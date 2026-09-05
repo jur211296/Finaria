@@ -26,7 +26,7 @@ enum GroupDetailDismissDecision {
     /// **Por qué el soft-delete necesita su propia señal.** `GroupService.softDelete` no borra
     /// la fila: pone `isHiddenForAll = true`, guarda y bumpea `dataVersion`. Así que ni
     /// `contextIsNil` ni `isDeleted` (que es el de SwiftData — fila fuera del store) se
-    /// encienden, y sin este parámetro los cinco argumentos caían en la rama "no cerrar": el
+    /// encienden, y sin este parámetro los cuatro que había caían todos en la rama "no cerrar": el
     /// owner confirmaba dos veces un borrado irreversible y se quedaba delante del mismo grupo,
     /// con sus gastos y su título, teniendo que tocar Atrás a mano para comprobar que la app
     /// le había hecho caso (device QA TF 2.1 build 12, ticket
