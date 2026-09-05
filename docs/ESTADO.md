@@ -5,33 +5,31 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-05 (Lima)
 
-**Rama** `2.1` · HEAD al día — el enlace de invitación ya no pierde el nombre del grupo, y la visita
+**Rama** `2.1` · HEAD `cb74daba` — el enlace de invitación ya no pierde el nombre del grupo, y la visita
 en el móvil de otra persona ya no deja huella en el Yala del dueño.
 TestFlight build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.** `yala-app.pe` sirve la web
 nueva desde el 4-sep.
 
 ## Esta sesión, en una línea
 
-**`secondary-visitor-writes-owner-domain` pasa a `qa`** (PR #66): quien entra de visita en el móvil de
-otra persona termina su onboarding sin marcar el del dueño —antes la marca se escribía en el cajón de
-él y se leía del de ella, y la pantalla de bienvenida podía reabrírsele— y el permiso de Grupos del
-dueño ya no se borra al entrar una visita: se guarda a un lado y se le devuelve al salir, con lo que
-además conservamos el registro de su consentimiento.
+**Herramienta, no producto: alcance en la app, cero.** Un worktree nuevo ya recibe
+`Secrets.xcconfig` enlazado (PR #70) en vez de que cada sesión lo copie a mano antes del primer
+build, y `.planning` deja de aparecer como fichero sin trackear en todas las sesiones lanzadas
+(PR #72): su patrón llevaba barra final, que solo casa con directorios, y lo que crea el launcher
+es un symlink.
 
-Dos cosas que el ticket daba por sabidas y no lo eran: los lectores de esa marca no eran los tres que
-nombraba sino **siete**, en seis ficheros; y **el escáner de conteo no habría visto el bug** —26 sitios
-antes, 26 después—, así que la red nueva censa el DOMINIO, no el número. Salen dos residuales a
-`backlog` con su medición, uno de ellos hallazgo nuevo:
-`secondary-entry-healing-writes-owner-not-session`, donde el kill-recovery de la entrada repara los
-flags en el dominio del dueño mientras la siembra ya copió el valor viejo al cajón.
+De camino se cayó una afirmación mía. Escribí, como justificación del cambio, «sin
+`Secrets.xcconfig` el primer build del worktree falla»; al medirlo resultó **falso** — el fichero
+no define ninguna clave desde que se fueron al Worker en junio, y `-showBuildSettings` devuelve 636
+líneas idénticas con y sin él. El enlace se queda por la razón buena: el día que vuelva a haber una
+clave, un worktree sin enlace compilaría **en silencio** sin ella.
 
-Nada de esto está visto en un teléfono todavía. Alcance real en producción: cero.
+## Las sesiones anteriores
 
-## La sesión anterior, en una línea
-
-El enlace de invitación queda cerrado del todo (PR #65): quien lo toca ve el nombre del grupo que la
-web acababa de enseñarle —también con la app cerrada—, un enlace sin el parámetro cosmético deja de
-morir en silencio, y el botón de compartir ya no culpa a tu conexión cuando el fallo es permanente.
+`secondary-visitor-writes-owner-domain` pasó a `qa` (PR #66): quien entra de visita en el móvil de
+otra persona ya no marca el onboarding del dueño, ni le borra su permiso de Grupos. Entraron
+además, **sin dejar entrada aquí**, los PR **#68** (volver a Yala deja de parecer una instalación
+nueva) y **#69** (el refresco forzado del invite deja de ser un no-op si hay otro en vuelo).
 
 ## Te espera a ti
 
