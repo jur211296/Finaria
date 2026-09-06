@@ -218,7 +218,7 @@ le falta a la Cara 2. Partirlo en dos garantiza que uno de los dos se arregle a 
       caso de `GroupsRPCError` que pueda llegar a esa pantalla tiene copy propio que dice qué pasó y
       si sirve reintentar (el canal apagado, como en el enlace de invitación, se cuenta como
       «vuelve más tarde», no como error del usuario).
-- [~] Un teléfono que es dueño **server-side** del grupo no se queda sin salida: la pantalla ofrece
+- [~] *(resuelto por decisión: la mitad que falta sale a `groups-owner-transfer-and-leave`)* Un teléfono que es dueño **server-side** del grupo no se queda sin salida: la pantalla ofrece
       la acción que corresponde a su situación real (transferir y salir, o cerrar el grupo si es el
       último), en vez de decidirlo solo con el `isOwner` local que únicamente escribe el creador.
 - [x] Queda fijado por test el mapeo entre el discriminante que ve el usuario y el caso del enum, de
@@ -231,6 +231,15 @@ sin salida. Y el bloqueo mira la deuda de **todo el grupo**, no la suya: puede q
 deuda entre otras dos personas, con un aviso que le dice que liquide deudas que no son suyas. Las salidas
 posibles —ofrecer «transferir y salir», permitir eliminar con deuda como ya se permite salir con deuda, o
 dejarlo como está— son decisión de producto, no de implementación.
+
+## Decisión Jürgen (2026-09-06)
+
+**«Transferir y salir».** Elegida entre las tres salidas de arriba. Motivo, tal como se le puso delante y ratificó: el RPC de transferencia ya
+existe en el servidor y solo falta la hoja en iOS; el grupo y sus deudas siguen vivos para los demás.
+Descartó «permitir eliminar con deuda» (borra deudas de terceros, irreversible) y «dejarlo como está».
+**«Eliminar» sigue bloqueado con deuda.** El trabajo es nuevo y va a su propio ticket:
+[[groups-owner-transfer-and-leave]] (`backlog/`, high). Este ticket se queda en `qa/` solo por el
+device-QA de lo ya hecho.
 
 ---
 

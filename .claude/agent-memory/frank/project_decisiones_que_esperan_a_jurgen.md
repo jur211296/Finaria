@@ -34,8 +34,13 @@ tenían una salida barata y coherente con algo que él ya había decidido antes 
 el 3-sep). **Cuando la opción recomendada se apoya en una decisión SUYA anterior, la toma sin
 pensarlo; cítala.** Un ticket de dos decisiones dentro (kill-switch) se parte en dos preguntas.
 
-**Lo que sigue SIN preguntar** (no estaba en el encargo): las dos de Grupos que lista `docs/ESTADO.md`
-en «Te espera a ti» —el dueño con deuda sin salida, y el botón «Más tarde» de la hoja del invitado—.
-Verifica que sigan abiertas antes de llevárselas.
+**Y una tercera tanda el mismo día, que enseña lo importante:** tras las seis, Jürgen preguntó
+«¿estamos seguros de que ya ninguna necesita decisión mía?». Mi «sí» habría salido del encargo
+(acotado a 3+2) y de un grep de «decisión». **Leer los 94 tickets vivos enteros destapó 13 más** —seis
+de ellas frenaban bugs— repartidas en `backlog/` Y en `qa/` (tickets ya implementados que dejaban un
+residual «decisión aparte» sin ticket propio). Las contestó todas (13/13 la recomendada). ⇒ **«¿queda
+alguna?» se responde leyendo, con lectores en paralelo y control positivo de las citas; y el
+residual de un ticket de `qa/` que dice «decisión aparte» es una decisión huérfana: sácala a ticket.**
+Quedan como abiertas del ESTADO solo las dos de la web (legal de Grupos, Vercel `1.0`/`2.1`).
 
 Relacionado: [[el-tablero-antes-que-el-bug]] · [[jurgen-levanta-sus-reglas]]

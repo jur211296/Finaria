@@ -4,7 +4,7 @@ status: backlog
 priority: medium
 area: panel/finance
 created: 2026-05-03
-updated: 2026-08-26
+updated: 2026-09-06
 source: YalaWiki/Ideas/idea-fx-pnl-card.md
 ---
 
@@ -31,11 +31,17 @@ Indicador adicional: cuando `isExchangeRateProvisional` aplica al saldo (TC fall
 - [ ] Solo aparece si `|FX P&L| > umbral` (ej. >0.5% del balance) — evita ruido.
 - [ ] Visualización breakdown por moneda en sheet detalle.
 - [ ] Etiqueta "TC estimado" cuando aplica.
-- [ ] Free vs Pro: revisar comercial. Probable Free (es informativa, no IA).
+- [x] Free vs Pro: **Free** (decisión Jürgen 2026-09-06, abajo).
+
+## Decisión Jürgen (2026-09-06)
+
+**Free.** Elegida entre Free y Pro. Motivo, tal como se le puso delante y ratificó: es informativa y no usa IA; explica una diferencia que el
+usuario multi-divisa ya ve en su saldo y no entiende. El diseño se resuelve en el `/spec` sobre el
+patrón de cards del Panel, no aquí.
 
 ## Diseño
 
-Pendiente. Inspiración: Wise, Revolut muestran FX P&L en transferencias. Yala lo mostraría a nivel cuenta/balance.
+Pendiente de `/spec` (ya no de decisión). Inspiración: Wise, Revolut muestran FX P&L en transferencias. Yala lo mostraría a nivel cuenta/balance.
 
 ## Notas Técnicas
 

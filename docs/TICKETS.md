@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (115)
+## Index (118)
 
 | id | status | path |
 |----|--------|------|
@@ -39,6 +39,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | apppreferences-rewritten-on-launch | blocked | tickets/blocked/apppreferences-rewritten-on-launch.md |
 | appstorage-onboarding-desarma-el-aislamiento-de-tests | backlog | tickets/backlog/appstorage-onboarding-desarma-el-aislamiento-de-tests.md |
 | aviso-de-nuevo-miembro-no-llega-hasta-abrir-la-app | qa | tickets/qa/aviso-de-nuevo-miembro-no-llega-hasta-abrir-la-app.md |
+| budget-days-left-counts-today | backlog | tickets/backlog/budget-days-left-counts-today.md |
 | budget-tied-to-income-or-expense | backlog | tickets/backlog/budget-tied-to-income-or-expense.md |
 | canarios-y-breadcrumbs-sin-emisor | backlog | tickets/backlog/canarios-y-breadcrumbs-sin-emisor.md |
 | cashflow-spend-prediction | backlog | tickets/backlog/cashflow-spend-prediction.md |
@@ -70,6 +71,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | group-notif-credits-payer-not-editor | done | tickets/done/group-notif-credits-payer-not-editor.md |
 | groups-approval-banner-stays | done | tickets/done/groups-approval-banner-stays.md |
 | groups-background-emitter-no-upload | done | tickets/done/groups-background-emitter-no-upload.md |
+| groups-archived-group-rejects-join | backlog | tickets/backlog/groups-archived-group-rejects-join.md |
 | groups-budget | backlog | tickets/backlog/groups-budget.md |
 | groups-cloud-identity-loss-on-migrate | discarded | tickets/discarded/groups-cloud-identity-loss-on-migrate.md |
 | groups-cloud-mode-hardening-v1 | discarded | tickets/discarded/groups-cloud-mode-hardening-v1.md |
@@ -85,6 +87,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | groups-join-intent-reconciler | blocked | tickets/blocked/groups-join-intent-reconciler.md |
 | groups-leave-rpc-error-10 | qa | tickets/qa/groups-leave-rpc-error-10.md |
 | groups-log-expense-via-chat-voice | backlog | tickets/backlog/groups-log-expense-via-chat-voice.md |
+| groups-owner-transfer-and-leave | backlog | tickets/backlog/groups-owner-transfer-and-leave.md |
 | groups-pending-member-can-open-group | backlog | tickets/backlog/groups-pending-member-can-open-group.md |
 | groups-reconnect-prune-or-rewire | done | tickets/done/groups-reconnect-prune-or-rewire.md |
 | groups-settlement-reminder | backlog | tickets/backlog/groups-settlement-reminder.md |
@@ -148,7 +151,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | yala-android | backlog | tickets/backlog/yala-android.md |
 | zone-decisions-still-per-row | backlog | tickets/backlog/zone-decisions-still-per-row.md |
 
-Counts by folder: backlog 56 · in-progress 0 · qa 36 · blocked 2 · done 16 · discarded 5 = 115. *(Recontados sobre disco el 2026-09-06, junto con el índice de arriba. La línea llevaba cuatro sesiones desviada — decía `= 96` con `in-progress 7` — y el ESTADO lo venía señalando sin recontar.)*
+Counts by folder: backlog 59 · in-progress 0 · qa 36 · blocked 2 · done 16 · discarded 5 = 118. *(Recontados sobre disco el 2026-09-06, junto con el índice de arriba. La línea llevaba cuatro sesiones desviada — decía `= 96` con `in-progress 7` — y el ESTADO lo venía señalando sin recontar.)*
 
 Frank 2026-09-06 (decisiones): Jürgen respondió en una sentada las **seis** decisiones de producto que tenían
 tickets parados sin código que escribir; cada una está en su ticket bajo «Decisión Jürgen (2026-09-06)», con
@@ -162,6 +165,27 @@ sesión). Dos extra que también decían «decisión antes de código»: **`fx-p
 «estás de visita», sin bloquear). Los cinco siguen en `backlog/` **listos para lanzar**; todos piden
 device-QA al final, cuatro copy en 16 idiomas y dos review adversarial. **Siguen en `blocked/` por
 device, no por decisión:** `apppreferences-rewritten-on-launch` y `groups-join-intent-reconciler`.
+
+Frank 2026-09-06 (barrido completo, misma sesión): Jürgen preguntó si YA no quedaba ningún ticket
+esperando una decisión suya. **Medido, no supuesto:** los 94 tickets vivos leídos enteros por cuatro
+lectores independientes, las 13 citas de «sí» re-comprobadas con grep. Quedaban **13 decisiones más**,
+y las respondió todas en cuatro tandas (misma forma: opciones, coste, recomendada primero). Escritas
+en su ticket bajo «Decisión Jürgen (2026-09-06)»: `panel-colapsa-la-seleccion-de-cuentas-a-la-primera`
+(el Panel respeta el conjunto de cuentas), `records-standalone-amount-discrepancy` (sin categoría →
+por el signo), `groups-guest-currency-from-region` (sí a adoptar la moneda del grupo si fue adivinada),
+`joiner-flag-residuals-cosmetic-and-service-guard` (manda la fila activa; no se borra),
+`groups-settlement-reminder` (al deudor, tono suave), `groups-shareable-summary` (todo el historial,
+botón en Ajustes), `groups-budget` (un límite por grupo), `fx-pnl-education-card` (Free),
+`el-job-de-tests-del-ci-no-tiene-timeout` (UI a nocturna; PR = build + unit con tope), y en `qa/`
+`secondary-guest-exit-lock-and-outbox` (ratificado: el dueño no tiene reintento) y
+`distribution-balance-kpi-skips-fx` (puntero al hero). **Tres decisiones sobre tickets de `qa/`
+generaban trabajo nuevo y salen a ticket propio en `backlog/`** para que la cola los pueda lanzar sin
+tocar lo que espera verificación: `groups-owner-transfer-and-leave` (high; de `groups-leave-rpc-error-10`),
+`groups-archived-group-rejects-join` (de `rejected-member-cold-tap-does-nothing`) y
+`budget-days-left-counts-today` (low; de `undercount-dias-intervalos-cerrados`). Counts: backlog 56 → 59,
+total 115 → 118. **Tres dudosas se quedaron sin preguntar a propósito, por técnicas:**
+`secondary-entry-healing-writes-owner-not-session`, `staging-test-user-c-does-not-exist` y el residual
+del faro en `prefs-domain-per-secondary-session` — las decide quien las implemente.
 
 Frank 2026-09-02 (altas): dos hallazgos del QA de hoy entran en `backlog/`, para que no se pierdan
 al cerrar la sesion.

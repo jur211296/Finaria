@@ -238,7 +238,8 @@ En Estadísticas, «Balance» ahora significa **dos cosas distintas según la pe
 Las tres últimas son **flujo del período**; Distribución pasa a ser **stock**. Es consecuencia
 directa de la decisión del 26-ago (igualar Distribución al Panel), y no se ha ampliado el alcance a
 las otras pestañas porque eso es otro objeto y otra decisión. Queda anotado para que se decida a
-sabiendas, no por omisión.
+sabiendas, no por omisión. **Decidido el 2026-09-06 en [[hero-estadisticas-stock-vs-flujo-entre-pestanas]]:
+se etiqueta la cifra en las cuatro pestañas; ningún cálculo cambia.**
 
 ### 3. Límite conocido, no corregido
 

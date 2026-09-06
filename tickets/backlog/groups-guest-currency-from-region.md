@@ -4,7 +4,7 @@ status: backlog
 priority: medium
 area: groups
 created: 2026-08-08
-updated: 2026-08-26
+updated: 2026-09-06
 source: YalaWiki/Backlog/groups-invitado-moneda-region-red-muerta.md
 ---
 
@@ -49,8 +49,18 @@ haberla elegido explícitamente?**
 1. Trazar el flujo de alta por invitación backend end-to-end y responder la pregunta: ¿dónde queda
    fijada la moneda del usuario y quién la elige? (Buscar también quién llamaba al escritor en el
    mundo CloudKit — murió con el transporte — para entender qué caso cubría.)
-2. Decidir con el owner según la respuesta (re-cablear vs borrar).
+2. ~~Decidir con el owner según la respuesta (re-cablear vs borrar).~~ **Decidido** (abajo): si el caso es alcanzable, re-cablear; si no, borrar.
 3. En ambos casos: el veredicto va MEDIDO, no inferido (la lección de esta familia), y el commit
    lleva su pin.
+
+## Decisión Jürgen (2026-09-06)
+
+**Sí queremos la red: si la moneda fue adivinada por región, al confirmarse la entrada se adopta la
+del grupo.** Elegida entre eso y «la moneda es siempre una elección explícita; la red se borra». Motivo, tal como se le puso delante y ratificó:
+quien entra por una invitación no debería quedarse con una moneda que no eligió. La decisión fija la
+INTENCIÓN; el paso 1 sigue siendo medir si el caso es alcanzable en el flujo backend: **si lo es**, se
+re-cablea el escritor (`GroupBackendInviteEntryHandler` ya conserva el campo); **si no lo es** —la
+moneda siempre pasa por una elección—, la cadena se borra en un commit sustractivo, porque no habría
+nada que proteger. En ambos casos el veredicto va medido y con su pin.
 
 migrated from YalaWiki Backlog/groups-invitado-moneda-region-red-muerta.md @ 1934e8ad

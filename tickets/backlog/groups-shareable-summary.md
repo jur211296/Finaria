@@ -4,7 +4,7 @@ status: backlog
 priority: medium
 area: groups
 created: 2026-07-01
-updated: 2026-08-26
+updated: 2026-09-06
 source: YalaWiki/Backlog/groups-resumen-compartible-exportable.md
 ---
 
@@ -47,6 +47,12 @@ Es de solo lectura — no crea, modifica ni borra ningún `SplitExpense`/`SplitS
 ### Decisión de diseño abierta
 
 ¿El resumen es de **todo el historial** del grupo, o del **período actualmente seleccionado** en Stats? Para el caso de uso "cierre del viaje" tiene más sentido todo el historial (`selectedPeriod = .allTime`) — pero si se reutiliza el mismo botón desde Stats con un período específico ya seleccionado, podría tener sentido respetar ese filtro. Decidir antes de implementar; afecta si el botón vive en Settings (sugiere todo el historial) o en Stats (sugiere período actual).
+
+## Decisión Jürgen (2026-09-06)
+
+**Todo el historial, con el botón en Ajustes del grupo.** Elegida entre eso y «el período
+seleccionado, con el botón en Estadísticas». Motivo, tal como se le puso delante y ratificó: el caso de uso es el cierre del viaje; un solo
+comportamiento que no depende del filtro que haya puesto en la pestaña. `selectedPeriod = .allTime`.
 
 ## Acceptance Criteria
 

@@ -4,7 +4,7 @@ status: backlog
 priority: medium
 area: groups
 created: 2026-07-01
-updated: 2026-08-26
+updated: 2026-09-06
 source: YalaWiki/Backlog/groups-presupuesto-de-grupo.md
 ---
 
@@ -281,6 +281,18 @@ grupo (lo cual no existe hoy y sería un cambio de schema mucho más grande).
       grupo.
 - [ ] Tests pure-logic para el cálculo de spending y umbral cruzado.
 - [ ] `qa/coverage-index.json` actualizado en el mismo commit.
+
+## Decisión Jürgen (2026-09-06)
+
+**Un límite por grupo, no varios.** Elegida entre «un límite (dos campos en el grupo)» y «varios
+presupuestos (tabla nueva)». Motivo, tal como se le puso delante y ratificó: barato de desplegar y de sincronizar, cubre el caso del viaje, y
+varios presupuestos se pueden añadir después si alguien los pide. Campos: `budgetLimitAmount` en la
+moneda del grupo (`currencyCode` ya existente).
+
+**Aviso al que lo implemente:** este ticket habla de CloudKit y `CKRecordTranslator`; Grupos va hoy
+por el backend propio, así que el coste de esquema es **DDL + RPCs de pull/push + gateway**, no
+`RecordType`. Es una inferencia del estado actual del repo hecha al decidir, **no re-medida**: el
+`/spec` la comprueba antes de reescribir el plan.
 
 ## Notas
 

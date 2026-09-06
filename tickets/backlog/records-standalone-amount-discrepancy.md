@@ -4,7 +4,7 @@ status: backlog
 priority: medium
 area: calculos
 created: 2026-04-30
-updated: 2026-09-02
+updated: 2026-09-06
 source: YalaWiki/Backlog/p20-13_records-standalone-discrepancy.md
 ---
 
@@ -288,8 +288,7 @@ Hechos y medidos en el árbol de hoy:
 
 Pendiente:
 
-- [ ] Decidir **una** convención para los movimientos sin categoría —fallback al signo o
-      exclusión— y aplicarla en los sitios de la §Las cuatro respuestas, no solo en los cuatro
+- [ ] **Decidido (ver «Decisión Jürgen»): fallback al signo.** Aplicarla en los sitios de la §Las cuatro respuestas, no solo en los cuatro
       consumidores del helper. Anotarla en `.claude/rules/` para que la próxima pantalla no
       invente la suya.
 - [ ] Alinear el residual 1: el `||` de `NewTransactionView.swift:1497` debe seguir la regla
@@ -313,3 +312,13 @@ Pendiente:
 - [ ] QA en dispositivo del frente que quede tras la decisión de convención.
 
 migrado desde YalaWiki Backlog/p20-13_records-standalone-discrepancy.md @ 1934e8ad
+
+## Decisión Jürgen (2026-09-06)
+
+**Por el signo del importe, en todas partes.** Elegida entre «fallback al signo» y «excluir de
+ingresos y gastos». Motivo, tal como se le puso delante y ratificó: es lo que ya hace el helper compartido (`TransactionClassificationLogic`) y
+tres de las cuatro pantallas, y el dinero cuenta aunque no tenga etiqueta. Convención: positivo =
+ingreso, negativo = gasto; **el cero** se resuelve al implementar con una sola regla (el helper dice
+`>= 0` ⇒ ingreso; el Informe dice `> 0`): se unifica a la del helper y se fija por test. Los filtros
+«Ingresos»/«Gastos» dejan de esconder el movimiento. La regla va a `.claude/rules/` en el mismo commit.
+
