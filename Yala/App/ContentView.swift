@@ -74,6 +74,10 @@ struct ContentView: View {
     /// `GroupInviteOnboardingView`. La FUENTE es `PendingJoinStore` — ver el drain de
     /// `.presentGroupBackendInviteOnboarding`.
     @State private var pendingInviteMetadata: InviteLinkService.BrandedMetadata?
+    /// Zona (== `group_id`) del invite que está presentando el cover. La vista la necesita para dos cosas
+    /// que no puede hacer sin ella: sellar la confirmación de ESE grupo y no de los otros invites vivos, y
+    /// poder decir «más tarde» sobre una invitación concreta.
+    @State private var pendingInviteZone: String?
     /// G4-invites (A2): sheets del flujo backend sign-in → consent → join, drenados de
     /// `.presentGroupsConsent` / `.presentGroupsSignIn`. DARK: con `groupsBackendEnabled`
     /// OFF los intents jamás se submitean.
@@ -352,6 +356,7 @@ struct ContentView: View {
         .modifier(GroupInviteModifier(
             showGroupInviteOnboarding: $showGroupInviteOnboarding,
             pendingInviteMetadata: $pendingInviteMetadata,
+            pendingInviteZone: $pendingInviteZone,
             hasCompletedOnboarding: $hasCompletedOnboarding,
             activeInviteError: $activeInviteError,
             activeGroupSyncError: $activeGroupSyncError
@@ -926,10 +931,24 @@ struct ContentView: View {
         case .presentGroupsOrganizerStep:
             advanceGroupsOrganizerFlow()
         case .presentGroupBackendInviteOnboarding(let zone):
-            // Condición viva al drenar (regla del repo): el intent pudo quedar retenido bajo
-            // un cover; si el onboarding YA se completó mientras tanto, no re-presentar —
-            // continuar el flujo directo (join).
-            if !hasCompletedOnboarding {
+            // Condición viva al drenar (regla del repo): el intent pudo quedar retenido bajo un cover; si
+            // la persona YA confirmó la invitación mientras tanto, no re-presentar — continuar el flujo
+            // directo (join).
+            //
+            // Esta es la SEGUNDA puerta con el mismo corte, y hasta 2026-09-05 preguntaba
+            // `!hasCompletedOnboarding`, igual que la tabla. Corregir solo la tabla no habría arreglado
+            // nada: el intent llegaba aquí y este `else` lo mandaba a `continueFlow` → join. Tiene que
+            // preguntar LO MISMO que `GroupBackendInviteEntryLogic.nextStep`, y por eso lee el mismo hecho
+            // del mismo sitio.
+            //
+            // TRES estados, no dos, y el tercero es el que un `?? false` convertía en daño: **sin entry**
+            // no hay nada que confirmar. El intent puede morir entre el submit y este drenaje —el pull baja
+            // el member y `.correctAndClear` lo limpia mientras un blocker retiene la cola—, y leer esa
+            // ausencia como «no confirmó» le presenta la hoja a alguien que YA está dentro del grupo, con
+            // el visual genérico y un CTA que no puede hacer nada (`reconcile` sale por su
+            // `guard !entries.isEmpty`). Sin entry no se presenta: no se pide confirmar lo que ya no existe.
+            switch PendingJoinStore.entry(zoneName: zone)?.isInviteConfirmed {
+            case .some(false):
                 // La marca sale del intent PERSISTIDO, no del payload: es lo que hace que también la
                 // tenga el invitado que llegó desde la web con la app cerrada, que es el caso normal.
                 // Antes esta línea era `= nil` con el comentario «backend: sin CKShare metadata — visual
@@ -937,11 +956,14 @@ struct ContentView: View {
                 // no tiene) y por eso el nombre del grupo no llegaba nunca. `nil` sigue siendo el
                 // fallback correcto — un enlace sin cosméticos pinta el visual genérico.
                 pendingInviteMetadata = PendingJoinStore.entry(zoneName: zone)?.branded
+                pendingInviteZone = zone
                 showGroupInviteOnboarding = true
-            } else {
+            case .some(true):
                 Task { @MainActor in
                     await GroupBackendInviteEntryHandler.continueFlow(zoneName: zone)
                 }
+            case .none:
+                break
             }
         default:
             break
@@ -1977,6 +1999,7 @@ private struct GroupInviteModifier: ViewModifier {
 
     @Binding var showGroupInviteOnboarding: Bool
     @Binding var pendingInviteMetadata: InviteLinkService.BrandedMetadata?
+    @Binding var pendingInviteZone: String?
     @Binding var hasCompletedOnboarding: Bool
     @Binding var activeInviteError: String?
     @Binding var activeGroupSyncError: String?
@@ -2008,16 +2031,26 @@ private struct GroupInviteModifier: ViewModifier {
                 Text(activeGroupSyncError ?? "")
             }
             .fullScreenCover(isPresented: $showGroupInviteOnboarding) {
-                GroupInviteOnboardingView(inviteMetadata: pendingInviteMetadata) { outcome in
+                GroupInviteOnboardingView(
+                    inviteMetadata: pendingInviteMetadata,
+                    pendingJoinZone: pendingInviteZone
+                ) { outcome in
                     // El consumo del invite pendiente según el outcome vivía aquí y su cuerpo llevaba
                     // vacío desde que `PendingInviteStore` —lo único que limpiaba— dejó de existir con el
                     // transporte CloudKit. Un `if` sin cuerpo no es una decisión: es un residuo que se lee
                     // como si algo pasara.
-                    // El setup silencioso ya corrió (nombre/moneda): no re-onboardear
-                    // en ningún outcome; el join intent sigue trabajando en background.
-                    hasCompletedOnboarding = true
+                    //
+                    // 2026-09-05 · ahora SÍ hay una decisión que tomar, porque hay un outcome que no
+                    // termina en alta: `.declined` es «ahora no», y a quien lo elige no se le marca ningún
+                    // onboarding —no ha completado nada— ni se le toca el intent desde aquí (lo retira la
+                    // propia vista, que es quien sabe de qué grupo habla). En los demás, el setup ya corrió
+                    // (nombre/moneda): no re-onboardear, y el join intent sigue trabajando en background.
+                    if outcome != .declined {
+                        hasCompletedOnboarding = true
+                    }
                     showGroupInviteOnboarding = false
                     pendingInviteMetadata = nil
+                    pendingInviteZone = nil
                 }
                 .environment(SessionState.shared)
             }

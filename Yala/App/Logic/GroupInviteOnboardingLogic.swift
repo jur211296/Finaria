@@ -51,6 +51,19 @@ enum GroupInviteOnboardingOutcome: Equatable {
     /// Salió desde "está tardando" — el intent persistente sigue trabajando.
     case closedWhileSyncing
     case abandonedAfterFailure(recoverable: Bool)
+    /// **«Ahora no»: la persona cierra la hoja SIN unirse (2026-09-05).** El único outcome que no termina
+    /// en membresía ni en intento de ella, y el único que RETIRA el join intent.
+    ///
+    /// Existe porque desde que la hoja se presenta también a quien ya usa Yala, no tener salida dejó de
+    /// ser inocuo: el paso de bienvenida solo ofrecía «Unirme al grupo», el cover es a pantalla completa
+    /// y el reconciler lo vuelve a montar en cada arranque y cada vuelta a primer plano mientras el intent
+    /// viva (7 días) ⇒ a quien tapeaba un enlace por error, su propia app le quedaba tapada por una
+    /// pantalla cuya única salida era entrar al grupo. Eso no captura un consentimiento: lo extrae.
+    ///
+    /// Se retira el intent —y no solo se cierra la vista— porque conservarlo devuelve la hoja en el
+    /// arranque siguiente, que es la misma jaula con un paso más. Tapear el enlace otra vez lo recrea
+    /// entero (`persistIntent`), así que no se pierde nada: «ahora no» significa ahora no, no nunca.
+    case declined
 }
 
 enum GroupInviteOnboardingLogic {

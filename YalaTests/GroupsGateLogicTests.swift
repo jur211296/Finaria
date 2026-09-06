@@ -27,6 +27,7 @@ struct GroupsGateLogicTests {
                       session: Bool = true,
                       consent: Bool = true,
                       setup: Bool = true,
+                      confirmedInvite: Bool = false,
                       canPresentInvite: Bool = true) -> Step {
         GroupsGateLogic.nextStep(
             entry: entry,
@@ -34,6 +35,7 @@ struct GroupsGateLogicTests {
             hasSession: session,
             isConsented: consent,
             hasCompletedSetup: setup,
+            hasConfirmedInvite: confirmedInvite,
             canPresentInviteOnboarding: canPresentInvite)
     }
 
@@ -106,13 +108,31 @@ struct GroupsGateLogicTests {
         }
     }
 
-    @Test("terminal de invite: onboarding del invitado si es fresco, si no join")
+    /// **Contrato NUEVO desde 2026-09-05, y el terminal que este test fijaba antes era el defecto.**
+    /// Decía `step(.invite, setup: true) == .join`: con el alta hecha, join directo. Eso es exactamente lo
+    /// que hacía que a quien ya tenía cuenta el enlace lo metiera en el grupo sin enseñarle nada. Se
+    /// actualiza a propósito —cambia una decisión de producto, no se «arregla» un test— y lo que ahora
+    /// decide es si dijo que sí a ESTA invitación.
+    @Test("terminal de invite: la hoja hasta que la persona confirme, y entonces join")
     func inviteTerminals() {
-        #expect(step(.invite, setup: false) == .presentInviteOnboarding)
-        #expect(step(.invite, setup: true) == .join)
+        #expect(step(.invite, confirmedInvite: false) == .presentInviteOnboarding)
+        #expect(step(.invite, confirmedInvite: true) == .join)
         // El discriminador del CTA del propio onboarding: sin él, el tap de «unirme» re-presentaría la
         // vista que lo emitió.
-        #expect(step(.invite, setup: false, canPresentInvite: false) == .join)
+        #expect(step(.invite, confirmedInvite: false, canPresentInvite: false) == .join)
+    }
+
+    /// **La regresión del ticket, en una aserción.** Tener cuenta (`setup: true`) no confirma nada: la
+    /// hoja aparece igual. Y su gemelo, que es la mitad que evita el sobre-arreglo: al invitado fresco no
+    /// le cambia el recorrido.
+    @Test("el alta previa NO decide el terminal de invite — la hoja aparece igual")
+    func inviteTerminalIgnoresPriorSetup() {
+        for setup in [false, true] {
+            #expect(step(.invite, setup: setup, confirmedInvite: false) == .presentInviteOnboarding,
+                    "con setup=\(setup) el invitado se saltó la hoja")
+            #expect(step(.invite, setup: setup, confirmedInvite: true) == .join,
+                    "con setup=\(setup) la hoja se re-presentó a quien ya había confirmado")
+        }
     }
 
     @Test("terminal de tab: siempre el formulario — el tab no da de alta a nadie")
@@ -126,6 +146,11 @@ struct GroupsGateLogicTests {
     /// Las 64 celdas decididas, para que añadir un `Entry` o un `Step` sin decidir su celda no pase en
     /// verde por omisión. Y la aserción que carga el peso: **el nombre solo es alcanzable con identidad y
     /// consent**, que es la invariante del chip expresada sobre la tabla.
+    ///
+    /// Barre el dominio con `confirmedInvite: false`, y no las 128 celdas que la tabla tiene desde que ese
+    /// eje existe (2026-09-05): el eje nuevo solo mueve el terminal de `.invite`, que jamás produce
+    /// `.presentName` — o sea que la mitad no barrida no puede cambiar lo que aquí se cuenta. El terminal
+    /// que sí mueve tiene su propio barrido en `inviteTerminalIgnoresPriorSetup`.
     @Test("las 64 celdas están decididas y `presentName` exige sesión Y consent")
     func fullDomain_isExhaustive_andNameRequiresIdentity() {
         var nombres = 0
@@ -193,14 +218,19 @@ struct GroupsGateDerivationTests {
     func inviteEntryMirrorsTheTable() {
         for session in [false, true] {
             for consent in [false, true] {
-                for onboarded in [false, true] {
+                for confirmed in [false, true] {
                     for canPresent in [false, true] {
                         let derivado = GroupBackendInviteEntryLogic.nextStep(
                             hasSession: session, isConsented: consent,
-                            hasCompletedOnboarding: onboarded, canPresentOnboarding: canPresent)
+                            hasConfirmedInvite: confirmed, canPresentOnboarding: canPresent)
+                        // `hasCompletedSetup: true` es lo que la derivada le pasa a la tabla desde que el
+                        // alta dejó de decidir este terminal. Fijarlo aquí es parte del espejo: si alguien
+                        // devolviera ese término a la decisión, la derivada y la tabla dejarían de coincidir
+                        // para la mitad del dominio y esto caería.
                         let tabla = GroupsGateLogic.nextStep(
                             entry: .invite, hasSeenEducational: true, hasSession: session,
-                            isConsented: consent, hasCompletedSetup: onboarded,
+                            isConsented: consent, hasCompletedSetup: true,
+                            hasConfirmedInvite: confirmed,
                             canPresentInviteOnboarding: canPresent)
                         let esperado: GroupBackendInviteEntryLogic.Step = switch tabla {
                         case .presentSignIn:           .presentSignIn

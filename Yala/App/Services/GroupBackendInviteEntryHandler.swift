@@ -74,14 +74,13 @@ enum GroupBackendInviteEntryHandler {
 
     static var hasSessionProvider: @MainActor () -> Bool = { CloudAuthService.shared.hasSession }
     static var isConsentedProvider: @MainActor () -> Bool = { GroupsConsentState.isAccepted }
-    /// Señal de routing del invitado fresco (paso 6 §A1 / A2): sin onboarding → invite onboarding
-    /// primero (captura el nombre antes del join).
-    static var hasCompletedOnboardingProvider: @MainActor () -> Bool = {
-        // El CAJÓN de esta sesión, igual que `profileNameProvider` justo debajo: las dos deciden lo
-        // mismo —si a quien toca el enlace hay que pedirle antes su nombre— y leerlas de dos dominios
-        // distintos daba un invitado «ya onboardeado» (por la dueña) al que nadie le había preguntado.
-        SessionDefaults.current.bool(forKey: AppPreferences.Keys.hasCompletedOnboarding)
-    }
+    // `hasCompletedOnboardingProvider` se RETIRÓ el 2026-09-05 y aquí queda su lápida, porque su ausencia
+    // es el arreglo. Alimentaba el único término que decidía si el invitado veía la hoja, y respondía a la
+    // pregunta equivocada («¿tiene cuenta?» en vez de «¿confirmó esta invitación?»): a quien ya tenía
+    // cuenta lo metía en el grupo sin enseñarle nada. Hoy ese término sale del intent persistido
+    // (`PendingJoinEntry.isInviteConfirmed`), así que no hay nada que inyectar. Lo que se pierde al
+    // retirarlo: el seam que permitía a un test fingir «usuario fresco» — los tests montan ahora el hecho
+    // real, un intent confirmado o sin confirmar, que además es lo que corre en device.
     static var profileNameProvider: @MainActor () -> String = {
         SessionDefaults.current.string(forKey: "userName") ?? ""
     }
@@ -158,7 +157,20 @@ enum GroupBackendInviteEntryHandler {
             backendGroupID: groupID,
             inviteToken: token,
             legacyMemberKey: legacyMemberKey ?? existing?.legacyMemberKey,
-            branded: branded.hasBranding ? branded : existing?.branded
+            branded: branded.hasBranding ? branded : existing?.branded,
+            // **`inviteConfirmedAt` se preserva solo si el TOKEN es el mismo, y es la única línea de aquí
+            // que mira el valor nuevo para decidir.** El token ES la identidad de la invitación
+            // (`create_group_invite` emite uno por invitación), así que:
+            //
+            //  - **Token distinto ⇒ invitación NUEVA ⇒ hay que volver a confirmar.** Heredar el «sí» de la
+            //    anterior devolvería el defecto entero: entrar a un grupo sin que nadie enseñe nada.
+            //  - **Mismo token ⇒ es la MISMA invitación.** Reabrir el mensaje de WhatsApp para releerlo
+            //    —cosa normal mientras esperas la aprobación del admin— no puede deshacer el «sí» ya dado.
+            //    Sin esta mitad, ese re-tap devolvía a la persona al paso «Bienvenido, pon tu nombre»
+            //    estando ya en «esperando aprobación», y a repetir un sí que ya había dado: `step(…)` no
+            //    mira la fase hasta que se tapea el CTA (`GroupInviteOnboardingLogic:87`), así que pintaba
+            //    `.welcome` con el join en vuelo.
+            inviteConfirmedAt: (existing?.inviteToken == token) ? existing?.inviteConfirmedAt : nil
         ))
     }
 
@@ -265,10 +277,23 @@ enum GroupBackendInviteEntryHandler {
     /// VIVAS y lo ejecuta. Reusado por el reconciler backend (§A1 pasos 3-4) y por la continuación de
     /// los sheets de A2.
     static func drive(groupID: String, token: String, source: Source) async {
+        // El SELLO de la confirmación, y su único sitio. `.userAction` es el discriminador que solo puede
+        // producir una persona tocando algo: el CTA «Unirme al grupo» de la hoja, el retry de su banner y
+        // el re-join del detalle de un grupo migrado. Los otros orígenes (`.universalLink`, `.boot`,
+        // `.foreground`, `.continuation`) son la app moviéndose sola y JAMÁS confirman nada por ella.
+        //
+        // Se sella ANTES de decidir, no después del join: lo que hay que recordar es que dijo que sí, y eso
+        // ya es verdad aquí. Si se sellara tras un `join_group` OK, un fallo de red devolvería a la persona
+        // a la hoja en el próximo arranque, a repetir un «sí» que ya había dado.
+        if source == .userAction {
+            PendingJoinStore.markInviteConfirmed(zoneName: groupID)
+        }
         switch GroupBackendInviteEntryLogic.nextStep(
             hasSession: hasSessionProvider(),
             isConsented: isConsentedProvider(),
-            hasCompletedOnboarding: hasCompletedOnboardingProvider(),
+            // Condición VIVA leída del intent en cada vuelta (regla del repo), no un one-shot del
+            // productor: entre el tap y este paso pueden mediar un sign-in, un consent y un relanzamiento.
+            hasConfirmedInvite: PendingJoinStore.entry(zoneName: groupID)?.isInviteConfirmed ?? false,
             canPresentOnboarding: source != .userAction
         ) {
         case .presentSignIn:
@@ -279,7 +304,11 @@ enum GroupBackendInviteEntryHandler {
             logger.notice("BackendInvite[\(source.rawValue, privacy: .public)]: no consent → present consent for \(groupID, privacy: .public)")
         case .presentInviteOnboarding:
             RouterEntryGate.shared.submit(.presentGroupBackendInviteOnboarding(pendingJoin: groupID))
-            logger.notice("BackendInvite[\(source.rawValue, privacy: .public)]: fresh user → present invite onboarding for \(groupID, privacy: .public)")
+            // Decía «fresh user» y desde 2026-09-05 sería falso la mitad de las veces: la hoja también se
+            // presenta a quien ya tiene cuenta. Este log es la FIRMA de campo del recorrido —su ausencia
+            // con el resto del flujo funcionando es el salto que el ticket cazó—, así que tiene que decir
+            // el hecho real.
+            logger.notice("BackendInvite[\(source.rawValue, privacy: .public)]: invite unconfirmed → present invite onboarding for \(groupID, privacy: .public)")
         case .join:
             await attemptJoin(groupID: groupID, token: token, source: source)
         }

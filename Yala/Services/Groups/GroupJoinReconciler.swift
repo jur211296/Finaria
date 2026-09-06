@@ -34,10 +34,18 @@ enum GroupJoinReconciler {
 
     /// Recorre los intents vigentes y reconcilia los que ya tienen zona local.
     /// - Parameters:
+    ///   - userConfirmedZone: **la zona sobre la que la PERSONA acaba de actuar**, y solo esa. Este barrido
+    ///     recorre TODAS las entries vigentes (hasta 8, 7 días de TTL), así que sin este dato un
+    ///     `.acceptShare` convertía a `.userAction` a invitaciones que nadie había mirado: tapear «Unirme»
+    ///     en la hoja del grupo A sellaba B como confirmada —y su hoja no volvía a presentarse JAMÁS—,
+    ///     que es literalmente el defecto que `PendingJoinEntry.inviteConfirmedAt` existe para cerrar.
+    ///     `nil` conserva el comportamiento anterior (todas), y solo debería usarse donde no haya zona que
+    ///     nombrar.
     ///   - context/groupLookup/engineReady: inyectables para tests; defaults de
     ///     producción (mainContext del sync).
     static func reconcile(
         trigger: Trigger,
+        userConfirmedZone: String? = nil,
         context providedContext: ModelContext? = nil,
         groupLookup: ((String) -> SplitGroup?)? = nil,
         engineReady: ((SplitGroup) -> Bool)? = nil,
@@ -60,7 +68,9 @@ enum GroupJoinReconciler {
             // sobre el flag — una entry backend JAMÁS se procesa por el camino CloudKit (mis-enqueue de
             // un grupo sin zona). El flag se re-chequea DENTRO (skipFlagOff conserva el intent).
             if entry.isBackendJoin {
-                await reconcileBackendEntry(entry, trigger: trigger, context: providedContext)
+                await reconcileBackendEntry(entry, trigger: trigger,
+                                            userConfirmedZone: userConfirmedZone,
+                                            context: providedContext)
                 continue
             }
 
@@ -110,6 +120,7 @@ enum GroupJoinReconciler {
     private static func reconcileBackendEntry(
         _ entry: PendingJoinEntry,
         trigger: Trigger,
+        userConfirmedZone: String?,
         context providedContext: ModelContext?
     ) async {
         guard let groupID = entry.backendGroupID, let token = entry.inviteToken else {
@@ -169,7 +180,8 @@ enum GroupJoinReconciler {
         case .presentSignIn, .presentConsent, .join:
             // El driver del handler re-evalúa las mismas condiciones vivas y presenta o (re)intenta join.
             await GroupBackendInviteEntryHandler.drive(
-                groupID: groupID, token: token, source: mapTrigger(trigger))
+                groupID: groupID, token: token,
+                source: mapTrigger(trigger, entryZone: entry.zoneName, userConfirmedZone: userConfirmedZone))
         }
     }
 
@@ -201,11 +213,26 @@ enum GroupJoinReconciler {
         }
     }
 
-    private static func mapTrigger(_ trigger: Trigger) -> GroupBackendInviteEntryHandler.Source {
+    /// **`.userAction` es de UNA zona, no del barrido entero — 2026-09-05.** Este método recibe la entry
+    /// que se está procesando y la zona sobre la que la persona actuó, porque `reconcile` itera todas las
+    /// vigentes: mapear `.acceptShare` a `.userAction` sin mirar la zona le atribuía a CADA invitación viva
+    /// un tap que solo se dio en una. Con el sello persistente (`inviteConfirmedAt`) eso dejaba de ser un
+    /// join de más y pasaba a ser permanente: la hoja de la otra invitación no se presentaba nunca.
+    ///
+    /// Una entry que NO es la confirmada se procesa como `.foreground`, que es exactamente lo que es —un
+    /// barrido de fondo aprovechando el momento—: conserva su reintento de join y su presentación, sin
+    /// heredar el discriminador que suprime la hoja.
+    private static func mapTrigger(
+        _ trigger: Trigger,
+        entryZone: String,
+        userConfirmedZone: String?
+    ) -> GroupBackendInviteEntryHandler.Source {
         switch trigger {
-        // .acceptShare = user-tap (CTA del invite onboarding / retry del tracker) → el drive NO debe
-        // re-presentar el onboarding (discriminador canPresentOnboarding de A2).
-        case .acceptShare: return .userAction
+        // .acceptShare = user-tap (CTA del invite onboarding / retry del banner) → el drive NO debe
+        // re-presentar el onboarding para ESA zona (discriminador canPresentOnboarding de A2).
+        case .acceptShare:
+            guard let userConfirmedZone else { return .userAction }
+            return entryZone == userConfirmedZone ? .userAction : .foreground
         case .foreground: return .foreground
         case .boot: return .boot
         }

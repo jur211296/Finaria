@@ -32,6 +32,33 @@
 //  segunda presentación compitiendo con el sheet que ya lo monta. En las cuatro el usuario ve un educativo
 //  antes de que se le pida identidad — que es el contrato— y en las dos que no lo tenían se añade.
 //
+//  ## La hoja del invitado se presenta SIEMPRE (2026-09-05) — y por qué esto cambió
+//
+//  El terminal de `.invite` cortaba por `hasCompletedSetup`: sin alta, la hoja; con alta, join directo. Era
+//  correcto bajo su propia premisa —la hoja es el educativo Y el alta del invitado, y a quien ya tiene
+//  nombre no hay que pedírselo— y **falso en device**: a quien ya tenía cuenta, tapear un enlace lo metía
+//  en el grupo solo, sin ver de qué grupo se trataba, sin elegir con qué nombre lo verían los demás y sin
+//  confirmar nada. Se enteraba después, si pasaba por el tab Grupos. Veredicto del owner: la hoja aparece
+//  siempre, venga de primer plano, de segundo plano o estando ya dentro de la app.
+//
+//  **`hasCompletedSetup` era un PROXY, y ese es el error que conviene no repetir.** Funcionaba para el
+//  invitado fresco solo porque la propia hoja marcaba su alta al terminar, así que «ya está dado de alta»
+//  acababa significando «ya pasó por aquí». La pregunta real siempre fue la segunda, y ahora se pregunta
+//  directamente: `hasConfirmedInvite` (`PendingJoinEntry.inviteConfirmedAt`, sellado por
+//  `GroupBackendInviteEntryHandler.drive` cuando el paso viene de una acción de la persona). Es el mismo
+//  género de arreglo que `hasSeenEducational` frente a `onboardingMode == .groupInvite`, dos párrafos más
+//  arriba: sustituir un testigo prestado por el hecho que de verdad se quería medir.
+//
+//  Lo que NO cambia: `canPresentInviteOnboarding` sigue siendo el discriminador del CTA de la propia hoja,
+//  y el invitado fresco conserva su recorrido intacto. Lo que la hoja ESCRIBE sí depende de si la persona
+//  ya tenía cuenta —el alta completa le pisaría preferencias vivas, y `userName`, `defaultCurrencyCode` y
+//  `defaultPeriod` van por `PreferenceSyncService` ⇒ el daño le llega a sus otros dispositivos—, pero eso
+//  se decide en la vista, no aquí. **Ojo con leer la invariante de arriba de más:** por el camino de la
+//  hoja, `onboardingMode` NO viaja al iKV (`OnboardingMode.setCurrent` escribe `UserDefaults.standard` a
+//  secas); la escalada never-downgrade que este encabezado describe es la del ALTA del organizador
+//  (`GroupsOrganizerOnboarding`), que es quien la empuja con `setSynced`. Medido el 2026-09-05, después de
+//  escribirlo mal aquí mismo.
+//
 //  ## Lo que esta tabla NO decide, y por qué no puede
 //
 //  El **canal** (`CloudSyncFlags.groupsBackendEnabled`) no entra aquí: vive en `GroupCreateRoutingLogic`
@@ -98,7 +125,10 @@ nonisolated enum GroupsGateLogic {
     ///   - hasSession: `CloudAuthService.shared.hasSession`.
     ///   - isConsented: `GroupsConsentState.isAccepted` (caché SELLADA con el `sub`, C1).
     ///   - hasCompletedSetup: `hasCompletedOnboarding`. Lo marca el propio alta, así que es el testigo de
-    ///     que el trío ya está escrito y de que este proceso no debe volver a pedir el nombre.
+    ///     que el trío ya está escrito y de que este proceso no debe volver a pedir el nombre. **No decide
+    ///     el terminal de `.invite`** — ver `hasConfirmedInvite`.
+    ///   - hasConfirmedInvite: `PendingJoinEntry.isInviteConfirmed` — ¿esta persona ya dijo que sí a ESTA
+    ///     invitación? Solo aplica a `.invite`.
     ///   - canPresentInviteOnboarding: `false` cuando el paso viene del CTA del PROPIO onboarding del
     ///     invitado (source `.userAction`) — sin este discriminador el tap de «unirme» re-presentaría la
     ///     vista. Solo aplica a `.invite`.
@@ -108,6 +138,7 @@ nonisolated enum GroupsGateLogic {
         hasSession: Bool,
         isConsented: Bool,
         hasCompletedSetup: Bool,
+        hasConfirmedInvite: Bool = false,
         canPresentInviteOnboarding: Bool = true
     ) -> Step {
         if entry.showsEducationalFirst && !hasSeenEducational { return .presentEducational }
@@ -118,7 +149,10 @@ nonisolated enum GroupsGateLogic {
         case .organizer, .onboardingCard:
             return hasCompletedSetup ? .presentGroupForm : .presentName
         case .invite:
-            return (!hasCompletedSetup && canPresentInviteOnboarding) ? .presentInviteOnboarding : .join
+            // 2026-09-05 · **el terminal del invitado ya no lo decide `hasCompletedSetup`.** Ver el bloque
+            // «La hoja del invitado se presenta SIEMPRE» del encabezado: la pregunta es si dijo que sí a
+            // esta invitación, no si tiene cuenta.
+            return (!hasConfirmedInvite && canPresentInviteOnboarding) ? .presentInviteOnboarding : .join
         case .tab:
             return .presentGroupForm
         }

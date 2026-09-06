@@ -68,9 +68,35 @@ struct PendingJoinEntry: Codable, Equatable {
     /// anterior decodifica a `nil` y la vista cae a su visual genérico, exactamente como hacía antes.
     var branded: InviteLinkService.BrandedMetadata?
 
+    /// Cuándo la persona CONFIRMÓ esta invitación — el tap del CTA «Unirme al grupo» de
+    /// `GroupInviteOnboardingView`, o cualquier otra acción deliberada suya sobre este join (el retry del
+    /// banner, el re-join del detalle de un grupo migrado). Lo sella `GroupBackendInviteEntryHandler.drive`
+    /// cuando el paso viene con `source == .userAction`, que es el único origen que solo puede producir una
+    /// persona tocando algo.
+    ///
+    /// **Es la señal que decide si la hoja del invitado se presenta, y sustituye a `hasCompletedOnboarding`
+    /// en ese papel (2026-09-05).** Aquella era un PROXY: valía para el invitado fresco —la hoja marcaba su
+    /// alta al terminar, así que «ya está dado de alta» equivalía a «ya pasó por aquí»— y era falsa para
+    /// quien ya tenía cuenta, a quien el alta previa hacía parecer confirmado sin haber visto nunca la
+    /// hoja: se unía al grupo solo, sin elegir con qué nombre lo verían ni confirmar nada. La pregunta real
+    /// no es «¿está dado de alta?» sino «¿ya dijo que sí a ESTA invitación?», y eso es lo que hay aquí.
+    ///
+    /// Vive en el intent y no en memoria a propósito: el caso dominante es el arranque en frío (el invitado
+    /// llega desde la web con la app cerrada) y quien completa el flujo es el reconciler en el boot
+    /// siguiente. Y muere con el intent —que se limpia cuando el member materializa—, así que un enlace
+    /// nuevo del mismo grupo vuelve a pedir confirmación, que es lo correcto: es otra petición.
+    ///
+    /// Opcional Codable back-compat (decodeIfPresent sintetizado): un JSON persistido por la versión
+    /// anterior decodifica a `nil` ⇒ sin confirmar ⇒ se presenta la hoja. El default seguro es el que pide
+    /// confirmación, nunca el que se une solo.
+    var inviteConfirmedAt: Date?
+
     /// `true` si esta entry es un join backend por token (contrato C3). El discriminador
     /// backend↔CloudKit del reconciler tiene PRIORIDAD sobre el flag (R5).
     var isBackendJoin: Bool { inviteToken != nil }
+
+    /// ¿La persona ya confirmó esta invitación? Ver `inviteConfirmedAt`.
+    var isInviteConfirmed: Bool { inviteConfirmedAt != nil }
 
     init(
         zoneName: String,
@@ -81,7 +107,8 @@ struct PendingJoinEntry: Codable, Equatable {
         backendGroupID: String? = nil,
         inviteToken: String? = nil,
         legacyMemberKey: String? = nil,
-        branded: InviteLinkService.BrandedMetadata? = nil
+        branded: InviteLinkService.BrandedMetadata? = nil,
+        inviteConfirmedAt: Date? = nil
     ) {
         self.zoneName = zoneName
         self.zoneOwnerName = zoneOwnerName
@@ -92,6 +119,7 @@ struct PendingJoinEntry: Codable, Equatable {
         self.inviteToken = inviteToken
         self.legacyMemberKey = legacyMemberKey
         self.branded = branded
+        self.inviteConfirmedAt = inviteConfirmedAt
     }
 }
 
@@ -155,6 +183,21 @@ enum PendingJoinStore {
             changed = true
         }
         if changed { persist(entries) }
+    }
+
+    /// Sella la confirmación de UNA zona: la persona dijo «unirme» a ESTA invitación. Idempotente —
+    /// re-confirmar conserva el primer instante, que es cuando de verdad lo dijo.
+    ///
+    /// Por zona, y no como `updateDisplayName` (que propaga a todas las entries vigentes porque el nombre
+    /// del perfil es global): confirmar es un acto sobre UN grupo. Con dos invitaciones vivas, decir que sí
+    /// a una no puede colar a la otra sin que nadie la vea — que es exactamente el defecto que esta señal
+    /// existe para cerrar.
+    static func markInviteConfirmed(zoneName: String, at date: Date = .now) {
+        var entries = load()
+        guard var entry = entries[zoneName], entry.inviteConfirmedAt == nil else { return }
+        entry.inviteConfirmedAt = date
+        entries[zoneName] = entry
+        persist(entries)
     }
 
     /// Registra la moneda fallback detectada por región (solo si la entry existe).
