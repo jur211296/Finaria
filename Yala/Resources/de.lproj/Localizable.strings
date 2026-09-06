@@ -5522,3 +5522,19 @@
 "groups.errors.leaveUnavailable" = "Wir konnten deinen Austritt aus der Gruppe nicht abschließen. Versuch es gleich noch mal.";
 /* Groups RPC rejected because the session token expired or is missing */
 "groups.errors.sessionExpired" = "Deine Sitzung ist abgelaufen. Melde dich erneut an und versuch es noch mal.";
+/* Botón: el dueño cede el grupo y sale */
+"groups.settings.transferAndLeave" = "Übertragen und verlassen";
+/* Hint bajo el botón Transferir y salir */
+"groups.settings.transferAndLeaveHint" = "Die Gruppe bleibt mit ihren Salden aktiv. Du bist dann kein Mitglied mehr.";
+/* Confirmación con el nombre de quien hereda el grupo */
+"groups.settings.transferAndLeaveConfirm" = "%@ übernimmt die Gruppe und du verlässt sie. Offene Salden bleiben bestehen.";
+/* Confirmación cuando no se pudo resolver el nombre de quien hereda */
+"groups.settings.transferAndLeaveConfirmUnknownHeir" = "Die Gruppe geht an jemand anderen und du verlässt sie. Offene Salden bleiben bestehen.";
+/* Hint del borrado bloqueado cuando SÍ se puede transferir */
+"groups.settings.deleteGroupDisabledHintTransfer" = "In der Gruppe gibt es offene Salden. Wenn du gehen möchtest, übertrage sie und verlasse sie.";
+/* El último miembro elegible salió durante la confirmación */
+"groups.errors.transferNoHeir" = "Es ist niemand mehr da, dem du die Gruppe übergeben könntest.";
+/* Aviso al transferir cuando el usuario tiene saldo propio */
+"groups.settings.transferAndLeaveDebtWarning" = "Achtung: Du gehst mit einem offenen Saldo. Die andere Person sieht diese Schuld weiterhin.";
+/* Variante del rechazo por ser dueño cuando SÍ hay a quién transferir */
+"groups.errors.ownerCannotLeaveCanTransfer" = "Diese Gruppe gehört dir, du kannst sie also nicht einfach verlassen — jemand muss die Leitung übernehmen. Du kannst sie übertragen und dann gehen.";

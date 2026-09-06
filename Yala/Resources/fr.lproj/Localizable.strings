@@ -5523,3 +5523,19 @@
 "groups.errors.leaveUnavailable" = "Nous n'avons pas pu finaliser ton départ du groupe. Réessaie dans un instant.";
 /* Groups RPC rejected because the session token expired or is missing */
 "groups.errors.sessionExpired" = "Ta session a expiré. Reconnecte-toi et réessaie.";
+/* Botón: el dueño cede el grupo y sale */
+"groups.settings.transferAndLeave" = "Transférer et quitter";
+/* Hint bajo el botón Transferir y salir */
+"groups.settings.transferAndLeaveHint" = "Le groupe reste actif avec ses soldes. Tu n'en fais plus partie.";
+/* Confirmación con el nombre de quien hereda el grupo */
+"groups.settings.transferAndLeaveConfirm" = "%@ prend la tête du groupe et tu le quittes. Les soldes en cours restent inchangés.";
+/* Confirmación cuando no se pudo resolver el nombre de quien hereda */
+"groups.settings.transferAndLeaveConfirmUnknownHeir" = "Le groupe passe à quelqu'un d'autre et tu le quittes. Les soldes en cours restent inchangés.";
+/* Hint del borrado bloqueado cuando SÍ se puede transferir */
+"groups.settings.deleteGroupDisabledHintTransfer" = "Il y a des soldes en cours dans le groupe. Si tu veux partir, transfère-le et quitte-le.";
+/* El último miembro elegible salió durante la confirmación */
+"groups.errors.transferNoHeir" = "Il ne reste personne à qui transmettre le groupe.";
+/* Aviso al transferir cuando el usuario tiene saldo propio */
+"groups.settings.transferAndLeaveDebtWarning" = "Attention : tu pars avec un solde en cours. L'autre personne continuera de voir cette dette.";
+/* Variante del rechazo por ser dueño cuando SÍ hay a quién transferir */
+"groups.errors.ownerCannotLeaveCanTransfer" = "Ce groupe est le tien, tu ne peux donc pas simplement le quitter — quelqu'un doit rester aux commandes. Tu peux le transférer et partir.";

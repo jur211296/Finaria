@@ -793,6 +793,39 @@ final class GroupService {
         }
     }
 
+    /// El inverso de `reconcileServerSideOwnership`: escribe `isOwner = false` en TODAS las filas de
+    /// la zona tras una transferencia aceptada por el servidor.
+    ///
+    /// Mismo criterio ANY-row de la familia y misma razón: la UI pinta la fila canónica y corregir
+    /// solo la que se tiene en mano dejaría la pantalla rota parte de las veces.
+    ///
+    /// Este es el ÚNICO punto en el que el flag baja, y por eso existe: `isOwner` es device-local y el
+    /// pull no lo trae —`owner_user_id` es server-only y no está en el manifest del canal—, así que sin
+    /// esta escritura no hay nada, ni un pull ni un arranque, que pueda deshacer el latch. Se apoya en
+    /// la única evidencia server-side que sirve: el RPC de transferencia acaba de devolver OK.
+    ///
+    /// Un fallo al guardar se deshace en memoria y se traga: el error que el caller debe ver es el del
+    /// `leave` que viene después, no un `saveFailed` que lo enmascare. Deshacer EXACTAMENTE lo escrito
+    /// y no `context.rollback()`, que se llevaría por delante cambios pendientes ajenos del contexto
+    /// compartido.
+    private func releaseLocalOwnership(_ group: SplitGroup, context: ModelContext) {
+        let zoneID = group.cloudKitZoneID
+        var escritas: [SplitGroup] = []
+        do {
+            let targets = try context.fetch(
+                FetchDescriptor<SplitGroup>(predicate: #Predicate { $0.cloudKitZoneID == zoneID }))
+            escritas = targets.filter { $0.isOwner }
+            guard !escritas.isEmpty else { return }
+            for row in escritas { row.isOwner = false }
+            try context.save()
+            SessionState.shared.incrementDataVersion()
+        } catch {
+            for row in escritas { row.isOwner = true }
+            logger.error(
+                "releaseLocalOwnership falló: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
     /// Salir de un grupo para el batch, tolerante a `member_not_found` en el resume (RPC `leave_group` NO es
     /// idempotente puro: 2º call → `yala_member_not_found`; tras un kill entre el RPC OK y el cleanup local, el
     /// resume lo re-llama → se trata como ÉXITO → fuerza el cleanup local). El canal CloudKit reusa el
@@ -837,6 +870,22 @@ final class GroupService {
             return .needsDecision(.backendNoEligibleHeir)
         }
         // transferred || already → server ya no me ve como owner → puedo salir.
+        //
+        // Y el flag local tiene que dejar de decir lo contrario AHORA, no al final: entre este punto
+        // y el cleanup hay una ventana (el `leave` puede fallar por red, kill-switch o muerte del
+        // proceso) en la que la pantalla sigue viva. Con `isOwner` en `true` ahí, le ofrece «Eliminar
+        // grupo» al que YA NO es dueño — y esa escritura **aterriza en el servidor**: la RLS de
+        // `split_groups` exige `is_group_admin`, no ownership, y `transfer_group_ownership` NO
+        // degrada al caller (sigue `role='admin'`). Es decir: el ex-dueño podía borrarle el grupo al
+        // dueño recién coronado, que es justo el invariante que el RPC protege por escrito («nunca
+        // destruir datos de terceros»).
+        //
+        // Bajarlo aquí no deja a nadie encerrado, al revés: sin `isOwner` la pantalla le ofrece
+        // «Salir del grupo», que es exactamente lo que le queda por hacer y lo que el servidor ya le
+        // permite. Y si el servidor discrepara, `reconcileServerSideOwnership` lo vuelve a subir con
+        // el rechazo en la mano — el latch sigue teniendo sus dos direcciones, cada una con
+        // evidencia server-side.
+        releaseLocalOwnership(group, context: context)
         do {
             _ = try await service.leave(groupID: group.cloudKitZoneID)
         } catch GroupsRPCError.memberNotFound {
@@ -846,6 +895,60 @@ final class GroupService {
         do { try context.save() } catch { throw GroupServiceError.saveFailed(error) }
         SessionState.shared.incrementDataVersion()
         return .left
+    }
+
+    // MARK: - Salida del dueño desde Ajustes (ticket `groups-owner-transfer-and-leave`)
+
+    /// Qué salida se le ofrece al dueño en Ajustes del grupo, y a quién iría el grupo si transfiere.
+    ///
+    /// READ-ONLY. La deuda llega **del caller** y no se calcula aquí a propósito: la pantalla ya la
+    /// tiene cacheada (`GroupSettingsView.recomputeOutstandingDebt`, 4 fetches) y es la deuda de TODO
+    /// el grupo — la que bloquea «Eliminar»—, no la del usuario que `batchFacts` calcula para el
+    /// batch. Recalcularla aquí duplicaría el trabajo y, peor, abriría la puerta a que las dos
+    /// superficies discreparan sobre si hay saldos.
+    ///
+    /// `heir` es el heredero que elegirá el SERVIDOR, replicado para poder nombrarlo antes de
+    /// confirmar (ver `GroupOwnerExitLogic.designatedHeir`). Es `nil` cuando no hay ninguno elegible.
+    func ownerExitOffer(
+        _ group: SplitGroup,
+        groupHasOutstandingDebt: Bool,
+        serverRefusedTransfer: Bool = false
+    ) throws -> (offer: GroupOwnerExitLogic.Offer, heir: GroupOwnerExitLogic.HeirCandidate?) {
+        let context = try requireContext()
+        let members = try fetchMembers(for: group, context: context)
+        // Identidad RESUELTA para «quién soy yo», en PLURAL y no en singular. El servidor descarta
+        // candidatos con `user_id <> auth.uid()`, o sea TODAS mis filas; `resolveCurrentUserMember`
+        // colapsa a UNA (`min(by: joinedAt)`) y en una zona migrada el mismo humano tiene dos —la
+        // legacy y la born-backend del re-join, con `member_key` distinto—. Con el singular, mi otra
+        // fila entraba como heredero elegible: al llevar `role = "admin"` ganaba el primer nivel del
+        // orden y la hoja me proponía transferirme el grupo A MÍ MISMO, mientras el servidor coronaba
+        // a un tercero. Y sin ese tercero, el botón se pintaba para acabar en `no_eligible_owner`.
+        let misFilas = Set(
+            GroupExpenseService.resolveAllCurrentUserMembers(from: members).map(\.id))
+        let activeCoMembers = members.filter { $0.isActive && !misFilas.contains($0.id) }
+        // `memberKey` no-nil además de `userID`: el servidor ordena por `member_key` y devuelve el del
+        // heredero, así que una fila sin él no se puede nombrar sin inventar el desempate.
+        let heirs = activeCoMembers.compactMap { m -> GroupOwnerExitLogic.HeirCandidate? in
+            guard m.userID != nil, let key = m.memberKey else { return nil }
+            return GroupOwnerExitLogic.HeirCandidate(
+                memberKey: key,
+                displayName: m.resolvedDisplayName,
+                // `m.role == "admin"` y NO `m.isAdmin`: ese último es
+                // `isGroupOwner || role == "admin"`, y `isGroupOwner` es device-local —el pull no lo
+                // escribe nunca—. El servidor ordena por `coalesce(role,'') = 'admin'` a secas, así
+                // que meter aquí un bit que no viaja por el wire es meter ruido en el primer nivel
+                // del espejo.
+                isAdmin: m.role == "admin",
+                joinedAt: m.joinedAt)
+        }
+        let facts = GroupOwnerExitLogic.Facts(
+            isOwner: group.isOwner,
+            isBackendChannel: routesMembershipToBackend(group),
+            activeCoMemberCount: activeCoMembers.count,
+            eligibleHeirCount: heirs.count,
+            groupHasOutstandingDebt: groupHasOutstandingDebt,
+            serverRefusedTransfer: serverRefusedTransfer)
+        return (GroupOwnerExitLogic.offer(facts), GroupOwnerExitLogic.designatedHeir(from: heirs))
     }
 
     /// Facts read-only del grupo (derivados EN MEMORIA — nunca `#Predicate` sobre `userID` opcional).

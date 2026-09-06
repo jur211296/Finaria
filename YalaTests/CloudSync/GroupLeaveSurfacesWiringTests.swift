@@ -47,6 +47,56 @@ struct GroupLeaveSurfacesWiringTests {
                 "\(ruta) volvió a pintar el discriminante crudo del enum")
     }
 
+    /// La salida del DUEÑO («Transferir y salir») tiene que seguir CABLEADA al offer, no a
+    /// `group.isOwner` a pelo.
+    ///
+    /// Esto un unit test no lo ve: `GroupOwnerExitLogicTests` seguiría verde si la vista volviera a
+    /// decidir con el booleano local, y el dueño con deuda volvería al callejón sin salida que este
+    /// trabajo cierra — sin que nada se ponga rojo. Es el mismo hueco que motivó el resto del fichero.
+    @Test func ownerExit_isWiredToTheOffer_notToTheLocalFlag() throws {
+        let src = try fuente("Yala/App/Views/Groups/GroupSettingsView.swift")
+
+        // Control POSITIVO: si desaparece la sección, el scan mide otra cosa y hay que arreglar el
+        // test, no darlo por bueno.
+        #expect(src.contains("transferAndLeaveSection"),
+                "GroupSettingsView ya no tiene la sección de transferir")
+
+        #expect(src.contains("GroupService.shared.ownerExitOffer"),
+                "la pantalla debe pedir el offer al servicio")
+
+        // El scan se ACOTA al bloque que elige las secciones de salida. Buscar `group.isOwner` en
+        // todo el fichero daría un falso positivo real y medido: la sección de opciones usa
+        // `if !group.isOwner` para el hint de «solo el dueño» (moneda única), que no tiene nada que
+        // ver con esta decisión y es legítimo.
+        // 1000 y no 700: la tercera sección (`showsDelete`) empieza en el carácter 782 del bloque —
+        // medido, no estimado. Un prefijo corto dejaría fuera justo la aserción que importa y el
+        // test pasaría a fijar dos tercios de lo que dice fijar.
+        let bloque = try #require(src.range(of: "// Leave group (non-owner)").map {
+            String(src[$0.lowerBound...].prefix(1000))
+        })
+        // Las tres decisiones de salida salen del offer…
+        #expect(bloque.contains("currentOffer.showsLeave"))
+        #expect(bloque.contains("currentOffer.showsTransferAndLeave"))
+        #expect(bloque.contains("currentOffer.showsDelete"))
+        // …y ninguna vuelve al flag device-local, que es lo que dejaba sin salida al dueño.
+        #expect(!bloque.contains("group.isOwner"),
+                "una sección de salida volvió a decidirse con el flag device-local")
+        #expect(!src.contains(".disabled(hasOutstandingDebt || isDeleting)"),
+                "«Eliminar» volvió a leer la deuda sin pasar por el offer")
+    }
+
+    /// El fallo de la transferencia tampoco puede pintar el discriminante crudo del enum.
+    @Test func transferAndLeave_doesNotShowRawErrors() throws {
+        let src = try fuente("Yala/App/Views/Groups/GroupSettingsView.swift")
+        let cuerpo = try #require(src.range(of: "private func transferAndLeave()").map {
+            String(src[$0.lowerBound...].prefix(1800))
+        })
+        #expect(cuerpo.contains("GroupLeaveErrorLogic.classify"))
+        #expect(!cuerpo.contains("actionErrorMessage = error.localizedDescription"))
+        // El «no queda heredero» NO es un error: llega como outcome del RPC y tiene copy propio.
+        #expect(cuerpo.contains("L10n.Groups.Errors.transferNoHeir"))
+    }
+
     /// Y el destino al que manda el copy de `ownerCannotLeave` («…puedes eliminarlo») tampoco puede
     /// recibir al usuario con una dev-string en inglés de `GroupServiceError`.
     @Test func softDelete_doesNotShowDevStrings() throws {
