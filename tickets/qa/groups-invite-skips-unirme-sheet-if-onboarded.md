@@ -538,6 +538,24 @@ tiene hoy. Se declara aquí para que no se lea como cubierto.
   deterministas. Se anota como residual en el índice, no como deuda silenciosa.
 - **Cero cambios de l10n, de UI y del flujo de install limpia.**
 
+## Contraste visual con la base `2.1` — hecho a medias, y la mitad que falta se midió
+
+Capturado en simulador (iPhone 17 Pro, iOS 26.5, `Yala Dev`) con `-uitest -uitest-invite-onboarding`:
+
+- **Recorrido del invitado FRESCO: idéntico a `2.1`.** Campo de nombre vacío (su perfil lo está, así que
+  el prellenado no actúa), un solo botón «Unirme al grupo», **sin** «Más tarde». Es exactamente la
+  acotación pretendida: al fresco no se le ofrece salir.
+- **El caso NUEVO no se pudo capturar, y el intento vale como medición.** Se sembraron
+  `hasCompletedOnboarding = true` y `userName` en el plist del contenedor antes de lanzar; la hoja salió
+  igual (sin prellenado y sin salida). Confirma lo que este ticket declara como residual: el seam
+  `-uitest-invite-onboarding` entra por `presentNextOnboardingScreen`, al que `checkInitialSyncState`
+  (`ContentView:1269`) no llega con el onboarding hecho — y el propio `-uitest` monta el dominio efímero de
+  `UITestEphemeralDefaults`, así que sembrar el plist tampoco alcanza.
+
+⇒ **el aspecto de la hoja para quien ya tiene cuenta no está observado, solo razonado.** Lo que sí está
+verificado es su DECISIÓN (15 casos deterministas, comprobados por mutación). Entra en el device-QA de
+abajo, y ahí es donde se mira.
+
 ## Verificación pendiente (device-QA)
 
 Entra en el montaje de dos teléfonos de `qa/guion-tanda.md`. **B = cuenta ya creada**: abre el enlace y
