@@ -1,14 +1,106 @@
 ---
 id: groups-tab-missing-panel-perf
-status: backlog
+status: qa
 priority: high
 area: "groups, performance, cloudkit"
 created: 2026-04-17
-updated: 2026-09-02
+updated: 2026-09-06
 source: YalaWiki/Bugs/qa_groups-tab-no-perf-patterns.md
 ---
 
 # Grupos — el freno del Panel ya está puesto; lo que quema ahora es la lista
+
+## 2026-09-06 — la lista ya no rehace las cuentas en cada tecla (hecho)
+
+**Cerrado el punto 1 de «Lo que sigue vivo».** Los puntos 2 (`GroupSettingsView` sin freno) y 3
+(validación cruzada del coalescing) **siguen abiertos**: no se tocaron.
+
+### Lo medido, en HEAD `acdab851` (el cuerpo de abajo se midió contra `553b91c9`)
+
+Coordenadas que **derivaron** desde la re-medición del 2-sep, sustituidas en el texto:
+`currentUserDebts` en la tarjeta `:390` → **`:396`** · `groupCardRow` `:385` → **`:391`** ·
+`archivedGroupsSection` `:555-560` → **`:540-570`**. El `VStack` no perezoso (`:69-70`), el
+`ForEach` (`:98`) y el `.searchable` (`:111`) estaban donde decía.
+
+**El coste, perfilado por primera vez** (el ticket avisaba de que no había una sola medida de
+tiempo). Harness sobre el ViewModel real, 30 grupos × 6 miembros × 50 gastos — 1.500 gastos y
+9.000 repartos:
+
+| 8 teclas del buscador | por tecla |
+|---|---|
+| Antes (calcular en el body, una vez por tarjeta) | **29,74 ms** |
+| Después (lookup del cache) | **0,014 ms** |
+
+El presupuesto de un frame a 60 fps es **16,7 ms**: una sola tecla se comía más de un frame entero
+sólo en deudas, antes de dibujar nada.
+
+**Corrección al cuerpo viejo: el cuadrático NO es el problema.** Con `simplifyDebts` encendido el
+mismo escenario cuesta 25,3 ms y apagado 24,8 — 2 % de diferencia. Lo caro es `rawDebts`
+recorriendo gastos × repartos, que corre **siempre**, con toggle o sin él. La sección «Sobre el
+algoritmo cuadrático» de abajo apunta a un sospechoso que no lo era.
+
+### Lo hecho
+
+1. **Las deudas se calculan una vez, en `recalculate()`** (`GroupsViewModel.debtsByGroup`), junto a
+   los balances que ya se calculaban ahí. `currentUserDebts(for:)` pasa a ser un lookup.
+   **Sin clave de invalidación propia a propósito**: sus entradas son exactamente los dicts que
+   puebla `fetchData()` más los toggles del grupo, y `recalculate()` es el único punto donde ese
+   conjunto cambia — el mismo ciclo que ya gobierna `balancesByGroup`. Eso disuelve el riesgo que
+   este ticket señalaba («un cache con clave por conteo devolvería el importe viejo tras una
+   edición en sitio»): no hay clave que acertar.
+2. **`LazyVStack` sólo alrededor de las tarjetas.** El resumen y el nudge se quedan fuera —ver el
+   defecto que cazó la review.
+
+### La review adversarial cazó dos cosas, y una era mía
+
+- **El `LazyVStack` rompía el auto-descarte del nudge.** `GroupNudgeBanner` se retira solo con un
+  `.task` de 10 s cuyo `catch` de cancelación es un noop declarado (`GroupNudgeBanner.swift:82-89`).
+  Envuelto en el contenedor perezoso, bajar por la lista antes de que venza descarta la fila,
+  cancela el task y `recordDismissed(..., autoDismissed: true)` no llega a correr: el aviso deja de
+  retirarse solo y puede reaparecer. **Arreglado** dejando resumen y nudge fuera del `LazyVStack`;
+  perezosas son sólo las tarjetas, que es donde está el coste.
+- **Se pierde una red accidental, y esto queda ABIERTO** (ver abajo).
+
+### Lo que este cambio empeora, dicho claro
+
+- **La tarjeta deja de repintarse sola ante una mutación in-place.** Hasta hoy el body recorría los
+  `SplitExpense`/`SplitShare` objeto a objeto, así que quedaba observándolos: cambiar un importe en
+  sitio repintaba la cifra sin que nadie recargara. Precalculado, el refresco depende entero de que
+  todo mutador llegue a `recalculate()`. **Dos lentes independientes midieron el mismo hueco**:
+  `GroupsSyncClient.pullUntilExhausted` sólo bumpea `dataVersion` en su rama de agotamiento
+  (`:1716-1721`); las salidas `.transient` / `.sessionExpired` / `.accountUnavailable` (`:1727-1729`)
+  y el cap de iteraciones (`:1732`) se lo saltan **con páginas ya aplicadas y guardadas**.
+  ⇒ con la lista en pantalla y un push silencioso que corte a media paginación, la cifra se sostiene
+  vieja hasta el próximo `onAppear`, pull-to-refresh o bump.
+  **Acotado, no resuelto:** `markRemoteChangePending()` (`:1925`) sí corre y lo cierra en el
+  siguiente `onAppear`; y el store de Grupos es `cloudKitDatabase: .none`, así que no hay merge de
+  CloudKit mutando modelos por detrás. **No se arregló aquí a propósito**: el arreglo está en el
+  canal de sync y pide QA de dos aparatos, que es justo lo que este encargo excluía.
+  Queda escrito como invariante en `.claude/rules/swiftui-ds.md`.
+- **`recalculate()` se encarece ~25 ms** con 30 grupos, porque calcula las deudas de todos aunque
+  `LazyVStack` sólo pinte las visibles. Ocurre una vez por cambio de datos en vez de una por tecla.
+- **`debtsByGroup` se indexa por `cloudKitZoneID`**, como los dicts fuente y `balancesByGroup`. Con
+  dos filas del mismo zone (estado anómalo con canario propio, `cloudkitDuplicateDetected`) la clave
+  colapsa y ambas tarjetas mostrarían los toggles de una. Antes cada una usaba los suyos. No se
+  cambia la clave: sería incoherente con los otros dicts.
+
+### Verificación
+
+- **10 tests nuevos** en `YalaTests/GroupsListDebtsCacheTests.swift`: paridad contra el cálculo
+  directo (incluido `simplifyDebts` y el toggle de moneda única, que mete el conversor), refresco
+  tras alta, **edición in-situ** y liquidación, aislamiento por grupo, y los dos casos de archivado.
+- **Los tests se pasaron por tres mutantes**, porque un test verde escrito por uno mismo no prueba
+  nada hasta que se le ve fallar: (a) cache que nunca se refresca → caen los 3 de refresco y sólo
+  esos; (b) cache que ignora `showDebtsInSingleCurrency` → cae sólo el de moneda única; (c) cálculo
+  movido **después** del `guard !group.isArchived` → cae sólo `survivesArchivingDuringSession`.
+- **Simulador** (Yala Dev, iPhone 17 Pro, seed `grupos`): la lista pinta las dos tarjetas con sus
+  deudas y el resumen cuadra (190 + 140 = 330). Teclear «Cusco» filtra y la tarjeta conserva su
+  cifra. **Y se refutó una nota caducada**: `PanelWidgetsGrid.swift:26` prohíbe `LazyVStack` dentro
+  del `ScrollView` de un tab («crashes on tab switch», commit `9460b726` del **2026-04-16**).
+  Grupos → Panel → Más → Grupos con el contenedor perezoso montado **no crashea**; la diferencia
+  medida es que los widgets del Panel llevan Swift Charts y las tarjetas de Grupos no.
+- **Sin device-QA de dos aparatos**: el criterio del coalescing sigue sin verificar.
+
 
 ## Léeme primero (2026-09-02)
 
@@ -230,8 +322,9 @@ corrí `qa/validate-coverage.sh`)*.
       _(re-medido: `GroupsContainerView.swift:186` + `:206`; `GroupDetailView.swift:211` + `:214`)_
       **⚠️ La razón que lo difirió era una propiedad de `SplitSyncManager`, que ya no existe, y el
       transporte de hoy sí bumpea `dataVersion` — hay que volver a decidirlo, no heredarlo.**
-- [ ] **La lista de grupos no rehace las deudas de las filas que no se ven, ni una vez por tecla
-      del buscador.** _(NUEVO 2026-09-02 — ver «Lo que sigue vivo» punto 1)_
+- [x] **La lista de grupos no rehace las deudas de las filas que no se ven, ni una vez por tecla
+      del buscador.** _(2026-09-06 — `debtsByGroup` precalculado en `recalculate()` + `LazyVStack`
+      alrededor de las tarjetas. Medido: 29,74 → 0,014 ms por tecla con 30 grupos.)_
 - [ ] **El `.onChange(of: dataVersion)` de `GroupSettingsView` (`:103-105`) tiene freno y
       cancelación, sin retrasar el valor que lee el diálogo de archivar/borrar.**
       _(NUEVO 2026-09-02 — ver punto 2)_

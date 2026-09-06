@@ -94,14 +94,28 @@ struct GroupsContainerView: View {
                                 )
                             }
 
-                            // Group cards
-                            ForEach(viewModel.filteredGroups, id: \.id) { group in
-                                groupCardRow(group: group)
-                            }
+                            // LazyVStack sólo alrededor de las TARJETAS: con VStack, SwiftUI
+                            // construye la de todos los grupos aunque no quepan en pantalla, y las
+                            // rehace enteras en cada invalidación del body — una por tecla del
+                            // buscador, porque `searchText` vive en el propio ViewModel.
+                            //
+                            // El resumen y el nudge se quedan FUERA a propósito, no por descuido:
+                            // `GroupNudgeBanner` se auto-descarta con un `.task` de 10 s cuyo
+                            // `catch` de cancelación es un noop (GroupNudgeBanner.swift:82-89).
+                            // Dentro del contenedor perezoso, bajar por la lista antes de que
+                            // venza descarta la fila, cancela ese task y `recordDismissed(...,
+                            // autoDismissed: true)` no llega a correr: el aviso deja de retirarse
+                            // solo y puede reaparecer. Eager, su reloj sigue siendo un reloj.
+                            LazyVStack(spacing: DS.Spacing.lg) {
+                                // Group cards
+                                ForEach(viewModel.filteredGroups, id: \.id) { group in
+                                    groupCardRow(group: group)
+                                }
 
-                            // Archived groups
-                            if !viewModel.archivedGroups.isEmpty {
-                                archivedGroupsSection
+                                // Archived groups
+                                if !viewModel.archivedGroups.isEmpty {
+                                    archivedGroupsSection
+                                }
                             }
                         }
                         .padding(.top, DS.Spacing.sm)
