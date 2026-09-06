@@ -23,3 +23,34 @@ marcó como inferido. No bloquea: el trabajo suele seguir siendo el mismo (aquí
 pero cambia cuál es el caso protagonista y qué hay que arreglar de verdad. Y díselo — no como
 corrección, sino como el dato que reordena el ticket. Ver [[review-adversarial-caza-lo-mio]] y
 [[mis-mediciones-fallan-por-el-filtro]].
+
+## Segundo caso, el mismo día, y más fuerte: el defecto YA estaba arreglado
+
+El encargo de `groups-pending-member-can-open-group` (2026-09-06) pedía «cerrar la puerta en el
+cliente: la tarjeta del grupo no abre el detalle mientras el miembro esté en `pendingApproval`».
+Medido antes de escribir código: **la tarjeta ya no lo abría**. `GroupCardView.handleTap` tenía un
+`case .pendingApproval` que no navegaba desde `#26`, y el doc del helper lo decía con todas las
+letras.
+
+Lo que fallaba en el reporte de campo (TestFlight build 12, 28-ago) era la **identidad** que
+alimentaba ese gate: `currentMemberStatus` resolvía por el flag `isCurrentUser`, que
+`GroupsSyncClient.applyMember` **nunca enciende**, así que a quien llegaba por el pull le devolvía
+`nil`, el modo caía en `.active` y la tarjeta abría. Y eso lo arregló **otro ticket**, `5ca4dd47`
+(4-sep), ya en `2.1`. Dos comandos lo zanjaron: `git log -L '/func currentMemberStatus/,+4:<f>'` y
+`git branch -a --contains`.
+
+**Why:** el encargo describía el síntoma de un build de hace nueve días como si fuera el estado de
+hoy. En un repo donde entran varios PR al día, **un reporte de campo caduca**, y el trabajo que
+describe puede haberlo hecho ya un vecino sin saberlo. Si hubiera «cerrado la puerta» sin medir,
+habría escrito un gate encima de otro y declarado arreglado algo que ya lo estaba — sin tocar
+ninguna de las tres cosas que sí seguían rotas.
+
+**How to apply:**
+- Cuando el encargo venga de un **reporte de device con fecha y build**, lo primero es preguntarse
+  «¿sigue vivo en `2.1`?». `git log -L` sobre la función sospechosa y `git branch --contains` sobre
+  el commit que salga cuestan un minuto y contestan.
+- **Que la premisa sea falsa casi nunca cancela el trabajo**: aquí quedaban tres cosas reales (el
+  tap era un muro mudo, había dos puertas más sin gate, y el copy prometía lo que la decisión
+  eliminaba). Lo que cambia es **cuál es el trabajo**, no si lo hay.
+- Y díselo a Jürgen en esos términos: «el bug que reportaste ya no se reproduce, lo cerró X; lo que
+  encontré abierto es esto otro». Ver [[mis-mediciones-fallan-por-el-filtro]].
