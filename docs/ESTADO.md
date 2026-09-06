@@ -5,52 +5,53 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-06 (Lima)
 
-**Rama** `2.1` · HEAD `8ad32fd3` — la cola autónoma ya no tiene ningún ticket parado por una decisión
-de Jürgen; el saldo de Distribución cuadra con el Panel; buscar un grupo no se atasca. TestFlight
+**Rama** `2.1` · HEAD `fd33894b` — el dueño de un grupo con deuda ya puede salir de él. TestFlight
 build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.** `yala-app.pe` sirve la web nueva.
 
 ## Esta sesión, en una línea
 
-**Diecinueve decisiones de producto de Jürgen, escritas en sus tickets** (PR #79, solo docs). El
-encargo traía tres (el hero de Estadísticas, la puerta del miembro pendiente, el kill-switch de la
-re-entrada) y dos extra. Después preguntó si **ya no quedaba ninguna**: **leer los 94 tickets vivos
-enteros** —cuatro lectores, citas re-comprobadas con grep— destapó **13 más**, seis frenando bugs, y
-la mitad escondidas en `qa/` como residuales «decisión aparte» sin ticket. Las contestó todas; tomó
-la recomendada en las 19 porque cada una se apoyaba en una decisión suya anterior.
+**«Transferir y salir»** (PR #80). El dueño de un grupo con saldos pendientes estaba encerrado:
+«Salir» no se le ofrece por ser dueño y «Eliminar» está en gris por la deuda — aunque sea **entre
+terceros**, con un aviso que le pedía liquidar lo ajeno. Ahora, si queda otro miembro elegible, cede
+el grupo y sale; el grupo sigue vivo con sus saldos y **se le dice a quién va antes de confirmar**.
 
-Lo que cambia para el usuario cuando se implementen, en una línea cada una: el número grande de
-Estadísticas dice qué es; el invitado pendiente no entra a un grupo vacío; bajo el kill nadie lee
-«no encontramos tus datos»; volver a la nube no pide reiniciar; el dueño con deuda puede transferir el
-grupo y salir; el Panel respeta dos cuentas filtradas; un movimiento sin categoría cuenta por su
-signo; un grupo archivado no acepta nuevos; el recordatorio de deuda le llega al deudor, suave.
-
-**Tres decisiones sobre tickets de `qa/` generaban trabajo nuevo y salen a ticket propio**:
-`groups-owner-transfer-and-leave` (high), `groups-archived-group-rejects-join`,
-`budget-days-left-counts-today`. Lección en la memoria de Frank: «¿queda alguna?» se responde
-leyendo, no con grep; un residual «decisión aparte» en `qa/` es una decisión huérfana.
+Dos cosas que el ticket da por sabidas y no lo eran. **El AC («elige a quién») partía de una premisa
+falsa**: medido contra producción, `transfer_group_ownership` toma **un solo parámetro** y elige él al
+heredero, así que no hay selector sin tocar el servidor — justo lo que el motivo de la decisión
+descartaba. Y **la review adversarial (3 lentes) cazó cinco defectos, todos míos**; el peor lo
+introducía el propio cambio: tras transferir, el ex-dueño **sigue siendo admin server-side**, así que
+podía pulsar «Eliminar» y **el borrado aterrizaba**, llevándose el grupo del dueño recién coronado.
 
 ## Te espera a ti
 
-1. **Publicar la app.** Los avisos de Grupos están completos en servidor y en los dos entornos; falta
+1. **Una decisión nueva** — `groups-owner-debt-no-heir-dead-end` (high). El dueño **con deuda y SIN
+   heredero** (único activo, canal CloudKit, o co-miembros sin cuenta) sigue sin salida: la decisión
+   del 6-sep no cubre esa celda porque descartó «eliminar con deuda». Cuatro opciones en el ticket;
+   la más prometedora es permitir eliminar cuando la deuda es solo con miembros que ya se fueron.
+2. **Publicar la app.** Los avisos de Grupos están completos en servidor y en los dos entornos; falta
    el cliente iOS. Llevaría además el saldo de Distribución, la identidad del recién llegado, los
    predeterminados del Panel, el cierre del detalle, la hoja de «Unirme» y el freno de la lista.
-2. **La tanda de QA: 32 tickets en 4 montajes.** Guion en **`qa/guion-tanda.md`**, sin tocar. El
+3. **La tanda de QA: 33 tickets en 4 montajes.** Guion en **`qa/guion-tanda.md`**, sin tocar. El
    montaje de dos teléfonos cubre TRES de golpe con una precondición frágil: **B se une por enlace y
-   NO relanza la app** antes de que A cree el gasto. `groups-leave-rpc-error-10` necesita el suyo.
-   **Device-QA multi-moneda del KPI de Balance** (`distribution-balance-kpi-skips-fx`): cuatro pasos
-   en el ticket; sin números de aparato no hay PASS.
-3. **Dos decisiones de la web**, las únicas que quedan: el texto legal de Grupos (dice «vía iCloud» y
-   el backend propio está al 100 % en prod) y si Vercel despliega al mergear (`1.0` vs `2.1`; de esa
-   depende `invite-aasa-requires-s-param`). Y ratificar o revertir el botón «Más tarde» del invitado
-   (decidido el 5-sep; revertirlo es un commit).
+   NO relanza la app** antes de que A cree el gasto. `groups-leave-rpc-error-10` necesita el suyo, y
+   ahora `groups-owner-transfer-and-leave` también (dos teléfonos).
+4. **Dos decisiones de la web**, sin cambios: el texto legal de Grupos (dice «vía iCloud» y el backend
+   propio está al 100 % en prod) y si Vercel despliega al mergear (`1.0` vs `2.1`; de esa depende
+   `invite-aasa-requires-s-param`). Y ratificar o revertir el botón «Más tarde» del invitado.
 
 ## Abiertos
 
-**`in-progress` vacío.** Todo lo vivo espera la tanda de QA o hardware (los 2 de `blocked`:
-`apppreferences-rewritten-on-launch`, `groups-join-intent-reconciler`); **ya nada espera una
-decisión**. Lo siguiente que la cola puede lanzar sin preguntar, por peso: `groups-owner-transfer-and-leave`
-y `groups-pending-member-can-open-group` (high, Grupos, review adversarial), después
-`panel-colapsa-la-seleccion-de-cuentas-a-la-primera` y `hero-estadisticas-stock-vs-flujo-entre-pestanas`.
+**`in-progress` vacío.** Lo vivo espera la tanda de QA, hardware (los 2 de `blocked`) o **una
+decisión tuya** (1, el de arriba). Lo siguiente que la cola puede lanzar sin preguntar, por peso:
+`groups-pending-member-can-open-group` (high, Grupos, review adversarial), después
+`panel-colapsa-la-seleccion-de-cuentas-a-la-primera` y
+`hero-estadisticas-stock-vs-flujo-entre-pestanas`.
+
+**El gate tiene ruido: `unit-suite-nondeterministic-reds` (high).** La suite completa da rojos
+**distintos en cada corrida** en local y **pasa entera en CI** (6100 en 622 suites, log leído, no el
+semáforo). Medido con el árbol base: el limpio falla con 3 y el modificado con 1, disjuntos; los cinco
+pasan aislados. Mientras siga así, cada sesión paga tres corridas para saber si un rojo es suyo — y el
+riesgo caro es el inverso: dar por ruido un rojo real. Sospecha principal: **disco/carga de la Mac**.
 
 **Al retomar cualquiera: las coordenadas de los tickets están sistemáticamente caducadas.** Greppea,
 no abras la línea citada. Y la premisa del ticket también caduca.
@@ -63,7 +64,7 @@ sigue sin `ok_`. **Cero `ok_` inventado.**
 
 ## Board
 
-**118 tickets · backlog 59 · in-progress 0 · qa 36 · blocked 2 · done 16 · discarded 5.**
+**122 tickets · backlog 62 · in-progress 0 · qa 37 · blocked 2 · done 16 · discarded 5.**
 `qa` significa «esperando la tanda», no «cerrado». Índice = disco, verificado con control positivo
 (ids con mayúsculas incluidos). **Todo cierre incluye `docs/TICKETS.md`**, y lo que salga de camino
-lleva ticket propio.
+lleva ticket propio — esta sesión sacó cuatro.
