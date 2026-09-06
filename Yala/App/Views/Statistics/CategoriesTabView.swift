@@ -97,6 +97,48 @@ struct CategoriesTabView: View {
     /// Se actualiza en `calculateData()` para evitar O(N) por render del hero.
     @State private var totalAmount: Double = 0
 
+    /// Saldo del período con la MISMA semántica que el KPI de Balance del Panel
+    /// (stock vivo al TC actual, o saldo histórico si el período está cerrado).
+    /// Solo alimenta el hero cuando `isBalanceMode`; en Ingresos/Gastos el hero
+    /// sigue mostrando el flujo del período (`totalAmount`).
+    ///
+    /// **Opcional a propósito.** `nil` = todavía no se ha calculado, y hay que
+    /// distinguirlo de un saldo de 0: la vista se destruye al cambiar de pestaña
+    /// (`DetailContainerView` es un `switch` en un ViewBuilder), así que el body
+    /// se evalúa una vez antes de `onAppear`. Con un `Double` a 0 el hero pintaba
+    /// «0» y luego rodaba los dígitos hasta el valor real por el
+    /// `contentTransition(.numericText())`.
+    @State private var balanceKPI: BalanceKPICalculator.Result?
+
+    /// Métrica Balance, derivada con la MISMA regla que el Panel
+    /// (`PanelViewModel.enforceTrendLock`): sin chips de naturaleza y sin el modo
+    /// "solo gastos".
+    ///
+    /// Se deriva aquí en vez de leer `viewModel.selectedMetric` porque esa
+    /// propiedad la refresca `enforceMetricLock`, que corre dentro de
+    /// `calculateTrendData` — detrás del debounce de 150 ms del contenedor. Leerla
+    /// dejaría al hero un frame largo con la métrica anterior.
+    private var isBalanceMode: Bool {
+        guard !sessionState.isExpensesOnlyMode else { return false }
+        // Con una dimensión del pie filtrada, el número dejaría de ser un saldo:
+        // sería "el neto histórico de las transacciones de esta categoría", bajo una
+        // etiqueta que dice "Este mes". `enforceMetricLock` del propio
+        // `StatisticsViewModel` ya declara esa condición para decidir la métrica de
+        // esta pantalla (`!hasCategoryFilters`), así que aquí se reusa en vez de
+        // inventar otra. Con filtro dimensional el hero vuelve al flujo del período,
+        // que es lo que el gráfico de debajo está enseñando.
+        guard !viewModel.hasCategoryFilters else { return false }
+        // Ningún chip, o los DOS. El Panel trata la selección mixta con
+        // `else { return }` — conserva la métrica, que sin intervención del usuario
+        // es su default `.balance` (`PanelViewModel.swift:633`, `:1173`). Y tiene
+        // sentido: marcar ingresos Y gastos no filtra nada, igual que no marcar
+        // ninguno. Sin esta rama el hero volvía al flujo justo ahí, que es el bug
+        // que este cambio venía a cerrar. Los dos chips son alcanzables desde el
+        // sheet de filtros, que hace `insert` sin limpiar el set.
+        let natures = viewModel.selectedTransactionNatures
+        return natures.isEmpty || natures.count == TransactionNature.allCases.count
+    }
+
     /// Effective category ID for subcategory filtering (uses first selected category or derives parent from subcategory)
     private var effectiveCategoryID: PersistentIdentifier? {
         if let catID = viewModel.selectedCategories.first {
@@ -197,6 +239,15 @@ struct CategoriesTabView: View {
                 calculateData()
             }
             .onChange(of: sessionState.customDateRange) { calculateData() }
+            // `isBalanceMode` cuelga de este flag, así que sin este observer el hero
+            // podía quedarse con un saldo rancio (o sin calcular) al apagar "solo
+            // gastos" desde el sheet de Ajustes, que se presenta ENCIMA de esta
+            // pestaña y la deja montada. El `didSet` de SessionState limpia
+            // `selectedTransactionNatures` y suele salvarlo de rebote, pero no
+            // cuando ya estaba vacío — que es justo el arranque de un usuario
+            // "solo gastos". La regla de `swiftui-ds.md` pide que todo camino de
+            // mutación llegue al recálculo, no que llegue de rebote.
+            .onChange(of: sessionState.isExpensesOnlyMode) { calculateData() }
             .onChange(of: sessionState.comparisonMode) {
                 // Recalcula el período actual para pasar las fuentes al recorte WTD/MTD.
                 // El call site anterior (`calculatePreviousPeriodTotals()` sin args) quedó
@@ -279,7 +330,16 @@ struct CategoriesTabView: View {
 
     @ViewBuilder
     private var heroSummary: some View {
+        // El subtítulo describe el pie (categorías/subcategorías/etiquetas), así
+        // que sigue atado al flujo del período aunque el monto pase a ser saldo.
         let hasRecords = totalAmount > 0
+        // En Balance NO vale `> 0`: un saldo negativo o de cero es un dato válido y
+        // condicionarlo escondería el hero justo cuando el usuario está en rojo. Pero
+        // tampoco vale "siempre": sin movimientos en el período el KPI es 0 por
+        // construcción —igual en el Panel— y pintarlo le diría "0" a alguien que
+        // tiene saldo, solo por abrir un mes vacío. Se muestra cuando hay algo que
+        // enseñar, que es lo que el Panel decide con su propio `hasNoTrendData`.
+        let showsAmount = isBalanceMode ? (balanceKPI?.hasDataInPeriod ?? false) : hasRecords
 
         VStack(alignment: .center, spacing: DS.Spacing.xs) {
             TrendsPeriodMenu(
@@ -290,9 +350,9 @@ struct CategoriesTabView: View {
             )
             .equatable()
 
-            if hasRecords {
+            if showsAmount {
                 AmountText(
-                    value: totalAmount,
+                    value: isBalanceMode ? (balanceKPI?.value ?? 0) : totalAmount,
                     currencyCode: defaultCurrencyCode,
                     font: DS.Typography.heroAmount, secondaryFont: DS.Typography.heroAmountSecondary
                 )
@@ -1293,6 +1353,24 @@ struct CategoriesTabView: View {
         if newCategorySpending != categorySpending { categorySpending = newCategorySpending }
         let newTotal = newCategorySpending.reduce(0) { $0 + $1.amount }
         if newTotal != totalAmount { totalAmount = newTotal }
+
+        // KPI de Balance: el hero deja de mostrar el gasto del período y pasa a
+        // mostrar el mismo saldo que el Panel. Solo se calcula en modo Balance —
+        // en Ingresos/Gastos el hero sigue siendo flujo y esta pasada sobra.
+        //
+        // Coste medido (5.475 transacciones, 3 años): ~15 ms. NO corre por tecla: el
+        // buscador de esta pantalla escribe en un `@State` local de
+        // `RecordsFiltersView` y solo se vuelca al ViewModel al pulsar "Aplicar".
+        if isBalanceMode {
+            let newBalanceKPI = viewModel.balanceKPI(
+                accounts: accounts,
+                transactions: allTransactions,
+                allTags: allTags,
+                defaultCurrencyCode: defaultCurrencyCode,
+                adjustment: adjustment
+            )
+            if newBalanceKPI != balanceKPI { balanceKPI = newBalanceKPI }
+        }
 
         // Calculate subcategory spending - filter by category if one is selected
         let subcategoryTransactions: [TransactionItem]

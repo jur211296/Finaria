@@ -2275,7 +2275,10 @@
         "Yala/App/ContentView.swift",
         "Yala/App/Tips/ProTourManager.swift",
         "Yala/App/Views/Records/RecordsStandaloneView.swift",
-        "Yala/Services/TrendDataProcessor.swift"
+        "Yala/Services/TrendDataProcessor.swift",
+        "Yala/App/Logic/Calculators/BalanceKPICalculator.swift",
+        "Yala/App/ViewModels/StatisticsViewModel.swift",
+        "Yala/App/Logic/Calculators/LiveBalanceCalculator.swift"
       ],
       "scenarioIDs": [
         "F-STA-01",
@@ -2284,9 +2287,9 @@
         "F-STA-05"
       ],
       "classification": "deterministic",
-      "coverage": "xcuitest:YalaUITests/StatisticsNavigationUITests",
+      "coverage": "xcuitest:YalaUITests/StatisticsNavigationUITests | 2026-09-06: el KPI de Distribucion en metrica Balance deja de ser el flujo del periodo y pasa a ser el MISMO numero que el Panel. El bug (device-QA del owner, TF 2.1 build 12, cuenta multi-moneda) NO era que Distribucion se saltara el FX —si convertia—: convertia con el TC del dia de cada TX y sumaba el gasto del periodo (flujo), mientras el Panel mostraba el saldo al TC ACTUAL (stock). Nace `BalanceKPICalculator` como SSOT de ese numero; delega en `LiveBalanceCalculator.liveBalanceOverride` + `TrendDataProcessor.finalBalance` en vez de reimplementar la regla. MEDIDO que el KPI del Panel tiene DOS regimenes y los dos se replican: periodo que cubre hoy -> stock vivo TC actual; periodo cerrado (mes/anho pasado) -> saldo historico al cierre. Devolver siempre el stock habria enseniado el saldo de HOY bajo la etiqueta 'Mes pasado'. Ingresos/Gastos siguen siendo flujo (decision del owner 2026-08-26). El header del pie NO se toca: `CategoriesPieWidget` se comparte con el Panel (PanelWidgetSection.swift:226) y su header es por construccion la suma de sus tajadas. unit:YalaTests/BalanceKPIParityTests (10 tests: paridad Distribucion==Panel en periodo vivo y cerrado, TC actual != snapshot historico, el KPI != flujo de TopSpendingCategoriesCalculator, saldo negativo reportado, arrastre de lo anterior al periodo, y el contrato de que el camino historico NO filtra cuentas por si mismo —`fillBalanceBuckets` recibe `accounts` y no lo usa, el pre-filtrado va aguas arriba en los dos callers). Control positivo hecho: mutante `liveBalanceOverride: nil` pone 4 tests en rojo (4000 vs 4500). Limite conocido, NO corregido: con >=2 cuentas seleccionadas el numero puede no cuadrar con el Panel, que colapsa la seleccion a `selectedAccountIDs.first`; asimetria preexistente del Panel y 'no tocar Panel' es decision del owner. DEVICE-QA MULTI-MONEDA PENDIENTE (owner): sin numeros de aparato no se declara PASS.",
       "owner": "",
-      "lastVerified": "2026-06-01"
+      "lastVerified": "2026-09-06"
     },
     {
       "area": "stats-records-polish",
