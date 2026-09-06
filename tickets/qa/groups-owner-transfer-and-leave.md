@@ -142,6 +142,19 @@ pueda esconder un heredero real.
 - **`member_key asc` es collation de Postgres; `<` de Swift es orden de escalares.** No se consiguió
   construir un par alcanzable que divergiera (los `member_key` son UUID en minúscula o recordName de
   CloudKit). Anotado, no medido como bug.
+- **Matiz del AC «el elegido es el dueño para todos, tras el pull» — medido, y no se cumple entero
+  en la UI del heredero.** El manifest del canal (`group_capability_manifest.json`) lleva para
+  `split_groups` once columnas y **`owner_user_id` NO es una de ellas** (es server-only,
+  `gateway/src/groups/routes.ts:51-56`). Lo que sí viaja en `group_members` es `role`. ⇒ el heredero:
+  - **gana de verdad los permisos** (server-side es el dueño, y por el pull le llega `role='admin'`,
+    así que puede renombrar, archivar e invitar);
+  - pero su `SplitGroup.isOwner` local **sigue en `false`**, porque el pull no escribe ese flag, así
+    que **«Eliminar grupo» no le aparece** hasta que intente salir y el servidor le conteste
+    `yala_owner_cannot_leave` — ahí `reconcileServerSideOwnership` lo corrige y la opción sale.
+  No es una regresión de este ticket: es el latch de una dirección que el padre ya dejó anotado, y
+  cerrarlo exige llevar el ownership al wire. Se dice aquí porque el AC prometía más de lo que el
+  canal puede dar hoy, y el device-QA lo va a ver.
+
 - **`already: true` no prueba «yo era el dueño y ya no»**: `transfer_group_ownership` filtra por
   `deleted = false` y `leave_group` no. Hoy inalcanzable (ningún camino del cliente emite el tombstone
   de meta), pero el `catch` de un solo caso es frágil si eso cambia.
