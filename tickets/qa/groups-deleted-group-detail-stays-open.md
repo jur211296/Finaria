@@ -1,13 +1,29 @@
 ---
 id: groups-deleted-group-detail-stays-open
-status: backlog
+status: qa
 priority: high
 area: groups
 created: 2026-08-28
-updated: 2026-08-28
+updated: 2026-09-05
 ---
 
 # Tras borrar el grupo, el detalle se queda abierto como si el grupo siguiera existiendo
+
+> [!success] Resuelto (2026-09-05) — rama `encargo/2026-09-05-groups-deleted-group-detail-stays-open`
+> **La pregunta que este ticket dejaba abierta ya está zanjada, y por medición, no por lectura del
+> cableado: es la hipótesis 1.** Reproducido en el simulador con el código pre-fix: al confirmar el
+> borrado, la sheet de Ajustes **sí** se cierra y lo que queda delante es el **detalle en push**, con
+> el título del grupo, sus gastos y su FAB. La hipótesis 2 (que lo que quedara fuese Ajustes) queda
+> descartada, y la 3 (que el `dismiss()` no llegara a correr) también: corrió y cerró su sheet.
+>
+> **El hueco.** `GroupDetailDismissDecision.shouldDismiss` decidía el auto-cierre con cuatro señales
+> y el soft-delete no enciende ninguna: `GroupService.softDelete` no borra la fila, pone
+> `isHiddenForAll`. `isHiddenForAll` pasa a ser el quinto parámetro de esa decisión.
+>
+> **Las otras dos salidas destructivas de la sheet ya cerraban** — medido, y por eso el fallo era solo
+> del borrado: archivar enciende `isArchived` (rama existente) y salir del grupo pasa por
+> `performLocalCleanupAndDelete`, que sí hace `context.delete` y enciende `isDeleted`.
+
 
 ## Reporte del owner (device, 2026-08-28, Lima)
 
@@ -169,22 +185,64 @@ pila»: hoy no hay dato que separe las dos.
 - `groups-reconnect-prune-or-rewire` y `rescue-discarded-groups-pull` — maquinaria de reconexión y
   rescate del pull de grupos. Otro sujeto.
 
-## HOLD
+## Implementación (2026-09-05)
 
-Sin implementación: **cero Swift** en este ticket. `status` sigue `backlog`. No se toca
-`qa/coverage-index.json` (no se toca código bajo `Yala/`). No inventar PASS ni declarar causa. Sin App
-Store, sin tag de release, sin TestFlight. A7 / M5 siguen en HOLD.
+Todo lo de abajo está medido en el árbol de la rama, no heredado de la sección anterior.
+
+- **`Yala/App/Logic/GroupDetailDismissDecision.swift`** — `shouldDismiss` gana el parámetro
+  `isHiddenForAll` y la rama `contextIsNil || isDeleted || isHiddenForAll`. **Sin valor por defecto a
+  propósito**: con default, un callsite futuro que lo olvidara decidiría «no borrado» en silencio; sin
+  él, el compilador lo señala. Hoy el callsite es uno solo.
+- **`Yala/App/Views/Groups/GroupDetailView.swift`** — el `onChange(of: sessionState.dataVersion)` pasa
+  `group.isHiddenForAll`. Una línea; no se tocó el orden dismiss-first ni nada más de la vista.
+- **`YalaTests/GroupDetailDismissDecisionTests.swift`** — los 6 tests existentes migran a la firma
+  nueva y entran 4: el caso del device, el borrado sobre un grupo abierto YA archivado (donde la rama
+  del archivado no cierra y el cierre depende enteramente del flag), el que llega por sync, y un
+  control negativo. 10/10 en verde.
+- **`qa/coverage-index.json`** — `groups-crud-balances-settlements`: entra el glob de
+  `GroupDetailDismissDecision.swift` (antes no caía bajo **ninguno**), nota de cobertura y
+  `lastVerified` a 2026-09-05.
+
+**Lo que NO se tocó**, por alcance: la semántica de `softDelete` en servidor, el diseño de la sheet de
+Ajustes, y el copy — no hay toast ni alert nuevo. El AC de «señal de que ocurrió» se cumple por su
+segunda vía, la que el propio criterio admite: **el cierre lo hace evidente**. El usuario aterriza en
+la lista y el grupo no está. Añadir copy habría pedido 7 idiomas para un caso que la navegación ya
+resuelve.
+
+### Sin equivalente a `wasArchivedOnAppear`, y por qué
+
+Un grupo archivado es un destino legítimo —tiene su sección en la lista—, así que la decisión respeta
+al que entró a propósito. Uno soft-deleted no lo es: **las cuatro puertas al push del detalle**
+(`GroupsContainerView` :398, :450, :499 y el deeplink de `openPendingGroupIfAvailable`) salen de
+`activeGroups`/`filteredGroups`, y ambas filtran `!isHiddenForAll` (`GroupsViewModel` :78, :82). No
+existe el caso «entré a propósito a un grupo oculto». Por eso el fix cubre la transición y no hace
+falta comprobarlo también en `onAppear`.
+
+### Verificación
+
+- **Unit:** 10/10. **Mutante verificado:** quitar `|| isHiddenForAll` pone en rojo exactamente los
+  tres `softDeleted*` y deja los otros siete en verde — el control negativo incluido.
+- **Simulador** (iPhone 17 Pro, seed `grupos-saldado`, grupo «Viaje a Lima», owner, sin deuda):
+  - *Con el fix*: al confirmar, la app aterriza en la **lista de Grupos** y el grupo ya no aparece.
+    Sin tocar Atrás.
+  - *Sin el fix* (mismo recorrido, mutante compilado): el detalle **se queda abierto** con su título y
+    sus gastos. Es el reporte del owner, reproducido.
+- De camino se confirmó el gate de deuda: en «Viaje a Cusco» (deuda viva entre otros dos miembros) el
+  botón de borrar sale deshabilitado con su hint, aunque el balance propio esté a cero.
 
 ## Acceptance Criteria
 
-- [ ] Tras confirmar el borrado del grupo, el usuario **no** se queda delante del grupo borrado: la app
-      lo devuelve a la lista de Grupos sin que tenga que tocar Atrás.
-- [ ] El borrado deja una señal de que ocurrió (hoy el éxito solo hace háptica), o el propio cierre lo
-      hace evidente.
-- [ ] Queda cubierto por test el criterio de cierre del detalle para un grupo soft-deleted, de modo que
-      no dependa de que el usuario navegue a mano.
-- [ ] Antes de tocar código: queda anotado en este ticket **qué pantalla** era la que se quedó abierta
-      (la sheet de Ajustes o el detalle en push). Sin eso, el fix se elige a ciegas.
+- [x] Tras confirmar el borrado del grupo, el usuario **no** se queda delante del grupo borrado: la app
+      lo devuelve a la lista de Grupos sin que tenga que tocar Atrás. — verificado en simulador.
+- [x] El borrado deja una señal de que ocurrió (hoy el éxito solo hace háptica), o el propio cierre lo
+      hace evidente. — por la segunda vía: el cierre. No se añadió copy.
+- [x] Queda cubierto por test el criterio de cierre del detalle para un grupo soft-deleted, de modo que
+      no dependa de que el usuario navegue a mano. — 4 tests nuevos, mutante verificado.
+- [x] Antes de tocar código: queda anotado en este ticket **qué pantalla** era la que se quedó abierta
+      (la sheet de Ajustes o el detalle en push). Sin eso, el fix se elige a ciegas. — **el detalle en
+      push**, reproducido en simulador antes de elegir el fix.
 
-Verificación pendiente: no hay device-QA de un fix, porque no hay fix. Los criterios se comprueban
-cuando se implemente.
+**Queda para device-QA**: repetir en teléfono real, sobre TestFlight, el recorrido del reporte
+original (owner, grupo con gastos y sin deuda). Lo verificado aquí es simulador; el reporte venía de
+device y ahí no hay traza. Vale también entrar al grupo por deeplink/notificación antes de borrar: es
+otra pila de navegación y el simulador solo cubrió la entrada desde la lista.

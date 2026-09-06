@@ -268,6 +268,7 @@ struct GroupDetailView: View {
             if GroupDetailDismissDecision.shouldDismiss(
                 contextIsNil: group.modelContext == nil,
                 isDeleted: group.isDeleted,
+                isHiddenForAll: group.isHiddenForAll,
                 isArchived: group.isArchived,
                 wasArchivedOnAppear: wasArchivedOnAppear
             ) {
