@@ -148,7 +148,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | yala-android | backlog | tickets/backlog/yala-android.md |
 | zone-decisions-still-per-row | backlog | tickets/backlog/zone-decisions-still-per-row.md |
 
-Counts by folder: backlog 49 · in-progress 7 · qa 20 · blocked 2 · done 13 · discarded 5 = 96.
+Counts by folder: backlog 55 · in-progress 0 · qa 36 · blocked 3 · done 16 · discarded 5 = 115. *(Recontados sobre disco el 2026-09-06, junto con el índice de arriba. La línea llevaba cuatro sesiones desviada — decía `= 96` con `in-progress 7` — y el ESTADO lo venía señalando sin recontar.)*
 
 Frank 2026-09-02 (altas): dos hallazgos del QA de hoy entran en `backlog/`, para que no se pierdan
 al cerrar la sesion.
