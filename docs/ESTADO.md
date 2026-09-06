@@ -5,57 +5,45 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-05 (Lima)
 
-**Rama** `2.1` · HEAD `cb74daba` — el enlace de invitación ya no pierde el nombre del grupo, y la visita
-en el móvil de otra persona ya no deja huella en el Yala del dueño.
+**Rama** `2.1` · HEAD `83958dc6` — borrar un grupo ya no te deja mirándolo; el enlace de invitación no
+pierde el nombre del grupo, y la visita en el móvil de otra persona no deja huella en el Yala del dueño.
 TestFlight build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.** `yala-app.pe` sirve la web
 nueva desde el 4-sep.
 
 ## Esta sesión, en una línea
 
-**Herramienta, no producto: alcance en la app, cero.** Un worktree nuevo ya recibe
-`Secrets.xcconfig` enlazado (PR #70) en vez de que cada sesión lo copie a mano antes del primer
-build, y `.planning` deja de aparecer como fichero sin trackear en todas las sesiones lanzadas
-(PR #72): su patrón llevaba barra final, que solo casa con directorios, y lo que crea el launcher
-es un symlink.
+**Borrar un grupo ya no te deja mirándolo** (PR #73). Confirmabas dos veces sobre un aviso que dice
+«esta acción es irreversible» y te quedabas delante del mismo grupo, con sus gastos; había que tocar
+Atrás para comprobar que la app te había hecho caso. El detalle ya sabía cerrarse solo, pero el
+borrado no enciende ninguna de sus señales: no saca la fila del almacén, le pone una marca de oculto.
+Esa marca pasa a ser una señal más, y cubre también el borrado que llega desde otro teléfono.
 
-De camino se cayó una afirmación mía. Escribí, como justificación del cambio, «sin
-`Secrets.xcconfig` el primer build del worktree falla»; al medirlo resultó **falso** — el fichero
-no define ninguna clave desde que se fueron al Worker en junio, y `-showBuildSettings` devuelve 636
-líneas idénticas con y sin él. El enlace se queda por la razón buena: el día que vuelva a haber una
-clave, un worktree sin enlace compilaría **en silencio** sin ella.
-
-## Las sesiones anteriores
-
-`secondary-visitor-writes-owner-domain` pasó a `qa` (PR #66): quien entra de visita en el móvil de
-otra persona ya no marca el onboarding del dueño, ni le borra su permiso de Grupos. Entraron
-además, **sin dejar entrada aquí**, los PR **#68** (volver a Yala deja de parecer una instalación
-nueva) y **#69** (el refresco forzado del invite deja de ser un no-op si hay otro en vuelo).
+**Lo que desatascó el ticket no fue leer el código, fue compilarlo.** Llevaba parado desde el 28-ago
+con un criterio de «antes de tocar código, anota qué pantalla se quedó abierta», y tres hipótesis
+declaradas irresolubles porque del device solo había el relato. Compilar el código **anterior** y
+repetir el recorrido en el simulador reprodujo el fallo exacto y zanjó cuál era. Coste: 30 s de build.
 
 ## Te espera a ti
 
 1. **Publicar la app.** Los dos avisos de Grupos están completos en servidor y en los dos entornos;
-   falta el cliente iOS. Ahora llevaría además el fix de identidad del recién llegado y los
-   predeterminados del Panel.
-2. **La tanda de QA: 27 tickets en 4 montajes.** Guion en **`qa/guion-tanda.md`**, sin tocar. El
-   montaje de dos teléfonos cubre ahora TRES de golpe —`group-joiner-flag-consumers-still-narrow`,
+   falta el cliente iOS. Ahora llevaría además el fix de identidad del recién llegado, los
+   predeterminados del Panel y este cierre del detalle.
+2. **La tanda de QA: 28 tickets en 4 montajes.** Guion en **`qa/guion-tanda.md`**, sin tocar. El
+   montaje de dos teléfonos cubre TRES de golpe —`group-joiner-flag-consumers-still-narrow`,
    `groups-equal-split-shows-not-participating-on-peer` y `rejoin-tap-renotifies-admins`— con una
    precondición frágil: **B se une por enlace y NO relanza la app** antes de que A cree el gasto. Si
-   B relanza, ninguno reproduce. Entra hoy `invite-link-five-causes-one-message`, y su parte visual
-   cabe en el mismo montaje: tapear el enlace **con la app cerrada** y ver el nombre del grupo en la
-   bienvenida.
+   B relanza, ninguno reproduce. `invite-link-five-causes-one-message` cabe en el mismo montaje
+   (tapear el enlace con la app cerrada). Entra hoy `groups-deleted-group-detail-stays-open`: basta
+   borrar un grupo sin deuda siendo owner, y repetirlo entrando por deeplink, que es otra pila.
 3. **Dos decisiones de la web** (§9 del informe): el **texto legal de Grupos** —dice «vía iCloud, no
    por servidores nuestros» y el backend propio está al 100 % en prod— y si Vercel debe desplegar al
    mergear (hoy su rama de producción es `1.0`).
 
 ## Abiertos
 
-Los 2 de `in-progress` esperan **código**, ninguno una decisión tuya:
-
-- **`secondary-guest-exit-lock-and-outbox`** — decidido el 3-sep, **el código aprobado no está
-  escrito**. Alcance real cero hoy (SECONDARY_SESSION al 0 %), pero bloquea el encendido. Su hermano
-  `secondary-visitor-writes-owner-domain` salió a `qa` esta madrugada y ya no está aquí.
-- **`reentry-counts-as-fresh-install`** — parado por falta de tiempo, no por bloqueo.
-- Los **2 de `blocked`** esperan **hardware**.
+**`in-progress` está vacío**: los dos que este documento listaba —`secondary-guest-exit-lock-and-outbox`
+y `reentry-counts-as-fresh-install`— ya salieron a `qa`. Todo lo vivo espera la tanda de QA o hardware
+(los **2 de `blocked`**), no código.
 
 **Al retomar cualquiera: las coordenadas de los tickets están sistemáticamente caducadas.** Greppea,
 no abras la línea citada.
@@ -68,11 +56,20 @@ sigue sin `ok_`. **Cero `ok_` inventado.**
 
 ## Board
 
-108 tickets · backlog 55 · in-progress 2 · qa 28 · blocked 2 · done 16 · discarded 5. Índice cuadrado
-(108 filas = 108 ficheros, verificado contra el disco). `qa` significa «esperando la tanda», no
-«cerrado».
+110 tickets · backlog 55 · in-progress 0 · qa 32 · blocked 2 · done 16 · discarded 5. `qa` significa
+«esperando la tanda», no «cerrado».
 
-**El verde del CI no dice que los XCUITest pasaran:** su paso de UI es *advisory*, así que el job sale
-`success` con 12 fallos dentro. Son 4 tests, **los mismos que ya fallan en `2.1`** sin cambio alguno —
-comparados run a run. Uno tiene causa escrita hoy en `uitest-compara-fechas-sin-fijar-locale`: compara
-una fecha contra un literal en inglés y acusa de un bug que no existe.
+**Tres cifras distintas en tres sitios, medido hoy:** el disco tiene 110; `docs/TICKETS.md` dice `= 96`
+(con `in-progress 7`, que hoy es 0); este documento venía diciendo 108. Y
+**`rojo-heroBuckets-thisWeek-trailing-window` está en disco sin fila** en el índice. Nadie lo ha
+recontado entero — hoy se tocó solo la fila del ticket de la sesión, para no ampliar alcance.
+
+**El verde del CI no dice que los XCUITest pasaran:** su paso de UI es *advisory* y el job sale
+`success` con fallos dentro. Hoy fueron **3**, y son **subconjunto** de los 5 que falla `2.1` sin
+cambio alguno — comparados nombre a nombre contra el run de `cb74daba`, cero regresiones. Dos flaky de
+la base (`BudgetAlertsConfigUITests`, `QuickActionsFavoritesUITests`) hasta pasaron esta vez: el eje es
+el runner frío, no el código. Uno de los tres tiene causa escrita en
+`uitest-compara-fechas-sin-fijar-locale`.
+
+**Y ojo con el `CLAUDE.md` de casa:** dice «El CI de GitHub, apagado». Es **falso** — `qa.yml` está
+activo y corre en cada push. Medido esta sesión.
