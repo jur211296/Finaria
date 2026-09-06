@@ -32,3 +32,18 @@ medido, y que era falsa.
 
 Relacionado: [[mutante-compilado-zanja-hipotesis]] (la mutación prueba que el test vale; la review prueba
 que el test mira donde hay que mirar — no se sustituyen) · [[mis-mediciones-fallan-por-el-filtro]].
+
+**Refuerzo medido el 2026-09-06** (`groups-leave-rpc-error-10`, tres lentes: SwiftData/concurrencia,
+producto/UX, y la mía de patrón). Cazó **seis** defectos míos, y dos hacían el fix **peor que el bug**:
+(1) el reconciliador de ownership se convertía en una cárcel — tras el primer rechazo, el guard local
+cortaba todo intento futuro antes de la red y ningún pull reabre `isOwner`; (2) un `save()` fallido
+dejaba el flag vivo EN MEMORIA, con la UI ya ofreciendo una acción irreversible sobre un dato que no
+estaba en disco. Los otros cuatro: copy circular que mandaba a la pantalla en la que ya estabas, un
+comentario que prometía una reanudación que no ocurre, un docblock cierto para la función y falso como
+efecto, y un doc-comment que mi propia inserción se había comido.
+
+Dos cosas que aprendí del formato: **la lente refuta además de acusar** —me confirmó que NO debía usar
+`saveUnderOutboxAuthor` (habría marcado con autor de eco ediciones ajenas pendientes, que el drain
+descarta) y que el `incrementDataVersion` no ciclaba—, y eso vale tanto como los hallazgos. Y **una
+lente de PRODUCTO encuentra lo que las técnicas no ven**: el callejón del dueño con deuda ajena y el
+copy que apuntaba a una pantalla inalcanzable no los vio ninguna lente de código.
