@@ -36,6 +36,22 @@ passed`; las dos de A dan `19 tests in 2 suites passed` en el árbol limpio.
 ⇒ No es un fallo de código: es **interacción dentro de la corrida** (estado global compartido, orden
 de ejecución, o el reuso per-file de `ModelContainer`).
 
+## El CI, en cambio, pasa ENTERO — y eso acota mucho la búsqueda
+
+Medido el mismo día sobre el mismo commit (`b8ce8ad7`, run `34043616483`, leyendo el LOG del job y no
+su estado, que es `advisory`):
+
+    ✔ Test run with 6100 tests in 622 suites passed after 258.926 seconds.
+    ✔ Test run with 94 tests in 7 suites passed after 1.516 seconds.
+
+Cero marcas `✘` en 110 402 líneas. ⇒ **el mismo código, en un runner limpio, no reproduce ninguno de
+los cinco rojos.** Lo que cambia entre los dos entornos no es el código: es la máquina. En local el
+disco estuvo entre 20 y 5,9 GB (umbral del repo: 25) y había 23 sesiones abiertas, con el sistema
+matando procesos en background por falta de memoria.
+
+⇒ La hipótesis 2 (**disco/carga**) sube al primer puesto y la 3 (orden/estado global) baja: un
+problema de orden se reproduciría también en CI, donde las suites corren igual de serializadas.
+
 ## La pista más fuerte: son casi todos SOURCE-SCANS
 
 Cuatro de los cinco (`CloudSyncWiredEntities`, `OwnerKeyValueWiring`, `AttestWiring`,
