@@ -145,10 +145,46 @@ Poner el stock vivo incondicional —la lectura literal de «igualar Balance a s
   deriva **en la vista** con la regla del Panel (`enforceTrendLock`) en vez de leer
   `viewModel.selectedMetric`, porque esa propiedad solo se refresca en el camino de Tendencias
   (`enforceMetricLock`, `StatisticsViewModel.swift:44`) y en esta pestaña llegaría rancia.
-- **Un defecto que introducía el propio cambio, corregido antes de salir:** el hero se mostraba solo
-  si `totalAmount > 0`. Con el saldo ahí, un saldo **negativo o cero escondía el hero entero** —
-  justo cuando el usuario más quiere verlo. Ahora en modo Balance el monto se muestra siempre; el
-  subtítulo dimensional sigue atado al flujo, porque describe el gráfico de tarta.
+### Lo que la review adversarial cazó de mi propio cambio
+
+Tres lentes independientes con refutación por hallazgo. **Seis defectos que yo introducía**, ninguno
+visible en mis tests en verde:
+
+1. El hero se mostraba solo si `totalAmount > 0`. Con el saldo ahí, un **saldo negativo o cero
+   escondía el hero entero** — justo cuando el usuario más quiere verlo.
+2. **Sin movimientos en el período el hero decía «0»** a alguien con saldo, solo por abrir un mes
+   vacío. El 0 del Panel es ambiguo (vale igual «no hay datos» que «el saldo es cero»); al Panel no
+   le estorba porque oculta el KPI, pero aquí había que distinguirlo → `Result.hasDataInPeriod`.
+3. El hero pintaba **«0» y rodaba los dígitos** antes del primer cálculo: la vista se destruye al
+   cambiar de pestaña, así que el body corre antes del `onAppear` → `@State` opcional.
+4. **Apagar «solo gastos» no recalculaba.** `isBalanceMode` cuelga de ese flag y no tenía observador;
+   un `didSet` de `SessionState` lo salvaba de rebote, pero **no** cuando los chips ya estaban
+   vacíos — que es el arranque de un usuario «solo gastos». Es la contrapartida que
+   `.claude/rules/swiftui-ds.md` manda comprobar al precalcular.
+5. **Con los DOS chips marcados volvía al flujo** — el bug de origen, en la rama que no había
+   cubierto. El Panel conserva `.balance` ahí (`else { return }`), y tiene sentido: marcar ingresos
+   y gastos no filtra nada, igual que no marcar ninguno.
+6. El **`adjustment` de gastos de grupo no viajaba** al processor. El Panel sí lo pasa, y su
+   `guard !isSuppressed` corre antes de fijar min/max, o sea que afecta al último bucket del saldo
+   en períodos cerrados.
+
+Y uno de diseño, corregido con la regla que la propia pantalla ya declara: con un **filtro
+dimensional** activo (categoría/subcategoría/necesidad) el hero habría mostrado «el neto histórico
+de esa categoría» bajo una etiqueta que dice «Este mes». `enforceMetricLock` ya usa
+`!hasCategoryFilters` para decidir la métrica de esta pantalla, así que se reusa: con filtro
+dimensional el hero vuelve al flujo, que es lo que el gráfico de debajo enseña.
+
+### Rendimiento, medido
+
+El processor construía la curva entera **y la descartaba** — `finalBalance` sale del anchor. Con
+5.475 movimientos (3 años): «Este mes» 21,1 → **14,9 ms**; «Todo» 42,8 → **14,8 ms**. El atajo es
+una condición duplicada, así que la suite **compara atajo contra cálculo completo en los 8
+períodos** más los bordes.
+
+Una premisa mía que resultó **falsa** y estaba escrita en un comentario: creí que esto corría por
+tecla del buscador. No — el campo de esta pantalla es un `@State` local de `RecordsFiltersView` que
+solo se vuelca al ViewModel al pulsar «Aplicar» (`:41`, `:511`, `:685`). Dos de las tres lentes se
+contradijeron en esto y hubo que medirlo.
 
 ### Lo que NO se tocó, y por qué
 
@@ -161,7 +197,7 @@ Poner el stock vivo incondicional —la lectura literal de «igualar Balance a s
 
 ### Verificación
 
-- `unit:YalaTests/BalanceKPIParityTests` — **10 tests, todos verdes.** Cubren la paridad
+- `unit:YalaTests/BalanceKPIParityTests` — **16 tests, todos verdes.** Cubren la paridad
   Distribución↔Panel en período vivo y cerrado, que el TC actual ≠ el snapshot histórico, que el KPI
   no es el flujo de `TopSpendingCategoriesCalculator`, el saldo negativo, el arrastre de lo anterior
   al período, y el contrato de que el camino histórico no filtra cuentas por sí mismo.
@@ -185,6 +221,10 @@ No se declara PASS: no hay números de aparato. Lo que hay que mirar, con cuenta
 4. Chips **Ingresos** y **Gastos** en Distribución: el hero debe seguir siendo el flujo del período.
 
 ### 2. Una decisión de producto que este cambio destapa
+
+`TrendsTabView.swift:1193-1203` documenta **explícitamente** que el hero de Estadísticas usa el
+agregado del período *«para coherencia cross-tab»*. Este cambio rompe esa regla en una de las cuatro
+pestañas.
 
 En Estadísticas, «Balance» ahora significa **dos cosas distintas según la pestaña**:
 
