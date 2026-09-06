@@ -54,6 +54,60 @@ struct GroupSettingsView: View {
     @State private var showDeleteConfirm: Bool = false
     @State private var isDeleting: Bool = false
 
+    // Transferir y salir (owner con co-members en canal backend).
+    /// Cache de `GroupService.ownerExitOffer`, recalculado en el MISMO sitio que `hasOutstandingDebt`
+    /// (del que depende). `nil` hasta el primer `.onAppear` → el body cae al `fallbackOffer`, que es
+    /// byte-a-byte lo que esta pantalla hacía antes de existir la transferencia.
+    @State private var ownerExitOffer: GroupOwnerExitLogic.Offer?
+    /// A quién iría el grupo. Se NOMBRA en la confirmación: el servidor elige heredero por su cuenta
+    /// y el usuario tiene derecho a saber quién antes de confirmar algo irreversible para él.
+    @State private var designatedHeirName: String?
+    @State private var showTransferConfirm = false
+    @State private var isTransferring = false
+    /// El servidor ya dijo `no_eligible_owner` en esta sesión. Apaga la oferta hasta que llegue dato
+    /// nuevo: los conteos locales no cambian con ese rechazo, así que sin esto la pantalla vuelve a
+    /// ofrecer la transferencia y a nombrar al mismo heredero fantasma, en bucle.
+    @State private var transferRefusedByServer = false
+
+
+    // MARK: - Qué salida se ofrece
+
+    /// El offer cacheado, o —antes del primer cálculo— exactamente lo que esta pantalla ofrecía
+    /// hasta ahora. El fallback NO es defensivo por costumbre: `ownerExitOffer` necesita fetches de
+    /// SwiftData y se calcula en `.onAppear`, así que hay un primer render sin él. Sin este camino,
+    /// ese render escondería «Salir» y «Eliminar» a todo el mundo durante un frame.
+    private var currentOffer: GroupOwnerExitLogic.Offer {
+        ownerExitOffer ?? GroupOwnerExitLogic.Offer(
+            showsLeave: !group.isOwner,
+            showsTransferAndLeave: false,
+            showsDelete: group.isOwner,
+            deleteEnabled: !hasOutstandingDebt,
+            deleteHint: hasOutstandingDebt ? .debtNoTransferAvailable : nil)
+    }
+
+    /// Mensaje de la confirmación de «Transferir y salir»: quién hereda, y —si el usuario tiene saldo
+    /// propio— el aviso de que sale con él.
+    ///
+    /// El aviso va como PÁRRAFO aparte y no como frase compuesta: son dos hechos independientes y
+    /// concatenarlos dentro de una sola clave obligaría a cuatro variantes (con/sin nombre ×
+    /// con/sin deuda) en dieciséis idiomas.
+    ///
+    /// Que exista es lo que iguala esta salida con las otras dos: «Salir del grupo» avisa con
+    /// `leaveGroupWithDebtWarning` y «Archivar» con `archiveWithDebtWarning`. Ésta era la única que
+    /// callaba, y encima es la que borra el histórico local del grupo al salir — el usuario perdía
+    /// de vista quién le debía sin que nadie se lo hubiera dicho.
+    private var transferConfirmMessage: String {
+        // La llamada va explícita y no como referencia a función (`.map(L10n…transferAndLeaveConfirm)`):
+        // pasarla como valor la saca del contexto `@MainActor` y el compilador avisa.
+        let base: String
+        if let name = designatedHeirName {
+            base = L10n.Groups.Settings.transferAndLeaveConfirm(name)
+        } else {
+            base = L10n.Groups.Settings.transferAndLeaveConfirmUnknownHeir
+        }
+        guard hasOutstandingBalance else { return base }
+        return base + "\n\n" + L10n.Groups.Settings.transferAndLeaveDebtWarning
+    }
 
     // MARK: - Body
 
@@ -76,7 +130,7 @@ struct GroupSettingsView: View {
                     }
 
                     // Leave group (non-owner)
-                    if !group.isOwner {
+                    if currentOffer.showsLeave {
                         leaveGroupSection
                     }
 
@@ -85,8 +139,15 @@ struct GroupSettingsView: View {
                         dangerZoneSection
                     }
 
+                    // Transferir y salir — la salida del DUEÑO. Va antes de «Eliminar» a propósito:
+                    // es la acción reversible para el grupo (sigue vivo, con sus saldos), y el hint
+                    // del borrado bloqueado apunta aquí arriba.
+                    if currentOffer.showsTransferAndLeave {
+                        transferAndLeaveSection
+                    }
+
                     // FU-02: soft-delete (owner-only).
-                    if group.isOwner {
+                    if currentOffer.showsDelete {
                         deleteGroupSection
                     }
 
@@ -99,9 +160,12 @@ struct GroupSettingsView: View {
             .scrollContentBackground(.hidden)
             .yalaScreenBackground(.subtle)
             .onDisappear { saveIdentity() }
-            .onAppear { recomputeOutstandingDebt() }
+            .onAppear { recomputeOwnerExit() }
             .onChange(of: sessionState.dataVersion) { _, _ in
-                recomputeOutstandingDebt()
+                // Llegó dato nuevo: el rechazo del servidor deja de ser la información más fresca
+                // que tenemos, así que la oferta puede volver a evaluarse con los conteos de ahora.
+                transferRefusedByServer = false
+                recomputeOwnerExit()
             }
             .navigationTitle(L10n.Groups.Settings.title)
             .navigationBarTitleDisplayMode(.inline)
@@ -168,6 +232,21 @@ struct GroupSettingsView: View {
                 Button(L10n.Common.cancel, role: .cancel) {}
             } message: {
                 Text(L10n.Groups.Settings.deleteGroupFinalConfirm)
+            }
+            .confirmationDialog(
+                L10n.Groups.Settings.transferAndLeave,
+                isPresented: $showTransferConfirm,
+                titleVisibility: .visible
+            ) {
+                Button(L10n.Groups.Settings.transferAndLeave, role: .destructive) {
+                    Task { await transferAndLeave() }
+                }
+                Button(L10n.Common.cancel, role: .cancel) {}
+            } message: {
+                // El nombre del heredero es el punto del diálogo. Si por lo que sea no se pudo
+                // resolver, se dice el hecho sin nombre en vez de callarlo: nombrar a quien no toca
+                // sería peor que no nombrar.
+                Text(transferConfirmMessage)
             }
         }
     }
@@ -537,6 +616,75 @@ struct GroupSettingsView: View {
         .solidCard(radius: DS.Radius.card)
     }
 
+    // MARK: - Transferir y salir (owner con heredero, canal backend)
+
+    private var transferAndLeaveSection: some View {
+        VStack(spacing: DS.Spacing.xs) {
+            Button {
+                // Refresca antes de abrir el diálogo — simétrico con `deleteGroupSection` y
+                // `toggleArchive`. Aquí importa doble: si el sync trajo la salida del último
+                // co-member, el heredero que íbamos a nombrar ya no existe.
+                recomputeOwnerExit()
+                guard currentOffer.showsTransferAndLeave else { return }
+                showTransferConfirm = true
+            } label: {
+                HStack {
+                    Image(systemName: "person.crop.circle.badge.checkmark")
+                        .foregroundStyle(DS.Semantic.errorForeground)
+                    Text(L10n.Groups.Settings.transferAndLeave)
+                        .font(DS.Typography.body)
+                        .foregroundStyle(DS.Semantic.errorForeground)
+                    Spacer()
+                    if isTransferring {
+                        ProgressView()
+                    }
+                }
+                .padding(.horizontal, DS.FormRow.paddingH)
+                .padding(.vertical, DS.FormRow.paddingV)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(isTransferring || isDeleting)
+
+            Text(L10n.Groups.Settings.transferAndLeaveHint)
+                .font(DS.Typography.caption)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, DS.FormRow.paddingH)
+                .padding(.bottom, DS.FormRow.paddingV)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .solidCard(radius: DS.Radius.card)
+    }
+
+    private func transferAndLeave() async {
+        guard !isTransferring else { return }
+        isTransferring = true
+        defer { isTransferring = false }
+
+        do {
+            switch try await GroupService.shared.transferOwnershipThenLeave(group) {
+            case .left:
+                DS.Haptic.success()
+                dismiss()
+            case .needsDecision:
+                // El servidor no encontró heredero (el último co-member elegible se fue entre que
+                // pintamos el botón y el usuario confirmó). NO es un error del usuario ni del canal:
+                // es un cambio de estado, y el copy lo dice tal cual. La pantalla se queda abierta y
+                // se recalcula, así que el botón desaparece solo.
+                DS.Haptic.warning()
+                actionErrorMessage = L10n.Groups.Errors.transferNoHeir
+                showActionError = true
+                transferRefusedByServer = true
+                recomputeOwnerExit()
+            }
+        } catch {
+            DS.Haptic.warning()
+            // Mismo contrato que `leaveGroup()`: nunca un número crudo ni una dev-string.
+            actionErrorMessage = GroupLeaveErrorLogic.classify(error).localizedMessage
+            showActionError = true
+        }
+    }
+
     // MARK: - FU-02 Soft-delete (owner-only)
 
     private var deleteGroupSection: some View {
@@ -545,8 +693,8 @@ struct GroupSettingsView: View {
                 // Refresh cache antes de mostrar el dialog — simétrico con toggleArchive,
                 // evita falsos negativos si el sync trajo deuda después del último
                 // onAppear/dataVersion change.
-                recomputeOutstandingDebt()
-                guard !hasOutstandingDebt else { return }
+                recomputeOwnerExit()
+                guard currentOffer.deleteEnabled else { return }
                 showDeleteConfirm = true
             } label: {
                 HStack {
@@ -565,10 +713,15 @@ struct GroupSettingsView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .disabled(hasOutstandingDebt || isDeleting)
+            .disabled(!currentOffer.deleteEnabled || isDeleting || isTransferring)
 
-            if hasOutstandingDebt {
-                Text(L10n.Groups.Settings.deleteGroupDisabledHint)
+            if let hint = currentOffer.deleteHint {
+                // El copy del bloqueo depende de si hay salida: pedirle «liquida las deudas» a un
+                // dueño al que lo que le frena es un saldo ENTRE TERCEROS le manda a hacer algo que
+                // no puede hacer. Con heredero, se le apunta a «Transferir y salir».
+                Text(hint == .debtTransferInstead
+                     ? L10n.Groups.Settings.deleteGroupDisabledHintTransfer
+                     : L10n.Groups.Settings.deleteGroupDisabledHint)
                     .font(DS.Typography.caption)
                     .foregroundStyle(DS.Semantic.errorForeground)
                     .padding(.horizontal, DS.FormRow.paddingH)
@@ -669,6 +822,34 @@ struct GroupSettingsView: View {
         }
     }
 
+    /// Recalcula la deuda del grupo Y, con ella, qué salida se le ofrece al dueño. Van juntos porque
+    /// el offer DEPENDE de la deuda: calcularlos por separado dejaría un frame en el que el botón de
+    /// eliminar y su hint discrepan sobre si hay saldos.
+    private func recomputeOwnerExit() {
+        recomputeOutstandingDebt()
+        do {
+            let result = try GroupService.shared.ownerExitOffer(
+                group, groupHasOutstandingDebt: hasOutstandingDebt,
+                serverRefusedTransfer: transferRefusedByServer)
+            ownerExitOffer = result.offer
+            designatedHeirName = result.heir?.displayName
+        } catch {
+            #if DEBUG
+            print("GroupSettingsView: ownerExitOffer error \(error), fallback al offer previo")
+            #endif
+            // Se deja el offer ANTERIOR: ponerlo a `nil` haría desaparecer «Transferir y salir»
+            // ante un fetch fallido, que es justo el callejón que este ticket viene a cerrar.
+            //
+            // Y lo que este camino NO puede hacer, dicho porque es el hueco de verdad: si el throw
+            // ocurre en el PRIMER `.onAppear` no hay offer anterior, así que el body cae al fallback
+            // —sin transferencia— y el dueño con deuda vuelve a ver las tres salidas cerradas. No se
+            // puede hacer mejor sin los datos que el fetch no trajo: la alternativa sería ofrecer una
+            // transferencia sin saber si hay heredero, y eso acaba en un `no_eligible_owner` tras
+            // confirmar. El estado es recuperable —cualquier `dataVersion` reintenta— y degrada al
+            // comportamiento anterior al ticket, no a uno peor.
+        }
+    }
+
     private func leaveGroup() async {
         guard !isLeavingGroup else { return }
         isLeavingGroup = true
@@ -683,7 +864,17 @@ struct GroupSettingsView: View {
             // Copy propio por caso: el `localizedDescription` de un `GroupsRPCError` es el número del
             // discriminante («…GroupsRPCError 10.»), y el de un `GroupServiceError` es una dev-string en
             // inglés. Ninguno de los dos es un mensaje para el usuario.
-            leaveErrorMessage = GroupLeaveErrorLogic.classify(error).localizedMessage
+            let kind = GroupLeaveErrorLogic.classify(error)
+            // El servidor acaba de decir «eres el dueño», y `reconcileServerSideOwnership` ya corrigió
+            // el flag y bumpeó `dataVersion` — así que la pantalla, detrás de este alert, se ha
+            // repintado con las salidas del dueño. Hay que recalcular ANTES de elegir el copy: con la
+            // transferencia disponible, el texto por defecto («…puedes eliminarlo») manda a un botón
+            // que en ese momento está en gris y cuyo hint devuelve a «transfiérelo y sal». El usuario
+            // daba vueltas entre dos mensajes que se remitían el uno al otro.
+            recomputeOwnerExit()
+            leaveErrorMessage = (kind == .ownedByCurrentUser && currentOffer.showsTransferAndLeave)
+                ? L10n.Groups.Errors.ownerCannotLeaveCanTransfer
+                : kind.localizedMessage
             showLeaveError = true
         }
     }
@@ -720,8 +911,11 @@ struct GroupSettingsView: View {
     private func toggleArchive() {
         let willArchive = !group.isArchived
         // Refresca el cache antes del check para evitar valor stale si el sync trajo
-        // data después del último onAppear/dataVersion change.
-        if willArchive { recomputeOutstandingDebt() }
+        // data después del último onAppear/dataVersion change. Tiene que ser `recomputeOwnerExit`
+        // y no solo la deuda: desde que «Eliminar» lee `currentOffer` en vez del `@State` vivo,
+        // refrescar únicamente `hasOutstandingDebt` deja el botón habilitado y sin hint mientras el
+        // diálogo de archivar, en la misma pantalla, ya avisa de que hay deudas.
+        if willArchive { recomputeOwnerExit() }
         if willArchive && hasOutstandingDebt {
             showArchiveConfirm = true
             return

@@ -1952,6 +1952,23 @@ enum L10n {
             static var deleteGroupConfirm: String { ls("groups.settings.deleteGroupConfirm", comment: "") }
             static var deleteGroupFinalConfirm: String { ls("groups.settings.deleteGroupFinalConfirm", comment: "") }
             static var deleteGroupDisabledHint: String { ls("groups.settings.deleteGroupDisabledHint", comment: "") }
+            /// Variante del hint anterior para cuando SÍ hay a quién transferirle el grupo. El original
+            /// («liquida las deudas antes de eliminar») manda al dueño a una acción imposible cuando el
+            /// saldo que le bloquea es entre TERCEROS. Ver `GroupOwnerExitLogic.DeleteHint`.
+            static var deleteGroupDisabledHintTransfer: String { ls("groups.settings.deleteGroupDisabledHintTransfer", comment: "") }
+            // Transferir y salir — la salida del dueño (ticket `groups-owner-transfer-and-leave`).
+            static var transferAndLeave: String { ls("groups.settings.transferAndLeave", comment: "") }
+            static var transferAndLeaveHint: String { ls("groups.settings.transferAndLeaveHint", comment: "") }
+            /// `%@` = nombre de quien hereda el grupo. Lo elige el SERVIDOR
+            /// (`transfer_group_ownership`); la app solo lo replica para poder nombrarlo.
+            static func transferAndLeaveConfirm(_ heirName: String) -> String {
+                String(format: ls("groups.settings.transferAndLeaveConfirm", comment: ""), heirName)
+            }
+            static var transferAndLeaveConfirmUnknownHeir: String { ls("groups.settings.transferAndLeaveConfirmUnknownHeir", comment: "") }
+            /// Párrafo APARTE que se añade a la confirmación cuando el usuario sale con saldo propio.
+            /// Las otras dos salidas de esta pantalla ya avisan; ésta callaba, y encima borra el
+            /// histórico local del grupo al salir.
+            static var transferAndLeaveDebtWarning: String { ls("groups.settings.transferAndLeaveDebtWarning", comment: "") }
             static var archive: String { ls("groups.settings.archive", comment: "") }
             static var unarchive: String { ls("groups.settings.unarchive", comment: "") }
             static var archiveHint: String { ls("groups.settings.archiveHint", comment: "") }
@@ -1981,6 +1998,14 @@ enum L10n {
             /// culpar a la conexión cuando el fallo es permanente manda al admin a reintentar para
             /// siempre. Ver `GroupInviteLinkCreationLogic`.
             static var inviteFailed: String { ls("groups.errors.inviteFailed", comment: "") }
+            /// El último co-member elegible salió entre que se pintó «Transferir y salir» y la
+            /// confirmación: el servidor devolvió `no_eligible_owner`. No es un fallo — es un cambio
+            /// de estado, y por eso no pasa por `GroupLeaveErrorLogic`.
+            static var transferNoHeir: String { ls("groups.errors.transferNoHeir", comment: "") }
+            /// Variante de `ownerCannotLeave` para cuando SÍ hay a quién transferirle el grupo. El
+            /// original acaba en «puedes eliminarlo», y con deuda ese botón está en gris apuntando a
+            /// «transfiérelo y sal»: el error mandaba a un sitio y el sitio devolvía al error.
+            static var ownerCannotLeaveCanTransfer: String { ls("groups.errors.ownerCannotLeaveCanTransfer", comment: "") }
             /// Bloqueo PERMANENTE: el grupo es de la era CloudKit y no admite enlaces por ninguna vía.
             static var inviteLegacyGroup: String { ls("groups.errors.inviteLegacyGroup", comment: "") }
             /// Bloqueo TRANSITORIO: el canal de grupos está apagado ahora mismo (kill remoto o

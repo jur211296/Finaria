@@ -5539,3 +5539,27 @@
 "groups.errors.leaveUnavailable" = "No pudimos completar tu salida del grupo. Vuelve a intentarlo en un momento.";
 /* Groups RPC rejected because the session token expired or is missing */
 "groups.errors.sessionExpired" = "Tu sesión caducó. Vuelve a iniciar sesión e inténtalo de nuevo.";
+
+/* Botón: el dueño cede el grupo y sale */
+"groups.settings.transferAndLeave" = "Transferir y salir";
+
+/* Hint bajo el botón Transferir y salir */
+"groups.settings.transferAndLeaveHint" = "El grupo sigue activo con sus saldos. Tú dejas de ser miembro.";
+
+/* Confirmación con el nombre de quien hereda el grupo */
+"groups.settings.transferAndLeaveConfirm" = "%@ pasa a quedarse al frente del grupo y tú sales. Los saldos pendientes siguen como están.";
+
+/* Confirmación cuando no se pudo resolver el nombre de quien hereda */
+"groups.settings.transferAndLeaveConfirmUnknownHeir" = "El grupo pasa a otra persona y tú sales. Los saldos pendientes siguen como están.";
+
+/* Hint del borrado bloqueado cuando SÍ se puede transferir */
+"groups.settings.deleteGroupDisabledHintTransfer" = "Hay saldos pendientes en el grupo. Si quieres irte, transfiérelo y sal.";
+
+/* El último miembro elegible salió durante la confirmación */
+"groups.errors.transferNoHeir" = "Ya no queda nadie a quien pasarle el grupo.";
+
+/* Aviso al transferir cuando el usuario tiene saldo propio */
+"groups.settings.transferAndLeaveDebtWarning" = "Ojo: sales con un saldo pendiente. La otra parte seguirá viendo esa deuda.";
+
+/* Variante del rechazo por ser dueño cuando SÍ hay a quién transferir */
+"groups.errors.ownerCannotLeaveCanTransfer" = "Este grupo es tuyo, así que no puedes salir sin más: alguien tiene que quedarse al frente. Puedes transferirlo y salir.";

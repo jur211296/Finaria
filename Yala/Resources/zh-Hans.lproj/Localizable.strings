@@ -5534,3 +5534,19 @@
 "groups.errors.leaveUnavailable" = "未能完成退出群组。请稍后再试。";
 /* Groups RPC rejected because the session token expired or is missing */
 "groups.errors.sessionExpired" = "你的登录已过期。请重新登录后再试。";
+/* Botón: el dueño cede el grupo y sale */
+"groups.settings.transferAndLeave" = "转让并退出";
+/* Hint bajo el botón Transferir y salir */
+"groups.settings.transferAndLeaveHint" = "群组会保留余额继续存在，你将不再是成员。";
+/* Confirmación con el nombre de quien hereda el grupo */
+"groups.settings.transferAndLeaveConfirm" = "%@ 将接管这个群组，你随即退出。未结清的余额保持不变。";
+/* Confirmación cuando no se pudo resolver el nombre de quien hereda */
+"groups.settings.transferAndLeaveConfirmUnknownHeir" = "群组将转给其他人，你随即退出。未结清的余额保持不变。";
+/* Hint del borrado bloqueado cuando SÍ se puede transferir */
+"groups.settings.deleteGroupDisabledHintTransfer" = "群组里还有未结清的余额。如果你想离开，可以转让后退出。";
+/* El último miembro elegible salió durante la confirmación */
+"groups.errors.transferNoHeir" = "已经没有人可以接管这个群组了。";
+/* Aviso al transferir cuando el usuario tiene saldo propio */
+"groups.settings.transferAndLeaveDebtWarning" = "注意：你带着未结清的余额离开，对方仍会看到这笔欠款。";
+/* Variante del rechazo por ser dueño cuando SÍ hay a quién transferir */
+"groups.errors.ownerCannotLeaveCanTransfer" = "这个群组是你的，所以不能直接退出——需要有人接手。你可以转让后退出。";

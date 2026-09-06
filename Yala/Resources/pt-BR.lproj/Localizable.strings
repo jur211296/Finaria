@@ -5522,3 +5522,19 @@
 "groups.errors.leaveUnavailable" = "Não conseguimos concluir sua saída do grupo. Tente de novo em um instante.";
 /* Groups RPC rejected because the session token expired or is missing */
 "groups.errors.sessionExpired" = "Sua sessão expirou. Entre de novo e tente outra vez.";
+/* Botón: el dueño cede el grupo y sale */
+"groups.settings.transferAndLeave" = "Transferir e sair";
+/* Hint bajo el botón Transferir y salir */
+"groups.settings.transferAndLeaveHint" = "O grupo continua ativo com os saldos. Você deixa de ser membro.";
+/* Confirmación con el nombre de quien hereda el grupo */
+"groups.settings.transferAndLeaveConfirm" = "%@ passa a cuidar do grupo e você sai. Os saldos pendentes ficam como estão.";
+/* Confirmación cuando no se pudo resolver el nombre de quien hereda */
+"groups.settings.transferAndLeaveConfirmUnknownHeir" = "O grupo passa para outra pessoa e você sai. Os saldos pendentes ficam como estão.";
+/* Hint del borrado bloqueado cuando SÍ se puede transferir */
+"groups.settings.deleteGroupDisabledHintTransfer" = "Há saldos pendentes no grupo. Se quiser sair, transfira o grupo e saia.";
+/* El último miembro elegible salió durante la confirmación */
+"groups.errors.transferNoHeir" = "Não há mais ninguém para quem passar o grupo.";
+/* Aviso al transferir cuando el usuario tiene saldo propio */
+"groups.settings.transferAndLeaveDebtWarning" = "Atenção: você sai com um saldo pendente. A outra pessoa continuará vendo essa dívida.";
+/* Variante del rechazo por ser dueño cuando SÍ hay a quién transferir */
+"groups.errors.ownerCannotLeaveCanTransfer" = "Este grupo é seu, então você não pode simplesmente sair — alguém precisa ficar à frente. Você pode transferi-lo e sair.";
