@@ -1,6 +1,6 @@
 ---
 name: decisiones-que-esperan-a-jurgen
-description: Las cinco decisiones que bloqueaban tickets desde agosto están CONTESTADAS (2026-09-02 noche); queda el método para la próxima tanda
+description: Dos tandas de decisiones contestadas (2026-09-02 y 2026-09-06) y el método que funcionó; quedan sin preguntar las dos de Grupos del ESTADO
 metadata:
   type: project
 ---
@@ -26,5 +26,16 @@ Un ticket que espera una respuesta y uno que espera trabajo se ven idénticos en
   esperaban decisión ninguna, una de las cinco ni siquiera estaba en `in-progress`, y faltaba
   una que nadie había listado (la custodia del consent legacy, RGPD). El `ESTADO.md` decía
   «cinco decisiones bloquean 8 tickets»; eran cuatro y bloqueaban cinco.
+
+**Segunda tanda, 2026-09-06 (PR #79):** seis decisiones en dos preguntas agrupadas (4 + 2 extra),
+mismo formato —opción, coste, recomendada primero— y **tomó la recomendada en las seis**. No es
+señal de que la recomendación sea un trámite (el 2-sep se apartó en 3 de 8): es que las seis
+tenían una salida barata y coherente con algo que él ya había decidido antes (el 26-ago, el 2-sep,
+el 3-sep). **Cuando la opción recomendada se apoya en una decisión SUYA anterior, la toma sin
+pensarlo; cítala.** Un ticket de dos decisiones dentro (kill-switch) se parte en dos preguntas.
+
+**Lo que sigue SIN preguntar** (no estaba en el encargo): las dos de Grupos que lista `docs/ESTADO.md`
+en «Te espera a ti» —el dueño con deuda sin salida, y el botón «Más tarde» de la hoja del invitado—.
+Verifica que sigan abiertas antes de llevárselas.
 
 Relacionado: [[el-tablero-antes-que-el-bug]] · [[jurgen-levanta-sus-reglas]]
