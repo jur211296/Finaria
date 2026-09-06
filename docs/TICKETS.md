@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (114)
+## Index (115)
 
 | id | status | path |
 |----|--------|------|
@@ -56,6 +56,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | distribution-balance-kpi-skips-fx | qa | tickets/qa/distribution-balance-kpi-skips-fx.md |
 | doble-conteo-dia1-previo-thismonth | done | tickets/done/doble-conteo-dia1-previo-thismonth.md |
 | edgecases-extreme-minimum-flaky-under-load | backlog | tickets/backlog/edgecases-extreme-minimum-flaky-under-load.md |
+| el-job-de-tests-del-ci-no-tiene-timeout | backlog | tickets/backlog/el-job-de-tests-del-ci-no-tiene-timeout.md |
 | el-saldo-de-distribucion-no-se-entera-de-un-registro-nuevo | backlog | tickets/backlog/el-saldo-de-distribucion-no-se-entera-de-un-registro-nuevo.md |
 | entitlement-sync-forzado-es-noop-si-hay-otro-en-vuelo | backlog | tickets/backlog/entitlement-sync-forzado-es-noop-si-hay-otro-en-vuelo.md |
 | exportable-insights | backlog | tickets/backlog/exportable-insights.md |
