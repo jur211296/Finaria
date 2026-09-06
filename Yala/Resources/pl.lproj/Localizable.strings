@@ -4088,7 +4088,7 @@
 "groups.member.rejectConfirm" = "Odrzucić prośbę od %@? Może ponownie poprosić o dostęp, jeśli otrzyma kolejny link.";
 "groups.member.pendingRequestsSection" = "Oczekujące prośby";
 "groups.invite.waitingApproval.title" = "Prośba wysłana";
-"groups.invite.waitingApproval.body" = "Administrator grupy musi Cię zatwierdzić, zanim dołączysz. W międzyczasie zobaczysz grupę i jej uczestników, ale jeszcze żadnych wydatków. Otwórz Yalę za jakiś czas, żeby sprawdzić, czy już jesteś w środku.";
+"groups.invite.waitingApproval.body" = "Administrator grupy musi Cię zatwierdzić, zanim dołączysz. W międzyczasie zobaczysz grupę na swojej liście, ale nie możesz jej jeszcze otworzyć. Otwórz Yalę za jakiś czas, żeby sprawdzić, czy już jesteś w środku.";
 "groups.invite.waitingApproval.banner" = "Oczekiwanie na akceptację administratora";
 "groups.invite.rejected.title" = "Prośba odrzucona";
 "groups.invite.rejected.body" = "Administrator nie zaakceptował Twojej prośby. Poproś o nowy link, jeśli chcesz spróbować jeszcze raz.";
@@ -5550,3 +5550,8 @@
 "groups.settings.transferAndLeaveDebtWarning" = "Uwaga: odchodzisz z nierozliczonym saldem. Druga strona nadal będzie widzieć ten dług.";
 /* Variante del rechazo por ser dueño cuando SÍ hay a quién transferir */
 "groups.errors.ownerCannotLeaveCanTransfer" = "Ta grupa należy do Ciebie, więc nie możesz jej po prostu opuścić — ktoś musi ją przejąć. Możesz ją przekazać i wyjść.";
+/* Título del aviso al tocar la tarjeta de un grupo en el que sigo pendiente de aprobación */
+"groups.card.pendingNotice.title" = "Oczekiwanie na zatwierdzenie";
+
+/* Cuerpo del aviso al tocar la tarjeta de un grupo pendiente de aprobación */
+"groups.card.pendingNotice.body" = "Administrator grupy jeszcze nie zatwierdził Twojej prośby. Gdy to zrobi, będziesz mieć dostęp do grupy i jej wydatków. Zajrzyj tu za jakiś czas.";

@@ -399,6 +399,67 @@ enum DevSeedGroups {
         }
     }
 
+    /// Grupo del canal backend donde **YO** soy el miembro PENDIENTE de aprobación: el estado exacto
+    /// que Jürgen reportó el 2026-08-28 desde TestFlight (se une por enlace, el grupo le sale en la
+    /// lista, y al tocarlo entraba).
+    ///
+    /// Es el espejo de `createAsBackendJoiner` con los papeles cambiados: allí la pendiente es Carla y
+    /// yo soy admin activo; aquí la dueña es Ana y **el pendiente soy yo**. Sin este perfil la puerta
+    /// del grupo no tiene ninguna red determinista — no había forma de montar un XCUITest del caso.
+    ///
+    /// `isCurrentUser` APAGADO a propósito, igual que en su hermano: `GroupsSyncClient.applyMember`
+    /// nunca lo enciende, así que encenderlo aquí probaría un camino que en producción no ocurre.
+    ///
+    /// **El grupo lleva un gasto sembrado**, y no es decorado: sin él, «el pendiente no ve contenido
+    /// financiero» pasaría por el motivo equivocado —no hay nada que ver— en vez de porque la puerta
+    /// está cerrada. Con él, el rojo distingue las dos cosas.
+    static func createAsPendingMember(in context: ModelContext) {
+        let group = SplitGroup(
+            name: "Cena de amigos",
+            iconName: "fork.knife",
+            currencyCode: "PEN",
+            isOwner: false
+        )
+        group.isBackendGroup = true
+        context.insert(group)
+        let zoneID = group.cloudKitZoneID
+        // Mismo motivo que en `create(in:)` y `createAsBackendJoiner(in:)`: sin publicar el id, el
+        // token `seeded-first` del deep link no resuelve y el test muere antes de la pantalla.
+        if UITestHooks.isActive {
+            UserDefaults.standard.set(group.id.uuidString, forKey: UITestHooks.seededGroupIDKey)
+        }
+
+        let ana = SplitMember(
+            groupZoneID: zoneID, displayName: "Ana",
+            cloudKitUserRecordID: "uitest-member-ana",
+            role: "admin", status: .active, isGroupOwner: true
+        )
+        let beto = SplitMember(
+            groupZoneID: zoneID, displayName: "Beto",
+            cloudKitUserRecordID: "uitest-member-beto", status: .active
+        )
+        // Yo: pendiente de que Ana me apruebe. El corazón del perfil.
+        let me = SplitMember(
+            groupZoneID: zoneID, displayName: "Tú",
+            cloudKitUserRecordID: "uitest-current-user",
+            status: .pendingApproval
+        )
+        for m in [ana, beto, me] { context.insert(m) }
+
+        let expense = SplitExpense(
+            groupZoneID: zoneID, amount: 120, currencyCode: "PEN",
+            expenseDescription: "Pizzas", paidByMemberID: ana.id.uuidString,
+            splitType: "equal"
+        )
+        context.insert(expense)
+
+        do {
+            try context.save()
+        } catch {
+            print("DevSeedGroups: createAsPendingMember save error: \(error)")
+        }
+    }
+
     /// Borra TODOS los modelos de grupos (Split* + GroupBridgePreference) del store local.
     /// Lo usa el reset del modo uitest: `DataWipeService.wipeAllUserData` los preserva a
     /// propósito (decisión de producto — los grupos son compartidos vía CloudKit y el

@@ -4056,7 +4056,7 @@
 "groups.member.rejectConfirm" = "Anfrage von %@ ablehnen? Über einen neuen Link kann erneut Zugang angefragt werden.";
 "groups.member.pendingRequestsSection" = "Offene Anfragen";
 "groups.invite.waitingApproval.title" = "Anfrage gesendet";
-"groups.invite.waitingApproval.body" = "Der Gruppen-Admin muss dich bestätigen, bevor du mitmachen kannst. Solange siehst du die Gruppe und wer dabei ist, aber noch keine Ausgaben. Öffne Yala später noch mal, um zu sehen, ob es geklappt hat.";
+"groups.invite.waitingApproval.body" = "Der Gruppen-Admin muss dich bestätigen, bevor du mitmachen kannst. Solange siehst du die Gruppe in deiner Liste, kannst sie aber noch nicht öffnen. Öffne Yala später noch mal, um zu sehen, ob es geklappt hat.";
 "groups.invite.waitingApproval.banner" = "Warten auf Admin-Freigabe";
 "groups.invite.rejected.title" = "Anfrage abgelehnt";
 "groups.invite.rejected.body" = "Der Admin hat Ihre Anfrage nicht freigegeben. Bitten Sie um einen neuen Link, falls Sie es erneut versuchen möchten.";
@@ -5538,3 +5538,8 @@
 "groups.settings.transferAndLeaveDebtWarning" = "Achtung: Du gehst mit einem offenen Saldo. Die andere Person sieht diese Schuld weiterhin.";
 /* Variante del rechazo por ser dueño cuando SÍ hay a quién transferir */
 "groups.errors.ownerCannotLeaveCanTransfer" = "Diese Gruppe gehört dir, du kannst sie also nicht einfach verlassen — jemand muss die Leitung übernehmen. Du kannst sie übertragen und dann gehen.";
+/* Título del aviso al tocar la tarjeta de un grupo en el que sigo pendiente de aprobación */
+"groups.card.pendingNotice.title" = "Warten auf Bestätigung";
+
+/* Cuerpo del aviso al tocar la tarjeta de un grupo pendiente de aprobación */
+"groups.card.pendingNotice.body" = "Die Gruppenadministration hat deine Anfrage noch nicht bestätigt. Sobald das passiert, kannst du die Gruppe öffnen und ihre Ausgaben sehen. Schau später noch mal vorbei.";

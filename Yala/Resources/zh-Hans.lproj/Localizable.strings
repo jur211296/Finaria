@@ -4088,7 +4088,7 @@
 "groups.member.rejectConfirm" = "拒绝 %@ 的请求吗？对方可以使用其他链接重新申请加入。";
 "groups.member.pendingRequestsSection" = "待处理的请求";
 "groups.invite.waitingApproval.title" = "请求已发送";
-"groups.invite.waitingApproval.body" = "群组管理员批准后你才能参与。在此期间你能看到群组和成员，但还看不到任何支出。过一会儿再打开 Yala，看看是否已经通过。";
+"groups.invite.waitingApproval.body" = "群组管理员批准后你才能参与。在此期间群组会显示在你的列表里，但还无法打开。过一会儿再打开 Yala，看看是否已经通过。";
 "groups.invite.waitingApproval.banner" = "等待管理员批准";
 "groups.invite.rejected.title" = "请求被拒绝";
 "groups.invite.rejected.body" = "管理员没有批准你的请求。如果你想再次尝试，可以请管理员发送新的链接。";
@@ -5550,3 +5550,8 @@
 "groups.settings.transferAndLeaveDebtWarning" = "注意：你带着未结清的余额离开，对方仍会看到这笔欠款。";
 /* Variante del rechazo por ser dueño cuando SÍ hay a quién transferir */
 "groups.errors.ownerCannotLeaveCanTransfer" = "这个群组是你的，所以不能直接退出——需要有人接手。你可以转让后退出。";
+/* Título del aviso al tocar la tarjeta de un grupo en el que sigo pendiente de aprobación */
+"groups.card.pendingNotice.title" = "等待批准";
+
+/* Cuerpo del aviso al tocar la tarjeta de un grupo pendiente de aprobación */
+"groups.card.pendingNotice.body" = "群组管理员尚未批准你的申请。批准后，你就可以打开该群组并查看它的支出。请稍后再来看看。";

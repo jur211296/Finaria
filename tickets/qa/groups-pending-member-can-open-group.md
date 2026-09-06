@@ -1,6 +1,6 @@
 ---
 id: groups-pending-member-can-open-group
-status: backlog
+status: qa
 priority: high
 area: groups
 created: 2026-08-28
@@ -35,7 +35,7 @@ La puerta del grupo no distingue **«pendiente»** de **«activo»**: se abre ig
 |---|---|---|
 | `tickets/done/groups-approval-banner-stays.md` | el aviso de «esperando aprobación» no se retiraba **después** de que el admin aprobara | Es la **salida** de la sala de espera, y quedó **PASS en device** en la misma corrida (cerrado en el mismo PR que abre este ticket). Aquí el problema es la **puerta**, y ocurre **antes** de aprobar. Meterlo ahí sería declarar que el PASS de hoy tapó algo que no tapó |
 | `tickets/qa/groups-join-intent-reconciler.md` | el `SplitMember` del invitado **jamás nacía**, «¡Todo listo!» sin miembro real, y al owner **no** le llegaba la solicitud | Es el defecto **contrario**: allí el alta no se materializaba. Hoy sí se materializó — B vio su solicitud pendiente y **A pudo aprobarla**. Reusar ese ticket enterraría este hallazgo bajo un guion (ventana export-only de CKShare) cuyo transporte ya está muerto |
-| `tickets/in-progress/guest-decline-has-no-screen.md` | la sala de espera del invitado: el «no» no tiene pantalla, y mientras espera **ve el grupo y el roster pero ni un gasto** sin que nadie le diga que eso es normal | **El vecino más cercano: leerlo antes de tocar nada.** Documenta el MISMO hecho observable y le pone **otro veredicto** — lo trata como problema de **copy**, no de puerta. Ver «La tensión de producto» |
+| `tickets/qa/guest-decline-has-no-screen.md` | la sala de espera del invitado: el «no» no tiene pantalla, y mientras espera **ve el grupo y el roster pero ni un gasto** sin que nadie le diga que eso es normal | **El vecino más cercano: leerlo antes de tocar nada.** Documenta el MISMO hecho observable y le pone **otro veredicto** — lo trata como problema de **copy**, no de puerta. Ver «La tensión de producto» |
 | `tickets/qa/groups-consent-door-spec.md` | «La puerta de Grupos»: educativo → login → consent antes de usar Grupos, y el consent viajando con la cuenta | Colisión de nombre, no de tema: esa puerta es la de **entrar a la función Grupos**; ésta es la de **entrar a UN grupo concreto estando pendiente**. B ya había pasado la primera |
 
 ## Lo medido en este árbol (`2.1` @ `2175e53e`)
@@ -139,15 +139,15 @@ primer paso es del ticket, no de esta decisión.
 
 Resuelto por la decisión de arriba (era condicionado; la rama «explicar la espera» queda descartada):
 
-- [ ] Con el miembro en `pendingApproval`, tocar la tarjeta del grupo **no** abre el detalle; en su
+- [x] Con el miembro en `pendingApproval`, tocar la tarjeta del grupo **no** abre el detalle; en su
       lugar el usuario recibe una superficie que le dice en qué estado está y qué puede hacer. Copy
       propio, en los 16 `.lproj`, sin prometer nada que la app no haga.
-- [ ] Al ser aprobado, la puerta se abre **sin** relanzar la app (ya tiene PASS en
+- [x] Al ser aprobado, la puerta se abre **sin** relanzar la app (ya tiene PASS en
       `groups-approval-banner-stays`, y no debe romperse).
-- [ ] **Nada de contenido financiero** para un pendiente y **ningún botón de escritura** a la vista:
+- [x] **Nada de contenido financiero** para un pendiente y **ningún botón de escritura** a la vista:
       el servidor ya lo garantiza (`is_group_writer`); el cliente no debe pintar un vacío que parezca
       un grupo sin gastos ni un botón que termine en error crudo.
-- [ ] El servidor no cambia: `is_group_member` sigue admitiendo `pendingApproval` en `split_groups` y
+- [x] El servidor no cambia: `is_group_member` sigue admitiendo `pendingApproval` en `split_groups` y
       `group_members`.
 
 ## Cómo se verifica
@@ -164,7 +164,7 @@ dos teléfonos, que depende de que haya una subida nueva (ESTADO: «Publicar la 
 
 - `tickets/done/groups-approval-banner-stays.md` — el aviso de aprobación; **PASS del owner en la misma
   corrida**, cerrado en el mismo PR que abre este ticket.
-- `tickets/in-progress/guest-decline-has-no-screen.md` — la sala de espera: el «no» sin pantalla y el
+- `tickets/qa/guest-decline-has-no-screen.md` — la sala de espera: el «no» sin pantalla y el
   copy de la espera. **Lectura obligada antes de diseñar nada aquí.**
 - `tickets/qa/groups-join-intent-reconciler.md` — el alta que no nacía. Otro defecto, no este.
 - Sesión de la corrida: `docs/sessions/2026-08-28-device-qa-approval-banner.md`.
@@ -208,3 +208,110 @@ es una urgencia de privacidad y no hace falta tratarlo como tal.
 ajustes). La lectura está cerrada; la escritura no se comprobó aquí — `is_group_writer` gobierna
 también los `insert`/`update`, así que el servidor la rechazaría, pero si el cliente le pinta los
 botones, el fallo que verá es un error crudo, no una puerta cerrada con explicación.
+
+---
+
+## MEDIDO · 2026-09-06 — la puerta de la tarjeta YA estaba cerrada, y no por este ticket
+
+La sección «Lo que NO se midió» pedía medir «quién gatea hoy la entrada a `GroupDetailView` con un
+miembro `pendingApproval`» antes de escribir código. Medido, y la respuesta cambia el trabajo:
+
+**`GroupCardView` ya no abría el detalle a un pendiente.** Su `handleTap` tenía desde `#26` un `case
+.pendingApproval` que no navegaba, más un `.disabled(displayMode == .pendingApproval)`. El doc de
+`GroupCardDisplayLogic:21-23` lo decía con todas las letras: «tap disabled (no abre el detalle)».
+
+**Entonces, ¿por qué B entró el 28-ago?** Porque el gate se alimentaba de una identidad que en su caso
+no resolvía. `GroupsViewModel.currentMemberStatus` hacía `first { $0.isCurrentUser }`, y
+`GroupsSyncClient.applyMember` **nunca enciende ese flag** — para B, que llegó por el pull del backend,
+devolvía `nil`, `displayMode` caía en `.active` y la tarjeta abría como cualquier otra.
+
+**Y ya está arreglado, colateralmente**: `5ca4dd47` (2026-09-04, «a quien se une por enlace la app deja
+de no reconocerle hasta reiniciar», en `2.1`) pasó esa función a `GroupExpenseService
+.resolveCurrentUserMember`, que resuelve por `cloudKitUserRecordID`. Comprobado con
+`git log -L` sobre la función y `git branch --contains`.
+
+⇒ **el defecto reportado en el build 12 ya no se reproduce en `2.1`**, y no por este ticket. Lo que
+quedaba abierto era otra cosa, y es lo que se implementó.
+
+## Lo que SÍ quedaba abierto (y se cerró aquí)
+
+**1 · El tap del pendiente era un muro mudo.** Cerrado con `.disabled`, cumplía media decisión —no
+entra— y fallaba la otra media: el AC pide «una superficie que le dice en qué estado está y qué puede
+hacer», y no pasaba absolutamente nada. Es el mismo defecto que C-10 ya había arreglado para los
+grupos congelados («el grupo era un muro; en un build incapaz, además, un muro mudo»). Ahora el tap
+presenta un aviso propio.
+
+**2 · La tarjeta NO era la única puerta.** Medido con control positivo: `openDetail(for:)` tiene **tres**
+call-sites en `Yala/`, y solo uno es la tarjeta.
+
+| Vía | Dónde | ¿Gateada antes? |
+|---|---|---|
+| Tarjeta de la lista | `GroupsContainerView:415` | Sí (`displayMode`) |
+| **Deep link de notificación** | `:467`, `openPendingGroupIfAvailable()` | **No** |
+| **Nudge `.openGroupDetail`** | `:516`, `handleNudgeAction(_:)` | **No** |
+
+Las dos últimas filtran por `viewModel.activeGroups`, que es `!isArchived && !isHiddenForAll` —
+**nada que ver con la membresía**. El nudge, además, abría `activeGroups.first`: si el único grupo del
+usuario es aquel en el que está pendiente, lo abría siempre. Cerrar solo la tarjeta habría dejado el AC
+cumplido en el camino que se probó a mano y abierto en los dos que no.
+
+**3 · El copy de la sala de espera prometía lo que la decisión elimina.**
+`groups.invite.waitingApproval.body` decía «Mientras esperas verás el grupo **y quién está dentro**,
+pero todavía ningún gasto». Con la puerta cerrada ya no ve el roster, así que el texto pasaba a mentir
+—justo lo que la pieza 2 del vecino había arreglado (`0342564c`, «deja de prometer un aviso que no
+existe»)—. Reescrito en los 16 `.lproj`: «verás el grupo en tu lista, pero todavía no puedes abrirlo».
+Se conserva intacto el final, que es lo que aquella pieza corrigió: no promete ningún aviso.
+
+## Implementado
+
+- **`GroupCardDisplayLogic.allowsDetailEntry(memberStatus:migrationState:)`** — SSOT de la puerta,
+  **derivado** de `displayMode` para que las dos decisiones no puedan divergir. Hereda la prioridad del
+  freeze: un grupo congelado **sí** abre el detalle aunque el miembro esté pendiente, porque es ahí
+  donde C-10 puso la explicación y el único CTA que ese build puede cumplir.
+- **`GroupsViewModel.canOpenDetail(for:)` / `firstGroupOpenableInDetail()`** — lo envuelven con la
+  identidad ya resuelta, para que las tres puertas hagan la misma pregunta.
+- **`GroupCardView`** — `onPendingTap` en vez del tap muerto. Se retiró el `.disabled`: no protegía nada
+  que `handleTap` no proteja ya, y apagaba la tarjeta para VoiceOver.
+- **Aviso «Esperando aprobación»** en `GroupsContainerView`, claves propias
+  `groups.card.pendingNotice.{title,body}` en los 16 idiomas. Un `Bool` y no un `SplitGroup?` para
+  poder atarlo con `$binding` en vez de un `Binding(get:set:)` en el body, que `swiftui-ds.md` prohíbe.
+- **Claves propias y no las de `Invite.waitingApproval*`**: aquélla es la pantalla del alta —se ve una
+  vez, al unirse— y ésta se ve cada vez que se toca la tarjeta, días después.
+
+## Verificación
+
+- `unit:YalaTests/GroupCardDisplayLogicTests` — **16 casos, verde** (12 previos + 4). Uno es el
+  invariante que fija que la puerta se deriva del `displayMode` en las 24 combinaciones.
+- `xcuitest:YalaUITests/GroupPendingMemberDoorUITests` — **2 casos, verde** (30,0 s, iOS 26.5).
+- **Seed nuevo `grupos-pendiente`** (`DevSeedGroups.createAsPendingMember`): ninguno de los siete
+  perfiles servía —todos siembran al usuario propio `.active`, y `grupos-sin-flag` deja pendiente a un
+  tercero—, así que el AC no tenía red determinista posible. Lleva un gasto sembrado a propósito: sin
+  él, «el pendiente no ve contenido financiero» pasaría por no haber nada que ver.
+- **Los dos mutantes, verificados** (regla de `testing.md`: un test que no se pone rojo al revertir el
+  fix no prueba la decisión, prueba el flujo):
+  - `allowsDetailEntry → true` ⇒ 2 casos unit en rojo.
+  - `handleTap` de `.pendingApproval` → `action()` ⇒ el XCUITest en rojo (exit 65).
+
+## Lo que NO se tocó, y por qué
+
+- **El servidor**, según la decisión. `is_group_member` sigue admitiendo `pendingApproval`.
+- **El interior de `GroupDetailView`.** Con las tres puertas cerradas es inalcanzable para un
+  pendiente. Su `PendingApprovalBanner(state: .pending)` (`:136`) se conserva como
+  defensa-en-profundidad y pasa a ser, en la práctica, código sin camino: cuesta cero y es exactamente
+  lo que querrías si alguna vía futura volviera a dejar entrar a alguien.
+- **La navegación forzada al tab** tras unirse, que el ticket ya había decidido no promover a defecto.
+
+## Residual → ticket propio
+
+`groups-pending-member-sees-detail-chrome` (medido en este pase, **no** corregido): si un pendiente
+llegara al detalle, los botones **Miembros** y **Ajustes** de la toolbar no tienen ningún gate de
+status, y dentro de Ajustes «Salir del grupo» tampoco. Hoy es inalcanzable —por eso no se arregló
+aquí, y por eso es `low`— pero la ausencia de gate es real y está medida.
+
+## Sigue pendiente
+
+**Device-QA de dos teléfonos sobre una subida posterior a este commit**, tal como pedía «Cómo se
+verifica»: el caso exige un pendiente real contra el canal backend. Y una comprobación que el
+simulador no da: que al **aprobar** al miembro la puerta se abra sin relanzar la app (AC 2) — el
+mecanismo no cambió (`currentMemberStatus` pasa a `.active` y el `displayMode` con él), y
+`groups-approval-banner-stays` ya tiene PASS del owner, pero aquí no se re-verificó en device.

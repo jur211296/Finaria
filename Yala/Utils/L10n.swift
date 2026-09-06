@@ -2089,6 +2089,15 @@ enum L10n {
             static var movedPausedChip: String { ls("groups.card.movedPausedChip", comment: "") }
             static var leaveGroupAlertTitle: String { ls("groups.card.leaveGroupAlertTitle", comment: "") }
             static var leaveGroupAlertBody: String { ls("groups.card.leaveGroupAlertBody", comment: "") }
+
+            /// Aviso al tocar la tarjeta de un grupo en el que sigo `pendingApproval` (decisión owner
+            /// 2026-09-06). Claves PROPIAS y no las de `Invite.waitingApproval*`: aquélla es la pantalla
+            /// del alta —se ve una vez, justo al unirse— y ésta se ve cada vez que toco la tarjeta días
+            /// después. Compartirlas ataría dos superficies que van a divergir.
+            enum PendingNotice {
+                static var title: String { ls("groups.card.pendingNotice.title", comment: "") }
+                static var body: String { ls("groups.card.pendingNotice.body", comment: "") }
+            }
             // M6 D3: chip overflow cuando hay más de 3 deudas en la card.
             static func moreDebts(_ count: Int) -> String {
                 String(format: ls("groups.card.moreDebts", comment: ""), count)

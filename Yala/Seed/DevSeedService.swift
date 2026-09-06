@@ -32,6 +32,16 @@ enum DevSeedProfile: String {
     /// ejercitar la resolución de identidad — la app te reconoce por `cloudKitUserRecordID`, que
     /// `-uitest-icloud-identity` siembra con el mismo literal.
     case gruposSinFlag = "grupos-sin-flag"
+
+    /// Grupo del canal backend donde **YO** soy el miembro `pendingApproval` — el estado del invitado
+    /// que se unió por enlace y aún espera al admin. Ningún otro perfil lo reproduce: `gruposSinFlag`
+    /// deja pendiente a OTRA persona (Carla) y a mí me hace admin activo, así que sirve para las
+    /// acciones de administración pero no para la puerta del grupo, que es justo la del revés.
+    ///
+    /// Igual que su hermano, la identidad viaja por `cloudKitUserRecordID` (`-uitest-icloud-identity`
+    /// siembra el mismo literal) y el flag `isCurrentUser` se deja APAGADO: es como llega de verdad
+    /// por el pull, y encenderlo devolvería la ceguera que `5ca4dd47` arregló.
+    case gruposPendiente = "grupos-pendiente"
     /// SOLO-GRUPOS PURO (escenario 5a legado): siembra únicamente grupos, SIN nada de vida
     /// personal (cuentas, transacciones, presupuestos, tags…). Representa fielmente al usuario
     /// `.groupInvite` que sólo usa Grupos. Pensado para combinar con `-uitest-group-invite` en
@@ -53,7 +63,7 @@ enum DevSeedProfile: String {
     var daysBack: Int {
         switch self {
         case .minimal, .grupos, .gruposInvitado, .gruposSaldado, .soloGrupos, .deadPointer,
-             .gruposSinFlag: return 7
+             .gruposSinFlag, .gruposPendiente: return 7
         case .realista: return 730
         case .pesado: return 3650
         }
@@ -62,7 +72,7 @@ enum DevSeedProfile: String {
     /// Si además siembra un grupo de gastos compartidos (DevSeedGroups).
     var seedsGroups: Bool {
         self == .grupos || self == .gruposInvitado || self == .gruposSaldado || self == .soloGrupos
-            || self == .gruposSinFlag
+            || self == .gruposSinFlag || self == .gruposPendiente
     }
 
     /// Si siembra vida personal (cuentas, transacciones, presupuestos, tags, pagos, drafts).
@@ -196,6 +206,7 @@ final class DevSeedService {
             switch profile {
             case .gruposInvitado: DevSeedGroups.createAsInvitee(in: context)
             case .gruposSinFlag:  DevSeedGroups.createAsBackendJoiner(in: context)
+            case .gruposPendiente: DevSeedGroups.createAsPendingMember(in: context)
             case .gruposSaldado:  DevSeedGroups.createSettled(in: context)
             default:              DevSeedGroups.create(in: context)
             }
