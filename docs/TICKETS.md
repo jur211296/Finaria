@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (122)
+## Index (123)
 
 | id | status | path |
 |----|--------|------|
@@ -90,7 +90,8 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | groups-log-expense-via-chat-voice | backlog | tickets/backlog/groups-log-expense-via-chat-voice.md |
 | groups-owner-debt-no-heir-dead-end | backlog | tickets/backlog/groups-owner-debt-no-heir-dead-end.md |
 | groups-owner-transfer-and-leave | qa | tickets/qa/groups-owner-transfer-and-leave.md |
-| groups-pending-member-can-open-group | backlog | tickets/backlog/groups-pending-member-can-open-group.md |
+| groups-pending-member-can-open-group | qa | tickets/qa/groups-pending-member-can-open-group.md |
+| groups-pending-member-sees-detail-chrome | backlog | tickets/backlog/groups-pending-member-sees-detail-chrome.md |
 | groups-reconnect-prune-or-rewire | done | tickets/done/groups-reconnect-prune-or-rewire.md |
 | groups-settlement-reminder | backlog | tickets/backlog/groups-settlement-reminder.md |
 | groups-shareable-summary | backlog | tickets/backlog/groups-shareable-summary.md |

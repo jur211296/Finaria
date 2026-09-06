@@ -269,7 +269,7 @@
 "groups.member.rejectConfirm" = "¿Rechazás la solicitud de %@? Va a poder volver a pedir acceso si recibe otro link.";
 "groups.member.pendingRequestsSection" = "Solicitudes pendientes";
 "groups.invite.waitingApproval.title" = "Solicitud enviada";
-"groups.invite.waitingApproval.body" = "El admin del grupo tiene que aprobarte antes de que puedas participar. Mientras esperás vas a ver el grupo y quién está adentro, pero todavía ningún gasto. Volvé a abrir Yala en un rato para ver si ya te aprobaron.";
+"groups.invite.waitingApproval.body" = "El admin del grupo tiene que aprobarte antes de que puedas participar. Mientras esperás vas a ver el grupo en tu lista, pero todavía no lo podés abrir. Volvé a abrir Yala en un rato para ver si ya te aprobaron.";
 "groups.invite.waitingApproval.banner" = "Esperando aprobación del admin";
 "groups.invite.rejected.title" = "Solicitud rechazada";
 "groups.invite.rejected.body" = "El admin no aprobó tu solicitud. Pedile un nuevo link si querés volver a intentarlo.";
@@ -4811,3 +4811,9 @@
 
 /* Variante del rechazo por ser dueño cuando SÍ hay a quién transferir */
 "groups.errors.ownerCannotLeaveCanTransfer" = "Este grupo es tuyo, así que no puedes salir sin más: alguien tiene que quedarse al frente. Puedes transferirlo y salir.";
+
+/* Título del aviso al tocar la tarjeta de un grupo en el que sigo pendiente de aprobación */
+"groups.card.pendingNotice.title" = "Esperando aprobación";
+
+/* Cuerpo del aviso al tocar la tarjeta de un grupo pendiente de aprobación */
+"groups.card.pendingNotice.body" = "El admin del grupo todavía no aprueba tu solicitud. Cuando lo haga vas a poder abrir el grupo y ver sus gastos. Volvé a entrar en un rato para comprobarlo.";

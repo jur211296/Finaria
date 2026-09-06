@@ -4088,7 +4088,7 @@
 "groups.member.rejectConfirm" = "%@ のリクエストを拒否しますか？別のリンクで再度アクセスをリクエストできます。";
 "groups.member.pendingRequestsSection" = "保留中のリクエスト";
 "groups.invite.waitingApproval.title" = "リクエストを送信しました";
-"groups.invite.waitingApproval.body" = "グループの管理者が承認するまでは参加できません。それまではグループと参加者は見えますが、支出はまだ見えません。しばらくしてからYalaをもう一度開いて、承認されたか確認してください。";
+"groups.invite.waitingApproval.body" = "グループの管理者が承認するまでは参加できません。それまではリストにグループが表示されますが、まだ開くことはできません。しばらくしてからYalaをもう一度開いて、承認されたか確認してください。";
 "groups.invite.waitingApproval.banner" = "管理者の承認を待っています";
 "groups.invite.rejected.title" = "リクエストが拒否されました";
 "groups.invite.rejected.body" = "管理者がリクエストを承認しませんでした。再度試したい場合は、新しいリンクを依頼してください。";
@@ -5550,3 +5550,8 @@
 "groups.settings.transferAndLeaveDebtWarning" = "注意：未精算の残高が残ったまま退出します。相手にはその貸し借りが残ります。";
 /* Variante del rechazo por ser dueño cuando SÍ hay a quién transferir */
 "groups.errors.ownerCannotLeaveCanTransfer" = "このグループはあなたのものなので、そのままでは退出できません。誰かが引き継ぐ必要があります。譲渡してから退出できます。";
+/* Título del aviso al tocar la tarjeta de un grupo en el que sigo pendiente de aprobación */
+"groups.card.pendingNotice.title" = "承認待ち";
+
+/* Cuerpo del aviso al tocar la tarjeta de un grupo pendiente de aprobación */
+"groups.card.pendingNotice.body" = "グループの管理者がまだリクエストを承認していません。承認されると、グループを開いて支出を見られるようになります。しばらくしてからもう一度確認してください。";

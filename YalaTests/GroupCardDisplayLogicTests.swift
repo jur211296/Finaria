@@ -95,6 +95,49 @@ struct GroupCardDisplayLogicTests {
             }
         }
     }
+
+    // MARK: - La puerta del grupo (decisión owner 2026-09-06)
+
+    @Test func allowsDetailEntry_isFalse_forPendingApproval() {
+        // El AC en una línea: con el miembro pendiente, el detalle NO se abre.
+        #expect(GroupCardDisplayLogic.allowsDetailEntry(memberStatus: .pendingApproval) == false)
+    }
+
+    @Test func allowsDetailEntry_isTrue_forEveryOtherStatus() {
+        // Cerrar la puerta al pendiente NO puede cerrarla a nadie más. `.rejected` incluido: su tap
+        // lleva a la confirmación de salir, que es una salida real y se perdería si lo bloqueásemos.
+        for status: SplitMemberStatus? in [.active, .rejected, .left, .removed, nil] {
+            #expect(
+                GroupCardDisplayLogic.allowsDetailEntry(memberStatus: status) == true,
+                "status \(String(describing: status)) debería poder abrir el detalle")
+        }
+    }
+
+    @Test func allowsDetailEntry_frozenGroupOpens_evenWhenMemberIsPending() {
+        // El freeze gana, y aquí eso IMPORTA: en un grupo congelado el detalle es el único sitio donde
+        // vive la explicación y el CTA que C-10 puso (volver a entrar / actualizar / en pausa). Cerrar
+        // la puerta por el status dejaría a ese usuario ante un muro mudo, que es el bug que C-10 cerró.
+        for state: GroupMigrationState in [.frozenRejoinable, .frozenNeedsUpdate, .frozenPaused] {
+            #expect(
+                GroupCardDisplayLogic.allowsDetailEntry(
+                    memberStatus: .pendingApproval, migrationState: state) == true,
+                "un grupo congelado debe abrir el detalle aunque el miembro esté pendiente (\(state))")
+        }
+    }
+
+    @Test func allowsDetailEntry_agreesWithDisplayMode_forEveryCombination() {
+        // El invariante que evita que las dos decisiones diverjan: la puerta se DERIVA del displayMode,
+        // así que si alguien añade un estado nuevo y solo toca uno de los dos, esto lo caza.
+        let states: [GroupMigrationState] = [.normal, .frozenRejoinable, .frozenNeedsUpdate, .frozenPaused]
+        for state in states {
+            for status: SplitMemberStatus? in [.active, .pendingApproval, .rejected, .left, .removed, nil] {
+                let mode = GroupCardDisplayLogic.displayMode(memberStatus: status, migrationState: state)
+                let allows = GroupCardDisplayLogic.allowsDetailEntry(
+                    memberStatus: status, migrationState: state)
+                #expect(allows == (mode != .pendingApproval))
+            }
+        }
+    }
 }
 
 // MARK: - G6-3: GroupFreezeLogic

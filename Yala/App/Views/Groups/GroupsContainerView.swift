@@ -36,6 +36,15 @@ struct GroupsContainerView: View {
     /// Drives el alert "¿Salir del grupo?" cuando un current user `.rejected`
     /// toca su card. Single-modal global vs N alerts montados por card.
     @State private var rejectedGroupPendingLeave: SplitGroup?
+    /// Drives el aviso «tu solicitud está en revisión» cuando un current user `.pendingApproval`
+    /// toca su card (decisión owner 2026-09-06: la puerta se cierra en el cliente y en su lugar se
+    /// explica). Un solo modal global, como su vecino `rejectedGroupPendingLeave`.
+    ///
+    /// Es un `Bool` y no un `SplitGroup?` a propósito: el aviso no nombra al grupo —no le hace falta,
+    /// se acaba de tocar su tarjeta— así que no hay nada que transportar, y así el alert se ata con
+    /// `$showPendingApprovalNotice` en vez de un `Binding(get:set:)` en el body, que la regla de área
+    /// `swiftui-ds.md` prohíbe. El vecino sí lo usa; esto no lo arregla, pero no lo propaga.
+    @State private var showPendingApprovalNotice = false
     /// G6-3 (C3): estado observable del uploader de migración (banner de progreso).
     @State private var leaveErrorMessage: String?
     /// Payload del composer "Nuevo gasto": captura los grupos elegibles AL MOMENTO del tap.
@@ -324,6 +333,20 @@ struct GroupsContainerView: View {
             } message: {
                 Text(L10n.Groups.Card.leaveGroupAlertBody)
             }
+            // La puerta del grupo para un miembro `.pendingApproval` (decisión owner 2026-09-06).
+            // Es un aviso, no una pregunta: no hay nada que confirmar ni acción que ofrecer —cancelar
+            // la propia solicitud no existe hoy, y el AC prohíbe prometer lo que la app no hace—, así
+            // que un solo botón de cierre.
+            .alert(
+                L10n.Groups.Card.PendingNotice.title,
+                isPresented: $showPendingApprovalNotice
+            ) {
+                Button(L10n.Common.understood, role: .cancel) {
+                    showPendingApprovalNotice = false
+                }
+            } message: {
+                Text(L10n.Groups.Card.PendingNotice.body)
+            }
             .alert(
                 L10n.Common.error,
                 isPresented: Binding(
@@ -413,7 +436,8 @@ struct GroupsContainerView: View {
                 migrationState: group.migrationState
             ),
             action: { viewModel.openDetail(for: group) },
-            onRejectedTap: { rejectedGroupPendingLeave = group }
+            onRejectedTap: { rejectedGroupPendingLeave = group },
+            onPendingTap: { showPendingApprovalNotice = true }
         )
         .accessibilityIdentifier("group_card")
     }
@@ -464,6 +488,15 @@ struct GroupsContainerView: View {
         else { return }
 
         sessionState.pendingGroupID = nil
+
+        // La puerta también se cierra aquí (decisión owner 2026-09-06). `activeGroups` filtra por
+        // archivado/oculto y NO por el status del miembro, así que sin este gate un deep link de
+        // notificación metía al pendiente en el detalle saltándose la tarjeta — la única puerta que
+        // estaba cerrada. Se consume el intent igual (arriba) para que no quede reintentándose.
+        guard viewModel.canOpenDetail(for: group) else {
+            showPendingApprovalNotice = true
+            return
+        }
         viewModel.openDetail(for: group)
     }
 
@@ -512,8 +545,14 @@ struct GroupsContainerView: View {
         case .openPanel:
             sessionState.selectMainTab(.panel)
         case .openGroupDetail:
-            if let group = viewModel.activeGroups.first {
+            // Tercera puerta. `activeGroups.first` puede ser perfectamente el grupo en el que aún
+            // estoy pendiente —si es el único que tengo, lo es siempre—, así que se elige el primero
+            // que SÍ se puede abrir en vez del primero a secas. Si ninguno abre, el nudge no lleva a
+            // un muro: explica por qué.
+            if let group = viewModel.firstGroupOpenableInDetail() {
                 viewModel.openDetail(for: group)
+            } else if viewModel.activeGroups.contains(where: { !viewModel.canOpenDetail(for: $0) }) {
+                showPendingApprovalNotice = true
             }
         case .dismiss:
             break

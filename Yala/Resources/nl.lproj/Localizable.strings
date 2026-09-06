@@ -4088,7 +4088,7 @@
 "groups.member.rejectConfirm" = "Het verzoek van %@ afwijzen? Diegene kan opnieuw toegang vragen met een andere link.";
 "groups.member.pendingRequestsSection" = "Openstaande verzoeken";
 "groups.invite.waitingApproval.title" = "Verzoek verstuurd";
-"groups.invite.waitingApproval.body" = "De groepsbeheerder moet je goedkeuren voordat je kunt meedoen. Ondertussen zie je de groep en wie erin zit, maar nog geen uitgaven. Open Yala straks nog eens om te zien of het gelukt is.";
+"groups.invite.waitingApproval.body" = "De groepsbeheerder moet je goedkeuren voordat je kunt meedoen. Ondertussen zie je de groep in je lijst, maar je kunt hem nog niet openen. Open Yala straks nog eens om te zien of het gelukt is.";
 "groups.invite.waitingApproval.banner" = "Wacht op goedkeuring van de beheerder";
 "groups.invite.rejected.title" = "Verzoek afgewezen";
 "groups.invite.rejected.body" = "De beheerder heeft je verzoek niet goedgekeurd. Vraag een nieuwe link als je het opnieuw wilt proberen.";
@@ -5550,3 +5550,8 @@
 "groups.settings.transferAndLeaveDebtWarning" = "Let op: je vertrekt met een openstaand saldo. De ander blijft die schuld zien.";
 /* Variante del rechazo por ser dueño cuando SÍ hay a quién transferir */
 "groups.errors.ownerCannotLeaveCanTransfer" = "Deze groep is van jou, dus je kunt er niet zomaar uit — iemand moet de leiding overnemen. Je kunt hem overdragen en dan vertrekken.";
+/* Título del aviso al tocar la tarjeta de un grupo en el que sigo pendiente de aprobación */
+"groups.card.pendingNotice.title" = "Wacht op goedkeuring";
+
+/* Cuerpo del aviso al tocar la tarjeta de un grupo pendiente de aprobación */
+"groups.card.pendingNotice.body" = "De groepsbeheerder heeft je verzoek nog niet goedgekeurd. Zodra dat gebeurt, kun je de groep openen en de uitgaven bekijken. Kom straks nog eens terug.";

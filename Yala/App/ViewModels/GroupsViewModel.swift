@@ -539,6 +539,24 @@ final class GroupsViewModel {
         }
     }
 
+    /// ¿Se le puede abrir el detalle de este grupo al usuario actual? Envuelve el SSOT
+    /// (`GroupCardDisplayLogic.allowsDetailEntry`) con la identidad ya resuelta, para que las TRES
+    /// puertas del tab —la tarjeta, el deep link de una notificación y la acción de un nudge— hagan
+    /// la misma pregunta en vez de tres parecidas.
+    func canOpenDetail(for group: SplitGroup) -> Bool {
+        GroupCardDisplayLogic.allowsDetailEntry(
+            memberStatus: currentMemberStatus(for: group),
+            migrationState: group.migrationState
+        )
+    }
+
+    /// El primer grupo de la lista que SÍ se puede abrir. Para quien navega sin haber elegido grupo
+    /// (hoy, el nudge `.openGroupDetail`): sin esto aterrizaba en `activeGroups.first`, que puede ser
+    /// justo el que está esperando aprobación.
+    func firstGroupOpenableInDetail() -> SplitGroup? {
+        activeGroups.first { canOpenDetail(for: $0) }
+    }
+
     /// Push del detalle vía `navigationDestination(item:)`: setear `selectedGroup` empuja.
     func openDetail(for group: SplitGroup) {
         selectedGroup = group

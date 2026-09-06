@@ -23,6 +23,9 @@ struct GroupCardView: View {
     /// Disparado cuando current user `.rejected` toca la card. El padre
     /// presenta el alert "¿Salir del grupo?" (un solo modal global).
     var onRejectedTap: (() -> Void)?
+    /// Disparado cuando current user `.pendingApproval` toca la card. El padre presenta el aviso
+    /// «solicitud en revisión» — mismo patrón de modal global que `onRejectedTap`.
+    var onPendingTap: (() -> Void)?
     // C-10: `onMigratedTap` se ELIMINÓ. Un grupo congelado ya no dispara el CTA desde la card: abre el
     // detalle (vía `action`), que es donde el banner explica el estado y ofrece la salida que este build
     // pueda cumplir de verdad.
@@ -37,7 +40,8 @@ struct GroupCardView: View {
         debts: [GroupsViewModel.DebtRow],
         displayMode: GroupCardDisplayMode = .active,
         action: @escaping () -> Void,
-        onRejectedTap: (() -> Void)? = nil
+        onRejectedTap: (() -> Void)? = nil,
+        onPendingTap: (() -> Void)? = nil
     ) {
         self.group = group
         self.memberCount = memberCount
@@ -46,6 +50,7 @@ struct GroupCardView: View {
         self.displayMode = displayMode
         self.action = action
         self.onRejectedTap = onRejectedTap
+        self.onPendingTap = onPendingTap
     }
 
     var body: some View {
@@ -87,7 +92,10 @@ struct GroupCardView: View {
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
-        .disabled(displayMode == .pendingApproval)
+        // El `.disabled(displayMode == .pendingApproval)` que vivía aquí se RETIRÓ (2026-09-06). No
+        // protegía nada que `handleTap` no proteja ya —abajo, con su propio `case`— y sí hacía dos
+        // daños: apagaba la card para VoiceOver (un botón deshabilitado no se anuncia como activable)
+        // y dejaba el tap sin destino. La puerta sigue cerrada; ahora dice por qué.
         .accessibilityLabel(accessibilityText)
     }
 
@@ -268,9 +276,10 @@ struct GroupCardView: View {
     private func handleTap() {
         switch displayMode {
         case .pendingApproval:
-            // Defensa-en-profundidad: la card está `.disabled` para pending,
-            // pero si el modifier no aplica (ej. fallback de a11y), no abrir detail.
-            break
+            // La puerta del grupo (decisión owner 2026-09-06). NO abre el detalle: presenta el aviso
+            // de «solicitud en revisión». Si el padre no cablea el closure no pasa nada —igual que
+            // `.rejected`—, así que el grupo sigue sin abrirse pase lo que pase.
+            onPendingTap?()
         case .rejected:
             onRejectedTap?()
         case .migratedFrozen, .migratedNeedsUpdate, .migratedPaused:
