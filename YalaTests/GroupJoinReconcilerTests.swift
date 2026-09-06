@@ -288,14 +288,12 @@ struct GroupJoinReconcilerTests {
         let savedUpdate = GroupBackendInviteEntryHandler.updateDisplayNameProvider
         let savedSession = GroupBackendInviteEntryHandler.hasSessionProvider
         let savedConsent = GroupBackendInviteEntryHandler.isConsentedProvider
-        let savedOnboarding = GroupBackendInviteEntryHandler.hasCompletedOnboardingProvider
         let savedUserID = GroupJoinReconciler.backendUserIDProvider
 
         CloudSyncFlags.groupsBackendEnabled = true
         GroupBackendInviteEntryHandler.clearInviteTapArms()
         GroupBackendInviteEntryHandler.hasSessionProvider = { true }
         GroupBackendInviteEntryHandler.isConsentedProvider = { true }
-        GroupBackendInviteEntryHandler.hasCompletedOnboardingProvider = { true }
         GroupBackendInviteEntryHandler.joinProvider = { _, _, _ in
             counter.calls += 1
             return JoinGroupResult(groupID: groupID, memberKey: sub, status: "pendingApproval", rebound: false)
@@ -322,7 +320,6 @@ struct GroupJoinReconcilerTests {
             GroupBackendInviteEntryHandler.updateDisplayNameProvider = savedUpdate
             GroupBackendInviteEntryHandler.hasSessionProvider = savedSession
             GroupBackendInviteEntryHandler.isConsentedProvider = savedConsent
-            GroupBackendInviteEntryHandler.hasCompletedOnboardingProvider = savedOnboarding
             GroupJoinReconciler.backendUserIDProvider = savedUserID
             GroupBackendInviteEntryHandler.clearInviteTapArms()
             CloudSyncFlags._testResetGroupsBackendEnabledOverride()
@@ -354,10 +351,13 @@ struct GroupJoinReconcilerTests {
         #expect(PendingJoinStore.entry(zoneName: groupID) == nil)
     }
 
-    /// El gemelo: con el tap de enlace de ESTE arranque (lo arma `persistIntent`, el choke point de los
-    /// dos caminos de tap), el join SÍ sale — y UNA sola vez aunque boot y foreground corran seguidos,
-    /// porque el consumo vive en `attemptJoin`, el único call-site del RPC.
-    @Test func rejectedMember_withTap_requestsJoinExactlyOnce() async throws {
+    /// El gemelo, **partido en dos el 2026-09-05 porque el contrato cambió**. Antes afirmaba que el tap del
+    /// enlace bastaba para que saliera el `join_group`; hoy el tap lleva a la HOJA y el join sale cuando la
+    /// persona confirma. La distinción no es cosmética: el destinatario de ese RPC es el admin del grupo, y
+    /// mandarle una solicitud sin que el invitado haya visto siquiera de qué grupo se trata era la mitad
+    /// del defecto. Lo que NO cambia —y por eso sigue midiéndose— es el consumo del tap: el join sale UNA
+    /// vez aunque boot y foreground corran seguidos, porque vive en `attemptJoin`.
+    @Test func rejectedMember_withTapButUnconfirmed_presentsSheetInsteadOfJoining() async throws {
         let cleanup = makeEnvironment(); defer { cleanup() }
         let context = try makeTestContext()
         let groupID = "SplitGroup-\(UUID().uuidString)"
@@ -372,8 +372,36 @@ struct GroupJoinReconcilerTests {
         await GroupJoinReconciler.reconcile(trigger: .boot, context: context)
         await GroupJoinReconciler.reconcile(trigger: .foreground, context: context)
 
+        // Cero solicitudes al admin: la invitación está esperando confirmación en la hoja.
+        #expect(counter.calls == 0)
+        // Y el intent sigue vivo, con el tap SIN gastar: lo consume `attemptJoin`, que no ha corrido.
+        #expect(PendingJoinStore.entry(zoneName: groupID) != nil)
+        #expect(GroupBackendInviteEntryHandler.isInviteTapArmed(groupID: groupID))
+    }
+
+    /// La segunda mitad: **confirmada** la invitación (es lo que sella el CTA «Unirme al grupo» de la hoja
+    /// vía `drive(source: .userAction)`), el join sale — y una sola vez aunque boot y foreground corran
+    /// seguidos.
+    @Test func rejectedMember_afterConfirming_requestsJoinExactlyOnce() async throws {
+        let cleanup = makeEnvironment(); defer { cleanup() }
+        let context = try makeTestContext()
+        let groupID = "SplitGroup-\(UUID().uuidString)"
+        let sub = "dddd1111-2222-3333-4444-555566667777"
+        let (counter, tearDown) = try makeRejectedBackendWorld(context: context, groupID: groupID, sub: sub)
+        defer { tearDown() }
+
+        GroupBackendInviteEntryHandler.persistIntent(groupID: groupID, token: "tok")
+        // El CTA de la hoja. Se sella por el mismo camino que en producción, no escribiendo el campo a
+        // mano: así este test también cae si alguien mueve el sello fuera de `drive`.
+        await GroupBackendInviteEntryHandler.drive(groupID: groupID, token: "tok", source: .userAction)
+        #expect(PendingJoinStore.entry(zoneName: groupID)?.isInviteConfirmed == true)
         #expect(counter.calls == 1)
-        // El tap quedó gastado: el segundo trigger ya no lo tenía.
+
+        await GroupJoinReconciler.reconcile(trigger: .boot, context: context)
+        await GroupJoinReconciler.reconcile(trigger: .foreground, context: context)
+
+        // Sigue en 1: el tap quedó gastado en el join del CTA.
+        #expect(counter.calls == 1)
         #expect(!GroupBackendInviteEntryHandler.isInviteTapArmed(groupID: groupID))
     }
 }

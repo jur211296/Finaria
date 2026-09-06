@@ -15,23 +15,29 @@ nonisolated enum GroupBackendInviteEntryLogic {
 
     /// El siguiente paso del flujo encadenado. Cada llamada re-evalúa condiciones VIVAS (no one-shots
     /// quemados en el productor — regla del repo): sin sesión → sign-in; con sesión sin consent →
-    /// consent; usuario FRESCO (sin onboarding) → invite onboarding (captura el nombre ANTES del join);
-    /// listo → join.
+    /// consent; invitación sin confirmar → invite onboarding (enseña el grupo y captura el nombre ANTES
+    /// del join); confirmada → join.
     enum Step: Equatable {
         case presentSignIn
         case presentConsent
-        /// A2 (paso 6 de A1): usuario fresco — presentar `GroupInviteOnboardingView` (metadata nil,
-        /// visual genérico); el JOIN lo dispara su CTA vía el reconciler (source `.userAction`).
+        /// A2 (paso 6 de A1): la invitación aún no está confirmada — presentar `GroupInviteOnboardingView`;
+        /// el JOIN lo dispara su CTA vía el reconciler (source `.userAction`).
         case presentInviteOnboarding
         case join
     }
 
     /// - Parameters:
-    ///   - hasCompletedOnboarding: señal de routing actual (UserDefaults) — un fresco pasa por el
-    ///     invite onboarding para capturar su nombre antes del join (R1: jamás join con placeholder
-    ///     si podemos capturar el real primero).
+    ///   - hasConfirmedInvite: `PendingJoinEntry.isInviteConfirmed` — ¿la persona ya dijo que sí a ESTA
+    ///     invitación? Sin confirmar se presenta la hoja, que es donde ve a qué grupo la invitaron y elige
+    ///     con qué nombre entrar (R1: jamás join con placeholder si podemos capturar el real primero).
     ///   - canPresentOnboarding: `false` cuando el paso viene del CTA del PROPIO onboarding
     ///     (source `.userAction`) — sin este discriminador el tap de "unirme" re-presentaría la vista.
+    ///
+    /// **2026-09-05: `hasCompletedOnboarding` SALIÓ de esta firma, y no por limpieza.** Era el parámetro
+    /// que decidía el terminal, y decidía mal: a quien ya tenía cuenta lo daba por confirmado sin haberle
+    /// enseñado nunca la hoja, así que tapear un enlace lo metía en el grupo solo. Se retira en vez de
+    /// dejarse mudo porque un parámetro que ya no decide nada es una trampa para quien lo lea después. El
+    /// razonamiento entero está en el encabezado de `GroupsGateLogic`.
     ///
     /// **C2 (2026-08-12): deriva de `GroupsGateLogic.nextStep(entry: .invite)`.** El invitado es la única
     /// puerta que NO lleva el educativo general delante: el suyo es `GroupInviteOnboardingView`, contextual
@@ -40,7 +46,7 @@ nonisolated enum GroupBackendInviteEntryLogic {
     static func nextStep(
         hasSession: Bool,
         isConsented: Bool,
-        hasCompletedOnboarding: Bool = true,
+        hasConfirmedInvite: Bool = false,
         canPresentOnboarding: Bool = true
     ) -> Step {
         switch GroupsGateLogic.nextStep(
@@ -50,7 +56,10 @@ nonisolated enum GroupBackendInviteEntryLogic {
             hasSeenEducational: true,
             hasSession: hasSession,
             isConsented: isConsented,
-            hasCompletedSetup: hasCompletedOnboarding,
+            // Ídem: desde 2026-09-05 el alta tampoco decide el terminal de `.invite`. Va `true` por la
+            // misma razón que la línea de arriba — un `false` sugeriría que aquí se pide un alta.
+            hasCompletedSetup: true,
+            hasConfirmedInvite: hasConfirmedInvite,
             canPresentInviteOnboarding: canPresentOnboarding
         ) {
         case .presentSignIn:           return .presentSignIn

@@ -26,40 +26,50 @@ struct GroupBackendInviteEntryLogicTests {
         #expect(L.nextStep(hasSession: true, isConsented: false) == .presentConsent)
     }
 
-    @Test func nextStep_sessionAndConsent_joins() {
-        #expect(L.nextStep(hasSession: true, isConsented: true) == .join)
+    /// **Cambió de significado el 2026-09-05, y el cambio es el arreglo.** Con los defaults de la firma
+    /// vieja esta llamada daba `.join`; con los de la nueva (`hasConfirmedInvite: false`) da la hoja. El
+    /// default seguro es el que PIDE confirmación: quien llame sin decir nada no puede meter a nadie en un
+    /// grupo por omisión.
+    @Test func nextStep_sessionAndConsent_presentsSheetUntilConfirmed() {
+        #expect(L.nextStep(hasSession: true, isConsented: true) == .presentInviteOnboarding)
+        #expect(L.nextStep(hasSession: true, isConsented: true, hasConfirmedInvite: true) == .join)
     }
 
-    // MARK: - nextStep con el fork del invitado FRESCO (A2, paso 6)
+    // MARK: - nextStep con el fork de la invitación SIN CONFIRMAR (A2, paso 6)
 
-    @Test func nextStep_freshUser_presentsInviteOnboardingBeforeJoin() {
-        // Sesión + consent listos pero onboarding pendiente → captura de nombre primero.
+    @Test func nextStep_unconfirmedInvite_presentsInviteOnboardingBeforeJoin() {
+        // Sesión + consent listos pero la invitación sin confirmar → la hoja primero.
         #expect(L.nextStep(
             hasSession: true, isConsented: true,
-            hasCompletedOnboarding: false, canPresentOnboarding: true) == .presentInviteOnboarding)
+            hasConfirmedInvite: false, canPresentOnboarding: true) == .presentInviteOnboarding)
     }
 
-    @Test func nextStep_freshUser_signInAndConsentStillComeFirst() {
-        // El fork fresco NO adelanta a sign-in/consent (orden del flujo encadenado).
+    @Test func nextStep_unconfirmedInvite_signInAndConsentStillComeFirst() {
+        // El fork de la hoja NO adelanta a sign-in/consent (orden del flujo encadenado).
         #expect(L.nextStep(
             hasSession: false, isConsented: false,
-            hasCompletedOnboarding: false, canPresentOnboarding: true) == .presentSignIn)
+            hasConfirmedInvite: false, canPresentOnboarding: true) == .presentSignIn)
         #expect(L.nextStep(
             hasSession: true, isConsented: false,
-            hasCompletedOnboarding: false, canPresentOnboarding: true) == .presentConsent)
+            hasConfirmedInvite: false, canPresentOnboarding: true) == .presentConsent)
     }
 
     @Test func nextStep_userActionFromOnboardingCTA_joinsWithoutRePresenting() {
         // El CTA del propio onboarding (source .userAction) JAMÁS re-presenta la vista.
         #expect(L.nextStep(
             hasSession: true, isConsented: true,
-            hasCompletedOnboarding: false, canPresentOnboarding: false) == .join)
+            hasConfirmedInvite: false, canPresentOnboarding: false) == .join)
     }
 
-    @Test func nextStep_onboardingComplete_joinsDirect() {
+    /// **Sustituye a `nextStep_onboardingComplete_joinsDirect`, que documentaba el defecto.** Aquél fijaba
+    /// que con el onboarding hecho el invitado se unía directo — o sea, que a quien ya tenía cuenta el
+    /// enlace lo metía en el grupo sin enseñarle la hoja. Lo que hoy manda al join es haber confirmado ESTA
+    /// invitación, y eso ya no depende de si la persona tenía cuenta: el término del alta salió de la
+    /// firma, así que esa confusión no se puede volver a escribir ni por accidente.
+    @Test func nextStep_confirmedInvite_joinsDirect() {
         #expect(L.nextStep(
             hasSession: true, isConsented: true,
-            hasCompletedOnboarding: true, canPresentOnboarding: true) == .join)
+            hasConfirmedInvite: true, canPresentOnboarding: true) == .join)
     }
 
     // MARK: - routesToBackend (C2 — con flag OFF NUNCA se toma la rama backend)

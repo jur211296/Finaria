@@ -368,7 +368,13 @@ struct HasCompletedOnboardingDomainTests {
         "AppBootstrapper.swift": 3,                  // restart-alert · seed de avisos · imagen compartida
         "ContentView.swift": 2,                      // gate del organizador · el skip de restauración
         "RouterEntryGate.swift": 1,                  // readiness del router
-        "GroupBackendInviteEntryHandler.swift": 1,   // routing del invitado fresco
+        // 2026-09-05 · el consumidor SE MOVIÓ, no desapareció: `GroupBackendInviteEntryHandler` decidía
+        // con esta key si el invitado veía la hoja y ya no la lee (ese terminal lo decide ahora
+        // `PendingJoinEntry.isInviteConfirmed`); quien la lee es la hoja, para elegir QUÉ escribe su CTA
+        // —el alta completa o solo el nombre del join—. El dominio sigue siendo el CAJÓN, que es el punto
+        // de este censo: la pregunta «¿el alta de quién?» tiene que responderla la persona que está usando
+        // la app, no la dueña del teléfono.
+        "GroupInviteOnboardingView.swift": 1,        // qué escribe el CTA de la hoja del invitado
         "ReviewPromptService.swift": 1,              // ya iba por la puerta desde F4
         "GroupsContainerView.swift": 1,              // gemelo del gate del organizador
         "OnboardingView.swift": 1,                   // EL escritor

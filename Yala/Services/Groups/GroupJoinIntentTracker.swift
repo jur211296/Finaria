@@ -124,7 +124,9 @@ final class GroupJoinIntentTracker {
         switch reason {
         case .memberSaveFailed:
             phase = .creatingMember
-            await GroupJoinReconciler.reconcile(trigger: .acceptShare)
+            // La zona ACOTA el `.userAction` a la invitación que la persona está reintentando: sin ella,
+            // `reconcile` trataría como confirmadas TODAS las vigentes (ver `GroupJoinReconciler.mapTrigger`).
+            await GroupJoinReconciler.reconcile(trigger: .acceptShare, userConfirmedZone: zoneName)
         case .acceptFailed:
             phase = .failed(.expired)
         case .expired:

@@ -22,8 +22,27 @@ struct GroupInviteOnboardingView: View {
     @State private var hasTappedJoin: Bool = false
     @State private var hitSoftTimeout: Bool = false
     @State private var timeoutTask: Task<Void, Never>?
+    /// El campo de nombre se siembra UNA vez (ver `seedNameFromProfileIfNeeded`).
+    @State private var didSeedName: Bool = false
 
     private var tracker: GroupJoinIntentTracker { .shared }
+
+    /// ¿Esta persona ya tiene cuenta en este device? Decide **qué escribe el CTA**, no qué se muestra: la
+    /// hoja es la misma para todos desde 2026-09-05 (ver el encabezado de `GroupsGateLogic`).
+    ///
+    /// El CAJÓN de esta sesión y no `.standard` (decisión del owner, 2026-09-03): con `.standard` la
+    /// pregunta la respondería la DUEÑA del teléfono, y a la visita se le haría el alta o no según el
+    /// onboarding de otra persona.
+    private var hasCompletedOnboarding: Bool {
+        SessionDefaults.current.bool(forKey: AppPreferences.Keys.hasCompletedOnboarding)
+    }
+
+    /// Nombre del perfil de ESTA sesión. Mismo dominio y misma clave que
+    /// `GroupBackendInviteEntryHandler.profileNameProvider`, que es quien lo usa de fallback en el join:
+    /// leerlos de dominios distintos daría un prellenado que no es el que acabaría enviándose.
+    private var profileName: String {
+        SessionDefaults.current.string(forKey: AppPreferences.Keys.userName) ?? ""
+    }
 
     /// #22: marca del invite (nombre/icono/color del grupo) para personalizar el banner. Si nil o sin
     /// nada que pintar → fallback al copy/visual genérico.
@@ -33,13 +52,23 @@ struct GroupInviteOnboardingView: View {
     /// llegaba SIEMPRE `nil`: el copy `welcomeWithGroup` y estos dos computed llevaban meses siendo código
     /// vivo sin camino alcanzable.
     let inviteMetadata: InviteLinkService.BrandedMetadata?
+
+    /// Zona (== `group_id`) de la invitación que esta hoja está presentando, tal como la trae el intent
+    /// del router. **Sin ella la vista no puede decir de qué grupo habla**, y eso tenía dos consecuencias:
+    /// el CTA reconciliaba TODAS las invitaciones vivas como si la persona las hubiera confirmado todas
+    /// (`reconcile(trigger: .acceptShare)` sin zona), y no había forma de retirar UNA invitación al decir
+    /// «más tarde». `nil` solo en previews y en el seam de XCUITest, donde no hay intent detrás.
+    let pendingJoinZone: String?
+
     var onComplete: (GroupInviteOnboardingOutcome) -> Void
 
     init(
         inviteMetadata: InviteLinkService.BrandedMetadata? = nil,
+        pendingJoinZone: String? = nil,
         onComplete: @escaping (GroupInviteOnboardingOutcome) -> Void
     ) {
         self.inviteMetadata = inviteMetadata
+        self.pendingJoinZone = pendingJoinZone
         self.onComplete = onComplete
     }
 
@@ -69,6 +98,7 @@ struct GroupInviteOnboardingView: View {
                 .padding(.horizontal, DS.Spacing.xxl)
             }
         }
+        .onAppear { seedNameFromProfileIfNeeded() }
         .onChange(of: tracker.phase) { _, newPhase in
             // Fase terminal → el soft-timeout deja de tener sentido.
             switch newPhase {
@@ -133,7 +163,26 @@ struct GroupInviteOnboardingView: View {
                 handleJoinTap()
             }
             .accessibilityIdentifier("invite_join_button")
-            .padding(.bottom, DS.Spacing.xxl)
+            .padding(.bottom, canDecline ? DS.Spacing.md : DS.Spacing.xxl)
+
+            // **La salida, y por qué SOLO para quien ya tiene la app montada.** Al invitado FRESCO esta
+            // hoja no le tapa nada: es su primera pantalla y detrás no hay app a la que volver, así que
+            // dejarle salir le dejaría en una app sin dar de alta — un brick, no una salida. A quien ya
+            // usa Yala sí le tapa lo suyo, y el cover se vuelve a montar en cada arranque mientras el
+            // intent viva, así que sin esto un enlace tapeado por error le secuestra la app hasta que se
+            // rinda y entre al grupo.
+            //
+            // Copy REUSADO (`action.later`, ya en los 16 idiomas): «ahora no», que es exactamente el
+            // hecho. Cero cadenas nuevas.
+            if canDecline {
+                Button(L10n.Action.later) {
+                    handleDeclineTap()
+                }
+                .font(DS.Typography.subheadline)
+                .foregroundStyle(.secondary)
+                .accessibilityIdentifier("invite_decline_button")
+                .padding(.bottom, DS.Spacing.xxl)
+            }
         }
         .dismissKeyboardOnTap()
     }
@@ -170,16 +219,70 @@ struct GroupInviteOnboardingView: View {
         }
     }
 
+    /// ¿Se le puede ofrecer salir sin unirse? Solo a quien tiene app detrás — ver el comentario del botón.
+    private var canDecline: Bool { hasCompletedOnboarding }
+
+    /// «Más tarde»: retira ESTA invitación y cierra. Sin la zona no se retira nada y solo se cierra la
+    /// vista, que es lo correcto en ese caso —no hay invitación que nombrar— y no ocurre en producción.
+    private func handleDeclineTap() {
+        if let pendingJoinZone {
+            PendingJoinStore.clear(zoneName: pendingJoinZone)
+        }
+        complete(.declined)
+    }
+
+    // MARK: - Prellenado del nombre
+
+    /// Siembra el campo con el nombre del perfil, UNA vez y solo si sigue vacío.
+    ///
+    /// Sin esto, desde que la hoja se presenta también a quien ya tiene cuenta (2026-09-05), a esa persona
+    /// se le pedía su nombre **en blanco** —el `@State` arranca vacío— y si lo dejaba así se unía como
+    /// «Usuario»: el fallback de `resolveJoinDisplayName` la habría salvado, pero el campo vacío ya le
+    /// había dicho que Yala no sabe quién es. Es el mismo nombre que se enviaría por defecto, escrito donde
+    /// puede cambiarlo.
+    ///
+    /// El `didSeed` no es defensivo: `onAppear` vuelve a correr al reaparecer la vista, y sin él una
+    /// re-siembra pisaría lo que la persona acabara de teclear. Y solo siembra sobre vacío, para no pisar
+    /// tampoco lo tecleado dentro de la misma aparición. Para un invitado FRESCO el perfil está vacío ⇒ el
+    /// campo queda como estaba y su recorrido no cambia.
+    private func seedNameFromProfileIfNeeded() {
+        guard !didSeedName else { return }
+        didSeedName = true
+        guard userName.isEmpty else { return }
+        userName = profileName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     // MARK: - Join handler (A3)
 
     private func handleJoinTap() {
         guard !hasTappedJoin else { return }
-        performSilentSetup()
+        // **La bifurcación entera del arreglo está en esta línea, y no en lo que se ve.** La hoja es la
+        // misma para todos; lo que su CTA ESCRIBE no puede serlo: el alta completa, corrida sobre una
+        // cuenta que ya existe, le pisa preferencias vivas — y las tres peores (`userName`,
+        // `defaultCurrencyCode`, `defaultPeriod`) van por `PreferenceSyncService`, o sea al iKV del Apple
+        // ID, así que el daño le llega también a sus OTROS dispositivos. Tabla medida en
+        // `performJoinOnlySetup`.
+        //
+        // **`hasCompletedOnboarding` es una key POR DEVICE** (`PreferenceSyncService`: «NOT synced»), así
+        // que lo que este predicado pregunta de verdad es «¿este teléfono hizo el alta?» y no «¿esta
+        // persona tiene cuenta?». Un segundo dispositivo, o una reinstalación de alguien con la cuenta
+        // consolidada, responden `false` y toman el alta completa. **Es el comportamiento que ya había**
+        // —esa misma condición era la puerta de la hoja antes de este cambio, así que quien la veía era
+        // exactamente quien la tomaba— y por eso no se toca aquí: el hueco es real, es anterior, y
+        // cerrarlo pide una señal de CUENTA que este camino no tiene.
+        if hasCompletedOnboarding {
+            performJoinOnlySetup()
+        } else {
+            performSilentSetup()
+        }
         withAnimation { hasTappedJoin = true }
         // Camino rápido: si la zona ya materializó, el member nace ahora mismo y
         // la fase salta a pending/active sin esperar el próximo fetch.
         Task { @MainActor in
-            await GroupJoinReconciler.reconcile(trigger: .acceptShare)
+            // La zona ACOTA el `.userAction`: `reconcile` barre todas las entries vigentes, y sin este dato
+            // tapear «Unirme» aquí confirmaba también las invitaciones que la persona no ha visto (y les
+            // sellaba la hoja para siempre). Ver `GroupJoinReconciler.mapTrigger`.
+            await GroupJoinReconciler.reconcile(trigger: .acceptShare, userConfirmedZone: pendingJoinZone)
         }
         startSoftTimeout()
     }
@@ -206,7 +309,7 @@ struct GroupInviteOnboardingView: View {
         switch outcome {
         case .joined, .pendingApproval:
             NudgeService.shared.recordGroupJoinIfNeeded()
-        case .closedWhileSyncing, .abandonedAfterFailure:
+        case .closedWhileSyncing, .abandonedAfterFailure, .declined:
             break
         }
         // El tracker se consume al confirmar unión o al abandonar sin recovery;
@@ -214,10 +317,18 @@ struct GroupInviteOnboardingView: View {
         switch outcome {
         case .joined, .abandonedAfterFailure(recoverable: false):
             tracker.clear()
+        case .declined:
+            // Solo si el tracker seguía esta invitación. Es global (trackea UNA zona), así que un `clear()`
+            // a secas le apagaría el banner a un join de OTRO grupo que sí está en vuelo.
+            if let pendingJoinZone, tracker.zoneName == pendingJoinZone { tracker.clear() }
         default:
             break
         }
         onComplete(outcome)
+        // **Quien dice «más tarde» no va a Grupos.** No se ha unido a nada: mandarle al tab sería
+        // llevarle justo a donde no quiso entrar, y en un dominio que puede no haber abierto nunca. Vuelve
+        // a lo que estaba haciendo, que es lo que pidió.
+        guard outcome != .declined else { return }
         // Navigate to groups after dismiss (UX delay for animation, not sync)
         Task {
             try? await Task.sleep(for: .milliseconds(300))
@@ -357,8 +468,43 @@ struct GroupInviteOnboardingView: View {
         }
     }
 
-    // MARK: - Silent Setup
+    // MARK: - Setup del CTA · la persona que YA tiene cuenta
 
+    /// Lo que el CTA escribe cuando quien se une ya está dado de alta: **el nombre con el que entrará a
+    /// ESTE grupo, y nada más.**
+    ///
+    /// Escrito como la LISTA de lo que `performSilentSetup` hace y esto no, porque la manera de romper esto
+    /// es añadir ahí abajo un paso y no mirar aquí:
+    ///
+    /// | `performSilentSetup` escribe | Aquí | Alcance del daño, MEDIDO |
+    /// |---|---|---|
+    /// | `userName` del perfil | **NO** | **CROSS-DEVICE.** `sync.set(string:)` empuja al iKV del Apple ID (o al outbox), así que unirte a un grupo te renombraría el perfil en TODOS tus dispositivos |
+    /// | `defaultCurrencyCode` / `defaultPeriod` | **NO** | **CROSS-DEVICE**, por el mismo camino, y recalculados desde el grupo o la región: te cambia la moneda de la app por la del grupo al que acabas de entrar |
+    /// | `updateCurrentUserDisplayName` | **NO** | DEVICE-WIDE dentro de Grupos: recorre TODOS tus members (`resolveAllCurrentUserMembers`), así que el nombre tecleado aquí te renombraría en tus otros grupos |
+    /// | `onboardingMode = .groupInvite` | **NO** | **Local a este device, y recuperable** (`FullModeActivationView`). La primera versión de esta tabla decía que escalaba al iKV con merge never-downgrade, y conviene saber que es FALSO por este camino: el `didSet` de `SessionState.onboardingMode` embuda en `OnboardingMode.setCurrent`, que escribe `UserDefaults.standard` a secas. Los dos que SÍ empujan esa key al iKV son `GroupsOrganizerOnboarding` y `FullModeActivationView`. Sigue fuera de aquí porque te deja la app recortada a Grupos sin haberlo pedido — pero el titular era otro, y repetirlo hacía creer que las cuentas existentes ya estaban protegidas de esa escalada |
+    /// | seeds de categorías/notificaciones + `save()` | **NO** | ya los tiene; correrlos es trabajo sobre un store vivo a cambio de nada |
+    /// | `signalOnboardingCompleted` | **NO** | no hay alta nueva que anunciar a los otros dispositivos |
+    /// | KPI `localRegistrationCompleted` | **NO** | contaría un registro por alguien que ya estaba registrado |
+    /// | `hasShownGroupsOnboarding` | **NO** | **la que cambió al medirla.** Marcarla APAGA el educativo de Grupos —tres pantallas— a quien nunca lo ha visto, per-device y para siempre: `hasSeenAnyGroupsEducational` es `hasShownOnboarding` OR (`onboardingMode == .groupInvite` AND alta hecha), y para un usuario `.full` de toda la vida el segundo término es falso ⇒ esta línea era la única que decidía. Esta hoja es UNA pantalla de bienvenida: hace de educativo para quien llega sin app, no para quien ya usa Yala y entra en Grupos por primera vez |
+    /// | nombre en el join intent | **SÍ** | es lo único que hace falta: `resolveJoinDisplayName` lo prefiere sobre el del perfil, así que el member de este grupo nace con él, y si ya existía lo corrige `correctDisplayNameIfNeeded` (R1) |
+    private func performJoinOnlySetup() {
+        let finalName = userName.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Sin fallback a `defaultName` aquí, al revés que en el alta: dejarlo vacío hace que
+        // `resolveJoinDisplayName` caiga al nombre del PERFIL, que para esta persona es un nombre real y
+        // mejor que «Usuario». Escribir el default lo taparía.
+        guard !finalName.isEmpty else { return }
+
+        // Residual DECLARADO: `updateDisplayName` propaga a TODAS las entries vigentes ("el nombre es
+        // global, no por grupo" — su propio docblock). Con dos invitaciones vivas a la vez, el nombre
+        // tecleado aquí viajaría también en la otra. Se deja: acotarlo a una zona obliga a que la vista
+        // sepa a qué grupo pertenece, que hoy no sabe, y el caso —dos invites sin resolver— no se ha visto.
+        PendingJoinStore.updateDisplayName(finalName)
+    }
+
+    // MARK: - Setup del CTA · el invitado FRESCO (alta completa)
+
+    /// El alta de primer arranque. **Solo para quien NO tiene cuenta** — ver `performJoinOnlySetup` para
+    /// qué de todo esto es dañino sobre una cuenta que ya existe, y por qué.
     private func performSilentSetup() {
         let sync = PreferenceSyncService.shared
         let finalName = userName.trimmingCharacters(in: .whitespacesAndNewlines)
