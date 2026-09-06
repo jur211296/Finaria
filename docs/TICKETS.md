@@ -78,7 +78,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | groups-guest-currency-from-region | backlog | tickets/backlog/groups-guest-currency-from-region.md |
 | groups-import-splitwise-tricount | backlog | tickets/backlog/groups-import-splitwise-tricount.md |
 | groups-in-group-search | backlog | tickets/backlog/groups-in-group-search.md |
-| groups-invite-skips-unirme-sheet-if-onboarded | backlog | tickets/backlog/groups-invite-skips-unirme-sheet-if-onboarded.md |
+| groups-invite-skips-unirme-sheet-if-onboarded | qa | tickets/qa/groups-invite-skips-unirme-sheet-if-onboarded.md |
 | groups-join-intent-reconciler | blocked | tickets/blocked/groups-join-intent-reconciler.md |
 | groups-leave-rpc-error-10 | backlog | tickets/backlog/groups-leave-rpc-error-10.md |
 | groups-log-expense-via-chat-voice | backlog | tickets/backlog/groups-log-expense-via-chat-voice.md |
@@ -395,3 +395,29 @@ Jurgen 2026-08-26: `groups-cloud-mode-hardening-v1`, `groups-cloud-identity-loss
 | Ideas/Tracking de deudas.md | tickets/backlog/debt-tracking.md |
 | Backlog/modo-nube/qa_MODO-NUBE-SPEC-CONSENT-GRUPOS.md | tickets/qa/groups-consent-door-spec.md |
 | Backlog/modo-nube/qa_rescate-pull-grupos-descartados.md | tickets/discarded/rescue-discarded-groups-pull.md |
+
+Frank 2026-09-05 (implementación): `groups-invite-skips-unirme-sheet-if-onboarded` pasa a `qa/`. La hoja
+del invitado se presenta SIEMPRE: el terminal de `.invite` deja de cortar por `hasCompletedOnboarding`
+—un PROXY que solo valía para el fresco, porque la propia hoja marcaba su alta al terminar— y pasa a
+preguntar el hecho real, `PendingJoinEntry.inviteConfirmedAt`. Las DOS puertas cambian juntas (la tabla y
+el drain del router); y lo que la hoja MUESTRA se separa de lo que su CTA ESCRIBE, porque el alta corrida
+sobre una cuenta viva le pisa nombre, moneda y periodo, y esos tres SÍ viajan al iKV.
+
+**Tres correcciones a lo que el ticket daba por medido**, re-medidas en este árbol: (1) su punto 5 está
+caducado — `AppBootstrapper.inviteRouteDecision` y sus tests dan CERO ocurrencias, se retiraron después de
+escribirlo; (2) las coordenadas se desplazaron, como el propio ticket avisaba; (3) su premisa de que
+`onboardingMode = .groupInvite` escala al iKV por este camino es **falsa** — `OnboardingMode.setCurrent`
+escribe `.standard` a secas, y los dos que empujan esa key al canal sincronizado son
+`GroupsOrganizerOnboarding` y `FullModeActivationView`. La conclusión del ticket (no correr el alta) era
+correcta; su titular, no.
+
+La **review adversarial** cazó cuatro defectos que este mismo cambio introducía y que ningún grep ve; el
+peor, que confirmar UNA invitación sellaba TODAS (`reconcile` barre las 8 entries vivas), o sea el defecto
+del ticket colado por la puerta de atrás. Y una decisión de producto nueva y **reversible en un commit**:
+la hoja gana salida («Más tarde», copy ya traducido) para quien tiene app detrás — sin ella, ampliar su
+audiencia convertía su falta de salida en una jaula que el reconciler remonta durante 7 días.
+
+Gate verde entero: build ×2 schemes sin warnings nuevos · 6134 unit / 623 suites · **130 XCUITest, la
+suite completa** · índice de QA validado. Verificado por MUTACIÓN en las dos rondas. **Queda device-QA de
+dos teléfonos**, que es lo que los tests no ven.
+
