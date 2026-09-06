@@ -5,48 +5,65 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-05 (Lima)
 
-**Rama** `2.1` · HEAD `83958dc6` — borrar un grupo ya no te deja mirándolo; el enlace de invitación no
-pierde el nombre del grupo, y la visita en el móvil de otra persona no deja huella en el Yala del dueño.
-TestFlight build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.** `yala-app.pe` sirve la web
-nueva desde el 4-sep.
+**Rama** `2.1` · HEAD `fa9b9b88` — el enlace de invitación ya no te mete en el grupo a escondidas;
+borrar un grupo no te deja mirándolo; la visita en el móvil de otra persona no deja huella en el Yala
+del dueño. TestFlight build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.** `yala-app.pe`
+sirve la web nueva desde el 4-sep.
 
 ## Esta sesión, en una línea
 
-**Borrar un grupo ya no te deja mirándolo** (PR #73). Confirmabas dos veces sobre un aviso que dice
-«esta acción es irreversible» y te quedabas delante del mismo grupo, con sus gastos; había que tocar
-Atrás para comprobar que la app te había hecho caso. El detalle ya sabía cerrarse solo, pero el
-borrado no enciende ninguna de sus señales: no saca la fila del almacén, le pone una marca de oculto.
-Esa marca pasa a ser una señal más, y cubre también el borrado que llega desde otro teléfono.
+**La hoja de «Unirme» aparece siempre al abrir un invite** (PR #74). Antes, si ya tenías cuenta,
+tocabas el enlace y Yala no te preguntaba nada: ni de qué grupo se trataba, ni con qué nombre te iban
+a ver, ni un «sí». Descubrías por tu cuenta que ya estabas dentro. Y unirte a un grupo ya no te toca
+nada tuyo: ni nombre de perfil, ni moneda, ni periodo, ni cómo ves la app en tus otros dispositivos.
 
-**Lo que desatascó el ticket no fue leer el código, fue compilarlo.** Llevaba parado desde el 28-ago
-con un criterio de «antes de tocar código, anota qué pantalla se quedó abierta», y tres hipótesis
-declaradas irresolubles porque del device solo había el relato. Compilar el código **anterior** y
-repetir el recorrido en el simulador reprodujo el fallo exacto y zanjó cuál era. Coste: 30 s de build.
+**La señal era un PROXY, y ese es el patrón que conviene recordar.** El corte preguntaba
+«¿tiene cuenta?» y funcionaba solo para el invitado nuevo, porque la propia hoja marcaba su alta al
+terminar — así que «ya está dado de alta» acababa significando «ya pasó por aquí». La pregunta real
+siempre fue la segunda. Es el mismo arreglo que `hasSeenEducational` frente a `onboardingMode`:
+sustituir un testigo prestado por el hecho que se quería medir.
+
+**Y la review adversarial cazó cuatro defectos que introducía el propio fix**, ninguno visible en un
+grep: confirmar UNA invitación sellaba TODAS (el defecto del ticket colado por la puerta de atrás, con
+mi test de esa propiedad en verde porque montaba el estado a mano); la hoja no tenía salida y al
+ampliar su audiencia se volvía una jaula que el reconciler remonta 7 días; re-abrir el mismo enlace
+mandaba a repetir un «sí» ya dado. Detalle en `tickets/qa/groups-invite-skips-unirme-sheet-if-onboarded.md`.
 
 ## Te espera a ti
 
-1. **Publicar la app.** Los dos avisos de Grupos están completos en servidor y en los dos entornos;
+1. **Una decisión de producto pequeña y reversible.** La hoja del invitado gana un botón **«Más
+   tarde»** (copy ya traducido, cero cadenas nuevas) **solo para quien ya tiene la app montada** —
+   al que llega sin app no se le ofrece, porque salir le dejaría en una app sin dar de alta. Sin él,
+   un enlace tapeado por error te tapaba tu propia app hasta que te rindieras y entraras al grupo. Lo
+   metí porque entregar eso habría sido peor que el bug; **revertirlo es un commit** y nada depende de
+   ello.
+2. **Publicar la app.** Los dos avisos de Grupos están completos en servidor y en los dos entornos;
    falta el cliente iOS. Ahora llevaría además el fix de identidad del recién llegado, los
-   predeterminados del Panel y este cierre del detalle.
-2. **La tanda de QA: 28 tickets en 4 montajes.** Guion en **`qa/guion-tanda.md`**, sin tocar. El
+   predeterminados del Panel, el cierre del detalle y esto.
+3. **La tanda de QA: 29 tickets en 4 montajes.** Guion en **`qa/guion-tanda.md`**, sin tocar. El
    montaje de dos teléfonos cubre TRES de golpe —`group-joiner-flag-consumers-still-narrow`,
    `groups-equal-split-shows-not-participating-on-peer` y `rejoin-tap-renotifies-admins`— con una
-   precondición frágil: **B se une por enlace y NO relanza la app** antes de que A cree el gasto. Si
-   B relanza, ninguno reproduce. `invite-link-five-causes-one-message` cabe en el mismo montaje
-   (tapear el enlace con la app cerrada). Entra hoy `groups-deleted-group-detail-stays-open`: basta
-   borrar un grupo sin deuda siendo owner, y repetirlo entrando por deeplink, que es otra pila.
-3. **Dos decisiones de la web** (§9 del informe): el **texto legal de Grupos** —dice «vía iCloud, no
+   precondición frágil: **B se une por enlace y NO relanza la app** antes de que A cree el gasto. Si B
+   relanza, ninguno reproduce. `invite-link-five-causes-one-message` cabe en el mismo montaje.
+   **Entra hoy `groups-invite-skips-unirme-sheet-if-onboarded`, y encaja justo ahí**: B tiene la cuenta
+   ya creada, abre el enlace y tiene que ver la hoja con su nombre puesto, sin estar dentro hasta
+   tocar «Unirme». Su criterio de no-regresión es el que importa: **después de unirse, el nombre, la
+   moneda y el periodo de B siguen como estaban**. Y `groups-deleted-group-detail-stays-open`, que es
+   otra pila.
+4. **Dos decisiones de la web** (§9 del informe): el **texto legal de Grupos** —dice «vía iCloud, no
    por servidores nuestros» y el backend propio está al 100 % en prod— y si Vercel debe desplegar al
    mergear (hoy su rama de producción es `1.0`).
 
 ## Abiertos
 
-**`in-progress` está vacío**: los dos que este documento listaba —`secondary-guest-exit-lock-and-outbox`
-y `reentry-counts-as-fresh-install`— ya salieron a `qa`. Todo lo vivo espera la tanda de QA o hardware
-(los **2 de `blocked`**), no código.
+**`in-progress` sigue vacío.** Todo lo vivo espera la tanda de QA o hardware (los **2 de `blocked`**),
+no código.
 
 **Al retomar cualquiera: las coordenadas de los tickets están sistemáticamente caducadas.** Greppea,
-no abras la línea citada.
+no abras la línea citada. Hoy volvió a pasar tres veces en el mismo ticket, y una de ellas era una
+premisa que el ticket daba por medida y es **falsa**: `onboardingMode = .groupInvite` NO escala al iKV
+por el camino de la hoja (`OnboardingMode.setCurrent` escribe `.standard` a secas). Lo que sí viaja
+cross-device es `userName`, `defaultCurrencyCode` y `defaultPeriod` — el daño era real, el titular no.
 
 ## Release 2.1 (sin cambios)
 
@@ -56,20 +73,19 @@ sigue sin `ok_`. **Cero `ok_` inventado.**
 
 ## Board
 
-110 tickets · backlog 55 · in-progress 0 · qa 32 · blocked 2 · done 16 · discarded 5. `qa` significa
+110 tickets · backlog 54 · in-progress 0 · qa 33 · blocked 2 · done 16 · discarded 5. `qa` significa
 «esperando la tanda», no «cerrado».
 
-**Tres cifras distintas en tres sitios, medido hoy:** el disco tiene 110; `docs/TICKETS.md` dice `= 96`
-(con `in-progress 7`, que hoy es 0); este documento venía diciendo 108. Y
-**`rojo-heroBuckets-thisWeek-trailing-window` está en disco sin fila** en el índice. Nadie lo ha
-recontado entero — hoy se tocó solo la fila del ticket de la sesión, para no ampliar alcance.
+**Sigue el desajuste de conteos**, sin recontar: el disco tiene 110 y `docs/TICKETS.md` dice `= 96`
+(con `in-progress 7`, que hoy es 0). Y **`rojo-heroBuckets-thisWeek-trailing-window` está en disco sin
+fila** en el índice. Hoy se tocó solo la fila del ticket de la sesión, otra vez, para no ampliar
+alcance — van dos sesiones seguidas dejándolo dicho.
 
-**El verde del CI no dice que los XCUITest pasaran:** su paso de UI es *advisory* y el job sale
-`success` con fallos dentro. Hoy fueron **3**, y son **subconjunto** de los 5 que falla `2.1` sin
-cambio alguno — comparados nombre a nombre contra el run de `cb74daba`, cero regresiones. Dos flaky de
-la base (`BudgetAlertsConfigUITests`, `QuickActionsFavoritesUITests`) hasta pasaron esta vez: el eje es
-el runner frío, no el código. Uno de los tres tiene causa escrita en
-`uitest-compara-fechas-sin-fijar-locale`.
+**El verde del CI no dice que los XCUITest pasaran:** su paso de UI es *advisory* (`continue-on-error`)
+y el job sale `success` con fallos dentro. Lo bloqueante de verdad es `Build for testing`. En el PR #74
+se esperaron los tres checks bloqueantes en verde y se mergeó con el advisory aún corriendo — llevaba
+1 h 45 min, y **la suite completa (130 XCUITest) ya había corrido 130/0 en esta Mac**, que es la red
+real.
 
 **Y ojo con el `CLAUDE.md` de casa:** dice «El CI de GitHub, apagado». Es **falso** — `qa.yml` está
-activo y corre en cada push. Medido esta sesión.
+activo y corre en cada push. Medido dos sesiones seguidas.
