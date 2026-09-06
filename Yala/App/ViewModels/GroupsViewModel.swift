@@ -47,6 +47,21 @@ final class GroupsViewModel {
     private(set) var sharesByGroup: [String: [SplitShare]] = [:]
     private(set) var settlementsByGroup: [String: [SplitSettlement]] = [:]
 
+    /// zoneID → deudas del current user ya calculadas, listas para la tarjeta.
+    ///
+    /// Evitar el fetch por render (M6 D3) no evitaba el CÁLCULO: `currentUserDebts(for:)` corría
+    /// `calculateDebts` (gastos × repartos) en el body de cada tarjeta, así que cualquier
+    /// invalidación de `GroupsContainerView` lo repetía una vez POR GRUPO. Y `searchText` vive en
+    /// este `@Observable`, de modo que cada tecla del buscador invalidaba ese body. Medido con
+    /// 30 grupos × 6 miembros × 50 gastos: ~25 ms por tecla, en el hilo principal — más que el
+    /// frame entero de 16,7 ms. Precalcularlo en `recalculate()` lo deja en un cálculo por
+    /// recarga de datos y un lookup por tarjeta.
+    ///
+    /// No lleva clave de invalidación propia a propósito: sus entradas son exactamente los dicts
+    /// de arriba más los toggles del grupo, y `recalculate()` es el único punto donde ese conjunto
+    /// puede haber cambiado — el mismo ciclo que ya gobierna `balancesByGroup`.
+    private(set) var debtsByGroup: [String: [DebtRow]] = [:]
+
     // MARK: - DebtRow (M6 D3)
 
     /// Una deuda perspectiva del current user para renderizar en la card del grupo.
@@ -151,10 +166,18 @@ final class GroupsViewModel {
         var allSettlements: [SplitSettlement] = []
         var currentUserMemberIDs = Set<String>()
         var newBalancesByGroup: [String: [MemberBalance]] = [:]
+        var newDebtsByGroup: [String: [DebtRow]] = [:]
 
         for group in groups {
             let zoneID = group.cloudKitZoneID
             let members = membersByGroup[zoneID] ?? []
+
+            // Deudas de la tarjeta: ANTES del guard de archivado, porque "Ver archivados" también
+            // pinta tarjetas y `computeDebts(for:)` reproduce el corte exacto que tenía el body —
+            // un grupo archivado EN ESTA SESIÓN conserva sus fuentes en los dicts (nadie las
+            // retira) y por eso su tarjeta sigue mostrando deudas hasta el próximo arranque.
+            // Saltárselo aquí cambiaría lo que ve el usuario, que no es lo que vengo a tocar.
+            if let rows = computeDebts(for: group) { newDebtsByGroup[zoneID] = rows }
 
             guard !group.isArchived else { continue }
 
@@ -190,6 +213,7 @@ final class GroupsViewModel {
         }
 
         if newBalancesByGroup != balancesByGroup { balancesByGroup = newBalancesByGroup }
+        if newDebtsByGroup != debtsByGroup { debtsByGroup = newDebtsByGroup }
 
         // Global summary
         let newSummary: GroupGlobalSummary?
@@ -280,12 +304,24 @@ final class GroupsViewModel {
     /// (`.iOwe` / `.theyOweMe`) + counterpartyName resuelto.
     ///
     /// Worst case (5p × 3 monedas) puede generar 15 rows; la card aplica truncation max 3.
+    ///
+    /// Lookup puro: el cálculo vive en `recalculate()` (ver `debtsByGroup`). Se llama desde el body
+    /// de cada tarjeta, así que NO debe volver a calcular nada.
     func currentUserDebts(for group: SplitGroup) -> [DebtRow] {
+        debtsByGroup[group.cloudKitZoneID] ?? []
+    }
+
+    /// Calcula las deudas de un grupo desde los dicts que pobló `fetchData()`.
+    ///
+    /// Devuelve `nil` —y no `[]`— cuando al grupo le falta alguna fuente, para distinguir
+    /// "sin datos cargados" de "cargado y sin deudas": lo primero no entra en `debtsByGroup`, y
+    /// así el lookup cae en su `?? []`. Es el mismo corte que hacía el guard del body.
+    private func computeDebts(for group: SplitGroup) -> [DebtRow]? {
         guard let members = membersByGroup[group.cloudKitZoneID],
               let expenses = expensesByGroup[group.cloudKitZoneID],
               let shares = sharesByGroup[group.cloudKitZoneID],
               let settlements = settlementsByGroup[group.cloudKitZoneID] else {
-            return []
+            return nil
         }
         return Self.computeCurrentUserDebts(
             members: members,

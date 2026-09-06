@@ -16,6 +16,8 @@ paths:
 - Preferir `@Observable` + `@State`/`@Bindable` sobre `ObservableObject`/`@Published`/`@StateObject`.
 - **Preferencias persistentes → `AppPreferences` inyectado via `@Environment`.** NUNCA `@AppStorage` directo en views nuevas.
 
+- **Mover un cálculo del body a una propiedad del VM CORTA el live-binding a los `@Model` que ese cálculo leía.** Un body que recorre objetos SwiftData queda observando sus propiedades una a una, así que una mutación **en sitio** (mismo objeto, otro importe) repinta sola sin que nadie recargue. Al precalcular en el ViewModel eso se acaba: la vista pasa a observar únicamente la propiedad del cache, y el refresco depende **entero** de que todo mutador llegue al recálculo. Medido el 2026-09-06 al mover las deudas de la tarjeta de grupo a `GroupsViewModel.debtsByGroup` (`recalculate()`): la lista de Grupos ya no repinta por una mutación in-place suelta, y `GroupsSyncClient.pullUntilExhausted` tiene salidas tempranas (`.transient`, sesión caducada, cap de iteraciones) que dejan páginas **aplicadas y guardadas sin bumpear `dataVersion`** — ahí la cifra se sostiene vieja hasta el próximo `onAppear`, pull-to-refresh o bump. ⇒ **Al precalcular en un VM, comprueba primero que TODO camino de mutación desemboca en el recálculo**, y prefiere la mutación que bumpea a confiar en la observación accidental. Contrapartida medida: en esa lista el cálculo en el body costaba **~25 ms por tecla del buscador** con 30 grupos, más que un frame entero.
+
 
 ## Gotchas de vistas
 
