@@ -1,6 +1,6 @@
 ---
 id: hero-estadisticas-stock-vs-flujo-entre-pestanas
-status: blocked
+status: backlog
 priority: medium
 area: statistics
 created: 2026-09-06
@@ -10,8 +10,8 @@ source: hallazgo de la review adversarial de distribution-balance-kpi-skips-fx
 
 # El número grande de Estadísticas significa una cosa en Distribución y otra en las demás pestañas
 
-**Bloqueado por una decisión de producto de Jürgen. No hay trabajo técnico que hacer hasta que
-responda.**
+**Desbloqueado el 2026-09-06: Jürgen decidió. Ver «Decisión Jürgen» abajo. Estuvo en `blocked/` desde
+su alta el mismo día (PR #78).**
 
 ## Qué pasa
 
@@ -55,8 +55,30 @@ Las dos posturas son defendibles y por eso no la tomo yo:
 No es un bug de cálculo: los cuatro números son correctos para lo que cada uno mide. No es
 `trends-comparison-kpi-vs-curve`, que va de KPI contra curva dentro de Comparativa.
 
+## Decisión Jürgen (2026-09-06)
+
+**Etiquetar el número.** Elegida entre las tres salidas de arriba, presentadas con su coste cada una.
+El motivo, tal como se le puso delante y ratificó: es la única salida que **no revierte** lo que él
+mismo pidió el 26-ago (Distribución cuadra con el Panel) y **no cambia ningún cálculo** — los cuatro
+números son correctos para lo que miden; lo que falta es decir cuál es cada uno. Descartó «dejarlo»
+(la incoherencia se queda), «igualar a flujo» (revierte el 26-ago) e «igualar a stock» (un saldo
+global sobre la gráfica de flujo de Tendencias no significa nada).
+
+Lo que implica: un rótulo bajo el hero en las **cuatro** pestañas —del estilo «Saldo de cuentas» en
+Distribución y «Neto del período» en Tendencias, Insights y Registros—, copy nuevo en los 16 `.lproj`
+(leer `BRAND-VOICE.md`), y ningún cambio en `TrendsTabView`/`InsightsTabView`/`RecordsTabView` más allá
+del rótulo. El comentario de `TrendsTabView.swift:1193-1203` («coherencia cross-tab») queda desfasado y
+hay que reescribirlo para que diga la coherencia nueva: mismo hueco, cifra distinta, **rotulada**.
+
 ## Acceptance Criteria
 
-- [ ] Jürgen decide: dejarlo, igualar las cuatro, o etiquetar.
-- [ ] Si toca cambiar algo, el cambio va con device-QA de las cuatro pestañas deslizando con el
-      mismo período.
+- [x] Jürgen decide: dejarlo, igualar las cuatro, o etiquetar → **etiquetar** (2026-09-06).
+- [ ] Las cuatro pestañas de Estadísticas llevan un rótulo bajo el hero que dice qué es la cifra;
+      el de Distribución nombra un saldo de cuentas, los otros tres un neto del período.
+- [ ] Copy en los 16 `.lproj`; paridad verde (`/l10n-check`).
+- [ ] Ningún cálculo cambia: los cuatro heros muestran el mismo número que antes con el mismo período
+      y los mismos filtros.
+- [ ] El comentario de `TrendsTabView.swift` que justificaba el hero por «coherencia cross-tab» se
+      reescribe: ya no describe lo que hay.
+- [ ] Device-QA de las cuatro pestañas deslizando con el mismo período (**pendiente: es lo que falta
+      tras implementar**).

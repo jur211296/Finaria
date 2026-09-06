@@ -4,7 +4,7 @@ status: backlog
 priority: medium
 area: modo-nube
 created: 2026-09-05
-updated: 2026-09-05
+updated: 2026-09-06
 ---
 
 # «Es mi primera vez → privacidad total» no dice nada a quien está de visita
@@ -68,7 +68,22 @@ crea que la app está rota.
 
 En cualquiera de las dos, el seed de categorías se arregla o se deja de prometer.
 
+## Decisión Jürgen (2026-09-06)
+
+**Salida 1: una pantalla propia, informa sin bloquear.** Elegida entre las dos salidas de arriba (y
+«no decidir hoy»). Motivo, tal como se le puso delante y ratificó: es su «encauzar, no bloquear» del
+2-sep aplicado a la letra, con el mismo molde que ya usa la rama de Grupos
+(`welcome.groups.secondary*`); y la app deja de contradecirse según por dónde entres. Y lo del seed:
+el onboarding en visita **deja de ofrecer** las categorías de ejemplo que no va a crear.
+
 ## Criterio de hecho
+
+Resuelto por la decisión de arriba:
+
+- [ ] «Es mi primera vez → privacidad total» en sesión secundaria muestra una pantalla propia que dice
+      que estás de visita y que lo tuyo no se mezcla con lo del dueño, y **sigue** al onboarding.
+- [ ] El onboarding privado en secundaria no ofrece el seed de categorías (o lo crea de verdad —
+      decidir en `/spec` cuál de las dos; hoy promete y no cumple).
 
 - Las dos ramas del chooser tratan la sesión secundaria de forma coherente, y si difieren está
   escrito por qué.

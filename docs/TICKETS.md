@@ -92,7 +92,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | groups-tab-missing-panel-perf | qa | tickets/qa/groups-tab-missing-panel-perf.md |
 | guest-decline-has-no-screen | qa | tickets/qa/guest-decline-has-no-screen.md |
 | guest-journey-dead-screens | done | tickets/done/guest-journey-dead-screens.md |
-| hero-estadisticas-stock-vs-flujo-entre-pestanas | blocked | tickets/blocked/hero-estadisticas-stock-vs-flujo-entre-pestanas.md |
+| hero-estadisticas-stock-vs-flujo-entre-pestanas | backlog | tickets/backlog/hero-estadisticas-stock-vs-flujo-entre-pestanas.md |
 | history-token-guard-echo-blind-spot | backlog | tickets/backlog/history-token-guard-echo-blind-spot.md |
 | inbox-convert-draft-to-group-expense | done | tickets/done/inbox-convert-draft-to-group-expense.md |
 | inbox-crash-convert-to-group-expense | done | tickets/done/inbox-crash-convert-to-group-expense.md |
@@ -148,7 +148,20 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | yala-android | backlog | tickets/backlog/yala-android.md |
 | zone-decisions-still-per-row | backlog | tickets/backlog/zone-decisions-still-per-row.md |
 
-Counts by folder: backlog 55 · in-progress 0 · qa 36 · blocked 3 · done 16 · discarded 5 = 115. *(Recontados sobre disco el 2026-09-06, junto con el índice de arriba. La línea llevaba cuatro sesiones desviada — decía `= 96` con `in-progress 7` — y el ESTADO lo venía señalando sin recontar.)*
+Counts by folder: backlog 56 · in-progress 0 · qa 36 · blocked 2 · done 16 · discarded 5 = 115. *(Recontados sobre disco el 2026-09-06, junto con el índice de arriba. La línea llevaba cuatro sesiones desviada — decía `= 96` con `in-progress 7` — y el ESTADO lo venía señalando sin recontar.)*
+
+Frank 2026-09-06 (decisiones): Jürgen respondió en una sentada las **seis** decisiones de producto que tenían
+tickets parados sin código que escribir; cada una está en su ticket bajo «Decisión Jürgen (2026-09-06)», con
+la opción elegida, las descartadas y el AC ya resuelto. Los tres del encargo:
+**`hero-estadisticas-stock-vs-flujo-entre-pestanas`** (etiquetar el número en las 4 pestañas;
+`blocked → backlog`, counts `blocked 3 → 2`, `backlog 55 → 56`), **`groups-pending-member-can-open-group`**
+(cerrar la puerta solo en cliente; el DDL no se toca) y **`reentry-killswitch-closes-both-doors`** (bajo el
+kill las dos puertas cerradas es lo deseado y se arregla el mensaje; la re-entrada arranca el motor en
+sesión). Dos extra que también decían «decisión antes de código»: **`fx-presentation-still-shows-1to1`**
+(número con marca de aproximado) y **`welcome-privacy-branch-has-no-secondary-door`** (pantalla propia
+«estás de visita», sin bloquear). Los cinco siguen en `backlog/` **listos para lanzar**; todos piden
+device-QA al final, cuatro copy en 16 idiomas y dos review adversarial. **Siguen en `blocked/` por
+device, no por decisión:** `apppreferences-rewritten-on-launch` y `groups-join-intent-reconciler`.
 
 Frank 2026-09-02 (altas): dos hallazgos del QA de hoy entran en `backlog/`, para que no se pierdan
 al cerrar la sesion.

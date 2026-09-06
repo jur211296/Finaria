@@ -4,7 +4,7 @@ status: backlog
 priority: high
 area: groups
 created: 2026-08-28
-updated: 2026-08-28
+updated: 2026-09-06
 ---
 
 # Un miembro pendiente de aprobación puede entrar al grupo
@@ -112,20 +112,43 @@ tab Grupos**» de `groups-join-intent-reconciler` es una superficie pensada para
 **encuentre** su estado cuando llegue a Grupos por su pie. ⇒ este pase **no abre ticket** por la
 navegación. Si algún día se trabaja, necesita el suyo.
 
+## Decisión Jürgen (2026-09-06)
+
+**Cerrar la puerta, solo en el cliente.** De las dos salidas de «La tensión de producto» eligió la 1,
+y de sus dos variantes la barata: la tarjeta del grupo **no abre el detalle** mientras el miembro esté
+en `pendingApproval`; en su lugar el invitado recibe una superficie que le dice que su solicitud está
+en revisión y qué puede hacer. **El servidor no se toca**: sigue entregando grupo y roster al pendiente
+(`is_group_member`), que es lo que hace que el grupo aparezca en su lista, y el endurecimiento del DDL
+que reserva gastos/repartos/saldos a `active` (`is_group_writer`) se queda como está. Motivo, tal como
+se le puso delante y ratificó: su veredicto del 28-ago era **«entrar sin estar aprobado está mal»**, la
+medición del 4-sep dice que no es fuga sino un cascarón vacío, y cerrar la puerta en cliente lo
+resuelve sin revertir un endurecimiento escrito a propósito. Descartó «explicar la espera dentro»
+(cerrar como no-bug) y «cerrar y además quitarlo de la lista» (tocar el DDL; la sala de espera se
+queda sin sitio).
+
+Consecuencia para el vecino `guest-decline-has-no-screen`: su copy de la sala de espera (pieza 2, ya en
+`2.1`) vive en la **lista**, no dentro del grupo, así que sigue teniendo dónde estar. Lo que cambia es
+que la tarjeta deja de navegar.
+
+**Antes de escribir código sigue faltando medir** lo que la sección «Lo que NO se midió» dejó abierto:
+quién gatea hoy la entrada a `GroupDetailView` con un `pendingApproval` y si el cliente pinta botones
+de escritura (añadir gasto, invitar, ajustes) que el servidor rechazaría con un error crudo. Ese
+primer paso es del ticket, no de esta decisión.
+
 ## Criterio de hecho (AC)
 
-El AC de conducta **depende de la decisión de arriba** y por eso se deja condicionado en vez de
-inventado:
+Resuelto por la decisión de arriba (era condicionado; la rama «explicar la espera» queda descartada):
 
-- **Si se cierra la puerta:** con el miembro en `pendingApproval`, tocar la tarjeta del grupo **no** abre
-  el detalle; en su lugar el usuario recibe una superficie que le dice en qué estado está y qué puede
-  hacer. Y al ser aprobado, la puerta se abre **sin** relanzar la app (eso último ya tiene PASS en
-  `groups-approval-banner-stays`, y no debe romperse).
-- **Si se explica la espera:** al entrar estando pendiente, la pantalla del grupo dice **dentro** que la
-  solicitud está en revisión y que por eso no hay gastos, sin prometer nada que la app no haga.
-- En cualquiera de las dos: **nada de contenido financiero** para un pendiente. Hoy el servidor ya lo
-  garantiza (`is_group_writer` en las tres SELECT); el cliente no debe pintar un vacío que parezca un
-  grupo sin gastos.
+- [ ] Con el miembro en `pendingApproval`, tocar la tarjeta del grupo **no** abre el detalle; en su
+      lugar el usuario recibe una superficie que le dice en qué estado está y qué puede hacer. Copy
+      propio, en los 16 `.lproj`, sin prometer nada que la app no haga.
+- [ ] Al ser aprobado, la puerta se abre **sin** relanzar la app (ya tiene PASS en
+      `groups-approval-banner-stays`, y no debe romperse).
+- [ ] **Nada de contenido financiero** para un pendiente y **ningún botón de escritura** a la vista:
+      el servidor ya lo garantiza (`is_group_writer`); el cliente no debe pintar un vacío que parezca
+      un grupo sin gastos ni un botón que termine en error crudo.
+- [ ] El servidor no cambia: `is_group_member` sigue admitiendo `pendingApproval` en `split_groups` y
+      `group_members`.
 
 ## Cómo se verifica
 
@@ -133,6 +156,9 @@ inventado:
 miembro pendiente real contra el canal backend, que no es ejercitable desde un test). Hoy **no hay
 subida**: no hay TestFlight, ni store, ni tag, y **A7/M5 sigue en HOLD** ⇒ este ticket **no** pasa a `qa`
 y **no hay PASS** que anotar.
+
+**Flag (2026-09-06):** la decisión ya está; lo que queda es implementación (cliente) y después el device-QA de
+dos teléfonos, que depende de que haya una subida nueva (ESTADO: «Publicar la app» sigue pendiente).
 
 ## Relacionado
 
