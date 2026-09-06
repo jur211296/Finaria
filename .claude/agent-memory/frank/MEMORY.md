@@ -12,6 +12,7 @@
 
 ## Cómo mido y cómo entrego
 - [La premisa del ENCARGO también se mide](feedback_la_premisa_del_encargo_tambien_se_mide.md) — hereda los errores del ticket y llega con tono de hecho; medirla cuesta un script.
+- [El paso 3 del gate no detecta cero casos](feedback_gate_paso3_no_detecta_cero_casos.md) — XCUITest es XCTest: cuenta «Test Suite» y «Executed», no «Test run with».
 - [La review adversarial caza lo MÍO](feedback_review_adversarial_caza_lo_mio.md) — cazó 4 defectos que yo introducía; un test verde escrito por mí puede saltarse al caller que lo rompe.
 - [El mutante compilado zanja hipótesis](feedback_mutante_compilado_zanja_hipotesis.md) — si un ticket dice que no hay dato para elegir, recompila el código anterior y reproduce: ese es el dato.
 - [Mis mediciones fallan por el filtro](feedback_mis_mediciones_fallan_por_el_filtro.md) — control positivo siempre, también en los greps de auditoría: un «cero» suele ser el filtro, no el código.
@@ -32,6 +33,7 @@
 ## Entorno y herramientas
 - [El sello del gate ancla en HEAD](reference_gate_sello_ancla_en_head.md) — una tanda de commits obliga a re-sellar entre ellos; mergear `2.1` obliga a re-correr el gate entero.
 - [Avisar a Frank: lo hace el hook, no tú](reference_avisar_a_frank_webhook.md) — el hook ya manda PR y rojos solo (dupliqué el 5-sep); la palabra «prueba» en el texto lo descarta.
+- [El aviso de cierre necesita el cwd del repo](reference_aviso_cierre_necesita_cwd.md) — tras retirar el worktree va a Dan y se descarta en silencio; lee la línea ENVIADO.
 - [Verificar el backend: MCP ve solo prod](reference_verificar_backend_yala.md) — no hay DDL de staging; el sandbox transaccional prueba contra el motor real sin dejar rastro.
 - [El hook de secretos está desactivado](hook_secretos_disparador_substring.md) — retirado del push el 2026-09-01 (ADR-009); nada escanea hoy. Su trampa del substring, si vuelve.
 - [El hook de /cerrar salta con «cerramos»](hook_cerrar_disparador_substring.md) — verifica la premisa contra su mensaje: cerrar un ticket no es cerrar la sesión, y el bloque de disco es irreversible.
