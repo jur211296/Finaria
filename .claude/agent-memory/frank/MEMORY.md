@@ -14,6 +14,7 @@
 - [La premisa del ENCARGO también se mide](feedback_la_premisa_del_encargo_tambien_se_mide.md) — hereda los errores del ticket y llega con tono de hecho; medirla cuesta un script.
 - [El paso 3 del gate no detecta cero casos](feedback_gate_paso3_no_detecta_cero_casos.md) — XCUITest es XCTest: cuenta «Test Suite» y «Executed», no «Test run with».
 - [La review adversarial caza lo MÍO](feedback_review_adversarial_caza_lo_mio.md) — cazó 4 defectos que yo introducía; un test verde escrito por mí puede saltarse al caller que lo rompe.
+- [Las lentes se contradicen entre sí](feedback_lentes_adversariales_se_contradicen.md) — cuando dos discrepan sobre un hecho, no elijas: mídelo; la gravedad que declaran no es evidencia.
 - [El mutante compilado zanja hipótesis](feedback_mutante_compilado_zanja_hipotesis.md) — si un ticket dice que no hay dato para elegir, recompila el código anterior y reproduce: ese es el dato.
 - [Mis mediciones fallan por el filtro](feedback_mis_mediciones_fallan_por_el_filtro.md) — control positivo siempre, también en los greps de auditoría: un «cero» suele ser el filtro, no el código.
 - [Revertir sin commit destruye](feedback_revertir_sin_commit_destruye.md) — en árbol sucio `git checkout -- <f>` borra el trabajo; los mutantes se revierten con `cp`.
