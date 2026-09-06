@@ -58,7 +58,10 @@ mídelo con `gh pr checks` antes de obedecerlo.
 
 El system prompt avisa de tres sitios invisibles al `disk-report.sh`, y uno de ellos tiene una
 trampa que casi me cuesta el simulador: **`~/Library/CoreSimulatorInternal/Devices` NO es caché.
-Ahí viven los devices REALES** — el `iPhone 17 Pro` (`9D0F6D32`) que uso para todo estaba dentro,
+Ahí viven los devices REALES** — el `iPhone 17 Pro` (UDID completo
+`9D0F6D32-1F49-46AD-8070-603D42B5220F`; **`simctl` rechaza el prefijo con «Invalid device», medido
+el 2026-09-06 — sácalo de `xcrun simctl list devices available`, no de aquí) que uso para todo
+estaba dentro,
 con sus 10 GB. Borrar esa carpeta «para liberar» habría destruido el simulador de trabajo.
 
 Lo medido esa noche, con el disco en 12 GB: `/Library/Developer/CoreSimulator/Volumes` = 16 GB (el

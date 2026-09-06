@@ -526,6 +526,64 @@ final class StatisticsViewModel: Filterable {
         }
     }
 
+    /// KPI de Balance para las pestañas que muestran un número bajo el selector
+    /// de período (hoy: Distribución). Devuelve **el mismo número que el Panel**
+    /// — stock vivo al TC actual si el período cubre hoy, saldo histórico al
+    /// cierre si es un período cerrado.
+    ///
+    /// Replica los insumos de `PanelViewModel.balanceTransactions`, que son la
+    /// razón por la que las dos pantallas divergían:
+    ///
+    /// - **Sin recorte de fecha.** El saldo acumula todo el histórico; recortarlo
+    ///   al período devuelve el FLUJO del período, que es el bug original.
+    /// - **Sin `BridgedTransactionFilter`.** Igual que el Panel: el toggle de
+    ///   "incluir gastos de grupo en estadísticas" no aplica al saldo, porque el
+    ///   saldo refleja montos reales que sí están en la cuenta.
+    /// - **Cuentas pre-filtradas**, por eso el criteria va con `selectedAccounts`
+    ///   vacío: filtrar dos veces por cuenta no cambia el resultado, pero deja
+    ///   dos sitios donde la regla puede divergir.
+    ///
+    /// Límite conocido: con **dos o más cuentas seleccionadas** el número puede
+    /// no coincidir con el Panel, porque el Panel colapsa la selección a su
+    /// primer elemento (`selectedAccountID` = `selectedAccountIDs.first`) y aquí
+    /// se respeta el set completo. Es una asimetría preexistente del Panel y
+    /// corregirla queda fuera de este cambio ("no tocar Panel").
+    func balanceKPI(
+        accounts: [Account],
+        transactions: [TransactionItem],
+        allTags: [Tag],
+        defaultCurrencyCode: String,
+        adjustment: GroupBridgeStatsAdjustment = .none,
+        converter: CurrencyConverting = CurrencyConverter.shared
+    ) -> BalanceKPICalculator.Result {
+        let eligibleAccounts = computeEligibleAccounts(from: accounts)
+        let eligibleAccountIDs = Set(eligibleAccounts.map { $0.persistentModelID })
+        let interval = panelDateInterval
+
+        var criteria = buildTrendFilterCriteria(interval: interval, allTags: allTags)
+        criteria.selectedAccounts = []
+        // Explícito, no heredado de `selectedMetric`: este KPI necesita el
+        // histórico completo aunque lo llame alguien con otra métrica activa.
+        criteria.dateInterval = nil
+
+        let balanceTransactions = transactions.filter { transaction in
+            guard let account = transaction.account,
+                eligibleAccountIDs.contains(account.persistentModelID)
+            else { return false }
+            return FilterService.matchesCriteria(transaction, criteria: criteria)
+        }
+
+        return BalanceKPICalculator.result(
+            transactions: balanceTransactions,
+            accounts: eligibleAccounts,
+            interval: interval,
+            period: detailPeriod,
+            currencyCode: defaultCurrencyCode,
+            adjustment: adjustment,
+            converter: converter
+        )
+    }
+
     /// Calculate total income, expense, and current balance
     private func calculateTotals(
         filtered: [TransactionItem],

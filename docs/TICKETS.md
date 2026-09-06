@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (110)
+## Index (115)
 
 | id | status | path |
 |----|--------|------|
@@ -52,9 +52,12 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | debounce-sync-imported-transactions | backlog | tickets/backlog/debounce-sync-imported-transactions.md |
 | debt-tracking | backlog | tickets/backlog/debt-tracking.md |
 | device-handover-groups-leak | discarded | tickets/discarded/device-handover-groups-leak.md |
-| distribution-balance-kpi-skips-fx | backlog | tickets/backlog/distribution-balance-kpi-skips-fx.md |
+| distribucion-recalcula-dos-veces-por-toque-y-sin-debounce | backlog | tickets/backlog/distribucion-recalcula-dos-veces-por-toque-y-sin-debounce.md |
+| distribution-balance-kpi-skips-fx | qa | tickets/qa/distribution-balance-kpi-skips-fx.md |
 | doble-conteo-dia1-previo-thismonth | done | tickets/done/doble-conteo-dia1-previo-thismonth.md |
 | edgecases-extreme-minimum-flaky-under-load | backlog | tickets/backlog/edgecases-extreme-minimum-flaky-under-load.md |
+| el-job-de-tests-del-ci-no-tiene-timeout | backlog | tickets/backlog/el-job-de-tests-del-ci-no-tiene-timeout.md |
+| el-saldo-de-distribucion-no-se-entera-de-un-registro-nuevo | backlog | tickets/backlog/el-saldo-de-distribucion-no-se-entera-de-un-registro-nuevo.md |
 | entitlement-sync-forzado-es-noop-si-hay-otro-en-vuelo | backlog | tickets/backlog/entitlement-sync-forzado-es-noop-si-hay-otro-en-vuelo.md |
 | exportable-insights | backlog | tickets/backlog/exportable-insights.md |
 | fx-partial-rate-rows-silent-1to1 | qa | tickets/qa/fx-partial-rate-rows-silent-1to1.md |
@@ -80,7 +83,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | groups-in-group-search | backlog | tickets/backlog/groups-in-group-search.md |
 | groups-invite-skips-unirme-sheet-if-onboarded | qa | tickets/qa/groups-invite-skips-unirme-sheet-if-onboarded.md |
 | groups-join-intent-reconciler | blocked | tickets/blocked/groups-join-intent-reconciler.md |
-| groups-leave-rpc-error-10 | backlog | tickets/backlog/groups-leave-rpc-error-10.md |
+| groups-leave-rpc-error-10 | qa | tickets/qa/groups-leave-rpc-error-10.md |
 | groups-log-expense-via-chat-voice | backlog | tickets/backlog/groups-log-expense-via-chat-voice.md |
 | groups-pending-member-can-open-group | backlog | tickets/backlog/groups-pending-member-can-open-group.md |
 | groups-reconnect-prune-or-rewire | done | tickets/done/groups-reconnect-prune-or-rewire.md |
@@ -89,6 +92,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | groups-tab-missing-panel-perf | qa | tickets/qa/groups-tab-missing-panel-perf.md |
 | guest-decline-has-no-screen | qa | tickets/qa/guest-decline-has-no-screen.md |
 | guest-journey-dead-screens | done | tickets/done/guest-journey-dead-screens.md |
+| hero-estadisticas-stock-vs-flujo-entre-pestanas | blocked | tickets/blocked/hero-estadisticas-stock-vs-flujo-entre-pestanas.md |
 | history-token-guard-echo-blind-spot | backlog | tickets/backlog/history-token-guard-echo-blind-spot.md |
 | inbox-convert-draft-to-group-expense | done | tickets/done/inbox-convert-draft-to-group-expense.md |
 | inbox-crash-convert-to-group-expense | done | tickets/done/inbox-crash-convert-to-group-expense.md |
@@ -102,6 +106,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | only-testing-filters-may-be-silently-empty | backlog | tickets/backlog/only-testing-filters-may-be-silently-empty.md |
 | orphan-alerts-behind-fullscreen-covers | backlog | tickets/backlog/orphan-alerts-behind-fullscreen-covers.md |
 | panel-accounts-redesign | backlog | tickets/backlog/panel-accounts-redesign.md |
+| panel-colapsa-la-seleccion-de-cuentas-a-la-primera | backlog | tickets/backlog/panel-colapsa-la-seleccion-de-cuentas-a-la-primera.md |
 | panel-defaults-four-sections-four-widgets | qa | tickets/qa/panel-defaults-four-sections-four-widgets.md |
 | prefs-domain-per-secondary-session | qa | tickets/qa/prefs-domain-per-secondary-session.md |
 | prefs-synced-keys-upload-not-download | qa | tickets/qa/prefs-synced-keys-upload-not-download.md |
@@ -119,7 +124,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | scheduled-payments-notif-dedup | qa | tickets/qa/scheduled-payments-notif-dedup.md |
 | secondary-entry-healing-writes-owner-not-session | backlog | tickets/backlog/secondary-entry-healing-writes-owner-not-session.md |
 | secondary-groups-off-wipes-owner | qa | tickets/qa/secondary-groups-off-wipes-owner.md |
-| secondary-guest-exit-lock-and-outbox | in-progress | tickets/in-progress/secondary-guest-exit-lock-and-outbox.md |
+| secondary-guest-exit-lock-and-outbox | qa | tickets/qa/secondary-guest-exit-lock-and-outbox.md |
 | secondary-visitor-writes-owner-domain | qa | tickets/qa/secondary-visitor-writes-owner-domain.md |
 | siri-intent-dual-container | qa | tickets/qa/siri-intent-dual-container.md |
 | smart-ai-notifications | backlog | tickets/backlog/smart-ai-notifications.md |
