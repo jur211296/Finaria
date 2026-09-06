@@ -295,7 +295,10 @@ struct GroupsContainerView: View {
                                 print("GroupsContainerView: leaveGroup failed: \(error)")
                                 #endif
                                 DS.Haptic.warning()
-                                leaveErrorMessage = error.localizedDescription
+                                // Mismo criterio que `GroupSettingsView`: el error crudo aquí era un
+                                // número de discriminante. El copy lo elige `GroupLeaveErrorLogic`.
+                                leaveErrorMessage =
+                                    GroupLeaveErrorLogic.classify(error).localizedMessage
                             }
                             rejectedGroupPendingLeave = nil
                         }

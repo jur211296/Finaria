@@ -5532,3 +5532,10 @@
 
 /* Sign-out blocked alert, guest session: close the session accepting that unsent changes are lost */
 "settings.signOutExitAnywayButton" = "Salir igualmente";
+
+/* Leave group rejected: the server says the current user owns the group */
+"groups.errors.ownerCannotLeave" = "Este grupo es tuyo, así que no puedes salir: alguien tiene que quedarse al frente. Si ya no lo necesitas, puedes eliminarlo.";
+/* Leave group failed for a transient/kill-switch reason: retry later, not the user's fault */
+"groups.errors.leaveUnavailable" = "No pudimos completar tu salida del grupo. Vuelve a intentarlo en un momento.";
+/* Groups RPC rejected because the session token expired or is missing */
+"groups.errors.sessionExpired" = "Tu sesión caducó. Vuelve a iniciar sesión e inténtalo de nuevo.";

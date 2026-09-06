@@ -5521,3 +5521,10 @@
 
 /* Sign-out blocked alert, guest session: close the session accepting that unsent changes are lost */
 "settings.signOutExitAnywayButton" = "Leave anyway";
+
+/* Leave group rejected: the server says the current user owns the group */
+"groups.errors.ownerCannotLeave" = "This group is yours, so you can't leave it — someone has to stay in charge. If you no longer need it, you can delete it.";
+/* Leave group failed for a transient/kill-switch reason: retry later, not the user's fault */
+"groups.errors.leaveUnavailable" = "We couldn't complete your exit from the group. Try again in a moment.";
+/* Groups RPC rejected because the session token expired or is missing */
+"groups.errors.sessionExpired" = "Your session expired. Sign in again and give it another try.";

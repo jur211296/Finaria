@@ -5527,3 +5527,10 @@
 
 /* Sign-out blocked alert, guest session: close the session accepting that unsent changes are lost */
 "settings.signOutExitAnywayButton" = "仍要退出";
+
+/* Leave group rejected: the server says the current user owns the group */
+"groups.errors.ownerCannotLeave" = "这个群组是你的，所以你无法退出——总得有人负责。如果你不再需要它，可以将它删除。";
+/* Leave group failed for a transient/kill-switch reason: retry later, not the user's fault */
+"groups.errors.leaveUnavailable" = "未能完成退出群组。请稍后再试。";
+/* Groups RPC rejected because the session token expired or is missing */
+"groups.errors.sessionExpired" = "你的登录已过期。请重新登录后再试。";

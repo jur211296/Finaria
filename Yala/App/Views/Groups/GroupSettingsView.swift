@@ -589,7 +589,12 @@ struct GroupSettingsView: View {
             DS.Haptic.warning()
             dismiss()
         } catch {
-            actionErrorMessage = error.localizedDescription
+            // El copy de `ownerCannotLeave` manda AQUÍ («…puedes eliminarlo»), así que este camino no
+            // puede seguir pintando la dev-string en inglés de `GroupServiceError` («GroupService: Only
+            // the group owner…»): sería mandar al usuario a un callejón con cartel técnico. Las otras
+            // cuatro acciones de esta pantalla (renombrar, archivar, opciones) tienen el mismo defecto y
+            // se dejan a propósito: no las nombra este cambio. Anotadas en el ticket.
+            actionErrorMessage = GroupLeaveErrorLogic.classify(error).localizedMessage
             showActionError = true
         }
     }
@@ -675,7 +680,10 @@ struct GroupSettingsView: View {
             dismiss()
         } catch {
             DS.Haptic.warning()
-            leaveErrorMessage = error.localizedDescription
+            // Copy propio por caso: el `localizedDescription` de un `GroupsRPCError` es el número del
+            // discriminante («…GroupsRPCError 10.»), y el de un `GroupServiceError` es una dev-string en
+            // inglés. Ninguno de los dos es un mensaje para el usuario.
+            leaveErrorMessage = GroupLeaveErrorLogic.classify(error).localizedMessage
             showLeaveError = true
         }
     }
