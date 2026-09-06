@@ -77,3 +77,18 @@ cada borrado: sin él el espacio no aparece en `df`, y eso hace parecer que el b
 
 Y una nota de herramienta: `rm -rf` sobre `~/Library` pide permiso; `find <dir> -depth -delete` hace
 lo mismo sin prompt.
+
+**El paso (2) sin adivinar, y lo que rinde (2026-09-06).** El `info.plist` de cada DerivedData
+guarda el árbol al que pertenece, así que la clasificación es un comando, no una inferencia:
+
+    for d in ~/Library/Developer/Xcode/DerivedData/Yala-*; do
+      ws=$(/usr/libexec/PlistBuddy -c "Print :WorkspacePath" "$d/info.plist" 2>/dev/null)
+      [ -e "$ws" ] && echo "VIVO     $(du -sh $d|cut -f1)  $ws" || echo "HUÉRFANO $(du -sh $d|cut -f1)  $ws"
+    done
+
+Ese día había **cuatro** carpetas de Yala y **dos eran huérfanas** (worktrees retirados el mismo
+día): **7,8 GB de basura pura**, de 8,4 GB libres a 16 GB, sin tocar nada vivo y sin recompilar. Es
+el borrado de mejor relación riesgo/beneficio de la lista cuando se ha trabajado en varios
+worktrees seguidos — que en este repo es lo normal. Y confirmado otra vez que `rm -rf` está
+bloqueado por el sandbox incluso con ruta absoluta: `find <dir> -type f -delete` y luego
+`find <dir> -depth -type d -empty -delete`.

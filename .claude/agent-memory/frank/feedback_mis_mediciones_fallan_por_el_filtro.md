@@ -350,3 +350,33 @@ contiene; y si la medición las tumba, el cambio suele seguir valiendo la pena p
 aquí, evitar la copia manual y cubrir el día que vuelva a haber una clave, cuando un worktree sin
 enlace compilaría en silencio sin ella. Escribir la razón verdadera es más útil que la razón
 impactante. Relacionado: [[revertir-sin-commit-destruye]].
+
+## Decimoséptimo (2026-09-06): el subagente midió la VARIABLE y yo la FUNCIÓN que la escribe
+
+Delegué a un `Explore` la auditoría de `GroupDetailView`. Volvió con un informe excelente y una
+conclusión falsa: *«Hoy no existe ninguna otra vía — el grep de `selectedGroup` sobre `Yala/` solo
+devuelve `GroupsViewModel:87/544` y `GroupsContainerView:190/193`»*. Yo, en paralelo, había medido
+`grep -rn "openDetail(for:"` y salían **tres** call-sites: la tarjeta, el deep link de una
+notificación y un nudge. Los dos últimos sin ningún gate de estado.
+
+La diferencia entera es qué se buscó: él, la **variable** de estado (`selectedGroup`); yo, la
+**función pública que la escribe** (`openDetail`). Como la única asignación vive dentro de esa
+función, buscar la variable devuelve un resultado correcto y una conclusión al revés.
+
+De haberme quedado con su informe, habría cerrado la tarjeta y firmado el AC con dos puertas
+abiertas — justo las que ningún device-QA prueba, porque hay que llegar por una notificación o por
+un nudge.
+
+**Why:** un encapsulamiento bien hecho **reduce** las coincidencias del grep de la variable a uno.
+Cuanto mejor está escrito el código, más engaña esa búsqueda.
+
+**How to apply:**
+- Para «¿cuántas formas hay de llegar a X?», el universo es el **setter público** (`openDetail`,
+  `present`, `route`), no el `@State`. Y si hay las dos, se buscan las dos.
+- **Un hallazgo de subagente que afirma una AUSENCIA** («solo existe una vía», «no hay más usos»)
+  se re-mide antes de construir encima; es el mismo caso nº 9 de esta ficha —universo equivocado—
+  cometido por otro. Y las lentes que se contradicen no se eligen, se miden
+  ([[lentes-adversariales-se-contradicen]]).
+- Lo que sí me salvó: **control positivo explícito**. Volví a correr el grep pidiéndole que
+  imprimiera además la línea de la tarjeta que ambos dábamos por buena. Si esa no salía, el roto
+  era mi filtro.
