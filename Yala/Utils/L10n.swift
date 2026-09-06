@@ -1993,6 +1993,21 @@ enum L10n {
             static var iCloudRequiredBody: String { ls("groups.errors.iCloudRequiredBody", comment: "") }
             /// G6-3: el grupo se migró a la nube de Yala y está congelado en este device (hay que re-entrar).
             static var movedToBackend: String { ls("groups.errors.movedToBackend", comment: "") }
+            /// El servidor rechazó la SALIDA porque el usuario es el dueño server-side del grupo
+            /// (`yala_owner_cannot_leave`). No es un fallo del usuario ni sirve reintentar: se le
+            /// ofrece la acción que su rol real sí permite (eliminar el grupo). El flag local
+            /// `SplitGroup.isOwner` puede decir lo contrario — solo lo escribe el creador y el pull
+            /// jamás lo actualiza —, así que este error es la ÚNICA afirmación autoritativa de
+            /// ownership que llega al device. Ver `GroupLeaveErrorLogic`.
+            static var ownerCannotLeave: String { ls("groups.errors.ownerCannotLeave", comment: "") }
+            /// Salida no completada por un motivo TRANSITORIO (red, 5xx, sesión que se renueva sola o
+            /// kill-switch del canal). Reintentar más tarde sí tiene sentido, y el mismo criterio que
+            /// `groups.invite.channelUnavailable` en el enlace de invitación: no se culpa al usuario.
+            static var leaveUnavailable: String { ls("groups.errors.leaveUnavailable", comment: "") }
+            /// El token de sesión expiró o falta (`GroupsRPCError.sessionExpired`). Acción concreta:
+            /// volver a iniciar sesión. Se separa de `leaveUnavailable` porque aquí el usuario SÍ
+            /// tiene algo que hacer.
+            static var sessionExpired: String { ls("groups.errors.sessionExpired", comment: "") }
         }
 
         /// G6-3: grupo migrado a la nube de Yala (congelado en CloudKit) — banner/CTA/borrar copia.

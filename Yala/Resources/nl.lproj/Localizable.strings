@@ -5527,3 +5527,10 @@
 
 /* Sign-out blocked alert, guest session: close the session accepting that unsent changes are lost */
 "settings.signOutExitAnywayButton" = "Toch weggaan";
+
+/* Leave group rejected: the server says the current user owns the group */
+"groups.errors.ownerCannotLeave" = "Deze groep is van jou, dus je kunt hem niet verlaten: iemand moet de leiding houden. Heb je hem niet meer nodig, dan kun je hem verwijderen.";
+/* Leave group failed for a transient/kill-switch reason: retry later, not the user's fault */
+"groups.errors.leaveUnavailable" = "We konden je vertrek uit de groep niet afronden. Probeer het zo meteen nog eens.";
+/* Groups RPC rejected because the session token expired or is missing */
+"groups.errors.sessionExpired" = "Je sessie is verlopen. Log opnieuw in en probeer het nog eens.";

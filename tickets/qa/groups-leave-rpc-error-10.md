@@ -1,10 +1,10 @@
 ---
 id: groups-leave-rpc-error-10
-status: backlog
+status: qa
 priority: high
 area: groups
 created: 2026-08-28
-updated: 2026-08-28
+updated: 2026-09-06
 ---
 
 # Salir del grupo falla con un error crudo («GroupsRPCError 10») y en ese teléfono no hay forma de borrar el grupo
@@ -30,6 +30,12 @@ Un mensaje del sistema con un número dentro. No dice qué pasó, no dice si es 
 sirve reintentar, y no ofrece nada que hacer. Y en la pantalla que produce ese mensaje tampoco está
 la acción que el usuario venía a hacer (borrar el grupo), así que se queda sin salida por los dos
 lados: no puede salir y no puede borrar.
+
+> ⚠️ **La sección siguiente quedó SUPERADA el 2026-09-06.** Su tabla de ordinales, sus tres hipótesis
+> y el reparto en «Cara 1 / Cara 2» se escribieron sin poder medir el discriminante (no había toolchain
+> de Swift en aquella sesión). Medido ya, **las dos caras eran la misma** y ninguna de las tres hipótesis
+> era correcta. Se conserva entera porque el mapa del terreno sigue siendo bueno y porque el error de
+> lectura es la parte instructiva. **El veredicto está al final, en «Resuelto».**
 
 ## Medido en el árbol
 
@@ -206,23 +212,124 @@ le falta a la Cara 2. Partirlo en dos garantiza que uno de los dos se arregle a 
 - `tickets/qa/groups-ghost-tx-on-delete.md` — la TX fantasma que sobrevive al borrar un **gasto**
   de grupo. Ese es el bridge de gastos; este es la membresía.
 
-## HOLD
-
-Sin implementación: **cero Swift** en este ticket. `status` sigue `backlog`. No se toca
-`qa/coverage-index.json` (no se toca código bajo `Yala/`). No inventar PASS ni declarar causa. Sin App
-Store, sin tag de release, sin TestFlight.
-
 ## Acceptance Criteria
 
-- [ ] Ningún fallo de «Salir del grupo» enseña un `localizedDescription` crudo con un número: cada
+- [x] Ningún fallo de «Salir del grupo» enseña un `localizedDescription` crudo con un número: cada
       caso de `GroupsRPCError` que pueda llegar a esa pantalla tiene copy propio que dice qué pasó y
       si sirve reintentar (el canal apagado, como en el enlace de invitación, se cuenta como
       «vuelve más tarde», no como error del usuario).
-- [ ] Un teléfono que es dueño **server-side** del grupo no se queda sin salida: la pantalla ofrece
+- [~] Un teléfono que es dueño **server-side** del grupo no se queda sin salida: la pantalla ofrece
       la acción que corresponde a su situación real (transferir y salir, o cerrar el grupo si es el
       último), en vez de decidirlo solo con el `isOwner` local que únicamente escribe el creador.
-- [ ] Queda fijado por test el mapeo entre el discriminante que ve el usuario y el caso del enum, de
+- [x] Queda fijado por test el mapeo entre el discriminante que ve el usuario y el caso del enum, de
       forma que un número en un reporte de device vuelva a ser una pista fiable.
 
-Verificación pendiente: no hay device-QA de un fix (no hay fix). Los tres criterios se comprueban
-cuando se implemente.
+**El segundo va a medias a propósito, y ese es el punto que espera a Jürgen.** La app ya ofrece la acción
+que corresponde al dueño —eliminar el grupo— en vez de decidirlo con un flag que solo escribe el creador.
+Lo que NO cubre: si el grupo tiene deuda pendiente, «Eliminar» está deshabilitado, así que ese dueño sigue
+sin salida. Y el bloqueo mira la deuda de **todo el grupo**, no la suya: puede quedar bloqueado por una
+deuda entre otras dos personas, con un aviso que le dice que liquide deudas que no son suyas. Las salidas
+posibles —ofrecer «transferir y salir», permitir eliminar con deuda como ya se permite salir con deuda, o
+dejarlo como está— son decisión de producto, no de implementación.
+
+---
+
+## Resuelto (2026-09-06)
+
+### El «10» no era el kill-switch: era `ownerCannotLeave`
+
+La comprobación decisiva que el ticket pedía se hizo, y **refuta la premisa con la que se abrió**
+—también la del encargo, que daba `channelDisabled` por seguro—. El tag que Foundation imprime
+**no sigue el orden de declaración**: Swift coloca primero los casos CON payload y detrás los demás
+desde el 2. Medido primero con una réplica compilada y después fijado contra el enum real en
+`YalaTests/CloudSync/GroupsMembershipClientTests.nsErrorCode_perCase_isMeasuredNotInferred`.
+
+En el enum del **build 12** (`f4cf3d2b`, 22-ago; `groupDeleted` no entró hasta el 3-sep, `7d9f6d17`)
+los ordinales reales eran `permanentRejected`=0, `transient`=1, y desde ahí los sin payload:
+⇒ **`ownerCannotLeave` = 10**, y `channelDisabled` = 11. Contar casos en el fichero daba el vecino
+equivocado, que es justo el que el ticket y el encargo dieron por bueno.
+
+**El servidor le dijo a B «eres el dueño de este grupo, no puedes salir».** El guard está en
+`supabase-groups-staging.ddl` (`leave_group`: `owner_user_id = auth.uid()` → `yala_owner_cannot_leave`).
+Eso explica de una vez las tres cosas que se observaron, sin necesidad de invocar el kill-switch: B veía
+«Salir» (su `isOwner` local decía `false`), NO veía «Eliminar grupo» (misma razón), y el servidor rechazó
+la salida (server-side sí era el dueño). Y encaja con lo que el owner venía a hacer: **borrar el grupo**
+era exactamente lo que su rol real le permitía y la app le escondía.
+
+⇒ **Las dos «caras» del ticket eran una sola.** La Cara 2 se registró como «el agujero de UX, y NO la
+causa del error 10»; medido, era la causa. La raíz es `SplitGroup.isOwner`: device-local, lo escribe solo
+quien crea el grupo, y el pull lo deja intacto a propósito ⇒ en un teléfono que no lo creó puede quedarse
+en `false` para siempre aunque el servidor diga lo contrario.
+
+**Lo que NO se pudo cerrar, y se dice:** por qué B era el dueño server-side. No hay dato del device y no
+se inventa. El fix no lo necesita — se recupera de la divergencia sin saber cómo se produjo.
+
+### Qué cambia para quien usa la app
+
+1. **Salir de un grupo ya no enseña un número.** Cada fallo dice qué pasó y si sirve reintentar: eres el
+   dueño · la sesión caducó · no se pudo ahora, vuelve en un momento · genérico honesto. En 16 idiomas.
+2. **El dueño deja de estar sin salida.** Cuando el servidor lo rechaza por ser el dueño, la app corrige
+   el dato que tenía mal y a partir de ahí le ofrece «Eliminar grupo», que es lo que su rol permite.
+3. **Vale para las DOS puertas de salida**, no solo la reportada: los ajustes del grupo y la salida desde
+   la lista de un grupo rechazado (`GroupsContainerView`), que tenía el mismo error crudo.
+4. **Y para «salir de todos mis grupos»**: ahí el mismo rechazo caía en «No se pudo, vuelve a intentarlo»
+   y reintentar fallaba siempre.
+
+### Cómo está hecho
+
+- `GroupLeaveErrorLogic` (nuevo) clasifica; la vista elige el copy. Molde de `GroupBackendAcceptErrorLogic`.
+  Se descartó conformar `GroupsRPCError` a `LocalizedError`: habría arrastrado aislamiento `@MainActor` a
+  un enum que se usa desde contextos `nonisolated`.
+- `GroupService.leaveGroup` / `batchLeave` reconcilian `isOwner` **por ZONA** (criterio ANY-row de la
+  familia) al recibir `yala_owner_cannot_leave`. Un save fallido deshace lo escrito en memoria —sin
+  `context.rollback()`, que arrasaría cambios ajenos del contexto compartido—.
+- **El corte local dejó de cortar en el canal backend.** `guard !group.isOwner` convertía «el servidor
+  dice que no» (recuperable) en «mi device dice que no, para siempre», y con el reconciliador delante eso
+  cerraba la última puerta. En el canal backend decide quien tiene el dato: `leave_group`.
+
+### Lo que la review adversarial cazó, y era mío
+
+Tres lentes independientes. Ninguno de estos se ve en un grep:
+
+- El reconciliador **se convertía en una cárcel**: tras el primer rechazo, el guard local cortaba todos los
+  intentos futuros ANTES de la red, y como el pull nunca escribe `isOwner`, ningún camino lo reabría.
+- Un `save()` fallido dejaba `isOwner = true` **vivo en memoria**: la UI ya ofrecía «Eliminar grupo»
+  —irreversible— sobre un flag que no estaba en disco, y el siguiente save de cualquier otro camino lo
+  commiteaba.
+- El copy era **circular** en Ajustes («ve a los ajustes del grupo» estando en ellos) y apuntaba a una
+  pantalla **inalcanzable** desde la lista de rechazados. Además saltaba de «tú» a «ustedes» y usaba
+  framing de expulsión («sacarte del grupo»).
+- Mi comentario del batch prometía una reanudación que **no ocurre** (`.failed` es terminal): el beneficio
+  llega al relanzar el batch, no en la corrida que falló.
+- Un docblock afirmaba que `SplitMember.isGroupOwner` «no se toca» — cierto para la función, falso como
+  efecto: `ensureCurrentUserMemberExists` lo escribe cuando `isOwner` es `true`.
+- Y mi inserción se había comido el doc-comment de `batchLeave`.
+
+También refutó dos sospechas mías: `saveUnderOutboxAuthor` **no** debía usarse (`isOwner` no es columna
+del wire ⇒ cero outbox; y envolver el save marcaría con autor de eco cualquier edición pendiente ajena,
+que el drain descartaría), y el `incrementDataVersion` no pierde el alert ni cicla.
+
+### Diferido, con su motivo
+
+- **Decisión de producto pendiente (ver abajo):** el dueño con deuda pendiente no puede salir *ni* borrar
+  —«Eliminar» se deshabilita con deuda, y la deuda que lo bloquea puede ser **entre terceros**—.
+- **«Transferir el grupo y salir» no se expone.** El RPC (`transfer_group_ownership`) y la clasificación
+  (`GroupBatchLeaveLogic`) existen, pero no hay UI ni copy en Ajustes: es pantalla nueva.
+- **`isOwner` sigue siendo un latch de una dirección.** Se corrige `false → true` con evidencia del
+  servidor; el inverso exigiría que el pull trajera ownership (cambio de wire).
+- **Otras cuatro acciones de Ajustes** (renombrar, archivar, opciones de grupo y de miembro) siguen
+  pintando dev-strings en inglés de `GroupServiceError`. Mismo patrón, distinto objeto: no las nombra
+  este ticket. Solo se arregló «eliminar», porque es a donde manda el copy nuevo.
+- **`approveMember`, `removeMember` y `createGroup`** también propagan `GroupsRPCError` crudo a su alert.
+  Otras operaciones, mismo defecto.
+
+### Verificación
+
+- `YalaTests` completa: **6148 tests / 626 suites, verde** (81,9 s).
+- Suites nuevas: `GroupLeaveErrorLogicTests` (tabla completa), `GroupLeaveOwnershipReconcileTests`
+  (el device-QA de punta a punta, con contraprueba de que un 5xx NO toca el flag) y
+  `GroupLeaveSurfacesWiringTests` (source-scan de cableado, **validado con mutación**: revertir la vista
+  al bug lo pone rojo).
+- Paridad l10n 16/16 en las tres claves nuevas.
+- **Falta device-QA**, y es el que cierra el ticket: dos teléfonos, reproducir el rechazo por ownership
+  y comprobar que el mensaje se entiende y que «Eliminar grupo» aparece después.

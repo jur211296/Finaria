@@ -455,7 +455,15 @@ final class GroupService {
     func leaveGroup(_ group: SplitGroup) async throws {
         let context = try requireContext()
 
-        guard !group.isOwner else { throw GroupServiceError.ownerCannotLeave }
+        // El corte LOCAL solo vale donde no hay servidor a quien preguntar. En el canal backend `isOwner`
+        // es device-local y puede estar desincronizado en LAS DOS direcciones —el pull no lo escribe
+        // jamás—, así que cortar aquí convertiría «el servidor dice que no» (recuperable: cambia con una
+        // transferencia) en «mi propio device dice que no» (una cárcel que ningún pull abre). Con el
+        // reconciliador de abajo eso importa el doble: sin esta condición, el primer rechazo cerraría para
+        // siempre la única puerta que quedaba. Quien decide es quien tiene el dato: `leave_group`.
+        if !routesMembershipToBackend(group) {
+            guard !group.isOwner else { throw GroupServiceError.ownerCannotLeave }
+        }
 
         // C5: zona backend + flag ON → RPC `leave_group` (server-first, deja la fila `status='left'`) +
         // limpieza local existente. SIN `leaveShare`/`PendingLeaveShareTracker` y SIN
@@ -463,7 +471,9 @@ final class GroupService {
         // tombstones del cascade de `performLocalCleanupAndDelete` NO se emiten (C2-bis: la zona sale del set
         // backend al borrar el SplitGroup — y sale SIEMPRE desde 2026-08-03, porque la primitiva barre TODAS
         // las filas de la zona; con una sola, un duplicado dejaba la zona dentro del set y esta frase era
-        // falsa). RPC falla → throw ANTES de tocar el contexto → local INTACTO.
+        // falsa). RPC falla → throw ANTES de tocar el contexto → local INTACTO, con UNA excepción
+        // deliberada: `yala_owner_cannot_leave` reconcilia `isOwner` antes de relanzar (abajo). Es el
+        // único camino en el que un fallo del RPC escribe, y escribe justo lo que ese fallo PRUEBA.
         //
         // **El residual del CKShare que esta rama declaraba se EXTINGUIÓ con la Fase 3**, no se arregló:
         // decía que en una zona MIXTA el usuario salía server-side pero se quedaba dentro del share, y que
@@ -482,6 +492,25 @@ final class GroupService {
                 // se le ofrece —la confirmación de salir de la tarjeta— terminaba en un alert de
                 // error, dejándole el grupo pegado en la lista para siempre. Sin este `catch`, la
                 // salida existe en la UI y no funciona.
+            } catch GroupsRPCError.ownerCannotLeave {
+                // El servidor acaba de decir que ESTE usuario es el dueño del grupo, y esa es la única
+                // afirmación autoritativa de ownership que llega al device: `isOwner` es device-local,
+                // solo lo escribe quien crea el grupo y el pull lo deja intacto a propósito, así que en
+                // un teléfono que no lo creó puede quedarse en `false` para siempre. Con el flag mal, la
+                // pantalla de ajustes ofrece «Salir» (que el servidor rechaza) y esconde «Eliminar
+                // grupo» (que es lo que ese usuario sí puede hacer): sin salida por los dos lados, que
+                // es exactamente el device-QA de 2026-08-28.
+                //
+                // Solo reconcilia el veredicto del SERVIDOR, y por eso este `catch` es tipado y no una
+                // comprobación aparte: el guard local de arriba ya leyó el flag, así que reconciliar desde
+                // él sería reescribir lo que ya está escrito y borraría la distinción entre «el device lo
+                // sabía» y «el device estaba equivocado».
+                //
+                // NO se llama a `performLocalCleanupAndDelete`: el usuario NO ha salido. Solo se corrige
+                // el flag y se relanza, para que la UI pinte el copy de `GroupLeaveErrorLogic` y para que
+                // la próxima vez que se abra la pantalla aparezca la acción que sí le corresponde.
+                reconcileServerSideOwnership(group, context: context)
+                throw GroupsRPCError.ownerCannotLeave
             }
             try performLocalCleanupAndDelete(group: group, context: context)
             do {
@@ -728,6 +757,42 @@ final class GroupService {
         }
     }
 
+    /// Escribe `isOwner = true` en TODAS las filas de la zona tras un `yala_owner_cannot_leave`.
+    ///
+    /// Criterio ANY-row de la familia (el mismo de `GroupBackendMembershipService` y de
+    /// `routesMembershipToBackend`): una zona puede tener más de una fila `SplitGroup` y la UI pinta la
+    /// canónica, así que corregir solo la fila en mano dejaría la pantalla rota parte de las veces.
+    /// `SplitMember.isGroupOwner` no lo escribe ESTA función: gobierna otras superficies (balances,
+    /// elegibilidad) y el error no dice qué fila de member es la del owner. Pero conviene no leer eso como
+    /// «el flip no lo toca»: `ensureCurrentUserMemberExists` sí escribe `isGroupOwner`/`role = "admin"`
+    /// cuando `group.isOwner` es `true`, así que el efecto llega por la puerta de al lado en los caminos
+    /// que pasan por ahí (el backend de `leaveGroup` no, el legacy sí).
+    ///
+    /// Un fallo al guardar se registra y se traga: el error que el caller debe ver es el
+    /// `ownerCannotLeave`, no un `saveFailed` que lo enmascare.
+    private func reconcileServerSideOwnership(_ group: SplitGroup, context: ModelContext) {
+        let zoneID = group.cloudKitZoneID
+        var escritas: [SplitGroup] = []
+        do {
+            let targets = try context.fetch(
+                FetchDescriptor<SplitGroup>(predicate: #Predicate { $0.cloudKitZoneID == zoneID }))
+            escritas = targets.filter { !$0.isOwner }
+            guard !escritas.isEmpty else { return }
+            for row in escritas { row.isOwner = true }
+            try context.save()
+            SessionState.shared.incrementDataVersion()
+        } catch {
+            // Deshacer EXACTAMENTE lo escrito, y no `context.rollback()`: el contexto es compartido y un
+            // rollback se llevaría por delante cualquier cambio pendiente ajeno. Sin esto, un save fallido
+            // deja `isOwner = true` vivo EN MEMORIA — la UI ya lo lee y ofrece «Eliminar grupo», una acción
+            // irreversible, sobre un flag que no está en disco; y el siguiente `save()` de cualquier otro
+            // camino lo commitea sin que nadie lo haya decidido.
+            for row in escritas { row.isOwner = false }
+            logger.error(
+                "reconcileServerSideOwnership falló: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
     /// Salir de un grupo para el batch, tolerante a `member_not_found` en el resume (RPC `leave_group` NO es
     /// idempotente puro: 2º call → `yala_member_not_found`; tras un kill entre el RPC OK y el cleanup local, el
     /// resume lo re-llama → se trata como ÉXITO → fuerza el cleanup local). El canal CloudKit reusa el
@@ -742,6 +807,17 @@ final class GroupService {
             _ = try await backendMembershipFactory().leave(groupID: group.cloudKitZoneID)
         } catch GroupsRPCError.memberNotFound {
             // Ya salí server-side (resume tras parcial) → sigo al cleanup local.
+        } catch GroupsRPCError.ownerCannotLeave {
+            // MISMA instancia del defecto que en `leaveGroup`, por la otra puerta. Aquí duele distinto:
+            // `GroupBatchLeaveLogic.classify` eligió `.leave` PORQUE `isOwner` decía `false`, así que sin
+            // reconciliar el paso cae a `.failed` («No se pudo. Vuelve a intentarlo») y reintentar falla
+            // igual para siempre — el mismo callejón, con otro copy. Ojo con lo que esto NO hace: la entry
+            // ya cae a `.failed`, que es TERMINAL (`GroupBatchLeaveStore.unfinished` la filtra), así que
+            // esta corrida no se reanuda. Lo que gana es la SIGUIENTE: al relanzar el batch, la entry nace
+            // `.pending` y `classify` —ya con el flag bueno— sale por `.deleteSolo` / `.transferThenLeave` /
+            // `.needsDecision`, que son las salidas que el batch sabe dar a un dueño.
+            reconcileServerSideOwnership(group, context: context)
+            throw GroupsRPCError.ownerCannotLeave
         }
         try performLocalCleanupAndDelete(group: group, context: context)
         do { try context.save() } catch { throw GroupServiceError.saveFailed(error) }

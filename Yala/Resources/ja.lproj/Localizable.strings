@@ -5527,3 +5527,10 @@
 
 /* Sign-out blocked alert, guest session: close the session accepting that unsent changes are lost */
 "settings.signOutExitAnywayButton" = "それでも終了";
+
+/* Leave group rejected: the server says the current user owns the group */
+"groups.errors.ownerCannotLeave" = "このグループはあなたのものなので、退出できません。誰かが管理者として残る必要があります。もう必要なければ、削除できます。";
+/* Leave group failed for a transient/kill-switch reason: retry later, not the user's fault */
+"groups.errors.leaveUnavailable" = "グループからの退出を完了できませんでした。少ししてからもう一度お試しください。";
+/* Groups RPC rejected because the session token expired or is missing */
+"groups.errors.sessionExpired" = "セッションの有効期限が切れました。もう一度サインインしてお試しください。";

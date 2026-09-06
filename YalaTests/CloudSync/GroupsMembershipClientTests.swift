@@ -291,4 +291,51 @@ struct GroupsMembershipClientTests {
         }
         #expect(session.callCount == 0)   // NUNCA se emitió el request sin token
     }
+
+    // MARK: - El número que ve el usuario ↔ el caso del enum
+
+    /// **Por qué existe este test.** Un reporte de device del 2026-08-28 traía el alert «No se ha podido
+    /// completar la operación. (Error de Yala.GroupsRPCError 10.)» — el `localizedDescription` que
+    /// Foundation fabrica al puentear a `NSError` un `Error` que no conforma `LocalizedError`, con el tag
+    /// del caso dentro. Interpretar ese número a ojo mandó el diagnóstico al caso equivocado, porque el
+    /// tag **NO sigue el orden de declaración**:
+    ///
+    ///   Swift coloca primero los casos CON payload, en su orden de declaración (aquí
+    ///   `permanentRejected` = 0 y `transient` = 1), y detrás los casos sin payload desde el 2.
+    ///
+    /// Contar casos en el fichero da un mapeo falso. Este test lo mide.
+    ///
+    /// **Si se rompe, no lo "arregles" cambiando los números sin más:** significa que el enum cambió de
+    /// forma, y con él el número que imprimirán los builds nuevos. Un caso insertado en medio desplaza a
+    /// todos los que van detrás — que es exactamente por qué el `10` del reporte de agosto (build 12,
+    /// `f4cf3d2b`, cuando `groupDeleted` aún no existía) era `ownerCannotLeave` y hoy ya no lo es.
+    @Test func nsErrorCode_perCase_isMeasuredNotInferred() {
+        // Casos CON payload: primero, pese a estar declarados los penúltimos.
+        #expect((GroupsRPCError.permanentRejected(code: "yala_x") as NSError).code == 0)
+        #expect((GroupsRPCError.transient(status: 500) as NSError).code == 1)
+
+        // Casos sin payload: orden de declaración, desde 2.
+        #expect((GroupsRPCError.sessionExpired as NSError).code == 2)
+        #expect((GroupsRPCError.notAuthorized as NSError).code == 3)
+        #expect((GroupsRPCError.invalidInvite as NSError).code == 4)
+        #expect((GroupsRPCError.groupDeleted as NSError).code == 5)
+        #expect((GroupsRPCError.badInput as NSError).code == 6)
+        #expect((GroupsRPCError.groupExists as NSError).code == 7)
+        #expect((GroupsRPCError.invalidGroupID as NSError).code == 8)
+        #expect((GroupsRPCError.memberNotFound as NSError).code == 9)
+        #expect((GroupsRPCError.cannotRemoveOwner as NSError).code == 10)
+        #expect((GroupsRPCError.ownerCannotLeave as NSError).code == 11)
+        #expect((GroupsRPCError.channelDisabled as NSError).code == 12)
+        #expect((GroupsRPCError.decoding as NSError).code == 13)
+    }
+
+    /// La contraprueba de que el número ya no llega a ninguna pantalla de salida: las dos superficies
+    /// pasan por `GroupLeaveErrorLogic`, y su copy nunca es el `localizedDescription` del error.
+    @Test func leaveSurfaces_neverShowTheRawDiscriminant() {
+        let crudo = (GroupsRPCError.ownerCannotLeave as Error).localizedDescription
+        #expect(crudo.contains("11"))   // el discriminante SIGUE ahí si alguien lo pinta a pelo
+
+        #expect(GroupLeaveErrorLogic.classify(GroupsRPCError.ownerCannotLeave) == .ownedByCurrentUser)
+        #expect(GroupLeaveErrorLogic.classify(GroupsRPCError.channelDisabled) == .retryLater)
+    }
 }
