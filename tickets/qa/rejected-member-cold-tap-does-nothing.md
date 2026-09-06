@@ -106,7 +106,8 @@ dicen exactamente lo que hay que decirle a esta persona.
 ⚠️ **`groups.reconnect.archived.body` NO se puede reusar tal cual**: afirma que un grupo archivado
 no acepta miembros nuevos y hoy eso es **falso** — `join_group` no mira `is_archived` en ninguna de
 sus líneas. Ponerlo delante del usuario sería una mentira; arreglar eso es decisión de producto
-aparte.
+aparte — **tomada el 2026-09-06: se hace verdad el comportamiento, no el texto.** Sale a
+[[groups-archived-group-rejects-join]] (`backlog/`); hasta que aterrice, este ticket **no** usa ese copy.
 
 ## Lo que no se midió
 

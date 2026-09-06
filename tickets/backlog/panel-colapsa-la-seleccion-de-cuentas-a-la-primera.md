@@ -49,6 +49,15 @@ es solo `computeEligibleAccounts`: `displayedBalanceInDefaultCurrency` pasa `sel
 (`LiveBalanceCalculator.swift:66-77`), y `PanelTotalAccountsLogic.accountsForTotal` decide con
 `hasSelectedAccount` (`:18-25`). Son cuatro sitios que asumen «una o ninguna».
 
+## Decisión Jürgen (2026-09-06)
+
+**El Panel respeta el conjunto de cuentas, como Estadísticas.** Elegida entre eso y «el Panel es de
+una cuenta y con varias muestra el total». Motivo, tal como se le puso delante y ratificó: la barra de filtros dice «2 cuentas» y Distribución ya
+suma las dos; que el Panel enseñe una —y no se sepa cuál— es el único camino conocido por el que los
+dos saldos siguen sin cuadrar tras `distribution-balance-kpi-skips-fx`. Toca los cuatro sitios que
+asumen «una o ninguna» (`selectedAccountID`, `computeEligibleAccounts`,
+`displayedBalanceInDefaultCurrency` → `LiveBalanceCalculator`, `PanelTotalAccountsLogic`).
+
 ## Acceptance Criteria
 
 - [ ] Con dos cuentas seleccionadas, Panel y Estadísticas muestran el mismo saldo.

@@ -60,6 +60,14 @@ fila. Lo que falta es la otra mitad, y **es una decisión, no código**: qué ha
 está expulsada y otra activa. Borrar el grupo es irreversible; no borrarlo deja el grupo puesto. Esa
 la toma Jürgen.
 
+## Decisión Jürgen (2026-09-06)
+
+**Manda la fila activa: no se borra nada.** Elegida entre eso y «manda la fila canónica de la zona».
+Motivo, tal como se le puso delante y ratificó: borrar el grupo con sus gastos es irreversible y dejarlo puesto de más es un aviso. Regla: el
+cleanup de «me expulsaron» corre **solo si ninguna fila mía en esa zona está `active`**; se contesta
+con `resolveAllCurrentUserMembers` (la variante plural) y se fija por test el caso de las dos filas en
+las dos direcciones. Con esto el tercer residual deja de esperar y se alinea junto con los dos badges.
+
 ## Por qué NO se hizo junto con el resto
 
 Alcance. El ticket padre pedía los consumidores con consecuencia sobre el dinero, el saldo y los

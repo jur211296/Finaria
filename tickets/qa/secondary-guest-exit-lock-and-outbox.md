@@ -2,7 +2,7 @@
 id: secondary-guest-exit-lock-and-outbox
 status: qa
 created: 2026-08-12
-updated: 2026-09-05
+updated: 2026-09-06
 source: YalaWiki/Bugs/secundaria-salida-de-la-invitada-bloqueo-permanente-y-outbox-de-grupos.md
 ---
 
@@ -217,6 +217,8 @@ descartar algo que no existe.
 - **El camino `.cloud` conserva su re-mapeo a `.permanent`.** Es deliberado y está anotado en su
   propio comentario, y la justificación de producto de la pieza 3 no le aplica: el dueño en su propio
   móvil no tiene ningún teléfono que devolver. **Si se quiere cambiar, es decisión aparte.**
+  **Ratificado por Jürgen el 2026-09-06: se deja así.** El bloqueo del dueño significa «hay datos sin subir,
+  no salgas» y no hay ningún aparato que devolver; no queda decisión abierta en este ticket.
 - **La pieza 4** (el swap sin reiniciar) sigue siendo completitud del recorrido, no un defecto.
 
 ### Verificación

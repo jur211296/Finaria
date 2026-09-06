@@ -4,7 +4,7 @@ status: backlog
 priority: medium
 area: groups
 created: 2026-07-01
-updated: 2026-08-26
+updated: 2026-09-06
 source: YalaWiki/Backlog/groups-recordatorio-liquidacion.md
 ---
 
@@ -264,6 +264,14 @@ que `SplitShare`/`SplitSettlement`).
       rate-limit, sin necesidad de `ModelContext` si es posible (mismo
       espíritu que `GroupBalanceService`, que es stateless y testeable sin
       contexto).
+
+## Decisión Jürgen (2026-09-06)
+
+**Al deudor, en tono suave.** Elegida entre: al deudor, a los dos, solo al acreedor, o un banner dentro
+del grupo sin push. Motivo, tal como se le puso delante y ratificó: es quien puede resolverlo y el acreedor ya lo sabe; una sola lógica de
+destinatario. Copy tipo «te recordamos que le debes X a Ana», revisado contra `BRAND-VOICE.md`:
+amable, nunca cobrador. El banner dentro del grupo puede acompañar, pero el pedido es un nudge que
+llega sin abrir la app.
 
 ## Notas
 

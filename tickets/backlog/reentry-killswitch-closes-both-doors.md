@@ -2,7 +2,7 @@
 id: reentry-killswitch-closes-both-doors
 status: backlog
 created: 2026-09-05
-updated: 2026-09-05
+updated: 2026-09-06
 source: tickets/qa/reentry-counts-as-fresh-install.md (§4, §5 y §6)
 ---
 
@@ -58,6 +58,48 @@ es el caso **normal** de este recorrido, no una anomalía a investigar.
 
 Es un docblock, y la prioridad del padre decía «con el siguiente cambio que toque esos ficheros». Las
 piezas 2 y 3 no tocaron `MigrationWorkExecutor.swift`, así que sigue esperando a quien lo haga.
+
+## Decisión Jürgen (2026-09-06)
+
+Las piezas 1 y 2 pedían decisión; la 3 es un docblock y no se le preguntó.
+
+**Pieza 1 — bajo el kill, las DOS puertas cerradas es lo deseado, y se arregla el mensaje.** Elegida
+entre tres: (a) las dos cerradas + corregir comentario + corregir el mensaje del Welcome, (b) las dos
+cerradas y solo el comentario, (c) mantener viva la puerta de Ajustes bajo el kill. Eligió (a). Motivo,
+tal como se le puso delante y ratificó: el kill significa **nube en pausa para todos, también para
+volver**; lo que no es aceptable es que un nacido-en-nube con sus datos intactos lea «No encontramos tus
+datos». Descartó (c): tocar el gate del kill (`StorageRowGateLogic`) es tocar el freno de emergencia.
+
+Lo que implica: el residual del código pasa a decir que bajo el kill se cierran **las dos** puertas
+(card del Welcome y fila «Dónde viven tus datos»), y el camino «Restaurar desde iCloud» bajo el kill
+termina en un mensaje que dice que la nube está en pausa, no que los datos no existen. Copy nuevo, 16
+`.lproj`.
+
+**Pieza 2 — el motor arranca en sesión también en la re-entrada.** Elegida entre dos: arrancar el
+motor en sesión como hace el alta, o dejar el relanzamiento y corregir el comentario. Eligió la primera.
+Motivo, tal como se le puso delante y ratificó: es la versión robusta y la coherente con el alta —dos
+caminos que montan el mismo store neutro no deberían terminar en pantallas distintas—. Lo que implica:
+`startAdoptWithExistingSession` llama a `startRuntimeIfStable()` (o su equivalente en el flujo) y la
+re-entrada termina en «¡Tu cuenta está lista!» en vez de «Ya casi está — reinicia Yala»; el comentario
+de `CloudWelcomeSignInFlow` que hablaba de «terminal equivalente» se reescribe.
+
+**Pieza 3** sigue como estaba: docblock de `MigrationWorkExecutor`, con el siguiente cambio que toque el
+fichero.
+
+## Criterio de hecho (AC)
+
+- [ ] Con el kill encendido y una instalación limpia, ni la card del Welcome ni la fila de Ajustes
+      ofrecen la nube (ya pasa hoy), y el comentario del código lo dice de las **dos** puertas.
+- [ ] Con el kill encendido, un nacido-en-nube que pasa por «Restaurar desde iCloud» lee que la nube
+      está en pausa, **no** «No encontramos tus datos». Copy propio, 16 `.lproj`.
+- [ ] La re-entrada por la puerta del Welcome en un móvil recién instalado arranca el motor en sesión
+      y termina en la misma pantalla de «lista» que el alta; **sin** «reinicia Yala».
+- [ ] La re-entrada por la puerta de Ajustes se comporta igual (mismo `runAdoptFlow`); comprobar que
+      arrancar el motor en sesión no rompe el caso con marcador presente.
+- [ ] Device-QA: móvil limpio (borrar app) × {kill apagado, kill encendido} × {alta, re-entrada}.
+      **Pendiente: es lo que falta tras implementar**, y el kill se conmuta desde el backend.
+- Coordenadas: las de arriba vienen del ticket padre y **no se re-midieron** aquí. Greppear antes.
+- Toca el arranque del motor de sync ⇒ **review adversarial** antes del gate.
 
 ## Relacionados
 

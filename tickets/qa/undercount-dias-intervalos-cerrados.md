@@ -4,7 +4,7 @@ status: qa
 priority: medium
 area: statistics
 created: 2026-09-02
-updated: 2026-09-03
+updated: 2026-09-06
 source: hallazgo colateral del fix doble-conteo-dia1-previo-thismonth (2026-09-02)
 ---
 
@@ -122,4 +122,5 @@ cableado del caso grave (2 rojos).
 `FullFinancialContextBuilder:627` (`daysLeft` de un presupuesto) cuenta `from: now, to: interval.end`
 y se clasificó **no-afectada**. Tocarla cambiaría la semántica de «días que quedan» —si un presupuesto
 acaba hoy, ¿queda 1 día o 0?— y eso es producto, no este bug. Queda escrito para que el próximo
-barrido no la trate como hallazgo nuevo.
+barrido no la trate como hallazgo nuevo. **Decidido por Jürgen el 2026-09-06: queda 1 — hoy todavía cuenta.**
+Sale a [[budget-days-left-counts-today]] (`backlog/`, low).

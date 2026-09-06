@@ -50,6 +50,14 @@ Dos cosas, y la segunda importa más que la primera:
    señal dentro de una sesión de trabajo, así que la pregunta real es si la suite completa de UI
    pertenece al PR o a una corrida nocturna.
 
+## Decisión Jürgen (2026-09-06)
+
+**La suite de UI pasa a una corrida nocturna; el PR corre build + unit con `timeout-minutes`.**
+Elegida entre eso, «todo en cada PR con tope de ~100 min» y «UI solo si el diff toca `Yala/`». Motivo, tal como se le puso delante y ratificó: el
+PR debe dar señal dentro de una sesión de trabajo, y el gate local ya corre los XCUITest de las áreas
+tocadas antes de cada commit. La nocturna corre sobre `2.1` y avisa si hay rojo (sin avisar en verde);
+el tope del PR se elige por encima del percentil alto medido de build + unit, no a ojo.
+
 ## Duración medida (2026-09-06)
 
 `gh run list --workflow qa.yml --limit 12`, quedándome con los runs que sí dispararon el job:
@@ -77,4 +85,4 @@ permitir que un cuelgue ocupe seis horas.
 - [ ] El job `tests` tiene `timeout-minutes` explícito, elegido a partir de duraciones medidas.
 - [x] Queda escrito cuánto tarda hoy la suite en CI (~80 min, muestra de 4 runs) — hecho el
       2026-09-06 al abrir este ticket.
-- [ ] Decidido si la suite completa de UI corre en cada PR o pasa a nocturno.
+- [x] Decidido si la suite completa de UI corre en cada PR o pasa a nocturno → **nocturno** (2026-09-06).

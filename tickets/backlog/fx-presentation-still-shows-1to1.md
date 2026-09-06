@@ -4,7 +4,7 @@ status: backlog
 priority: medium
 area: currency
 created: 2026-09-03
-updated: 2026-09-03
+updated: 2026-09-06
 source: residual explícito de fx-partial-rate-rows-silent-1to1 (decisión del owner, 2026-09-03)
 ---
 
@@ -46,3 +46,25 @@ pantalla no era más correcto antes— pero sí cambia dónde mirar al diagnosti
 
 - `fx-partial-rate-rows-silent-1to1` (en `qa/`) — la persistencia, ya arreglada.
 - `distribution-balance-kpi-skips-fx` — qué base de conversión usa cada vista, no si hay tasa.
+
+## Decisión Jürgen (2026-09-06)
+
+**Número con marca de «aproximado».** Elegida entre: (a) mostrar el mejor número disponible con un
+indicador discreto (≈ o rotulito) cuando a alguna divisa le falta tasa, (b) omitir la divisa sin tasa
+como hace el widget, (c) no decidir hoy. Eligió (a). Motivo, tal como se le puso delante y ratificó:
+no oculta información y deja de mentir; la alternativa del widget da un número exacto pero incompleto.
+
+Lo que implica: `CurrencyConverting` expone la calidad de la conversión (`convertChecked` /
+`RateQuality` ya existen), los ~28 puntos de inyección la propagan, y las superficies que pintan totales
+—Panel, Tendencias, Estadísticas, saldos de Grupos— muestran la marca cuando la calidad no es plena.
+`isExchangeRateProvisional` gana por fin un consumidor de UI. Copy del rótulo en 16 `.lproj`. Cómo se
+pinta la marca (símbolo vs texto, dónde) es diseño y se resuelve en el `/spec`, no aquí.
+
+## Criterio de hecho (AC)
+
+- [ ] Con una divisa sin tasa ese día, todo total que la incluya lleva la marca de aproximado; con el
+      set de tasas completo, ninguna marca.
+- [ ] El número mostrado es el mismo que hoy (mejor disponible); lo que cambia es que se declara.
+- [ ] Ningún sitio de presentación queda usando `convert` a ciegas: barrido de las ~34 llamadas con
+      control positivo.
+- [ ] Cálculo financiero ⇒ **review adversarial** antes del gate.

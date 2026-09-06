@@ -1,6 +1,6 @@
 ---
 name: decisiones-que-esperan-a-jurgen
-description: Las cinco decisiones que bloqueaban tickets desde agosto están CONTESTADAS (2026-09-02 noche); queda el método para la próxima tanda
+description: Dos tandas de decisiones contestadas (2026-09-02 y 2026-09-06) y el método que funcionó; quedan sin preguntar las dos de Grupos del ESTADO
 metadata:
   type: project
 ---
@@ -26,5 +26,21 @@ Un ticket que espera una respuesta y uno que espera trabajo se ven idénticos en
   esperaban decisión ninguna, una de las cinco ni siquiera estaba en `in-progress`, y faltaba
   una que nadie había listado (la custodia del consent legacy, RGPD). El `ESTADO.md` decía
   «cinco decisiones bloquean 8 tickets»; eran cuatro y bloqueaban cinco.
+
+**Segunda tanda, 2026-09-06 (PR #79):** seis decisiones en dos preguntas agrupadas (4 + 2 extra),
+mismo formato —opción, coste, recomendada primero— y **tomó la recomendada en las seis**. No es
+señal de que la recomendación sea un trámite (el 2-sep se apartó en 3 de 8): es que las seis
+tenían una salida barata y coherente con algo que él ya había decidido antes (el 26-ago, el 2-sep,
+el 3-sep). **Cuando la opción recomendada se apoya en una decisión SUYA anterior, la toma sin
+pensarlo; cítala.** Un ticket de dos decisiones dentro (kill-switch) se parte en dos preguntas.
+
+**Y una tercera tanda el mismo día, que enseña lo importante:** tras las seis, Jürgen preguntó
+«¿estamos seguros de que ya ninguna necesita decisión mía?». Mi «sí» habría salido del encargo
+(acotado a 3+2) y de un grep de «decisión». **Leer los 94 tickets vivos enteros destapó 13 más** —seis
+de ellas frenaban bugs— repartidas en `backlog/` Y en `qa/` (tickets ya implementados que dejaban un
+residual «decisión aparte» sin ticket propio). Las contestó todas (13/13 la recomendada). ⇒ **«¿queda
+alguna?» se responde leyendo, con lectores en paralelo y control positivo de las citas; y el
+residual de un ticket de `qa/` que dice «decisión aparte» es una decisión huérfana: sácala a ticket.**
+Quedan como abiertas del ESTADO solo las dos de la web (legal de Grupos, Vercel `1.0`/`2.1`).
 
 Relacionado: [[el-tablero-antes-que-el-bug]] · [[jurgen-levanta-sus-reglas]]
