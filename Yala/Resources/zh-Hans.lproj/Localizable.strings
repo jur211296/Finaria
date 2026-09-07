@@ -5570,3 +5570,12 @@
 
 /* Stats hero caption: the figure sums income and expense magnitudes (pie total), neither a net nor one side */
 "stats.hero.captionTotalPeriod" = "期间合计";
+
+/* Secondary session on the private branch: title of the notice shown after choosing the private account, before the onboarding */
+"welcome.private.secondaryTitle" = "你的数据和对方的分开保存";
+
+/* Secondary session on the private branch: body of the notice — the fact, the guarantee, and the measured detail that the secondary store is cloudKitDatabase .none */
+"welcome.private.secondaryBody" = "你正在别人的设备上使用 Yala。你在这里记录的内容只属于你，而且只保存在这台设备上：对方看不到，也不会同步到任何 iCloud。";
+
+/* Secondary session on the private branch: CTA that continues to the private onboarding (informs, does not block) */
+"welcome.private.secondaryCta" = "继续";

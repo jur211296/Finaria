@@ -27,12 +27,24 @@ enum OnboardingResetHelper {
         "defaultCurrencyCode",
     ]
 
-    /// Limpia las prefs residuales tanto en `UserDefaults.standard` como en
+    /// Limpia las prefs residuales tanto en el dominio local de ESTA sesión como en
     /// `NSUbiquitousKeyValueStore.default`. Llamar SOLO desde el callback
     /// del Welcome Chooser cuando el user elige rama A ("Soy nuevo") —
     /// señal explícita de "empezar de cero".
     static func clearResidualPreferencesForFreshStart() {
-        let local = UserDefaults.standard
+        // **El CAJÓN de esta sesión, no el dominio del dueño** (2026-09-07). La mitad iKV de abajo ya
+        // estaba protegida y su comentario nombra el motivo; ésta se quedó en `.standard` crudo, así que
+        // el barrido era mitad guardado y mitad abierto. En sesión secundaria la visita que elige
+        // «empezar de cero» entra SIEMPRE por aquí —`hasExistingData` mide el store de la INVITADA, que
+        // nace vacío, y esa es justo la rama que borra— y le dejaba al dueño su nombre y su divisa en
+        // blanco. Y sin cura: la reposición del arranque siguiente sale de `readRemoteIKV`, que devuelve
+        // `nil` cuando la key no está en el iKV, o sea para un dueño SIN iCloud — que es exactamente el
+        // público de la rama «privacidad total».
+        //
+        // Fuera de una sesión secundaria `SessionDefaults.current` **es** `.standard` (su `resolve()`
+        // devuelve el owner sin descriptor activo), así que para el usuario de siempre no cambia nada.
+        // Es la misma forma que la decisión del owner del 2026-09-03 ya aplicó a `hasCompletedOnboarding`.
+        let local = SessionDefaults.current
         // La PUERTA, no el store crudo: en sesión secundaria el iCloud KV es el del DUEÑO, y este
         // barrido le dejaría su nombre y su divisa en blanco en todos sus dispositivos.
         let iKV = OwnerKeyValueStore.shared

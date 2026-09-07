@@ -48,6 +48,38 @@ struct OnboardingView: View {
     /// Salta cuentas/tipo/saldo/categorías; conserva nombre + moneda + confirmación.
     private var groupsOnlyMode: Bool { selectedUsageMode == .groupsOnly }
 
+    /// La visita está usando Yala en el móvil de otra persona. Se lee del descriptor y no del corpus:
+    /// el store de la invitada está VACÍO en una sesión recién montada, así que contar filas diría que
+    /// no. Es el mismo predicado que consulta la puerta de la rama organizador del Welcome.
+    ///
+    /// No es `@State` ni observable a propósito: la sesión secundaria no empieza ni termina a mitad de
+    /// un onboarding — las dos fronteras exigen relanzamiento —, así que un valor vivo leído en el
+    /// render es exacto y no arrastra estado que pueda desincronizarse.
+    private var isSecondarySession: Bool { SecondarySessionStore.isActive() }
+
+    /// **Lo que de verdad va a pasar con las categorías**, que es lo único que el resumen puede contar y
+    /// lo único que `completeOnboarding` debe ejecutar. `loadSeedCategories` es la respuesta del usuario
+    /// a un paso que en visita **ni siquiera se muestra** (`OnboardingStepPlan.skippedSteps`), y su
+    /// default es `true`: sin este término, el onboarding en secundaria seguía llamando al seed, el seed
+    /// retornaba en su cinturón M1 y el store quedaba vacío tras haberlo prometido.
+    ///
+    /// Y arrastra un segundo arreglo que sale del mismo término: con `false`, la rama de abajo crea la
+    /// subcategoría «Ajuste de saldo» que el seed ya no va a traer. Sin ella,
+    /// `createOnboardingAccount` no encontraba dónde colgar el saldo inicial y **lo descartaba en
+    /// silencio** (`findBalanceAdjustmentSubcategory` → `nil` → el `print` de DEBUG y nada más), así que
+    /// la visita tecleaba «tengo 500» y su cuenta nacía en cero.
+    ///
+    /// **Y con eso `ensureBalanceAdjustmentSubcategoryExists` pasa a ser el ÚNICO sembrador que corre en
+    /// sesión secundaria — a propósito, y conviene que quede dicho aquí.** Los dos de `CategorySeed`
+    /// llevan cinturón M1 (`if SecondarySessionStore.isActive() { return }`) y éste no, así que quien lea
+    /// aquellos podría creer que la frontera está cerrada del todo: no lo está, y son **dos filas**
+    /// («Otros» + «Ajuste de saldo», con el mismo `isDefaultSeed`, color e icono que las del seed, así
+    /// que `CategoryDeduplicationService` las funde). Se acepta porque la alternativa es la que había:
+    /// perder el saldo inicial sin decir nada. Residual conocido: si la cuenta de la visita se hidrata
+    /// después por pull en OTRO idioma, `CloudSyncReconciler` funde la subcategoría pero no su categoría
+    /// padre, y le queda una «Otros» en el idioma del móvil prestado.
+    private var willSeedCategories: Bool { loadSeedCategories && !isSecondarySession }
+
     /// Definición movida a `OnboardingUsageMode` (pure-logic en
     /// `Yala/App/Logic/OnboardingPurposeSelectionLogic.swift`) para que la selección
     /// del paso «Propósito» sea testeable — mismo movimiento que `OnboardingStep`.
@@ -142,7 +174,11 @@ struct OnboardingView: View {
             prefilledCategoriesCount: prefilledData?.categoriesCount ?? 0,
             hasPrefill: prefilledData != nil,
             expensesOnly: false,
-            dayToDay: false
+            dayToDay: false,
+            // Inocuo para el PRIMER paso —`.categories` es el 7º y `.purpose` no se salta nunca, así que
+            // jamás encabeza `effectiveSteps`— pero se pasa igual: dos llamadas a la misma SSOT con
+            // términos distintos es como divergen, y el yo-futuro leería la ausencia como un olvido.
+            isSecondarySession: SecondarySessionStore.isActive()
         )
         _currentStep = State(initialValue: OnboardingStepPlan.firstStep(skipping: initialSkip))
     }
@@ -184,7 +220,8 @@ struct OnboardingView: View {
             hasPrefill: prefilledData != nil,
             expensesOnly: expensesOnlyMode,
             dayToDay: selectedUsageMode == .dayToDay,
-            groupsOnly: groupsOnlyMode
+            groupsOnly: groupsOnlyMode,
+            isSecondarySession: isSecondarySession
         )
     }
 
@@ -1248,14 +1285,20 @@ struct OnboardingView: View {
                     )
                 }
 
-                rowDivider
-                confirmItem(
-                    icon: "folder.fill",
-                    color: .priorityNeed,
-                    value: loadSeedCategories
-                        ? L10n.Onboarding.categoriesDefault
-                        : L10n.Onboarding.categoriesCustom
-                )
+                // En visita la fila NO se pinta, igual que no se pinta en «Solo grupos» y por la misma
+                // razón: el resumen cuenta lo que va a pasar, y ahí no va a pasar ninguna de las dos
+                // cosas. Con `willSeedCategories` habría dicho «categorías personalizadas», que es
+                // igual de falso — la visita no personalizó nada: nunca se le preguntó.
+                if !isSecondarySession {
+                    rowDivider
+                    confirmItem(
+                        icon: "folder.fill",
+                        color: .priorityNeed,
+                        value: loadSeedCategories
+                            ? L10n.Onboarding.categoriesDefault
+                            : L10n.Onboarding.categoriesCustom
+                    )
+                }
             }
         }
         .background(cardFill)
@@ -1793,17 +1836,20 @@ struct OnboardingView: View {
         sync.set(string: selectedMindset, forKey: "financialMindset")
         sessionState.financialMindset = selectedMindset
 
-        if loadSeedCategories {
+        // Los tres términos son `willSeedCategories` y no `loadSeedCategories`: en visita el paso no se
+        // muestra, así que la respuesta del usuario no existe y su default (`true`) mentiría. Ver el
+        // docblock de la propiedad — de ahí sale también el saldo inicial que en secundaria se perdía.
+        if willSeedCategories {
             seedCategoriesIfNeeded(in: modelContext)
         }
 
-        if !loadSeedCategories && !expensesOnlyMode {
+        if !willSeedCategories && !expensesOnlyMode {
             InitialBalanceService.ensureBalanceAdjustmentSubcategoryExists(context: modelContext)
         }
 
         createOnboardingAccount()
 
-        if wantsBudget && loadSeedCategories {
+        if wantsBudget && willSeedCategories {
             createOnboardingBudget()
         }
 
