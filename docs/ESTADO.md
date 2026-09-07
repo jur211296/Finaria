@@ -5,56 +5,68 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-07 (Lima)
 
-**Rama** `2.1` · HEAD `9498b9b3` — al cerrar un viaje puedes mandar al chat una imagen con las cuentas
-del grupo y los pagos mínimos para saldarlas.
+**Rama** `2.1` · HEAD `7f3fed41` — un grupo puede tener un tope de gasto, con barra de progreso y
+aviso al acercarse.
 TestFlight build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.** `yala-app.pe` sirve la web
 nueva.
 
 ## Esta sesión, en una línea
 
-**El resumen compartible del grupo ya existe** (PR #90). En Ajustes de un grupo, «Compartir resumen»
-genera una **imagen** con el total gastado, quién puso qué y la lista mínima de pagos para saldarlo
-todo, y la manda por el share sheet: WhatsApp, Mensajes, Guardar en Fotos. Cubre **todo el historial**
-—no el período filtrado en Estadísticas, decisión tuya del 6-sep— y con gastos en varias monedas cada
-una lleva su bloque, sin sumarse jamás entre sí. Si no queda nada pendiente, lo dice. Solo lectura.
+**El presupuesto de grupo ya existe** (PR #91, mergeado). En Ajustes de un grupo, un administrador fija
+un tope de gasto para todos —en la moneda del grupo— y la pestaña de registros enseña una barra con
+cuánto lleva gastado el grupo y cuánto queda. Al cruzar el 50, el 75, el 90 y el 100 % llega un aviso.
+Quitarlo es una acción aparte, con confirmación. **Un solo campo nuevo**, como decidiste el 6-sep: sin
+tabla de presupuestos, sin moneda propia y sin multi-presupuesto.
 
-**Primera vez que la app genera una imagen**, así que la tarjeta va con dos reglas que no son
-estética: ni un `@Environment` dentro —`ImageRenderer` hostea su contenido fuera del árbol y una
-sub-vista que lea `AppPreferences` daría `SIGTRAP`, la trampa de las `.annotation` de Swift Charts— y
-colores fijos en claro, porque la imagen sale de la app y no puede depender del tema de quien la mandó.
+**La premisa del ticket era falsa, y por eso el plan que traía no se siguió.** Describía un checklist de
+CloudKit —`CKRecordTranslator`, `SplitSyncManager`, deploy al Dashboard— y esos tres símbolos dan **cero
+ocurrencias** en `Yala/`: ese transporte lo borró la Fase 3. El coste real fue DDL + grants + dos RPCs.
+Tu nota del 6-sep ya lo sospechaba y pedía comprobarlo: queda confirmado.
 
-**Las tres lentes cazaron nueve defectos míos, y otra vez el más caro fue un razonamiento explícito y
-equivocado.** Había escrito que los pagos irían siempre por moneda cruda, «porque una conversión al
-cambio del momento se congela en una imagen»: bueno para los totales, **falso para los pagos**, porque
-se me escapó que «ver deudas en una sola moneda» también decide **en qué moneda se ESCRIBE la
-liquidación**. Con ese ajuste puesto, una cena de US$ 100 pagada en soles dejaba la deuda viva en
-dólares y el pago como deuda inversa en soles: la imagen habría mandado al chat **dos transferencias
-fantasma en direcciones opuestas por dinero ya pagado**, contradiciendo a Balances. Los otros ocho:
-se ofrecía en grupos **migrados y congelados** (que enseñan una copia vieja, y la imagen se fecha hoy);
-el botón lo decidía un proxy que contaba los saldos iniciales y dejaba pasar grupos que producían una
-**tarjeta en blanco**; los **repartos no se deduplicaban** —solo los gastos—, con el total blindado y
-«le tocaba» al doble; **sin techo de tamaño**, 40 personas × 4 divisas dan 38 940 px a escala 3, el
-doble del techo de textura, y un bitmap de ~336 MB; y faltaba **`NSPhotoLibraryAddUsageDescription`**,
-sin la cual «Guardar imagen» crashea — es la primera vez que la app escribe en la fototeca.
+**Tres decisiones que el ticket no traía.** El tope se **cifra** (es un monto, y dejarlo en claro en la
+tabla cuyo `name` está cifrado sería una regresión del modelo de amenaza) — y eso destapó que la
+normalización de escala del cifrado estaba atada al nombre literal `'amount'`, así que una segunda
+columna numérica se habría cifrado sin escala y habría dejado el root del Merkle divergente para
+siempre. La barra **sí convierte divisas**, al revés que el resumen compartible: allí la regla existe
+porque el número se congela en una imagen, y una barra se recalcula al abrirla; lo que sí engañaría es
+**no** convertir. Y fijarlo es **de admin por construcción**, no por criterio de la app: la policy del
+backend lo exige, y a un miembro normal el server le devolvería un noop que dejaría el cambio solo en su
+teléfono.
 
-**Y una explicación mía que era falsa aunque la medición fuera buena.** Documenté que la columna «le
-tocaba» descuadra «porque el reparto asigna los céntimos gasto a gasto». Lo que vi en el simulador era
-cierto (123,34 × 3 contra 370), pero la causa no: `GroupSplitCalculator.equalSplit` **sí** reparte el
-residuo y cuadra exacto — el descuadre era del **seed**. En producción existe por otras vías (el
-reparto exacto tolera ±0,02; los importes del wire no pasan por el calculador). ⇒ un comentario que
-dice «medido» y explica mal lo medido es peor que no tenerlo.
+**El servidor ya está en producción** (`g14_01`), verificado en sandbox transaccional contra el motor
+real con control positivo y **control negativo con su propio control positivo**: el no-admin recibe
+`not_authorized_or_gone` y el valor no cambia, y el mismo no-admin sobre una columna vieja recibe el
+mismo rechazo — así que lo que protege es la RLS y no un accidente del campo nuevo. Sin drift: el `.ddl`
+del repo y el `prosrc` de producción coinciden byte a byte.
 
-**Dos mutantes sobrevivieron a su primera pasada**, los dos por la trampa del helper ciego: el del
-orden de monedas usaba PEN/USD, donde «la principal primero» y «alfabético» **coinciden**. Salió dos
-veces en el mismo cambio. Nueve mutantes verificados al final, uno por decisión.
+**Y una coordinación de despliegue que hay que tener presente:** `canon_version` sube a `c2`. Añadir una
+columna al manifest de Grupos cambia el root del Merkle de **todas** las filas, y ese canal —a diferencia
+del personal— no manda `X-Yala-Capability-Set`, así que el server no puede podar por versión. Sin el
+bump, cada cliente con el contrato anterior habría reportado divergencia falsa en el 100 % de sus grupos,
+con reset de cursores y re-pull por sesión. Con él, **saltan** la verificación. Mientras convivan las dos
+versiones el Merkle de Grupos queda apagado, y vuelve solo cuando el parque converge.
+
+**Las cuatro lentes volvieron a cazar lo mío, y una evitó romper otra pantalla.** El editor del tope
+tenía un botón condicional dentro del `actions` de un `.alert` — el patrón que el repo tiene medido como
+«no rompe la alerta: rompe la app». Además: un tope de 15 dígitos se perdía en silencio y dejaba el grupo
+en divergencia permanente (el codec del wire lanza a partir de 1e14 y quien traga el throw no crea la
+fila de outbox, con el log bajo `#if DEBUG`); «te pasaste por S/ 0,00» en rojo por comparar `Double` con
+`>` sobre una suma de importes de dos decimales —el 16,5 % de los repartos que dan el tope exacto lo
+cruzan, y mi test del borde usaba un solo gasto, el único caso que no puede fallar—; y guardar con el
+campo vacío borraba el presupuesto de todo el grupo sin avisar.
 
 ## Te espera a ti
 
-1. **Staging arrastra ya DOS migraciones** — g13_04 (4-sep) y g13_05. Mismo bloqueo las dos: **no hay
-   credencial de DDL** (el conector MCP solo lista producción, `~/Secrets/yala-supabase-test/` solo
-   tiene JWTs de usuario). Se cierran aplicando los dos `.sql` de `qa/cloud/` en orden. Es acceso tuyo,
-   no una tarea que se destrabe sola.
-2. **Decisiones abiertas:**
+1. **Staging arrastra ya TRES migraciones** — g13_04 (4-sep), g13_05 y **g14_01** (7-sep). Mismo
+   bloqueo las tres: **no hay credencial de DDL** (el conector MCP solo lista producción). Se cierran
+   aplicando los tres `.sql` de `qa/cloud/` **en orden**. Es acceso tuyo, no una tarea que se destrabe
+   sola. Con g14_01 el drift ya muerde: fijar un presupuesto contra staging deja un dead-letter
+   permanente, y un dead-letter apaga el Merkle de ese grupo. Producción está al día.
+2. **Desplegar el Worker cuando quieras encender el Merkle nuevo.** El manifest de Grupos va en `c2`
+   desde este PR; hasta que el gateway se despliegue, la verificación Merkle de Grupos queda apagada
+   (los clientes saltan por el guard de canon en vez de reportar divergencias falsas). No corre prisa y
+   no rompe nada: es una red que vuelve cuando tú quieras.
+3. **Decisiones abiertas:**
    - `groups-archived-still-accepts-changes` — el copy promete que un archivado «ya no acepta cambios»
      y acepta todos: gastos, ediciones, liquidaciones, ajustes, invitaciones. Tres opciones dentro.
    - `groups-owner-debt-no-heir-dead-end` (high, del 6-sep) — el dueño con deuda y SIN heredero sigue
@@ -171,7 +183,8 @@ sigue sin `ok_`. **Cero `ok_` inventado.**
 
 ## Board
 
-**143 tickets · backlog 74 · qa 46 · blocked 2 · done 16 · discarded 5 · in-progress 0.**
+**146 tickets · backlog 76 · qa 46 · blocked 2 · done 16 · discarded 5 · in-progress 1.**
+Recontado sobre disco el 7-sep tras el presupuesto de grupo: `groups-budget` pasa a `in-progress` y entran **tres** hallazgos de su review adversarial que **no son suyos** — `groups-canal-sin-capability-set` (el canal de Grupos no manda capability-set, así que cada columna nueva apaga el Merkle del parque viejo), `groups-stats-no-deduplica-gastos` (Estadísticas no dedupe y ahora se contradice con la barra de presupuesto, a un tap de distancia) y `gateway-typecheck-roto-y-fuera-del-ci` (tres errores de tipos que nadie ve porque el CI no corre `typecheck` y `@types/node` no está declarado).
 `qa` significa «esperando la tanda», no «cerrado». Índice = disco, verificado comparando **conjuntos**
 (143 = 143, cero huérfanos en ambas direcciones, y ningún estado discrepante entre fila y carpeta).
 **El índice traía dos defectos que nadie había visto**, los dos arreglados: una fila de datos **por
