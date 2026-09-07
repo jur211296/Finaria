@@ -5,35 +5,37 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-07 (Lima)
 
-**Rama** `2.1` · HEAD `00924924` — el número grande de Estadísticas ya dice qué es. TestFlight
-build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.** `yala-app.pe` sirve la web nueva.
+**Rama** `2.1` · HEAD `77dff99e` — en el móvil de otra persona, «privacidad total» ya lo dice.
+TestFlight build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.** `yala-app.pe` sirve la web
+nueva.
 
 ## Esta sesión, en una línea
 
-**El hero de Estadísticas dice qué es la cifra** (PR #85). Las cuatro pestañas comparten el mismo
-hueco visual y se deslizan entre sí, pero desde #78 ese hueco mostraba dos cosas distintas con el
-mismo período: un saldo de cuentas en Distribución, el neto del período en las otras tres. Tu
-decisión del 6-sep era etiquetar el número, y eso se hizo. **Cero cambio de cálculo.**
+**La rama privada del Welcome deja de callarse en visita** (PR #86). «Es mi primera vez → privacidad
+total» llevaba a quien usa Yala en el móvil de otra persona al onboarding **sin decirle nada**,
+mientras la rama de al lado sí se lo decía: la app se contradecía según por dónde entraras. Ahora
+sale una pantalla propia —«Lo tuyo no se mezcla con lo suyo»— que **informa y no bloquea**. Y el
+onboarding en visita deja de ofrecer las categorías de ejemplo que nunca creaba: un paso menos
+(8 → 7) en vez de una promesa incumplida.
 
-**La premisa del AC era falsa, y cumplirla al pie de la letra habría metido un bug peor.** El
-ticket pedía un rótulo FIJO por pestaña —Distribución «Saldo de cuentas», las otras tres «Neto del
-período»—. Medido contra el árbol, ninguna de las cuatro cifras es siempre la misma magnitud:
-Distribución solo enseña saldo en `isBalanceMode` y vuelve al flujo con un filtro de categoría, en
-modo solo-gastos o con un chip —que es **tu decisión del 26-ago**, escrita en el propio código—;
-Tendencias pinta uno de tres números según la métrica; Registros deja de ser un neto en cuanto hay
-un chip; y el pie suma con `abs`, así que con las dos naturalezas no es ni neto ni un lado. Un
-rótulo fijo habría mentido en pantalla, que es el mismo defecto del ticket agravado. Por eso el
-rótulo se deriva del estado que elige el número. No se repreguntó: rotular el número que de verdad
-se pinta **es** cumplir tu decisión, no ampliarla.
+**La premisa trajo dos hechos que el ticket no tenía, y uno cambió el copy.** La card que la visita
+acaba de tocar promete «se sincronizan por tu iCloud privado», y el store secundario es
+`cloudKitDatabase: .none` — no se espeja a ninguna CloudKit, ni a la del dueño ni a la suya. Por eso
+el cuerpo dice «solo en este dispositivo»: es medido, no cautela. El segundo era un defecto vivo:
+**el saldo inicial de la visita se descartaba en silencio** (sin seed no existía «Ajuste de saldo»,
+así que no había dónde colgar el importe). No hizo falta arreglo aparte — tratarla como «sin seed»
+entra por la rama que ya la crea.
 
-**Y se vio en pantalla, no solo en el fuente.** En el simulador, Distribución e Insights enseñaban
-S/ 80.018,00 y S/ 72.361,30 en el mismo hueco sin filtros; y la misma pestaña Distribución pasa de
-80.018,00 «Saldo de cuentas» a 204.821,00 «Gastos del período» al tocar un chip. Esa segunda es la
-prueba de que el rótulo fijo mentía. Evidencia en `tickets/qa/`.
+**Y un tercero, que la review adversarial encontró a UN TAP de la pantalla nueva.**
+`clearResidualPreferencesForFreshStart` borraba `userName` y `defaultCurrencyCode` del
+`UserDefaults` del **dueño**, y la visita entra siempre por esa rama. Se cerró aquí porque sin eso
+el copy es falso. Su mitad iKV **ya estaba protegida**, con un comentario que nombra la sesión
+secundaria: era un arreglo hecho a medias, y el comentario correcto de al lado hacía la zona parecer
+revisada. Está en `aprendizajes-tecnicos.md`.
 
-**El source-scan existe porque cablear el rótulo a un valor fijo deja la suite entera en verde** —
-el bug del ticket. Control positivo por mutación: rompe exactamente los 2 tests que debe y deja
-verdes los otros 3.
+**Se vio en pantalla, y ahí saltó lo que el fuente escondía:** la primera captura mostró el copy
+VIEJO con el fichero ya corregido — `es` y `pt` son copias regeneradas de `es-419` y `pt-BR`, y
+editarlas tras `add-l10n-key.sh` las dejó atrás, con un `[NEEDS_TRANSLATION]` vivo en `pt`.
 
 ## Te espera a ti
 
@@ -41,32 +43,34 @@ verdes los otros 3.
    credencial de DDL** (el conector MCP solo lista producción, `~/Secrets/yala-supabase-test/` solo
    tiene JWTs de usuario). Se cierran aplicando los dos `.sql` de `qa/cloud/` en orden. Es acceso tuyo,
    no una tarea que se destrabe sola.
-2. **Dos decisiones nuevas, las dos salidas de cumplir un AC al pie de la letra:**
+2. **Decisiones abiertas:**
    - `groups-archived-still-accepts-changes` — el copy promete que un archivado «ya no acepta cambios»
-     y acepta todos: gastos, ediciones, liquidaciones, ajustes, invitaciones. Ni los dos
-     `validateGroupIsWritable` ni ninguna función del servidor miran `isArchived`. Tres opciones dentro.
+     y acepta todos: gastos, ediciones, liquidaciones, ajustes, invitaciones. Tres opciones dentro.
    - `groups-owner-debt-no-heir-dead-end` (high, del 6-sep) — el dueño con deuda y SIN heredero sigue
      sin salida.
+   - **`secondary-onboarding-still-crosses-owner-domain` (nuevo, 7-sep)** — lo que QUEDA de la
+     frontera: el prellenado LEE del dueño (y por esa vía hereda `expensesOnlyMode`, que **apaga la
+     rama del saldo** que el PR #86 acaba de encender), y `notificationsSeeded` escribe en él. Las
+     dos con contrapartida: la divisa heredada probablemente sí se quiere; las notificaciones de la
+     visita sonando en un móvil prestado, quizá no. **Decisión key por key, no un barrido.**
+   - **`secondary-visit-data-lost-on-signout-unannounced` (nuevo)** — el wipe de salida borra lo que
+     la visita apuntó. Es correcto; qué se le cuenta y cuándo son cuatro salidas con contrapartidas.
 3. **Publicar la app.** Los avisos de Grupos están completos en servidor y en los dos entornos; falta
    el cliente iOS. Llevaría además el saldo de Distribución, la identidad del recién llegado, los
    predeterminados del Panel, el cierre del detalle, la hoja de «Unirme», el freno de la lista,
-   «Transferir y salir», la puerta del grupo, la puerta del archivado, **la marca de aproximado con
-   su corrección del 1:1** y **el rótulo del hero de Estadísticas**.
-4. **La tanda de QA: 40 tickets, y el guion solo cubre 22.** Entra
-   `hero-estadisticas-stock-vs-flujo-entre-pestanas`, ya verificado en simulador; en el teléfono
-   falta la 4ª pestaña (Registros con sus chips), el estado de las dos naturalezas a la vez y el
-   deslizamiento entre las cuatro con el mismo período, que es donde la incoherencia se nota. Guion en **`qa/guion-tanda.md`**. El
-   montaje de dos teléfonos ya lleva ocho, incluido `groups-archived-group-rejects-join` (A archiva → B
-   tapea y ve el aviso; A desarchiva → B entra). Los **17 sin montaje asignado** salen a
-   `qa-guion-tanda-no-cubre-17-tickets`, con la sugerencia de sostenerlo con un comprobador en vez de
-   con la memoria.
-5. **La deuda FX que deja el PR #84, y el orden importa.** Cuatro tickets, uno de ellos gobierna a
-   los otros: **`fx-manual-writes-seal-approximate-as-final` (high)** — diez sitios que GUARDAN un
-   importe convertido lo sellan como definitivo aunque la tasa fuera aproximada, incluidos crear una
-   transacción y el cambio de moneda preferida (que reescribe todo el histórico). **Es la razón de
-   que la marca nueva avise menos de lo que debería**, así que probar la marca antes de cerrarlo da
-   falsos negativos. Detrás: `fx-approximate-mark-missing-on-secondary-surfaces` (siete pantallas
-   más sin marca) y `fx-unknown-currency-code-collapses-to-usd`.
+   «Transferir y salir», la puerta del grupo, la puerta del archivado, la marca de aproximado con su
+   corrección del 1:1, el rótulo del hero de Estadísticas **y el aviso de visita**.
+4. **La tanda de QA: 42 tickets en `qa/`, y el guion solo cubre 22.** Entra
+   `welcome-privacy-branch-has-no-secondary-door`: el seam de simulador enciende el descriptor pero
+   **no monta** un store secundario, así que falta el e2e con dos cuentas reales — los datos de la
+   visita en SU store, su saldo inicial, y que el copy quepa en alemán y neerlandés (solo se vio en
+   español). Guion en **`qa/guion-tanda.md`**. Los **17 sin montaje asignado** siguen en
+   `qa-guion-tanda-no-cubre-17-tickets`.
+5. **La deuda FX del PR #84, y el orden importa.** **`fx-manual-writes-seal-approximate-as-final`
+   (high)** gobierna a los otros: diez sitios que GUARDAN un importe convertido lo sellan como
+   definitivo aunque la tasa fuera aproximada. **Es la razón de que la marca nueva avise menos de lo
+   que debería**, así que probar la marca antes de cerrarlo da falsos negativos. Detrás:
+   `fx-approximate-mark-missing-on-secondary-surfaces` y `fx-unknown-currency-code-collapses-to-usd`.
 6. **Dos decisiones de la web**, sin cambios: el texto legal de Grupos (dice «vía iCloud» y el backend
    propio está al 100 % en prod) y si Vercel despliega al mergear. Y ratificar o revertir el botón «Más
    tarde» del invitado.
@@ -74,33 +78,30 @@ verdes los otros 3.
 ## Abiertos
 
 **`in-progress` vacío.** Lo vivo espera la tanda de QA, hardware (los 2 de `blocked`) o **una decisión
-tuya** (2, las de arriba).
+tuya** (4, las de arriba).
 
-**El gate tiene ruido: `unit-suite-nondeterministic-reds` (high).** Hoy la suite unit completa volvió
-a pasar entera (**6240 tests en 633 suites**, 84 s) sin un solo rojo. Dos sesiones seguidas sin
-reproducirlo: sigue sin estar descartado, pero tampoco visto.
+**Ruido del gate — hoy hay UN rojo nuevo bien medido y dos viejos que no aparecieron.**
 
-**El runner de XCUITest: `rojo-xcuitest-runner-muere-tras-el-primer-caso` (high) NO se reprodujo el
-7-sep.** El 6-sep se caía tras el primer caso de CADA suite («Restarting after unexpected exit»): 5
-suites, 5 casos, 5 en «Failing tests». Hoy, en el gate de esta sesión: **8 suites, 15 casos
-ejecutados = 15 declarados, 0 fallos** —y las suites de 2 casos ejecutaron los 2, que es justo lo
-que ayer no pasaba—. Dos diferencias de entorno, ninguna descartada: hoy el disco se subió a 12 GB
-antes de correr (borrando dos `DerivedData` de worktrees ya retirados, 6,6 GB) y el Mac llevaba
-menos horas encendido. **No lo des por cerrado con una sola observación**, pero tampoco arranques
-asumiendo que el paso 3 no da veredicto: hoy lo dio. Lo que lo hace `high` sigue en pie — taparía
-un rojo de verdad en cualquier caso que no sea el primero de su suite.
+- **`transaction-save-helper-flake-one-per-suite` (nuevo, medium).** Toda corrida completa de
+  `YalaUITests` acaba con **un** fallo en el mismo aserto («no apareció la pantalla de éxito de la
+  transacción», `XCUIApplication+Yala.swift:208`) y **la víctima cambia**: `QuickActionsFavorites`
+  dos veces, `EdgeCases.test_extremeMinimumAmountSaves` la tercera —con la primera pasando esa vez—.
+  Bisecado con 17 muestras contra el árbol base; la que lo zanja **falló con un único fichero
+  cambiado cuyo parámetro nuevo no lo pasa nadie**: un fallo sin causa posible ⇒ ruido del
+  instrumento, no regresión. El ticket lleva un **reproductor de 3 minutos** (4 suites + la suya) para
+  que nadie repita las dos horas de bisección. **Aviso que va en el propio ticket:** este mismo aserto
+  ya cazó una rotura REAL (el `.alert` con label dinámico), así que **no se descarta sin medir**.
+- **`rojo-xcuitest-runner-muere-tras-el-primer-caso` (high) NO se reprodujo, y esta vez con volumen.**
+  **Tres corridas completas de 134 casos cada una**, todas ejecutando los 134 (el 6-sep moría tras el
+  primer caso de CADA suite). Es la segunda sesión seguida sin verlo. Sigue sin descartarse, pero ya
+  no es «una sola observación».
+- **`unit-suite-nondeterministic-reds` (high): tampoco.** La suite unit completa pasó entera dos veces
+  hoy — **6272 tests en 637 suites**, 89 s. Tercera sesión sin reproducirlo.
 
-Que es ajeno está medido en las **dos** direcciones: worktree limpio desde HEAD falla idéntico, y un
-caso que PASA con los cambios FALLA sin ellos. **No lo confundas con
-`uitest-compara-fechas-sin-fijar-locale`**, que cataloga rojos de ASERCIÓN con causa conocida; aquí
-lo que muere es el proceso.
-
-**Ojo con el entorno, y con la hipótesis correcta.** La sospecha del disco se probó y **no explica el
-síntoma**: se liberaron 6,3 GB —de ellos **5,7 GB en
-`CoreSimulator/…/Caches/com.apple.containermanagerd/Dead`**, contenedores muertos que el informe
-esconde dentro del total de «Simuladores»— y siguió igual a 14 GB. La pista buena ya estaba en este
-bloque ayer: **la MEMORIA**. Anoche el sistema mató además dos procesos de espera de la sesión por
-presión de memoria. Antes de perseguir un rojo de UI: mirar memoria **y** disco, y repetir aislado.
+**El entorno, con una medición nueva.** El disco bajó a **7,1 GB** (umbral 25) tras dos horas de
+corridas encadenadas; un `simctl erase` lo devolvió a 12 GB — y **no eliminó el flake de arriba**, que
+volvió a salir en la corrida hecha desde el simulador recién borrado. El disco libre absoluto **no**
+es su variable. Antes de perseguir un rojo de UI: mirar memoria **y** disco, y repetir aislado.
 
 **Al retomar cualquiera: las coordenadas de los tickets están sistemáticamente caducadas.** Greppea, no
 abras la línea citada. **Y la premisa del ticket —y la del encargo— también caduca.**
@@ -113,18 +114,15 @@ sigue sin `ok_`. **Cero `ok_` inventado.**
 
 ## Board
 
-**129 tickets · backlog 65 · qa 41 · blocked 2 · done 16 · discarded 5.**
+**134 tickets · backlog 69 · qa 42 · blocked 2 · done 16 · discarded 5.**
 `qa` significa «esperando la tanda», no «cerrado». Índice = disco, verificado comparando **conjuntos**
-(129 = 129, cero huérfanos en ambas direcciones). **Todo cierre incluye `docs/TICKETS.md`**, y lo
-que salga de camino lleva ticket propio — esta sesión sacó **cuatro**:
-`fx-manual-writes-seal-approximate-as-final` (high),
-`fx-approximate-mark-missing-on-secondary-surfaces`, `fx-unknown-currency-code-collapses-to-usd` y
-`rojo-xcuitest-runner-muere-tras-el-primer-caso` (high). Al índice le faltaban además **dos entradas
-que no eran de esta sesión**: se comprueba con conjuntos, no con el contador.
+(134 = 134, cero huérfanos en ambas direcciones, cero rutas rotas). **Todo cierre incluye
+`docs/TICKETS.md`**, y lo que salga de camino lleva ticket propio — esta sesión sacó **cinco**:
+`secondary-onboarding-still-crosses-owner-domain`, `transaction-save-helper-flake-one-per-suite`,
+`welcome-beacon-reads-owner-icloud-in-secondary`,
+`secondary-visit-data-lost-on-signout-unannounced` y `welcome-private-card-promises-icloud-in-visit`.
 
-El 7-sep la tabla cuadraba fila a fila (129 = 129, cero huérfanos), pero su línea de *counts*
-seguía diciendo `= 118`. Corregida. **Dos trampas al recontar, las dos me mordieron:** cuenta solo
-`*.md` —hay un `.gitkeep` por carpeta y tres PNG en `done/`, que inflan un `ls` a 132— y si filtras
-las filas con una regex, acepta MAYÚSCULAS en el id: `rojo-heroBuckets-thisWeek-trailing-window` se
-escapa de `[a-z0-9-]+` y aparenta ser un huérfano que no existe. Estuve a punto de "reparar" un
-índice que estaba sano.
+**Dos trampas al recontar, las dos han mordido ya:** cuenta solo `*.md` —hay un `.gitkeep` por carpeta
+y PNG de evidencia en `done/` y `qa/`, que inflan un `ls`— y si filtras las filas con una regex,
+acepta MAYÚSCULAS en el id: `rojo-heroBuckets-thisWeek-trailing-window` se escapa de `[a-z0-9-]+` y
+aparenta ser un huérfano que no existe. Se comprueba con **conjuntos**, no con el contador.
