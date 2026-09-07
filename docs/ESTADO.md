@@ -5,35 +5,48 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-07 (Lima)
 
-**Rama** `2.1` · HEAD `9329812a` — si le debes dinero a alguien en un grupo y la cuenta lleva semanas
-quieta, Yala te lo recuerda con buenas maneras.
+**Rama** `2.1` · HEAD `9498b9b3` — al cerrar un viaje puedes mandar al chat una imagen con las cuentas
+del grupo y los pagos mínimos para saldarlas.
 TestFlight build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.** `yala-app.pe` sirve la web
 nueva.
 
 ## Esta sesión, en una línea
 
-**El recordatorio amable de liquidación pendiente ya existe** (PR #89). Si le debes dinero a alguien
-en un grupo y esa cuenta lleva **tres semanas sin moverse**, Yala te avisa **a ti** —quien puede
-resolverlo— sin que abras la app: «👋 Te recordamos que le debes S/ 50 a Ana. Cuando puedas, ponte al
-día». Debiendo a varias personas del mismo grupo llega **un** aviso, no tres; no se repite antes de
-una semana; y cualquier gasto o pago entre vosotros dos reinicia el contador. Nace **apagado**, en
-Ajustes → Notificaciones. V1 sin tocar el schema de CloudKit: el rate-limit vive en `UserDefaults`.
+**El resumen compartible del grupo ya existe** (PR #90). En Ajustes de un grupo, «Compartir resumen»
+genera una **imagen** con el total gastado, quién puso qué y la lista mínima de pagos para saldarlo
+todo, y la manda por el share sheet: WhatsApp, Mensajes, Guardar en Fotos. Cubre **todo el historial**
+—no el período filtrado en Estadísticas, decisión tuya del 6-sep— y con gastos en varias monedas cada
+una lleva su bloque, sin sumarse jamás entre sí. Si no queda nada pendiente, lo dice. Solo lectura.
 
-**Las tres lentes cazaron ocho defectos míos, y el más caro fue una decisión que yo había razonado
-al revés.** Respetaba `simplifyDebts` «para que el aviso diga lo mismo que la pantalla», y el caso
-numérico lo tumbó: con simplificación, la arista «yo → X» es un **enrutado sobre saldos de terceros**,
-así que el aviso podía afirmar «lleva semanas quieta» sobre dinero de anoche con un importe **7×** el
-real — y el rate-limit se rompía, porque su clave cambiaba cuando dos personas **que no eres tú** se
-pagaban algo. Ahora usa deudas directas, y el precio (el importe puede no coincidir con la pantalla en
-grupos con simplificación) está escrito en el código. Los otros: «varias personas» cuando era **una**
-en dos monedas; una espera de frescura que **salía en el primer poll** porque un solo grupo legacy en
-el store cuenta como fresco — el feature habría quedado mudo al arrancar, en verde y sin síntoma; y
-la identidad sin filtrar por `isActive`, que mandaba el push a quien ya salió del grupo.
+**Primera vez que la app genera una imagen**, así que la tarjeta va con dos reglas que no son
+estética: ni un `@Environment` dentro —`ImageRenderer` hostea su contenido fuera del árbol y una
+sub-vista que lea `AppPreferences` daría `SIGTRAP`, la trampa de las `.annotation` de Swift Charts— y
+colores fijos en claro, porque la imagen sale de la app y no puede depender del tema de quien la mandó.
 
-**Y el conteo de call-sites del gate de frescura no se ponía rojo solo:** su lista de ficheros es
-explícita, así que un cuarto consumidor **en un fichero nuevo** le era invisible. Ampliado a cuatro,
-con la diferencia escrita — los otros tres preguntan «¿esto no existe?» y este «¿está completa mi foto
-de deudas?», y por eso exige `belongsToBackendChannel` además de `isFresh`.
+**Las tres lentes cazaron nueve defectos míos, y otra vez el más caro fue un razonamiento explícito y
+equivocado.** Había escrito que los pagos irían siempre por moneda cruda, «porque una conversión al
+cambio del momento se congela en una imagen»: bueno para los totales, **falso para los pagos**, porque
+se me escapó que «ver deudas en una sola moneda» también decide **en qué moneda se ESCRIBE la
+liquidación**. Con ese ajuste puesto, una cena de US$ 100 pagada en soles dejaba la deuda viva en
+dólares y el pago como deuda inversa en soles: la imagen habría mandado al chat **dos transferencias
+fantasma en direcciones opuestas por dinero ya pagado**, contradiciendo a Balances. Los otros ocho:
+se ofrecía en grupos **migrados y congelados** (que enseñan una copia vieja, y la imagen se fecha hoy);
+el botón lo decidía un proxy que contaba los saldos iniciales y dejaba pasar grupos que producían una
+**tarjeta en blanco**; los **repartos no se deduplicaban** —solo los gastos—, con el total blindado y
+«le tocaba» al doble; **sin techo de tamaño**, 40 personas × 4 divisas dan 38 940 px a escala 3, el
+doble del techo de textura, y un bitmap de ~336 MB; y faltaba **`NSPhotoLibraryAddUsageDescription`**,
+sin la cual «Guardar imagen» crashea — es la primera vez que la app escribe en la fototeca.
+
+**Y una explicación mía que era falsa aunque la medición fuera buena.** Documenté que la columna «le
+tocaba» descuadra «porque el reparto asigna los céntimos gasto a gasto». Lo que vi en el simulador era
+cierto (123,34 × 3 contra 370), pero la causa no: `GroupSplitCalculator.equalSplit` **sí** reparte el
+residuo y cuadra exacto — el descuadre era del **seed**. En producción existe por otras vías (el
+reparto exacto tolera ±0,02; los importes del wire no pasan por el calculador). ⇒ un comentario que
+dice «medido» y explica mal lo medido es peor que no tenerlo.
+
+**Dos mutantes sobrevivieron a su primera pasada**, los dos por la trampa del helper ciego: el del
+orden de monedas usaba PEN/USD, donde «la principal primero» y «alfabético» **coinciden**. Salió dos
+veces en el mismo cambio. Nueve mutantes verificados al final, uno por decisión.
 
 ## Te espera a ti
 
@@ -68,8 +81,13 @@ de deudas?», y por eso exige `belongsToBackendChannel` además de `isFresh`.
    el cliente iOS. Llevaría además el saldo de Distribución, la identidad del recién llegado, los
    predeterminados del Panel, el cierre del detalle, la hoja de «Unirme», el freno de la lista,
    «Transferir y salir», la puerta del grupo, la puerta del archivado, la marca de aproximado con su
-   corrección del 1:1, el rótulo del hero de Estadísticas **y el aviso de visita**.
-4. **La tanda de QA: 44 tickets en `qa/`, y el guion solo cubre 22.** Entra
+   corrección del 1:1, el rótulo del hero de Estadísticas, el aviso de visita **y el resumen
+   compartible del grupo**.
+4. **La tanda de QA: 46 tickets en `qa/`, y el guion solo cubre 22.** Entra
+   **`groups-shareable-summary`**, y su device-QA tiene algo que el simulador no da: **«Guardar en
+   Fotos» es camino nuevo** —la app nunca había escrito en la fototeca— y estrena
+   `NSPhotoLibraryAddUsageDescription`; hay que ver además cómo llega la imagen a un chat de WhatsApp
+   y que el texto del permiso se lea bien en su idioma. Entra
    **`reentry-killswitch-closes-both-doors`** (7-sep), y es el más caro de montar de los tres: pide
    **conmutar el kill desde el backend** y un móvil limpio por caso. Bajo `-uitest` los flags remotos
    cortocircuitan a su default, así que el estado nuevo **no es alcanzable por XCUITest**: su guion
@@ -153,9 +171,9 @@ sigue sin `ok_`. **Cero `ok_` inventado.**
 
 ## Board
 
-**141 tickets · backlog 73 · qa 45 · blocked 2 · done 16 · discarded 5 · in-progress 0.**
+**143 tickets · backlog 74 · qa 46 · blocked 2 · done 16 · discarded 5 · in-progress 0.**
 `qa` significa «esperando la tanda», no «cerrado». Índice = disco, verificado comparando **conjuntos**
-(141 = 141, cero huérfanos en ambas direcciones, y ningún estado discrepante entre fila y carpeta).
+(143 = 143, cero huérfanos en ambas direcciones, y ningún estado discrepante entre fila y carpeta).
 **El índice traía dos defectos que nadie había visto**, los dos arreglados: una fila de datos **por
 encima de la cabecera de la tabla**, y dos punteros del mapa de origen apuntando a `in-progress/`,
 que está vacío desde hace días. **Todo cierre incluye `docs/TICKETS.md`**, y lo que
@@ -173,7 +191,16 @@ journal y nunca pregunta si el motor arrancó de verdad. La del recordatorio de 
 **dos**: **`groups-settlement-reminder-stale-clock`** —el reloj del nudge no ve las ediciones de un
 gasto viejo ni los pagos retro-fechados, porque `SplitSettlement` no tiene `createdAt` ni
 `SplitExpense` tiene `updatedAt`; cerrarlo pide campo nuevo y migración— y
-**`groups-settlement-reminder-discoverability`**, que es decisión tuya y está arriba.
+**`groups-settlement-reminder-discoverability`**, que es decisión tuya y está arriba. La del
+resumen compartible sacó **dos**, los dos sobre código que ese cambio **no tocó a propósito**:
+**`debt-simplification-nondeterministic-ties`** —ante un empate exacto de saldos,
+`DebtSimplificationService` elige acreedor y deudor con `max`/`min` sobre un `Dictionary`, cuyo orden
+de iteración cambia entre procesos, así que el conjunto de transferencias puede salir distinto (todas
+correctas, mismo total); hasta ahora eso quedaba en pantalla, donde se vuelve a mirar, y desde el
+resumen **se congela en una imagen** y circulan dos versiones por el mismo chat— y
+**`group-balance-service-shares-not-deduped`**, el mismo hueco de repartos duplicados que se cerró en
+la lógica del resumen y sigue abierto en el servicio que alimenta Balances, la banda del header y el
+recordatorio de deudas.
 
 **Y una lección de higiene del board:** abrí un cuarto ticket para el rojo de
 `EdgeCases.test_extremeMinimumAmountSaves` **sin comprobar que ya existía uno**
@@ -184,5 +211,8 @@ no por el nombre del test** — la víctima cambia entre corridas y el nombre no
 **Dos trampas al recontar, las dos han mordido ya:** cuenta solo `*.md` —hay un `.gitkeep` por carpeta
 y PNG de evidencia en `done/` y `qa/`, que inflan un `ls`— y si filtras las filas con una regex,
 acepta MAYÚSCULAS en el id: `rojo-heroBuckets-thisWeek-trailing-window` se escapa de `[a-z0-9-]+` y
-aparenta ser un huérfano que no existe. **Y el índice tiene DOS tablas**: acota al bloque que sigue al
+aparenta ser un huérfano que no existe. **Estaba escrito y volvió a morder el 7-sep**: la sesión del
+resumen compartible «encontró» ese mismo huérfano, añadió su fila al índice y creó un duplicado, que
+tuvo que deshacer. ⇒ ante una discrepancia del board, sospecha **primero del filtro** y córrelo con un
+patrón laxo (`\S+`) antes de tocar el fichero. **Y el índice tiene DOS tablas**: acota al bloque que sigue al
 separador `|----|`, o cuentas filas de la de abajo. Se comprueba con **conjuntos**, no con el contador.
