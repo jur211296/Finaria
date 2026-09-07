@@ -1,6 +1,6 @@
 ---
 name: hipotesis-lista-negra-recomprobadas
-description: Qué hipótesis de la Lista Negra volví a comprobar y cuándo. Caducan. Al 2026-09-06: el CI de GitHub sigue vivo, el runner de XCUITest SÍ está roto hoy (muere tras el primer caso de cada suite, medido también en árbol limpio), y hay 5,7 GB que el informe de disco no destaca.
+description: Registro de hipótesis de la Lista Negra re-medidas y cuándo. El runner de XCUITest se cayó el 6-sep y NO se reprodujo el 7 (15/15 casos); el CI sigue vivo y `tests` tarda ~1h; qué esconde el informe de disco y qué NO (CoreSimulatorInternal/Devices es el mismo inode, no espacio extra).
 metadata:
   type: project
 ---
@@ -55,6 +55,55 @@ arriba, o la causa es otra. Ticket `rojo-xcuitest-runner-muere-tras-el-primer-ca
 peligroso no es el falso rojo, es que **taparía un rojo real** en cualquier caso que no sea el
 primero de su suite. No archives los nombres que salgan en «Failing tests»: el conjunto depende del
 orden de ejecución, no de qué esté roto.
+
+## «El runner de XCUITest muere tras el primer caso» — NO se reprodujo el 2026-09-07
+
+**Dónde se afirma:** `docs/ESTADO.md` del 6-sep y el ticket `rojo-xcuitest-runner-muere-tras-el-primer-caso`
+(high): el runner se cae tras el primer caso de CADA suite («Restarting after unexpected exit»),
+5 suites → 5 casos, 0 líneas de fallo, 5 nombres en «Failing tests». El bloque concluía que **el
+paso 3 del gate no da veredicto**.
+
+**Qué medí:** en el gate del ticket del rótulo del hero corrí **8 suites** de una vez
+(`StatisticsNavigation`, `EdgeCases`, `WelcomeFreshStartAlert`, `IncomeExpenseClassification`,
+`ProConversionUpsells`, `RecordsDetailSheet`, `SplitCalculator`, `BulkEdit`). **15 casos ejecutados
+= 15 declarados en el fuente, 0 fallos.** Siete de esas suites tienen 2 casos y ejecutaron los dos,
+que es justo lo que el 6-sep no pasaba.
+
+**Cómo lo conté, porque `TEST SUCCEEDED` no vale:** conté los `func test`/`@Test` de cada fichero de
+suite y los comparé con el `Executed N tests` del log. 15 = 15. Sin ese conteo, un runner que muere
+después del primer caso de cada suite sale igual de verde ([[gate-paso3-no-detecta-cero-casos]]).
+
+**La diferencia de entorno, sin descartar nada:** subí el disco de 5,2 GB a **12 GB** ANTES de correr
+—borrando dos `DerivedData` de worktrees ya retirados, 6,6 GB— y el Mac llevaba menos horas
+encendido. El 6-sep la máquina estuvo entre 8,7 y 15 GB, así que el disco solo **no** explica la
+diferencia; la sospecha de MEMORIA que el ESTADO apuntaba sigue viva.
+
+**How to apply:** no arranques asumiendo que el paso 3 no da veredicto — el 7-sep lo dio. Pero
+tampoco des el ticket por cerrado: son dos observaciones opuestas en dos días, así que **cuenta los
+casos siempre** y, si mueren, sube el disco por encima de 12 GB y repite antes de escribir nada.
+
+---
+
+## Los `DerivedData` de worktrees retirados se acumulan — medido el 2026-09-07
+
+**Qué pasó:** dos builds del gate bajaron el disco de 11 GB a **5,2 GB**, zona donde CoreSimulator
+falla con errores que no lo mencionan. En `~/Library/Developer/Xcode/DerivedData` había **tres**
+carpetas de Yala: la mía (4,0 GB, `mtime` de hacía 2 minutos) y **dos huérfanas de worktrees ya
+retirados** (4,4 GB + 2,2 GB = 6,6 GB). Borrar solo las huérfanas devolvió el disco a 12 GB sin
+tocar mi build en curso.
+
+**Cómo distinguir la mía de las huérfanas, que es lo único delicado:**
+`plutil -extract WorkspacePath raw <carpeta>/info.plist` da la ruta del `.xcodeproj`; si esa ruta ya
+no existe, la carpeta es basura. `rm -rf` está **bloqueado** en este entorno: se borra con
+`find <dir> -depth -delete`.
+
+**La corrección que me ahorré escribir mal:** iba a reportar `~/Library/CoreSimulatorInternal/Devices`
+(4,6 GB) como espacio que el informe de disco esconde. **Es el MISMO directorio** que
+`~/Library/Developer/CoreSimulator/Devices` — lo comprobé con `stat -f '%i'`: inode 43225723 en los
+dos. El informe ya lo cuenta; sumarlos habría inflado el recuperable al doble. El punto ciego **real**
+sigue siendo `/Library/Developer/CoreSimulator/Volumes` (16 GB de runtimes), y **eso no se borra**.
+
+---
 
 ## «El CI de GitHub, apagado» — FALSO el 2026-09-05, y sigue vivo el 2026-09-06
 

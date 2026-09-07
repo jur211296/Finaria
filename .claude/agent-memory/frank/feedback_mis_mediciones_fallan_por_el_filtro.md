@@ -1,6 +1,6 @@
 ---
 name: mis-mediciones-fallan-por-el-filtro
-description: Mis errores de medición se repiten con la misma forma — el filtro descarta justo lo que busco y la ausencia se lee como resultado. Doce casos entre el 2026-09-02 y el 2026-09-05, un CI "en verde" cuyo check clave no existía, y la variante cara: la afirmación falsa la escribí yo.
+description: Mis errores de medición se repiten con la misma forma — el filtro descarta justo lo que busco y la ausencia se lee como resultado. Trece casos entre el 2026-09-02 y el 2026-09-07, incluida la variante inversa: el filtro INVENTA un defecto y casi "reparo" un documento sano.
 metadata:
   type: feedback
 ---
@@ -380,3 +380,23 @@ Cuanto mejor está escrito el código, más engaña esa búsqueda.
 - Lo que sí me salvó: **control positivo explícito**. Volví a correr el grep pidiéndole que
   imprimiera además la línea de la tarjeta que ambos dábamos por buena. Si esa no salía, el roto
   era mi filtro.
+
+---
+
+**Caso 13 (2026-09-07), y es el que va al revés: el filtro me inventó un problema que no existía.**
+Auditando `docs/TICKETS.md` contra el disco, mi regex de filas era
+`^\| ([a-z0-9-]+) \| (backlog|qa|…)`. Reportó «128 filas, 129 ficheros, huérfano:
+`rojo-heroBuckets-thisWeek-trailing-window`». Empecé a escribir el parche que le añadía la fila…
+y el `assert fila not in t` saltó: **la fila ya estaba ahí**, en la línea 133. El id lleva
+MAYÚSCULAS (`heroBuckets`) y `[a-z0-9-]+` no las acepta. El índice estaba sano; el roto era yo.
+
+**Por qué importa más que los otros doce:** los anteriores me hacían ver una AUSENCIA falsa y
+concluir «no hay nada». Este me hizo ver un DEFECTO falso y casi me lleva a "reparar" un documento
+correcto — un cambio que habría duplicado una fila y que nadie habría cuestionado, porque venía con
+una medición detrás.
+
+**How to apply:** cuando una auditoría mía diga que un documento está roto, **antes de arreglarlo,
+grep del identificador suelto** (`grep -n "<id>" fichero`). Si aparece y mi regex no lo veía, el
+defecto es del filtro. Y en este repo, las clases de caracteres para ids llevan `[A-Za-z0-9._-]`:
+hay ids en camelCase y con puntos. Lo que me salvó fue un `assert` de sanidad antes de escribir —
+si hubiera hecho el `replace` a ciegas, el parche habría "funcionado" y roto el índice.
