@@ -75,12 +75,25 @@ struct AccountsCarouselView: View {
     private func cardView(at index: Int, accounts: [Account]) -> some View {
         if index < accounts.count {
             let account = accounts[index]
-            let isSelected = viewModel.selectedAccountID == account.persistentModelID
+            // `contains` y no `== .first`: con dos cuentas filtradas desde
+            // Registros el carrusel marcaba una sola, y el saldo ya suma las dos.
+            let isSelected = viewModel.selectedAccountIDs.contains(account.persistentModelID)
 
             Button {
-                if viewModel.selectedAccountID == account.persistentModelID {
+                if viewModel.isExcludeMode {
+                    // La tarjeta atenuada dice "excluida": tocarla la devuelve al
+                    // total, y tocar una normal la excluye. Reemplazar el filtro
+                    // aquí convertía la cuenta excluida en la única incluida —el
+                    // filtro inverso del que el usuario acababa de pedir.
+                    if isSelected {
+                        viewModel.selectedAccountIDs.remove(account.persistentModelID)
+                    } else {
+                        viewModel.selectedAccountIDs.insert(account.persistentModelID)
+                    }
+                } else if isSelected && viewModel.selectedAccountIDs.count == 1 {
                     viewModel.selectedAccountID = nil
                 } else {
+                    // Elegir ésta reemplaza el filtro; volver a tocarla lo limpia.
                     viewModel.selectedAccountID = account.persistentModelID
                 }
             } label: {

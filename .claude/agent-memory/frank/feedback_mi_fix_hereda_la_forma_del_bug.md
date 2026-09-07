@@ -37,6 +37,23 @@ Y no fue casualidad ni descuido puntual — el mismo día, la misma sesión:
    defectos míos ahí, y ninguno lo veía la suite en verde. Es la tercera vez que pasa
    ([[review-adversarial-caza-lo-mio]]): no es mala suerte, es el modo normal de fallar.
 
+**El mecanismo concreto, medido el 2026-09-07 en
+`panel-colapsa-la-seleccion-de-cuentas-a-la-primera`: al generalizar «uno → conjunto», la condición
+nueva se COPIA en varios sitios, y en uno de ellos está mal.** El bug era «el Panel colapsa el
+filtro a un elemento». Sustituí `selectedAccountID != nil` por `!selectedAccountIDs.isEmpty` en dos
+sitios a la vez. En modo excluir esa condición es `true`, lo que bypaseaba el toggle «incluir
+grupos»: **excluir una cuenta de 200 hacía SUBIR el total 300**. Un saldo que ignora lo que el
+usuario configuró, en el commit que existía para que el saldo respetara lo que el usuario configuró.
+
+Dos lentes independientes lo cazaron **las dos**; la suite en verde (6280 tests) no. El arreglo fue
+darle nombre a la regla —`PanelTotalAccountsLogic.hasAccountFilter`— para que exista en **un solo
+sitio** en vez de dos copias que pueden separarse.
+
+⇒ **Cuando un fix sustituye una condición en más de un sitio, no la copies: nómbrala.** Y sospecha
+de la traducción mecánica `X != nil` → `!Xs.isEmpty`: es correcta en el caso que estás mirando y
+puede no serlo en el modo de al lado.
+
 Relacionado: [[mis-mediciones-fallan-por-el-filtro]] (el control positivo también va en los greps de
 auditoría) · [[la-premisa-del-encargo-tambien-se-mide]] (medir la premisa ajena; ésta es su gemela,
-medir la propia).
+medir la propia) · [[mutante-compilado-zanja-hipotesis]] (cómo comprobar que el test del fix
+protege de verdad).
