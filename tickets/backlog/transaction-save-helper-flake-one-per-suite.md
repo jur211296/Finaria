@@ -87,3 +87,32 @@ reproductor de 3 minutos y la tabla, y para que tampoco lo descarte a la ligera.
 - `.claude/rules/swiftui-ds.md` — el precedente donde este MISMO aserto cazó una rotura real
 - `.claude/rules/testing.md` — «NO apagar el simulador entre corridas» y «la primera corrida tras
   bootear no cuenta», las dos reglas de entorno que rodean esto
+
+## Cuarta medición (2026-09-07, tarde) — la que descarta el código sin bisecar
+
+Salió otra vez en el gate de `panel-colapsa-la-seleccion-de-cuentas-a-la-primera`, víctima
+`EdgeCasesUITests.test_extremeMinimumAmountSaves`. Dos datos que este ticket no tenía:
+
+**1. No hace falta la suite completa: con CINCO suites ya sale.** Las del gate de aquel cambio —
+`EdgeCases`, `PanelDashboard`, `ProConversionUpsells`, `StatisticsNavigation`,
+`WelcomeFreshStartAlert`— 11 casos en total. Es un reproductor aún más corto que el de 3 min de
+arriba.
+
+**2. El árbol base falla IGUAL con el mismo comando.** Cuatro corridas, dos árboles:
+
+| Árbol | Comando | Resultado |
+|---|---|---|
+| `encargo/…panel-colapsa…` | las 5 suites | **FALLA** — 11 tests, 1 fallo |
+| **`HEAD` limpio (`ad39a13d`)** | **las 5 suites** | **FALLA — el mismo test, 11 tests, 1 fallo** |
+| `encargo/…panel-colapsa…` | `EdgeCases` aislado, ×2 | PASA — 2 tests, 0 fallos |
+| `HEAD` limpio | `EdgeCases` aislado | PASA — 2 tests, 0 fallos |
+
+**Esas cuatro celdas cierran «¿es del cambio?» en cuatro corridas, sin bisecar.** La comparación que
+sirve es el **mismo comando en los dos árboles**: correr aislado en el base y en tanda en la rama
+diría «es tuyo» y sería falso. Vale la pena repetirlas antes de gastar muestras en cualquier rojo
+futuro de este aserto.
+
+**3. La condición se estrecha: es la TANDA, no la corrida completa ni el disco.** En aislado pasa
+siempre, en tanda falla; disco entre 11 y 14 GB en estas cuatro, dentro del rango ya observado. Lo
+que sigue sin descartarse es que el umbral de 25 GB importe: **ninguna de las 21 muestras se ha
+tomado con el disco por encima de él**. Es la comprobación más barata que queda y no se ha hecho.

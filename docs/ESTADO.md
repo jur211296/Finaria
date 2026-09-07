@@ -5,37 +5,36 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-07 (Lima)
 
-**Rama** `2.1` · HEAD `77dff99e` — en el móvil de otra persona, «privacidad total» ya lo dice.
+**Rama** `2.1` · HEAD `73e060c1` — el Panel ya suma las cuentas que filtraste, no una de ellas.
 TestFlight build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.** `yala-app.pe` sirve la web
 nueva.
 
 ## Esta sesión, en una línea
 
-**La rama privada del Welcome deja de callarse en visita** (PR #86). «Es mi primera vez → privacidad
-total» llevaba a quien usa Yala en el móvil de otra persona al onboarding **sin decirle nada**,
-mientras la rama de al lado sí se lo decía: la app se contradecía según por dónde entraras. Ahora
-sale una pantalla propia —«Lo tuyo no se mezcla con lo suyo»— que **informa y no bloquea**. Y el
-onboarding en visita deja de ofrecer las categorías de ejemplo que nunca creaba: un paso menos
-(8 → 7) en vez de una promesa incumplida.
+**El saldo del Panel respeta el conjunto de cuentas filtradas** (PR #87). Con dos cuentas
+seleccionadas el Panel enseñaba el saldo de **una** —y cuál no era predecible, porque `Set.first` no
+tiene orden estable— mientras Distribución sumaba las dos. Era la última vía conocida por la que esos
+dos números seguían sin cuadrar tras `distribution-balance-kpi-skips-fx`. La decisión de Jürgen del
+6-sep revoca su «no tocar Panel» del 26-ago.
 
-**La premisa trajo dos hechos que el ticket no tenía, y uno cambió el copy.** La card que la visita
-acaba de tocar promete «se sincronizan por tu iCloud privado», y el store secundario es
-`cloudKitDatabase: .none` — no se espeja a ninguna CloudKit, ni a la del dueño ni a la suya. Por eso
-el cuerpo dice «solo en este dispositivo»: es medido, no cautela. El segundo era un defecto vivo:
-**el saldo inicial de la visita se descartaba en silencio** (sin seed no existía «Ajuste de saldo»,
-así que no había dónde colgar el importe). No hizo falta arreglo aparte — tratarla como «sin seed»
-entra por la rama que ya la crea.
+**La premisa decía «cuatro sitios» y ninguna de sus rutas existía** (citaba los ficheros sin su
+carpeta). El grep del símbolo devolvió tres vistas más del Panel y **un defecto vivo que el ticket no
+recogía**: `LiveBalanceCalculator` no conoce `isExcludeMode`, y el modo sí viaja con el conjunto
+—`RecordsFiltersView` escribe los dos en el mismo gesto—, así que **«excluir la cuenta A» enseñaba el
+saldo de A**. Entró aquí porque sin eso el AC de paridad era falso.
 
-**Y un tercero, que la review adversarial encontró a UN TAP de la pantalla nueva.**
-`clearResidualPreferencesForFreshStart` borraba `userName` y `defaultCurrencyCode` del
-`UserDefaults` del **dueño**, y la visita entra siempre por esa rama. Se cerró aquí porque sin eso
-el copy es falso. Su mitad iKV **ya estaba protegida**, con un comentario que nombra la sesión
-secundaria: era un arreglo hecho a medias, y el comentario correcto de al lado hacía la zona parecer
-revisada. Está en `aprendizajes-tecnicos.md`.
+**La review adversarial cazó un defecto MÍO que los 6280 tests no veían, y las dos lentes lo
+encontraron por separado.** Al generalizar copié `!selectedAccountIDs.isEmpty` en dos sitios; en modo
+excluir eso es `true` y bypaseaba el toggle `includeGroupsInPanelTotal`, así que las cuentas de
+grupos volvían al agregado: **excluir una cuenta de 200 hacía SUBIR el total 300**. La regla vive
+ahora en `PanelTotalAccountsLogic.hasAccountFilter`, en **un solo sitio**. Y el test que la fija se
+verificó **con un mutante**: sin el arreglo falla con 1500 esperando 1000 — mi primer test pasaba
+igual sin él, que es la forma exacta de escribir una red que no sujeta nada.
 
-**Se vio en pantalla, y ahí saltó lo que el fuente escondía:** la primera captura mostró el copy
-VIEJO con el fichero ya corregido — `es` y `pt` son copias regeneradas de `es-419` y `pt-BR`, y
-editarlas tras `add-l10n-key.sh` las dejó atrás, con un `[NEEDS_TRANSLATION]` vivo en `pt`.
+**Lo que se preservó a propósito:** el fallback al total cuando la selección no resuelve a ninguna
+cuenta contable (heredado de `BalanceHelper.displayedBalance`, fijado por test). En modo excluir NO
+lo hay: excluir todas da 0, no el total — un fallback ahí convertiría «excluir» en «mostrar el
+total». Cero claves de l10n nuevas: el chip reusa `buildAccountChips`, el helper de Registros.
 
 ## Te espera a ti
 
@@ -55,13 +54,20 @@ editarlas tras `add-l10n-key.sh` las dejó atrás, con un `[NEEDS_TRANSLATION]` 
      visita sonando en un móvil prestado, quizá no. **Decisión key por key, no un barrido.**
    - **`secondary-visit-data-lost-on-signout-unannounced` (nuevo)** — el wipe de salida borra lo que
      la visita apuntó. Es correcto; qué se le cuenta y cuándo son cuatro salidas con contrapartidas.
+   - **`saldo-con-seleccion-no-contable-diverge-entre-panel-y-estadisticas` (nuevo, 7-sep)** — al
+     filtrar una cuenta «excluida de estadísticas», el saldo grande muestra el TOTAL, los widgets 0 y
+     el KPI 0: **la pantalla se contradice consigo misma**. Tres salidas dentro (0 en las tres, total
+     en las tres, o no dejar filtrarlas). Alcanzable desde el carrusel, que sí lista esas cuentas.
 3. **Publicar la app.** Los avisos de Grupos están completos en servidor y en los dos entornos; falta
    el cliente iOS. Llevaría además el saldo de Distribución, la identidad del recién llegado, los
    predeterminados del Panel, el cierre del detalle, la hoja de «Unirme», el freno de la lista,
    «Transferir y salir», la puerta del grupo, la puerta del archivado, la marca de aproximado con su
    corrección del 1:1, el rótulo del hero de Estadísticas **y el aviso de visita**.
-4. **La tanda de QA: 42 tickets en `qa/`, y el guion solo cubre 22.** Entra
-   `welcome-privacy-branch-has-no-secondary-door`: el seam de simulador enciende el descriptor pero
+4. **La tanda de QA: 43 tickets en `qa/`, y el guion solo cubre 22.** Entra
+   **`panel-colapsa-la-seleccion-de-cuentas-a-la-primera`**, con escenario paso a paso en su ticket:
+   filtrar DOS cuentas desde Registros → Filtros y comparar Panel vs Distribución; repetirlo con
+   «excluir» y con el toggle de grupos OFF. Hacen falta **tres cuentas con saldo distinto y no cero**.
+   Y entra `welcome-privacy-branch-has-no-secondary-door`: el seam de simulador enciende el descriptor pero
    **no monta** un store secundario, así que falta el e2e con dos cuentas reales — los datos de la
    visita en SU store, su saldo inicial, y que el copy quepa en alemán y neerlandés (solo se vio en
    español). Guion en **`qa/guion-tanda.md`**. Los **17 sin montaje asignado** siguen en
@@ -80,7 +86,8 @@ editarlas tras `add-l10n-key.sh` las dejó atrás, con un `[NEEDS_TRANSLATION]` 
 **`in-progress` vacío.** Lo vivo espera la tanda de QA, hardware (los 2 de `blocked`) o **una decisión
 tuya** (4, las de arriba).
 
-**Ruido del gate — hoy hay UN rojo nuevo bien medido y dos viejos que no aparecieron.**
+**Ruido del gate — el rojo del helper de guardado ya tiene condición, y los dos viejos siguen sin
+aparecer.**
 
 - **`transaction-save-helper-flake-one-per-suite` (nuevo, medium).** Toda corrida completa de
   `YalaUITests` acaba con **un** fallo en el mismo aserto («no apareció la pantalla de éxito de la
@@ -91,6 +98,11 @@ tuya** (4, las de arriba).
   instrumento, no regresión. El ticket lleva un **reproductor de 3 minutos** (4 suites + la suya) para
   que nadie repita las dos horas de bisección. **Aviso que va en el propio ticket:** este mismo aserto
   ya cazó una rotura REAL (el `.alert` con label dinámico), así que **no se descarta sin medir**.
+  **Cuarta medición (tarde): la condición es la TANDA, no la corrida completa.** Con **cinco** suites
+  ya sale, y en aislado pasa. Lo que lo zanja en cuatro corridas y sin bisecar: **el mismo comando en
+  los dos árboles** —`HEAD` limpio falla idéntico, 11 tests y 1 fallo—. Correr aislado en el base y en
+  tanda en la rama diría «es tuyo» y sería falso. **Ninguna de las 21 muestras se ha tomado con el
+  disco sobre 25 GB**: es la comprobación barata que queda.
 - **`rojo-xcuitest-runner-muere-tras-el-primer-caso` (high) NO se reprodujo, y esta vez con volumen.**
   **Tres corridas completas de 134 casos cada una**, todas ejecutando los 134 (el 6-sep moría tras el
   primer caso de CADA suite). Es la segunda sesión seguida sin verlo. Sigue sin descartarse, pero ya
@@ -114,15 +126,23 @@ sigue sin `ok_`. **Cero `ok_` inventado.**
 
 ## Board
 
-**134 tickets · backlog 69 · qa 42 · blocked 2 · done 16 · discarded 5.**
+**137 tickets · backlog 71 · qa 43 · blocked 2 · done 16 · discarded 5 · in-progress 0.**
 `qa` significa «esperando la tanda», no «cerrado». Índice = disco, verificado comparando **conjuntos**
-(134 = 134, cero huérfanos en ambas direcciones, cero rutas rotas). **Todo cierre incluye
-`docs/TICKETS.md`**, y lo que salga de camino lleva ticket propio — esta sesión sacó **cinco**:
-`secondary-onboarding-still-crosses-owner-domain`, `transaction-save-helper-flake-one-per-suite`,
-`welcome-beacon-reads-owner-icloud-in-secondary`,
-`secondary-visit-data-lost-on-signout-unannounced` y `welcome-private-card-promises-icloud-in-visit`.
+(137 = 137, cero huérfanos en ambas direcciones). **Todo cierre incluye `docs/TICKETS.md`**, y lo que
+salga de camino lleva ticket propio — esta sesión sacó **tres**:
+`panel-lee-el-filtro-de-cuentas-en-singular-fuera-del-saldo` (el subtítulo «en N cuentas» cuenta todas
+mientras el saldo filtra; y el prefill del formulario propone una cuenta arbitraria, en modo excluir
+la excluida), `saldo-con-seleccion-no-contable-diverge-entre-panel-y-estadisticas` y
+`filtro-de-cuentas-se-colapsa-al-navegar-a-registros`.
+
+**Y una lección de higiene del board:** abrí un cuarto ticket para el rojo de
+`EdgeCases.test_extremeMinimumAmountSaves` **sin comprobar que ya existía uno**
+(`transaction-save-helper-flake-one-per-suite`, de esta misma mañana). Se retiró y su medición nueva
+se fusionó en el que ya estaba. ⇒ **antes de abrir ticket por un rojo, greppea el board por el aserto,
+no por el nombre del test** — la víctima cambia entre corridas y el nombre no encuentra nada.
 
 **Dos trampas al recontar, las dos han mordido ya:** cuenta solo `*.md` —hay un `.gitkeep` por carpeta
 y PNG de evidencia en `done/` y `qa/`, que inflan un `ls`— y si filtras las filas con una regex,
 acepta MAYÚSCULAS en el id: `rojo-heroBuckets-thisWeek-trailing-window` se escapa de `[a-z0-9-]+` y
-aparenta ser un huérfano que no existe. Se comprueba con **conjuntos**, no con el contador.
+aparenta ser un huérfano que no existe. **Y el índice tiene DOS tablas**: acota al bloque que sigue al
+separador `|----|`, o cuentas filas de la de abajo. Se comprueba con **conjuntos**, no con el contador.
