@@ -51,3 +51,22 @@ demasiado pequeña para concluir nada salvo que no es determinista.
 Reproducirlo: correr el mismo lote de cinco suites unas cuantas veces y contar. Un fallo de 1 en N no
 justifica tocar el test; uno de 1 en 3 sí, y entonces el arreglo es el timeout de la espera, no el
 guardado.
+
+## Medición del 2026-09-06 (Frank, desde `groups-archived-group-rejects-join`)
+
+**No es flaky bajo carga: es determinista, y el nombre del ticket induce a error.** Medido hoy en
+local, aislado y sin nada más corriendo:
+
+- Falla con mis cambios (39,3 s) **y falla igual con `ContentView.swift` revertido a HEAD** (36,3 s)
+  ⇒ preexistente, no de ninguna rama en vuelo.
+- **Falla también corriéndolo SOLO**, que es lo que lo separa de sus vecinos: en la misma tanda,
+  `QuickActionsFavoritesUITests` y `TransactionsCrudUITests` fallan dentro de una tanda y **pasan
+  aislados** (47 s y 37 s). Ésos sí son carga; éste no.
+- Cae en `XCUIApplication+Yala.swift:208`, esperando `transaction_success_accept`: la pantalla de
+  éxito de la transacción no aparece en 10 s.
+
+⇒ Subir el timeout del helper —que ayudaría a los otros dos— **no arreglará éste**. Hay algo que
+impide que el guardado complete con ese importe. Y un aviso de método pagado hoy: ese mismo síntoma,
+en esa misma línea, lo produjo también un **bug real** introducido en esta sesión (una alerta con el
+label del botón dependiendo del `@State`). ⇒ el síntoma no identifica la causa; hay que bisecar.
+
