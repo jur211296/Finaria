@@ -2,10 +2,10 @@
   "description": "Golden cross-lenguaje de la PROYECCIÓN Merkle del canal de GRUPOS (B1, regla A-4 canal 1). Generado por gateway/scripts/generate-groups-merkle-fixtures.mjs importando canonRowC1Group/merkleColumnsGroup/leafChannel1/entityHash/merkleRoot de gateway/src SIN modificarlos. Consumido por GroupMerkleFixtureTests (Swift): reproyecta cada `model` con GroupMerkleProjection+Canonc1Codec y compara payload_c1/leaf_hex/entity_hash_hex/root byte a byte. Montos: ::text de numeric(_,4) (escala exacta). Timestamps: epoch ms.",
   "empty_entity_hash_hex": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "empty_root_hex": "005906de4d6be47d525c5e24730822e154d08d4b3395a0bf184ff57a10a025b6",
-  "root_hex": "62c8ed3663bbff161330f7fac2ddaed44c79889b48f6299330808eb20e0e1249",
+  "root_hex": "4442ace503f9bbee43f47a92081526942e57f244a8047192e59e5649db141985",
   "entities": {
     "split_groups": {
-      "entity_hash_hex": "549d1a444f720ce917a190a7667c19e7519f9fd1077b2edbb9676f2e1f4fa62e",
+      "entity_hash_hex": "7b226d3d7f570eb51f5e590d5fd849267f38e4ebbb2456ffb22c74af1bee0536",
       "samples": [
         {
           "identity": "splitgroup-a1b2c3d4",
@@ -23,8 +23,8 @@
             "is_hidden_for_all": false,
             "created_at_ms": 1784116800123
           },
-          "payload_c1": "{\"color_hex\":\"#8B5CF6\",\"created_at\":\"2026-07-15T12:00:00.123Z\",\"currency_code\":\"PEN\",\"default_split_type\":\"equal\",\"icon_name\":\"house.fill\",\"is_archived\":false,\"is_hidden_for_all\":false,\"members_can_invite\":true,\"name\":\"Casa 🏠\",\"show_debts_in_single_currency\":false,\"simplify_debts\":true}",
-          "leaf_hex": "eca2ce2a1f72359b4fa58773adf37b65924e1c2b30285a9b5710f07be8e03545"
+          "payload_c1": "{\"budget_limit_amount\":null,\"color_hex\":\"#8B5CF6\",\"created_at\":\"2026-07-15T12:00:00.123Z\",\"currency_code\":\"PEN\",\"default_split_type\":\"equal\",\"icon_name\":\"house.fill\",\"is_archived\":false,\"is_hidden_for_all\":false,\"members_can_invite\":true,\"name\":\"Casa 🏠\",\"show_debts_in_single_currency\":false,\"simplify_debts\":true}",
+          "leaf_hex": "7e32eda4fd5692c3dc459c2286b415b858838a64370d2dd4407ac7be9483ed60"
         },
         {
           "identity": "splitgroup-zebra9",
@@ -40,10 +40,11 @@
             "default_split_type": "percentage",
             "is_archived": true,
             "is_hidden_for_all": false,
-            "created_at_ms": 1769903999999
+            "created_at_ms": 1769903999999,
+            "budget_limit_amount": 3000
           },
-          "payload_c1": "{\"color_hex\":\"#112233\",\"created_at\":\"2026-01-31T23:59:59.999Z\",\"currency_code\":\"USD\",\"default_split_type\":\"percentage\",\"icon_name\":\"airplane\",\"is_archived\":true,\"is_hidden_for_all\":false,\"members_can_invite\":false,\"name\":\"Viaje ✈️ 2026\",\"show_debts_in_single_currency\":true,\"simplify_debts\":false}",
-          "leaf_hex": "c1e08d04184a9fbe6ed46e6ec74217add45b396f750c35586ef2383a20799d1a"
+          "payload_c1": "{\"budget_limit_amount\":\"3000.0000\",\"color_hex\":\"#112233\",\"created_at\":\"2026-01-31T23:59:59.999Z\",\"currency_code\":\"USD\",\"default_split_type\":\"percentage\",\"icon_name\":\"airplane\",\"is_archived\":true,\"is_hidden_for_all\":false,\"members_can_invite\":false,\"name\":\"Viaje ✈️ 2026\",\"show_debts_in_single_currency\":true,\"simplify_debts\":false}",
+          "leaf_hex": "cd9ede08689459521fd53e0386c732684a01f0873a5d7c7fde9b159e7454c5d8"
         }
       ]
     },

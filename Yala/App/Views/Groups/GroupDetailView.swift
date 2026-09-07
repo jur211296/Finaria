@@ -463,7 +463,9 @@ struct GroupDetailView: View {
                     transaction.disablesAnimations = true
                     withTransaction(transaction) { selectedTab = .balances }
                 },
-                onRefresh: { await viewModel.refreshFromCloud(force: true) }
+                onRefresh: { await viewModel.refreshFromCloud(force: true) },
+                budgetProgress: viewModel.budgetProgress,
+                budgetColorHex: group.colorHex
             )
 
         case .balances:

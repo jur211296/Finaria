@@ -30,6 +30,14 @@
 --   gain a p_key text argument) + g8_01_push_fanout + g8_02_push_machine_role. The G7 changes are woven IN-PLACE into
 --   §1–§4 plus the new §5; g8_02 is woven IN-PLACE into §6 (the machine role + re-signed RPCs + machine-role grants).
 --   Then — 2026-07-20 — g10_01_transfer_group_ownership (§7).
+--   Then — 2026-09-07 — g14_01_group_budget_limit (§9): `split_groups.budget_limit_amount`, the NINTH †
+--   column (bytea, the group's spending cap in its own currency_code). Woven IN-PLACE into §1 (table +
+--   column grant), into apply_group_delta (the column joins the † list, and the scale normalisation stops
+--   being tied to the literal name 'amount' — see the migration header) and into the split_groups pull
+--   reader (returned decrypted, LAST in the returns table).
+--   ⚠️ STAGING IS THREE MIGRATIONS BEHIND: g13_04, g13_05 and g14_01 are applied in PRODUCTION only —
+--   there is no staging DDL credential (re-measured 2026-09-07). This mold therefore describes PRODUCTION;
+--   staging matches it only after those three are applied, in order.
 -- Regenerate on any groups-schema change by concatenating the applied migrations.
 -- NOT staging-only anymore: the whole groups stack was PROMOTED TO PRODUCTION on 2026-07-16 (gate §12 Bloque A,
 --   13 migrations) and g10_01 followed on 2026-07-21 — staging↔prod parity is verified by md5(pg_get_functiondef),
@@ -108,6 +116,7 @@ create table public.split_groups (
   default_split_type text,
   is_archived boolean,
   is_hidden_for_all boolean,
+  budget_limit_amount bytea,  -- † G14: limite de presupuesto del grupo, en su currency_code
   owner_user_id uuid references auth.users(id) on delete set null,
   created_at timestamptz,
   field_hlcs jsonb,
@@ -907,7 +916,7 @@ revoke update on public.group_members from authenticated;
 -- es server-only y la RLS lo protege).
 revoke update on public.split_groups from authenticated;
 grant update (name, icon_name, color_hex, currency_code, simplify_debts, show_debts_in_single_currency,
-              members_can_invite, default_split_type, is_archived, is_hidden_for_all,
+              members_can_invite, default_split_type, is_archived, is_hidden_for_all, budget_limit_amount,
               hlc, field_hlcs, deleted, deleted_hlc, schema_version, updated_at)
   on public.split_groups to authenticated;
 
@@ -954,7 +963,8 @@ grant update (from_member_key, to_member_key, amount, currency_code, note, date,
 --   y en la value-list se emite pgp_sym_encrypt(...) con tri-estado NULL explícito: un unit que setea note=null → NULL
 --   bytea (jamás cifrar la string "null"); columna ausente de la unit → no se toca. Los AMOUNTS se cifran como
 --   ((v_win->>'amount')::numeric(18,4))::text — normaliza la escala ("30" → "30.0000"), byte-idéntico al recrypt de la
---   fase intermedia y a lo que el Merkle servía pre-G7. 'amount' es la ÚNICA columna † numérica. DROP de la firma de 8
+--   fase intermedia y a lo que el Merkle servía pre-G7. 'amount' fue la única columna † numérica hasta g14_01, que añadió
+--   `budget_limit_amount` — por eso la condición de escala es una LISTA y no una igualdad. DROP de la firma de 8
 --   args primero (C4); search_path adds `extensions` (C3: pgp_sym_* no resuelve con `public` pelado).
 drop function if exists public.apply_group_delta(text, text, uuid, text, jsonb, jsonb, text, integer);
 create function public.apply_group_delta(
@@ -1006,7 +1016,7 @@ begin
                when 'split_expenses'    then array['amount','expense_description','note']
                when 'split_shares'      then array['amount']
                when 'split_settlements' then array['amount','note']
-               when 'split_groups'      then array['name']
+               when 'split_groups'      then array['name','budget_limit_amount']
                else array[]::text[]
              end;
 
@@ -1093,7 +1103,7 @@ begin
         v_vallist := concat_ws(', ',
           (select string_agg(format('r.%I', k), ', ') from unnest(coalesce(v_plain_cols, array[]::text[])) k),
           (select string_agg(
-             case when c = 'amount'
+             case when c in ('amount','budget_limit_amount')
                then format('case when ($7->>%L) is null then null else pgp_sym_encrypt((($7->>%L)::numeric(18,4))::text, $8) end', c, c)
                else format('case when ($7->>%L) is null then null else pgp_sym_encrypt(($7->>%L), $8) end', c, c)
              end, ', ')
@@ -1165,7 +1175,7 @@ begin
         v_vallist := concat_ws(', ',
           (select string_agg(format('r.%I', k), ', ') from unnest(coalesce(v_plain_cols, array[]::text[])) k),
           (select string_agg(
-             case when c = 'amount'
+             case when c in ('amount','budget_limit_amount')
                then format('case when ($6->>%L) is null then null else pgp_sym_encrypt((($6->>%L)::numeric(18,4))::text, $7) end', c, c)
                else format('case when ($6->>%L) is null then null else pgp_sym_encrypt(($6->>%L), $7) end', c, c)
              end, ', ')
@@ -1183,7 +1193,7 @@ begin
         v_vallist := concat_ws(', ',
           (select string_agg(format('r.%I', k), ', ') from unnest(coalesce(v_plain_cols, array[]::text[])) k),
           (select string_agg(
-             case when c = 'amount'
+             case when c in ('amount','budget_limit_amount')
                then format('case when ($7->>%L) is null then null else pgp_sym_encrypt((($7->>%L)::numeric(18,4))::text, $8) end', c, c)
                else format('case when ($7->>%L) is null then null else pgp_sym_encrypt(($7->>%L), $8) end', c, c)
              end, ', ')
@@ -1371,7 +1381,7 @@ revoke all on function public.migrate_group(text, jsonb, jsonb, text) from publi
 -- ============================================================================
 -- §5 — g7_encrypt_groups (g7_01_encrypt_groups_columns + g7_02_encrypt_groups_cutover, 2026-07-16)
 -- ============================================================================
--- Cifrado pgcrypto de las 8 columnas † (bytea at-rest) — protege DUMPS/BACKUPS lógicos: una fila filtrada no revela
+-- Cifrado pgcrypto de las 9 columnas † (bytea at-rest) — protege DUMPS/BACKUPS lógicos: una fila filtrada no revela
 -- montos ni descripciones. La llave viaja como ARGUMENTO de request (p_key text), NUNCA residente en la DB. La RLS
 -- sigue arbitrando ANTES de descifrar (los readers son SECURITY INVOKER). El cutover de columnas (DROP plaintext +
 -- RENAME _enc → nombre), los 6 RPCs escritores con p_key y los column-UPDATE grants regenerados están tejidos IN-PLACE
@@ -1385,6 +1395,10 @@ create extension if not exists pgcrypto with schema extensions;
 
 -- ---- g7_recrypt_corpus(p_key) — motor de re-cifrado IDEMPOTENTE, SERVICE-ONLY (g7_01) ----
 -- Copia plaintext→cifrado para las 8 columnas SOLO donde `<col>_enc is null and <col> is not null` (idempotente).
+-- El 8 es CORRECTO y no se actualizó con g14_01: esta función es el motor de re-cifrado de la FASE A de G7 y
+-- cubre solo aquellas 8. La novena (`budget_limit_amount`) nació ya cifrada y sin corpus que convertir. Además
+-- la función está MUERTA desde el cutover: referencia columnas `<col>_enc` que g7_02 dropeó, así que su primer
+-- UPDATE daría 42703. Se conserva como registro; no la invoques.
 -- Amounts como pgp_sym_encrypt(amount::text, p_key) (escala-4 preservada). Devuelve counts por columna (jsonb).
 -- REVOKE all de public/anon/authenticated → solo ejecutable en contexto SERVICE. Se aplicó vía execute_sql directo
 -- (NO migración: la llave no toca schema_migrations). NOTA: las columnas <col>_enc que referencia YA NO existen tras
@@ -1471,21 +1485,27 @@ grant execute on function public.yala_logging_settings() to authenticated;
 -- (string decimal exacto escala-4, resolución C1), los demás † descifrados a text. `where group_id = p_group_id and
 -- server_seq > p_after_seq order by server_seq asc limit p_limit`. GRANT a authenticated (un caller sin llave solo
 -- obtiene NULLs en las †, sin fuga). El Worker cambia de leer select=* (GET) a llamar estos RPCs (POST body).
-create or replace function public.groups_pull_rows_split_groups(
+-- DROP + CREATE, no `create or replace`: g14_01 añadió una columna al `returns table`, y Postgres no
+-- deja cambiar el tipo de retorno de una función existente. Con `or replace`, replicar este molde sobre
+-- una BD pre-G14 muere con `cannot change return type of existing function`.
+drop function if exists public.groups_pull_rows_split_groups(text, bigint, int, text);
+create function public.groups_pull_rows_split_groups(
   p_group_id text, p_after_seq bigint, p_limit int, p_key text
 ) returns table(
   group_id text, name text, icon_name text, color_hex text, currency_code text,
   simplify_debts boolean, show_debts_in_single_currency boolean, members_can_invite boolean,
   default_split_type text, is_archived boolean, is_hidden_for_all boolean, owner_user_id uuid,
   created_at timestamptz, field_hlcs jsonb, hlc text, deleted boolean, deleted_hlc text,
-  server_seq bigint, schema_version integer, updated_at timestamptz
+  server_seq bigint, schema_version integer, updated_at timestamptz,
+  budget_limit_amount text  -- † G14, descifrada; AL FINAL (aditivo para el gateway, que lee por nombre)
 ) language sql security invoker stable set search_path = public, extensions as $$
   select
     t.group_id, public.yala_try_decrypt(t.name, p_key), t.icon_name, t.color_hex, t.currency_code,
     t.simplify_debts, t.show_debts_in_single_currency, t.members_can_invite,
     t.default_split_type, t.is_archived, t.is_hidden_for_all, t.owner_user_id,
     t.created_at, t.field_hlcs, t.hlc, t.deleted, t.deleted_hlc,
-    t.server_seq, t.schema_version, t.updated_at
+    t.server_seq, t.schema_version, t.updated_at,
+    public.yala_try_decrypt(t.budget_limit_amount, p_key)
   from public.split_groups t
   where t.group_id = p_group_id and t.server_seq > p_after_seq
   order by t.server_seq asc

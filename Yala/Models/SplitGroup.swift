@@ -31,6 +31,14 @@ final class SplitGroup {
     var showDebtsInSingleCurrency: Bool = false
     var defaultSplitType: String = "equal" // "equal" | "percentage" | "exact" | "shares"
     var membersCanInvite: Bool = false
+    /// Límite de gasto colectivo del grupo, expresado SIEMPRE en `currencyCode` (decisión Jürgen
+    /// 2026-09-06: un límite por grupo, sin moneda propia y sin tabla de presupuestos). `nil` = el grupo
+    /// no tiene presupuesto, que es lo que significa "quitarlo": el wire manda `null` explícito y el pull
+    /// lo aplica por PRESENCIA DE CLAVE, no por valor no-nil (ver `applyGroupMeta`).
+    /// Server: `split_groups.budget_limit_amount`, columna † CIFRADA (g14_01) — solo un ADMIN puede
+    /// escribirla (`is_group_admin` en la policy de update); un miembro normal recibe
+    /// `not_authorized_or_gone` y el valor no cambia.
+    var budgetLimitAmount: Double?
     var ckSystemFieldsData: Data?            // CKRecord system fields for conflict-free uploads
     /// Baseline del primer import de la zona (bug "Jür se unió al grupo"):
     /// seteado al INSERTAR el grupo vía fetch (applyGroupMeta rama NUEVO — invitado

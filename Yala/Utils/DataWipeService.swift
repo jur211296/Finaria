@@ -425,7 +425,14 @@ final class DataWipeService {
         // ese dominio sobrevive el wipe personal por diseño. Aquí sí se va — con el dominio entero
         // no queda ninguna deuda de la que avisar, y una entrada superviviente silenciaría durante
         // una semana el primer recordatorio de quien entre después.
-        let prefixes = ["groupPrefs_", "GroupNotifications.lastNotified.", SettlementReminderTracker.keyPrefix]
+        // `GroupBudgetAlertTracker.keyPrefix` («ya avisé de este umbral de este tope») entra por la
+        // misma puerta y por la misma razón: sin grupos no queda ningún presupuesto del que avisar, y
+        // una entrada superviviente se llevaría por delante el primer aviso de quien entre después —
+        // su clave lleva el zone id y el importe, y ambos pueden repetirse tras un wipe.
+        let prefixes = [
+            "groupPrefs_", "GroupNotifications.lastNotified.",
+            SettlementReminderTracker.keyPrefix, GroupBudgetAlertTracker.keyPrefix,
+        ]
         for key in defaults.dictionaryRepresentation().keys
         where prefixes.contains(where: key.hasPrefix) {
             defaults.removeObject(forKey: key)

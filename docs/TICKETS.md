@@ -73,6 +73,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | fx-widget-drops-missing-currency | backlog | tickets/backlog/fx-widget-drops-missing-currency.md |
 | gate-doc-says-swift-testing-only | backlog | tickets/backlog/gate-doc-says-swift-testing-only.md |
 | gateway-has-no-telemetry | backlog | tickets/backlog/gateway-has-no-telemetry.md |
+| gateway-typecheck-roto-y-fuera-del-ci | backlog | tickets/backlog/gateway-typecheck-roto-y-fuera-del-ci.md |
 | group-balance-service-shares-not-deduped | backlog | tickets/backlog/group-balance-service-shares-not-deduped.md |
 | group-joiner-flag-consumers-still-narrow | qa | tickets/qa/group-joiner-flag-consumers-still-narrow.md |
 | group-notif-credits-payer-not-editor | done | tickets/done/group-notif-credits-payer-not-editor.md |
@@ -81,7 +82,8 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | groups-archived-still-accepts-changes | backlog | tickets/backlog/groups-archived-still-accepts-changes.md |
 | groups-background-emitter-no-upload | done | tickets/done/groups-background-emitter-no-upload.md |
 | groups-batch-facts-plural-identity | backlog | tickets/backlog/groups-batch-facts-plural-identity.md |
-| groups-budget | backlog | tickets/backlog/groups-budget.md |
+| groups-budget | in-progress | tickets/in-progress/groups-budget.md |
+| groups-canal-sin-capability-set | backlog | tickets/backlog/groups-canal-sin-capability-set.md |
 | groups-cloud-identity-loss-on-migrate | discarded | tickets/discarded/groups-cloud-identity-loss-on-migrate.md |
 | groups-cloud-mode-hardening-v1 | discarded | tickets/discarded/groups-cloud-mode-hardening-v1.md |
 | groups-consent-door-spec | qa | tickets/qa/groups-consent-door-spec.md |
@@ -105,6 +107,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | groups-settlement-reminder-discoverability | backlog | tickets/backlog/groups-settlement-reminder-discoverability.md |
 | groups-settlement-reminder-stale-clock | backlog | tickets/backlog/groups-settlement-reminder-stale-clock.md |
 | groups-shareable-summary | qa | tickets/qa/groups-shareable-summary.md |
+| groups-stats-no-deduplica-gastos | backlog | tickets/backlog/groups-stats-no-deduplica-gastos.md |
 | groups-tab-missing-panel-perf | qa | tickets/qa/groups-tab-missing-panel-perf.md |
 | groups-transfer-leave-write-ahead | backlog | tickets/backlog/groups-transfer-leave-write-ahead.md |
 | guest-decline-has-no-screen | qa | tickets/qa/guest-decline-has-no-screen.md |
@@ -176,7 +179,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | yala-android | backlog | tickets/backlog/yala-android.md |
 | zone-decisions-still-per-row | backlog | tickets/backlog/zone-decisions-still-per-row.md |
 
-Counts by folder: backlog 72 · in-progress 0 · qa 44 · blocked 2 · done 16 · discarded 5 = 139. *(Recontados sobre disco el 2026-09-07; la tabla de arriba ya cuadraba fila a fila con el disco —129 y 129—, era solo esta línea la desviada, que decía `= 118`. Dos trampas al recontar: cuenta solo `*.md` (`tickets/` lleva además un `.gitkeep` por carpeta y tres PNG de evidencia en `done/`, que inflan un `ls` a 132), y si filtras las filas con una regex, acepta MAYÚSCULAS en el id — `rojo-heroBuckets-thisWeek-trailing-window` se escapa de `[a-z0-9-]+` y aparenta ser un huérfano que no existe.)*
+Counts by folder: backlog 76 · in-progress 1 · qa 46 · blocked 2 · done 16 · discarded 5 = 146. *(Recontados sobre disco el 2026-09-07 por la sesión de `groups-budget`, que aporta dos de los cambios: `groups-budget` pasa a in-progress y entran `gateway-typecheck-roto-y-fuera-del-ci`, `groups-stats-no-deduplica-gastos` y `groups-canal-sin-capability-set` (los dos ultimos, hallazgos de su review adversarial que no son suyos). Los otros tres —qa 44 → 46, backlog 72 → 74— ya estaban en disco y no en esta línea: los dejó la sesión del resumen compartible. La tabla de arriba SÍ cuadra fila a fila con el disco, 144 y 144; esta línea era, otra vez, la única desviada.)*
 
 Frank 2026-09-06 (decisiones): Jürgen respondió en una sentada las **seis** decisiones de producto que tenían
 tickets parados sin código que escribir; cada una está en su ticket bajo «Decisión Jürgen (2026-09-06)», con

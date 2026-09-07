@@ -671,12 +671,13 @@ struct GroupsSyncClientTests {
     // MARK: - Test 5b-bis · applyGroupMeta: adopción ATÓMICA de un grupo CloudKit migrado (C3, G6-2)
 
     private func groupMetaDelta(
-        group: String = "SplitGroup-A", op: SyncOutboxOp = .upsert, serverSeq: Int64 = 5
+        group: String = "SplitGroup-A", op: SyncOutboxOp = .upsert, serverSeq: Int64 = 5,
+        fields: [String: WireValue] = ["name": .string("Viaje")]
     ) -> GroupPulledDelta {
         GroupPulledDelta(
             entityType: GroupEntityEmissionMap.splitGroup.table, groupID: group,
             rawSyncID: nil, syncID: nil, op: op,
-            fields: ["name": .string("Viaje")],
+            fields: fields,
             fieldHlcs: [:], hlc: "2026-07-15T00:00:00.000Z-0000-000000000000000c",
             serverSeq: serverSeq, schemaVersion: 1)
     }
@@ -2101,6 +2102,72 @@ struct GroupsSyncClientTests {
     }
 
     /// Un grupo que NACE del pull arma el baseline: sus miembros preexistentes vienen detrás.
+    // MARK: - G14 · el presupuesto del grupo en el wire
+    //
+    // Estos tres cubren la afirmación central del campo, que hasta ahora solo vivía en un comentario:
+    // el apply lee por PRESENCIA DE LA CLAVE, no por valor no-nil. Un `/simplify` que alineara esa línea
+    // con sus diez vecinas (`if let v = wireDouble(f[...])`) reintroduciría el bug —quitar un
+    // presupuesto no llegaría jamás a los demás miembros— y sin estos tests la suite seguiría verde.
+
+    /// `budget_limit_amount: null` es cómo se QUITA un presupuesto. Tiene que aplicarse.
+    @Test func applyGroupMeta_budgetLimitNull_borraElValorLocal() throws {
+        let dir = freshDir(); defer { cleanup(dir) }
+        let context = try makeContext(dir)
+        let group = makeBackendGroup(zoneID: "SplitGroup-A", context: context)
+        group.budgetLimitAmount = 3000
+        try context.save()
+
+        let client = GroupsSyncClient()
+        let cursor = try client.loadOrCreateCursor(context)
+        client.applyPulledPage(
+            GroupPulledPage(
+                deltas: [groupMetaDelta(fields: ["budget_limit_amount": .null])],
+                cursors: [:], memberships: []),
+            cursor: cursor, context: context)
+
+        #expect(group.budgetLimitAmount == nil)
+    }
+
+    /// La clave AUSENTE es un PATCH parcial que no habla del presupuesto: no puede borrarlo.
+    @Test func applyGroupMeta_sinLaClave_noTocaElPresupuesto() throws {
+        let dir = freshDir(); defer { cleanup(dir) }
+        let context = try makeContext(dir)
+        let group = makeBackendGroup(zoneID: "SplitGroup-A", context: context)
+        group.budgetLimitAmount = 3000
+        try context.save()
+
+        let client = GroupsSyncClient()
+        let cursor = try client.loadOrCreateCursor(context)
+        client.applyPulledPage(
+            GroupPulledPage(
+                deltas: [groupMetaDelta(fields: ["name": .string("Otro nombre")])],
+                cursors: [:], memberships: []),
+            cursor: cursor, context: context)
+
+        #expect(group.budgetLimitAmount == 3000)
+        #expect(group.name == "Otro nombre")
+    }
+
+    /// El server sirve esta columna DESCIFRADA COMO TEXTO (`yala_try_decrypt` devuelve `text`), así que
+    /// el valor llega como `"3000.0000"` y no como número. Si el decoder no aceptara la forma string, el
+    /// presupuesto no bajaría nunca — y el síntoma sería «no se ve en el otro teléfono», no un error.
+    @Test func applyGroupMeta_budgetLimitComoStringConEscala_seLeeComoNumero() throws {
+        let dir = freshDir(); defer { cleanup(dir) }
+        let context = try makeContext(dir)
+        let group = makeBackendGroup(zoneID: "SplitGroup-A", context: context)
+        try context.save()
+
+        let client = GroupsSyncClient()
+        let cursor = try client.loadOrCreateCursor(context)
+        client.applyPulledPage(
+            GroupPulledPage(
+                deltas: [groupMetaDelta(fields: ["budget_limit_amount": .string("3000.0000")])],
+                cursors: [:], memberships: []),
+            cursor: cursor, context: context)
+
+        #expect(group.budgetLimitAmount == 3000)
+    }
+
     @Test func applyGroupMeta_bornRemote_armsInitialImportBaseline() throws {
         let dir = freshDir(); defer { cleanup(dir) }
         let context = try makeContext(dir)

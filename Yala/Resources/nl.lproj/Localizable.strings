@@ -5633,3 +5633,54 @@
 
 /* Shareable group summary: shown when ImageRenderer returns nil. Never blame the user. */
 "groups.shareableSummary.renderFailed" = "We konden de afbeelding niet maken. Probeer het opnieuw.";
+
+/* G14: título de la sección/tarjeta del presupuesto de grupo */
+"groups.budget.title" = "Groepsbudget";
+
+/* G14: %@ = código de moneda del grupo */
+"groups.budget.hint" = "Een uitgavenlimiet voor de hele groep, in %@.";
+
+/* G14: el grupo no tiene límite fijado */
+"groups.budget.none" = "Geen budget";
+
+/* G14: acción para fijar el límite */
+"groups.budget.set" = "Budget instellen";
+
+/* G14: acción para borrar el límite */
+"groups.budget.remove" = "Budget verwijderen";
+
+/* G14: el server exige is_group_admin */
+"groups.budget.adminOnly" = "Alleen een beheerder kan dit wijzigen.";
+
+/* G14: %1 = gastado, %2 = tope; ambos ya formateados */
+"groups.budget.spentOfLimit" = "%1$@ van %2$@";
+
+/* G14: %@ = importe restante formateado */
+"groups.budget.remaining" = "Nog %@";
+
+/* G14: %@ = importe excedido formateado */
+"groups.budget.exceededBy" = "%@ over het budget";
+
+/* G14: nota del ≈ */
+"groups.budget.convertedNote" = "Inclusief uitgaven in andere valuta, omgerekend tegen de koers van vandaag.";
+
+/* G14: %@ = nombre del grupo */
+"groups.budget.alertTitle" = "Budget van %@";
+
+/* G14: aviso al cruzar 50 */
+"groups.budget.alertBody50" = "De groep heeft de helft van het budget uitgegeven.";
+
+/* G14: aviso al cruzar 75 */
+"groups.budget.alertBody75" = "De groep heeft driekwart van het budget uitgegeven.";
+
+/* G14: aviso al cruzar 90 */
+"groups.budget.alertBody90" = "De groep is het budget bijna kwijt.";
+
+/* G14: aviso al cruzar 100 */
+"groups.budget.alertBody100" = "De groep heeft het budget bereikt.";
+
+/* G14: el texto tecleado no era un importe valido */
+"groups.budget.invalidAmount" = "Voer een bedrag groter dan nul in.";
+
+/* G14: confirmacion de quitar el presupuesto */
+"groups.budget.removeConfirm" = "Groepsbudget verwijderen? Het verdwijnt voor iedereen.";

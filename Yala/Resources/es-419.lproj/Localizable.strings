@@ -5647,3 +5647,54 @@
 
 /* Shareable group summary: shown when ImageRenderer returns nil. Never blame the user. */
 "groups.shareableSummary.renderFailed" = "No pudimos armar la imagen. Inténtalo otra vez.";
+
+/* G14: título de la sección/tarjeta del presupuesto de grupo */
+"groups.budget.title" = "Presupuesto del grupo";
+
+/* G14: %@ = código de moneda del grupo */
+"groups.budget.hint" = "Un tope de gasto para todo el grupo, en %@.";
+
+/* G14: el grupo no tiene límite fijado */
+"groups.budget.none" = "Sin presupuesto";
+
+/* G14: acción para fijar el límite */
+"groups.budget.set" = "Fijar presupuesto";
+
+/* G14: acción para borrar el límite */
+"groups.budget.remove" = "Quitar presupuesto";
+
+/* G14: el server exige is_group_admin */
+"groups.budget.adminOnly" = "Solo un administrador puede cambiarlo.";
+
+/* G14: %1 = gastado, %2 = tope; ambos ya formateados */
+"groups.budget.spentOfLimit" = "%1$@ de %2$@";
+
+/* G14: %@ = importe restante formateado */
+"groups.budget.remaining" = "Quedan %@";
+
+/* G14: %@ = importe excedido formateado */
+"groups.budget.exceededBy" = "Se pasaron por %@";
+
+/* G14: nota del ≈ */
+"groups.budget.convertedNote" = "Incluye gastos en otras monedas, convertidos al cambio de hoy.";
+
+/* G14: %@ = nombre del grupo */
+"groups.budget.alertTitle" = "Presupuesto de %@";
+
+/* G14: aviso al cruzar 50 */
+"groups.budget.alertBody50" = "El grupo lleva gastada la mitad de su presupuesto.";
+
+/* G14: aviso al cruzar 75 */
+"groups.budget.alertBody75" = "El grupo lleva gastadas tres cuartas partes de su presupuesto.";
+
+/* G14: aviso al cruzar 90 */
+"groups.budget.alertBody90" = "El grupo está a punto de agotar su presupuesto.";
+
+/* G14: aviso al cruzar 100 */
+"groups.budget.alertBody100" = "El grupo llegó a su presupuesto.";
+
+/* G14: el texto tecleado no era un importe valido */
+"groups.budget.invalidAmount" = "Escribe un importe mayor que cero.";
+
+/* G14: confirmacion de quitar el presupuesto */
+"groups.budget.removeConfirm" = "¿Quitar el presupuesto del grupo? Dejará de verse para todos.";

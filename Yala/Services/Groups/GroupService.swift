@@ -217,6 +217,48 @@ final class GroupService {
         SessionState.shared.incrementDataVersion()
     }
 
+    /// Tope máximo de un presupuesto de grupo, y NO es una cifra de producto: es el límite del canal.
+    ///
+    /// `Canonc1Codec.decimalFixed` lanza `.numericOutOfRange` a partir de 1e14, y quien traga ese throw
+    /// es `appendUpsert`, que devuelve `nil` y **no crea la fila de outbox** (su log vive bajo `#if
+    /// DEBUG`). O sea: sin esta cota, un tope de 15 dígitos se guardaría en local, no saldría jamás del
+    /// teléfono sin dejar rastro en Release, y además el Merkle local saltaría esa fila —
+    /// `collectLeaves` descarta el payload que lanza — dejando el grupo en divergencia PERMANENTE
+    /// contra el server. Un número absurdo tiene que rebotar en el formulario, no romper el sync.
+    static let maxBudgetLimitAmount: Double = 1e14
+
+    /// Fija o quita el presupuesto del grupo (G14). `nil` lo quita.
+    ///
+    /// ADMIN-ONLY, y no por criterio de la app: la policy `split_groups_update` del backend exige
+    /// `is_group_admin`, así que un miembro normal recibiría del server un
+    /// `{"noop":true,"reason":"not_authorized_or_gone"}` — el delta se purgaría como aplicado y el cambio
+    /// se quedaría SOLO en su teléfono, divergiendo en silencio del resto del grupo. El guard de aquí es
+    /// lo que impide llegar a esa situación; la UI, además, ni ofrece el control (`canEditBudget`).
+    ///
+    /// El límite se expresa siempre en `group.currencyCode`: no hay moneda propia que fijar.
+    func setBudgetLimit(_ group: SplitGroup, amount: Double?) throws {
+        let context = try requireContext()
+        try validateGroupIsWritable(group)
+        try requireCurrentUserAdmin(in: group, context: context)
+
+        // Un tope no positivo, no finito o fuera del rango del canal no es un presupuesto: se normaliza
+        // a "sin presupuesto" en vez de persistir un valor que la UI tendría que reinterpretar en cada
+        // pantalla —o que, en el caso del rango, se quedaría atascado en el teléfono sin sincronizar.
+        if let amount, amount.isFinite, amount > 0, amount < Self.maxBudgetLimitAmount {
+            group.budgetLimitAmount = amount
+        } else {
+            group.budgetLimitAmount = nil
+        }
+
+        do {
+            try context.save()
+        } catch {
+            throw GroupServiceError.saveFailed(error)
+        }
+
+        SessionState.shared.incrementDataVersion()
+    }
+
     /// Soft-delete del grupo. Owner-only. Bloquea si cualquier miembro tiene balance pendiente.
     /// Propaga `isHiddenForAll` por dos canales (idem setArchived): SplitGroup record sync +
     /// CKShare custom key. Invisible para todos los miembros al próximo sync; el CKShare custom
