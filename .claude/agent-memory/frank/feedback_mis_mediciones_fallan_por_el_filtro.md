@@ -430,3 +430,27 @@ que lo delataba era la CONFIGURACIÓN del arnés.
   worktree entero (1,6 GB de DerivedData) antes de gastar esos diez segundos.
 - El worktree base **no se tira**: sigue siendo la respuesta correcta a «¿es mío?» cuando el arnés ya
   está descartado. Lo que cambia es el ORDEN — arnés primero, porque es más barato.
+
+## 2026-09-07 — dos más, y la segunda casi me hace abrir un ticket fantasma
+
+**(a) `-only-testing` por TIPO, no por fichero: me pasó DOS veces en la misma sesión.** Pedí seis
+suites y corrieron cinco; pedí ocho y corrieron siete. **xcodebuild no avisa** — sale exit 0 y
+`TEST SUCCEEDED`, y la suite que falta desaparece sin ruido. Las dos veces el motivo fue el mismo:
+el TIPO no se llama como el fichero (`SessionPreferenceKeysTests.swift` declara
+`SessionPreferenceKeysNetTests`; `GroupRemoteDeletionUnbridgeTests.swift` declara cinco tipos y
+ninguno con ese nombre). Y la segunda vez la suite que faltaba era **justo la que verificaba mi
+cambio**. Está en `.claude/rules/testing.md` y aun así lo repetí: ⇒ **resolver los nombres con
+`grep -n "@Suite\|^struct" <fichero>` ANTES de construir el comando**, y contar las suites
+ejecutadas contra las pedidas siempre, no solo cuando algo huele mal.
+
+**(b) El filtro que INVENTA un defecto, otra vez.** Conté las filas del índice de tickets con
+`grep -cE '^\| [a-z0-9-]+ \| ...'` y los ficheros con `ls | wc -l`: me salió **138 filas vs 144
+ficheros vs «139» declarado**, y estuve a punto de anotarlo como descuadre del board. Las dos
+mediciones estaban mal: la regex se comía los ids con mayúsculas y el `ls` contaba `.gitkeep` y PNG
+de evidencia. Medido con **conjuntos** —`set(indice) - set(disco)` en las dos direcciones— salió
+**139 = 139, cero huérfanos**. El propio `ESTADO.md` del repo ya avisaba de las dos trampas.
+
+⇒ el patrón se repite: **mi filtro falla en la dirección que más ruido genera**. Un conteo que no
+cuadra es sospechoso del INSTRUMENTO antes que del dato, y la forma barata de zanjarlo no es afinar
+la regex: es comparar conjuntos y que te diga *qué* elemento sobra o falta. Si no puede nombrarlo,
+no hay defecto.

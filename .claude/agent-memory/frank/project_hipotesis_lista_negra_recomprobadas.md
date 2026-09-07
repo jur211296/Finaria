@@ -169,6 +169,47 @@ arriba**: su rojo no es señal de tu cambio.
 mergees un PR con checks pendientes por creer que no hay CI.** Y si vuelves a leer que está apagado,
 mídelo con `gh pr checks` antes de obedecerlo.
 
+## El SNAPSHOT de Time Machine: por qué liberar disco puede EMPEORARLO (2026-09-07)
+
+**Lo que pasó, medido.** Con 10 GB libres hice `simctl erase` del iPhone 17 Pro para recuperar sus
+4,4 GB. El `du` del device bajó de 4,4 GB a 157 MB — el borrado ocurrió — y el disco libre **bajó a
+5 GB**. Seguí borrando y siguió bajando (4,2 GB). La causa: `tmutil listlocalsnapshots /` mostraba
+**`com.apple.TimeMachine.2026-09-07-130952.local`**, nacido a mitad de mi corrida de tests. **Un
+snapshot local RETIENE los bloques que borras después**, así que todo lo que liberé se quedó
+retenido y encima el trabajo nuevo consumió más.
+
+Borrarlo devolvió **9 GB de golpe**: 4,2 → 13 GB.
+
+**La sintaxis, que también costó un intento:** `tmutil deletelocalsnapshots <timestamp>` — solo el
+timestamp (`2026-09-07-130952`). Con el nombre completo responde **«is not a valid disk»** y un
+`POSIXError Code=22`, que parece un problema de permisos y no lo es.
+
+**Y por qué el informe no me avisó, aunque SÍ los cuenta.** `disk-report.sh` tiene su línea
+«Snapshots locales de Time Machine»; cuando lo corrí al empezar decía **0**, y era cierto: el
+snapshot **nació después**, durante la corrida. ⇒ **el informe del arranque caduca dentro de la
+propia sesión.** Re-medir el disco cuando algo no cuadre, no fiarse de la foto inicial.
+
+**La regla operativa:** si liberas espacio y el número libre no sube, **deja de borrar y mira los
+snapshots**. Seguir borrando con un snapshot puesto es trabajo tirado, y en el peor caso destruyes
+algo (el simulador) sin ganar nada.
+
+## El job `tests` del CI es ADVISORY por diseño — no lo esperes como si bloqueara (2026-09-07)
+
+**Dónde se comprueba, y cuesta un comando:** `gh run view --job <id>` lista los pasos, y los tres de
+test se llaman literalmente *«Unit tests (YalaTests pure-logic) — **advisory** (flaky crash SwiftData
+in-memory; ver Lista Negra)»*, *«… context-based — advisory»* y *«UI tests (YalaUITests) — advisory
+(flaky en runner frío)»*. Los que **sí** bloquean son `changes` y `coverage-index`, y son rápidos
+(2 s y 17 s).
+
+⇒ un PR en `UNSTABLE` con `changes` y `coverage-index` en verde y `tests` en vuelo **no es un PR con
+el CI en rojo**: es el estado normal mientras el runner compila. Con el gate local pasado —que corre
+más que el CI y en hardware real, no en runner frío— mergear ahí es correcto. Lo que NO vale es
+mergear sin mirar **cuál** de los checks está pendiente.
+
+**Corolario sobre el `CLAUDE.md` global:** dice «El CI de GitHub, apagado». **Es falso desde hace
+tiempo** — el workflow corre en cada PR y sus dos checks bloqueantes deciden. Ya lo tenía anotado
+como «el CI sigue vivo»; ahora además sé qué parte de él manda.
+
 ## Lo que el informe de disco no ve: una corrección MEDIDA el 2026-09-05
 
 El system prompt avisa de tres sitios invisibles al `disk-report.sh`, y uno de ellos tiene una

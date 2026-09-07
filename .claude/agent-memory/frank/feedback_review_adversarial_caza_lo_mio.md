@@ -102,3 +102,31 @@ argumento: fue a mirar **quién más escribe ese flag** y encontró la línea qu
 - Y una que ya sabía y volvió a cumplirse: **dos de los cuatro los había cazado yo antes** (el
   `force: true` lo encontré leyendo el patrón del repo). La review no sustituye la auto-revisión;
   encuentra la clase de cosa que la auto-revisión no ve porque es donde yo *creo* que ya pensé.
+
+## 2026-09-07 — ocho defectos, y el peor era una decisión que yo había razonado al revés
+
+Recordatorio de liquidación (PR #89). Tres lentes: cálculo, ciclo de vida, producto. **Los ocho eran
+míos**, con el build en verde y 6316 tests pasando.
+
+**El grave repite la forma del 2026-09-06: no era un descuido, era un razonamiento explícito y
+equivocado, escrito con confianza en un comentario.** Decidí respetar `simplifyDebts` «para que el
+aviso diga lo mismo que la pantalla», y suena bien. La lente no discutió el principio: **montó el
+caso numérico**. Con simplificación, la arista «yo → X» no la produjo ningún gasto entre X y yo —
+es un enrutado de mínimo flujo de caja sobre saldos de **terceros** — así que el aviso podía decir
+«lleva semanas quieta» sobre dinero de anoche, con un importe **7,6× el real**; y de paso rompía el
+rate-limit, porque su clave (`Debt.id`) cambiaba cuando dos personas **que no soy yo** se pagaban
+algo. Coherencia con la pantalla era el criterio correcto para un *saldo* y el equivocado para una
+*afirmación temporal*, que es lo que este feature añade.
+
+**Y el que peor se habría escondido:** mi espera de frescura salía en el primer poll porque un solo
+grupo legacy en el store cuenta como `.fresh` incondicional. El feature habría quedado **mudo en el
+arranque, en verde y sin un solo síntoma** — exactamente el modo de fallo del que el docblock del
+repo avisa, reintroducido por mí **en el mismo commit en que copié ese docblock para citarlo**.
+
+**Lo que me llevo, y es nuevo:** cuando reuso una primitiva ajena, la pregunta no es «¿la estoy
+llamando bien?» sino **«¿mi pregunta es la misma que la suya?»**. `GroupChannelFreshness` contesta
+«¿puedo afirmar que esto NO EXISTE?»; yo preguntaba «¿está completa mi foto de deudas?». Mismo
+`isFresh`, significados opuestos para una zona sin canal. El conteo de call-sites que debía cazar el
+cuarto consumidor **no se puso rojo**: su lista de ficheros es explícita y un fichero nuevo le es
+invisible. ⇒ **un escáner de cableado prueba que el cambio se aplicó, nunca que sea correcto**, y
+ese punto ciego concreto —lista explícita de ficheros— hay que mirarlo antes de confiar en él.
