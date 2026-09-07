@@ -6366,6 +6366,16 @@ enum L10n {
             static func multipleChanges(_ count: Int) -> String {
                 String(format: ls("notifications.groups.multipleChanges", comment: ""), count)
             }
+            /// Nudge amable al DEUDOR de una deuda parada. `amount` ya viene formateado por
+            /// `YalaFormatterStatic.currency`; `creditor` es el `resolvedDisplayName` del acreedor.
+            /// Los argumentos son POSICIONALES (`%1$@`/`%2$@`) porque varios idiomas invierten el
+            /// orden — en inglés se nombra antes a la persona que al importe.
+            static func settlementReminder(_ amount: String, _ creditor: String) -> String {
+                String(format: ls("notifications.groups.settlementReminder", comment: ""), amount, creditor)
+            }
+            /// El mismo nudge cuando se le debe a VARIAS personas del grupo: una sola notificación,
+            /// sin nombrar a nadie (ver `GroupSettlementReminderService`, «una por grupo»).
+            static var settlementReminderMultiple: String { ls("notifications.groups.settlementReminderMultiple", comment: "") }
             static var fallbackGroup: String { ls("notifications.groups.fallbackGroup", comment: "") }
             static var fallbackMember: String { ls("notifications.groups.fallbackMember", comment: "") }
         }
@@ -6402,6 +6412,10 @@ enum L10n {
         // Budget alerts
         static var budgetAlertsTitle: String { ls("notifications.budgetAlerts.title", comment: "") }
         static var budgetAlertsHint: String { ls("notifications.budgetAlerts.hint", comment: "") }
+
+        // Recordatorios de liquidación de grupo
+        static var settlementRemindersTitle: String { ls("notifications.settlementReminders.title", comment: "") }
+        static var settlementRemindersHint: String { ls("notifications.settlementReminders.hint", comment: "") }
 
         // MARK: - Scheduled Payment Notifications (personalized)
 

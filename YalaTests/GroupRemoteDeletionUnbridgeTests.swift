@@ -1119,10 +1119,18 @@ struct RemoteUnbridgeWiringTests {
                 "El guard del canal se movió por debajo del contador: las zonas legacy inflan el canario.")
     }
 
-    /// El gate vive en UNA primitiva y la consumen los DOS sitios que hacen la misma pregunta. El conteo
+    /// El gate vive en UNA primitiva y la consumen los sitios que hacen la misma pregunta. El conteo
     /// esperado es el anti-falso-verde (molde `AttestWiringTests`): sin él, borrar un call-site o
     /// renombrar el tipo pasaría en verde con el escáner comprobando nada.
-    @Test func freshnessGate_hasExactlyItsThreeProductionCallSites() throws {
+    ///
+    /// **Su punto ciego, medido el 2026-09-07: la lista de ficheros es explícita, así que un call-site
+    /// en un fichero NUEVO no lo ve.** El cuarto consumidor (`GroupSettlementReminderService`) entró en
+    /// verde sin que nada avisara, y su pregunta NO es la de los otros tres: ellos preguntan «¿puedo
+    /// afirmar que esto NO EXISTE?» y él «¿está completa mi foto de deudas?». La diferencia importa —
+    /// el gate concede `.fresh` incondicional a una zona sin canal, que para el editor es correcto y
+    /// para un aviso de dinero significa lo contrario— y por eso ese consumidor exige ADEMÁS
+    /// `belongsToBackendChannel`. Al añadir un quinto, añádelo aquí y decide de qué familia es.
+    @Test func freshnessGate_hasExactlyItsFourProductionCallSites() throws {
         // Se cuentan LLAMADAS, no menciones del tipo: `ChannelSignals` aparece además como tipo del
         // parámetro inyectable del barrido, y contar el prefijo suelto convertiría una firma en cobertura.
         let sites: [(path: String, call: String, expected: Int)] = [
@@ -1134,6 +1142,10 @@ struct RemoteUnbridgeWiringTests {
              "GroupChannelFreshness.isFresh(", 1),
             // El arranque: la espera acotada antes de barrer.
             ("Yala/App/AppBootstrapper.swift",
+             "GroupChannelFreshness.verdictsByZone(", 1),
+            // El recordatorio de liquidación: espera acotada + veredicto por zona, y filtra ADEMÁS
+            // por `belongsToBackendChannel` (ver el docblock de arriba).
+            ("Yala/Services/Groups/GroupSettlementReminderService.swift",
              "GroupChannelFreshness.verdictsByZone(", 1),
         ]
         for site in sites {

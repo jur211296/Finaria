@@ -90,7 +90,7 @@ nonisolated enum SessionPreferenceKeys {
         //   `FullModeActivationView.swift:109-114` las escribe juntas y sin guard.
         "usageFocus", "tabBarConfiguration",
         // — Ideas y avisos
-        "insightsTone", "insightsFocus", "budgetAlertsEnabled",
+        "insightsTone", "insightsFocus", "budgetAlertsEnabled", "groupSettlementRemindersEnabled",
         // — Grupos: cómo quiere ver ella sus gastos compartidos
         "includeGroupTransactionsInFeed", "includeGroupsInPanelTotal",
         "includeGroupTransactionsInStats", "bridgeGroupExpensesToPersonalAccounts",

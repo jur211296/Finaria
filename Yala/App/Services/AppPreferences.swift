@@ -378,6 +378,22 @@ final class AppPreferences {
         }
     }
 
+    /// Recordatorio amable de liquidación pendiente: un nudge al DEUDOR cuando una deuda de grupo
+    /// lleva semanas sin moverse (`GroupSettlementReminderService`).
+    ///
+    /// **Default OFF a propósito.** Es el único aviso de la app que habla de dinero que le debes a
+    /// otra persona, y encenderlo sin pedirlo convertiría una actualización en un cobro sorpresa.
+    /// Se enciende desde Ajustes → Notificaciones, igual que `budgetAlertsEnabled`.
+    ///
+    /// Apagarlo NO apaga el resto de avisos de Grupos, que dependen del `NotificationItem` `.groups`.
+    /// La relación no es simétrica: el maestro de Grupos sí manda sobre este nudge.
+    var groupSettlementRemindersEnabled: Bool = false {
+        didSet {
+            guard oldValue != groupSettlementRemindersEnabled else { return }
+            persistBool(groupSettlementRemindersEnabled, forKey: Keys.groupSettlementRemindersEnabled, synced: true)
+        }
+    }
+
     // MARK: - UI Feature Flags
 
     /// D1 (retención «Seguir con mis grupos»): foco de presentación de la shell.
@@ -1109,6 +1125,9 @@ final class AppPreferences {
         // Budgets / Alerts
         budgetsHideInactive = defaults.bool(forKey: Keys.budgetsHideInactive)
         budgetAlertsEnabled = defaults.bool(forKey: Keys.budgetAlertsEnabled)
+        // Default `false` ⇒ lectura incondicional (el guard `object(forKey:) != nil` solo hace falta
+        // para las de default `true`, donde un store vacío devolvería `false` y las apagaría).
+        groupSettlementRemindersEnabled = defaults.bool(forKey: Keys.groupSettlementRemindersEnabled)
 
         // A0-Bridge: Group Visibility Toggles (default = true cuando key ausente)
         if defaults.object(forKey: Keys.includeGroupTransactionsInFeed) != nil {
@@ -1324,6 +1343,9 @@ final class AppPreferences {
 
         // Bridge opt-out global per-user (synced cross-device).
         static let bridgeGroupExpensesToPersonalAccounts = "bridgeGroupExpensesToPersonalAccounts"
+
+        // Nudge de deuda parada (synced cross-device). Default false.
+        static let groupSettlementRemindersEnabled = "groupSettlementRemindersEnabled"
 
         // Per-device (no synced). Apaga SOLO el hook de dedup-en-oleadas de sync
         // (observeRemoteStoreChanges). El pase de arranque y el force-sync manual

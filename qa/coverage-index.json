@@ -1144,6 +1144,19 @@
       "lastVerified": "2026-09-05"
     },
     {
+      "area": "groups-settlement-reminders",
+      "codeGlobs": [
+        "Yala/Services/Groups/GroupSettlementReminderService.swift",
+        "Yala/Services/Groups/SettlementReminderTracker.swift",
+        "Yala/App/Logic/SettlementReminderLogic.swift"
+      ],
+      "scenarioIDs": [],
+      "classification": "manual",
+      "coverage": "unit:YalaTests/SettlementReminderLogicTests,SettlementReminderTrackerTests,SettlementReminderActivityTests (20 casos, 3 suites, verde 2026-09-07). Cubren los AC pure-logic: solo se avisa al DEUDOR (`fromMemberID == currentMemberID`, sin rama para el acreedor); el umbral de antigüedad y su borde exacto (>=, 21 dias); el reset por actividad reciente ENTRE ESAS DOS PERSONAS y el control en la direccion contraria (la actividad con un tercero NO calla la deuda — sin ese control, medir por grupo dejaria el nudge mudo en un piso compartido); el rate-limit de 7 dias y que es POR DEUDA; el orden determinista (el caller manda UNA notif por grupo y toma la primera); y que varios gastos con la misma persona son UNA deuda con UNA fecha, no un aviso por gasto. Fail-closed pinneado en dos formas: sin identidad resuelta y sin evidencia de actividad no se avisa. MANUAL (gemelo de budget-alerts-push-notifications): la ENTREGA del push depende del reloj real, del permiso de notificaciones y de que el canal de Grupos haya entregado — nada de eso es determinista en XCUITest. Lo NO cubierto por unit y que necesita device-QA: los 4 gates end-to-end (toggle `groupSettlementRemindersEnabled` + `NotificationItem` .groups activo + frescura por zona + antiguedad), el deep link `groups/<uuid>` y el texto renderizado.",
+      "owner": "",
+      "lastVerified": "2026-09-07"
+    },
+    {
       "area": "groups-onboarding-tutorial-visual",
       "codeGlobs": [
         "Yala/App/Views/Groups/Onboarding/GroupsOnboardingView.swift",

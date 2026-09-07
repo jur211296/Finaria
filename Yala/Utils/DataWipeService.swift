@@ -420,7 +420,12 @@ final class DataWipeService {
         // key, así que la lista explícita no puede nombrarlos. `GroupNotifications.lastNotified.*`
         // está excluida del wipe normal (barrerla duplicaría una notificación legítima); aquí SÍ se
         // va: no hay ninguna notificación legítima que proteger, el dominio entero se va con ella.
-        let prefixes = ["groupPrefs_", "GroupNotifications.lastNotified."]
+        // `SettlementReminderTracker.keyPrefix` («ya avisé de esta deuda») entra por la MISMA razón
+        // que su vecina y NO en `removeUserPreferenceKeys`: es dedup de notificaciones de GRUPOS, y
+        // ese dominio sobrevive el wipe personal por diseño. Aquí sí se va — con el dominio entero
+        // no queda ninguna deuda de la que avisar, y una entrada superviviente silenciaría durante
+        // una semana el primer recordatorio de quien entre después.
+        let prefixes = ["groupPrefs_", "GroupNotifications.lastNotified.", SettlementReminderTracker.keyPrefix]
         for key in defaults.dictionaryRepresentation().keys
         where prefixes.contains(where: key.hasPrefix) {
             defaults.removeObject(forKey: key)
@@ -630,6 +635,7 @@ final class DataWipeService {
         // --- Preferencias de presupuestos ---
         defaults.removeObject(forKey: "budgets.hideInactive")   // Default: false
         defaults.removeObject(forKey: "budgetAlertsEnabled")    // Default: false
+        defaults.removeObject(forKey: "groupSettlementRemindersEnabled")    // Default: false
 
         // --- Grupos (toggles personales de visibilidad/bridge) ---
         defaults.removeObject(forKey: AppPreferences.Keys.includeGroupTransactionsInFeed)   // Default: true

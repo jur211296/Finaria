@@ -49,7 +49,14 @@ enum GroupChannelFreshness {
     /// veredicto decide si «no está» significa «no existe», y `belongsToBackendChannel` decide si la zona
     /// entra siquiera en su conjunto de CANDIDATAS. Van en el mismo valor para no repetir el fetch de
     /// grupos ni ampliar el número de call-sites de esta primitiva, que va con conteo esperado en
-    /// `freshnessGate_hasExactlyItsThreeProductionCallSites`.
+    /// `freshnessGate_hasExactlyItsFourProductionCallSites`.
+    ///
+    /// El cuarto (2026-09-07) es `GroupSettlementReminderService`, y **no hace la misma pregunta que
+    /// los otros tres**: ellos quieren saber si «no está» significa «no existe»; él, si su foto de
+    /// deudas está completa. Por eso exige `belongsToBackendChannel` ADEMÁS de `isFresh` — la concesión
+    /// de `.fresh` a una zona sin canal es correcta para el editor y es justo lo contrario de lo que él
+    /// necesita, porque sobre un snapshot congelado «lleva tres semanas sin moverse» es cierto por
+    /// construcción.
     struct ZoneStatus: Equatable {
         let verdict: GroupChannelFreshnessGate.Verdict
         /// ALGUNA fila de la zona pertenece al canal backend (ANY-row) — el mismo predicado con el que el

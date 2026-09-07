@@ -2568,6 +2568,19 @@ final class AppBootstrapper {
         await BudgetAlertService.shared.checkBudgetsAndNotify()
         BudgetAlertTracker.shared.cleanupOldEntries()
 
+        // Recordatorio amable de liquidación pendiente (nudge al deudor).
+        //
+        // En un `Task` propio y NO con `await` en línea, al revés que sus vecinos: este chequeo
+        // espera hasta 30 s a que el canal de Grupos dé evidencia (ver `awaitFreshVerdicts`), y
+        // encadenarlo aquí retrasaría `lastNotificationCheckDate` esos mismos segundos — con lo que
+        // el guard de 5 s del foreground dejaría de proteger nada. Su propio `isChecking` cubre el
+        // solape entre dos foregrounds seguidos.
+        GroupSettlementReminderService.shared.setContext(context)
+        Task { @MainActor in
+            await GroupSettlementReminderService.shared.checkPendingSettlementsAndNotify()
+            SettlementReminderTracker.shared.cleanupOldEntries()
+        }
+
         lastNotificationCheckDate = Date.now
     }
 

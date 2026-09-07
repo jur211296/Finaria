@@ -1,10 +1,10 @@
 ---
 id: groups-settlement-reminder
-status: backlog
+status: qa
 priority: medium
 area: groups
 created: 2026-07-01
-updated: 2026-09-06
+updated: 2026-09-07
 source: YalaWiki/Backlog/groups-recordatorio-liquidacion.md
 ---
 
@@ -307,3 +307,60 @@ llega sin abrir la app.
   bajo riesgo aplica aquí sin pensarlo.
 
 migrated from YalaWiki Backlog/groups-recordatorio-liquidacion.md @ 1934e8ad
+
+---
+
+## Implementado (2026-09-07)
+
+**Qué hace ahora la app.** Si le debes dinero a alguien en un grupo y esa cuenta lleva tres
+semanas sin moverse, Yala te manda un aviso amable —a ti, que eres quien puede resolverlo— sin
+que tengas que abrir la app: «👋 Te recordamos que le debes S/ 50 a Ana. Cuando puedas, ponte al
+día». Si le debes a varias personas del mismo grupo llega **un solo aviso**, no uno por persona.
+No se repite antes de una semana, y cualquier gasto o pago nuevo entre vosotros dos reinicia el
+contador. Se enciende en Ajustes → Notificaciones → «Recordatorios de deudas», y nace apagado.
+
+**Piezas nuevas**
+- `Yala/App/Logic/SettlementReminderLogic.swift` — decisión pura: a quién, cuándo, cada cuánto.
+- `Yala/Services/Groups/GroupSettlementReminderService.swift` — los gates, el cálculo y el envío.
+- `Yala/Services/Groups/SettlementReminderTracker.swift` — el «ya avisé», por deuda.
+- `AppPreferences.groupSettlementRemindersEnabled` (synced, default `false`) + su tarjeta en
+  Ajustes, y 4 strings nuevos en los 16 `.lproj`.
+
+**V1 según el ticket: opción 3.** Cero cambios de schema CloudKit. El estado del rate-limit vive
+solo en `UserDefaults`, con el precedente de `GroupNotificationService.persistTimestamp`.
+
+### Las cuatro decisiones que no estaban en el ticket
+
+1. **Deudas DIRECTAS siempre, aunque el grupo tenga `simplifyDebts` encendido.** La primera
+   versión lo respetaba «para que el aviso diga lo mismo que la pantalla»; la review lo tumbó con
+   un caso numérico. Bajo simplificación la arista «yo → X» es un enrutado calculado sobre saldos
+   de terceros: podía afirmar «lleva semanas quieta» sobre dinero de anoche, con un importe 7×
+   mayor que el real, y el rate-limit se rompía porque su clave (`Debt.id`) cambiaba cuando dos
+   personas que no eres tú se pagaban algo. Precio aceptado y escrito en el código: en un grupo
+   con simplificación el importe del aviso puede no coincidir con la fila de la pantalla.
+2. **El reloj se mide por PAR de personas, no por grupo.** En un piso compartido siempre hay
+   gastos; medir por grupo dejaría el nudge mudo justo donde más falta hace.
+3. **Se exige `belongsToBackendChannel` además de `isFresh`.** El gate de frescura concede
+   `.fresh` incondicional a una zona sin canal — correcto para el editor, y lo contrario de lo
+   que hace falta aquí: sobre un snapshot congelado «lleva tres semanas sin moverse» es cierto
+   por construcción. Sin ese filtro, además, un solo grupo legacy en el store hacía salir la
+   espera en el primer poll y el feature quedaba mudo en el arranque.
+4. **Solo se avisa a un miembro `isActive` de un grupo no congelado.** `resolveCurrentUserMember`
+   no filtra por estado (regla de `.claude/rules/swiftdata-cloudkit.md`, caso 4): sin eso, un push
+   pidiendo liquidar podía llegar a quien ya salió del grupo o a quien no puede escribir en él.
+
+### Verificado
+
+- Build ×2 (`Yala` y `Yala Dev`) en verde, sin warnings nuevos.
+- 36 tests en 5 suites, incluidos los 20 propios. **Verificados por mutación**: contar deudas en
+  vez de acreedores, y quitar el clamp de fechas futuras, ponen rojos exactamente sus tests.
+- `qa/coverage-index.json`: área `groups-settlement-reminders`, `manual` (la entrega depende del
+  reloj real y del permiso de notificaciones; nada de eso es determinista en XCUITest).
+
+### Pendiente
+
+- **Device-QA**: los cuatro gates end-to-end, el deep link y el texto renderizado.
+- Dos tickets abiertos de camino: `groups-settlement-reminder-stale-clock` (el reloj no ve
+  ediciones ni pagos retro-fechados; necesita campo nuevo) y
+  `groups-settlement-reminder-discoverability` (**decisión de Jürgen**: el toggle nace apagado,
+  no entra en el primer y depende de un segundo interruptor invisible).

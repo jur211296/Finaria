@@ -5574,3 +5574,15 @@
 
 /* Restore: cuerpo del estado de nube en pausa — tranquiliza sobre los datos sin prometer plazo */
 "welcome.restore.cloudPausedBody" = "Vos données restent en sécurité dans votre compte Yala. La synchronisation est en pause pour le moment. Réessayez plus tard.";
+
+/* Push: gentle reminder to the DEBTOR that a group debt has been idle. Args: 1=formatted amount, 2=creditor name. Never dunning/collector tone. */
+"notifications.groups.settlementReminder" = "👋 Petit rappel : tu dois %1$@ à %2$@. Quand tu peux, mets-toi à jour.";
+
+/* Push: same gentle reminder when the user owes several people in one group (no args). */
+"notifications.groups.settlementReminderMultiple" = "👋 Petit rappel : tu as des comptes en attente avec plusieurs personnes. Quand tu peux, mets-toi à jour.";
+
+/* Settings toggle title: gentle reminders for idle group debts. */
+"notifications.settlementReminders.title" = "Rappels de dettes";
+
+/* Settings toggle hint under notifications.settlementReminders.title. */
+"notifications.settlementReminders.hint" = "Un rappel bienveillant quand une dette de groupe reste inchangée pendant des semaines";

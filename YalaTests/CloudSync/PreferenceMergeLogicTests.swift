@@ -228,13 +228,14 @@ struct PreferenceMergeLogicTests {
 
     // MARK: - Taxonomía completa (guardas de conteo/kind)
 
-    @Test func taxonomy_37Keys() {
+    @Test func taxonomy_38Keys() {
         // 38 hasta D1; +1 = usageFocus (retención «Seguir con mis grupos», familia .stringGuardNonEmpty);
         // −2 en C1 = las dos del consent de GRUPOS, que SALIERON del enum. No fue limpieza: su destino lo
         // decidía el `behavior` del instante de escritura y con `.icloud` —el default del parque— acababan
         // en el iCloud KV del Apple ID sin llegar nunca a Yala. Ahora el registro vive en la cuenta
         // (`groups_consents`) y la copia local es un snapshot sellado (`GroupsConsentState`).
-        #expect(PrefSyncKey.allCases.count == 37)
+        // +1 el 2026-09-07 = groupSettlementRemindersEnabled (nudge de deuda parada, .boolPresence).
+        #expect(PrefSyncKey.allCases.count == 38)
         // Y no pueden volver por la puerta de atrás: el canal de prefs no debe transportar este consent.
         #expect(!PrefSyncKey.allCases.contains { $0.rawValue.hasPrefix("groupsConsent") })
     }

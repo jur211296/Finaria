@@ -28,12 +28,12 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (139)
+## Index (141)
 
-| adopt-terminal-claims-ready-without-checking-engine | backlog | tickets/backlog/adopt-terminal-claims-ready-without-checking-engine.md |
 | id | status | path |
 |----|--------|------|
 | account-goldens-freeze-read-test-times-out | backlog | tickets/backlog/account-goldens-freeze-read-test-times-out.md |
+| adopt-terminal-claims-ready-without-checking-engine | backlog | tickets/backlog/adopt-terminal-claims-ready-without-checking-engine.md |
 | ai-recommended-budgets | backlog | tickets/backlog/ai-recommended-budgets.md |
 | apple-watch | backlog | tickets/backlog/apple-watch.md |
 | applepay-shortcut-warm-launch-empty-data | qa | tickets/qa/applepay-shortcut-warm-launch-empty-data.md |
@@ -99,7 +99,9 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | groups-pending-member-can-open-group | qa | tickets/qa/groups-pending-member-can-open-group.md |
 | groups-pending-member-sees-detail-chrome | backlog | tickets/backlog/groups-pending-member-sees-detail-chrome.md |
 | groups-reconnect-prune-or-rewire | done | tickets/done/groups-reconnect-prune-or-rewire.md |
-| groups-settlement-reminder | backlog | tickets/backlog/groups-settlement-reminder.md |
+| groups-settlement-reminder | qa | tickets/qa/groups-settlement-reminder.md |
+| groups-settlement-reminder-discoverability | backlog | tickets/backlog/groups-settlement-reminder-discoverability.md |
+| groups-settlement-reminder-stale-clock | backlog | tickets/backlog/groups-settlement-reminder-stale-clock.md |
 | groups-shareable-summary | backlog | tickets/backlog/groups-shareable-summary.md |
 | groups-tab-missing-panel-perf | qa | tickets/qa/groups-tab-missing-panel-perf.md |
 | groups-transfer-leave-write-ahead | backlog | tickets/backlog/groups-transfer-leave-write-ahead.md |
@@ -436,7 +438,7 @@ Jurgen 2026-08-26: `groups-cloud-mode-hardening-v1`, `groups-cloud-identity-loss
 | Backlog/groups-invitado-moneda-region-red-muerta.md | tickets/backlog/groups-guest-currency-from-region.md |
 | Backlog/groups-presupuesto-de-grupo.md | tickets/backlog/groups-budget.md |
 | Backlog/groups-reconexion-poda-o-recableado.md | tickets/done/groups-reconnect-prune-or-rewire.md |
-| Backlog/groups-recordatorio-liquidacion.md | tickets/backlog/groups-settlement-reminder.md |
+| Backlog/groups-recordatorio-liquidacion.md | tickets/qa/groups-settlement-reminder.md |
 | Backlog/groups-registrar-gasto-por-chat-voz.md | tickets/backlog/groups-log-expense-via-chat-voice.md |
 | Backlog/groups-resumen-compartible-exportable.md | tickets/backlog/groups-shareable-summary.md |
 | Backlog/insights-calculator-iconlookup-precomputed.md | tickets/backlog/insights-precomputed-icon-lookup.md |

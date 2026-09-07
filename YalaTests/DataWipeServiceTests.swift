@@ -51,6 +51,8 @@ struct DataWipeServiceTests {
         "exchangeRate_lastHistoricalLoad", "exchangeRate_lastTodayUpdate",
         // Presupuestos
         "budgets.hideInactive", "budgetAlertsEnabled",
+        // Recordatorio de deuda parada (nudge al deudor)
+        "groupSettlementRemindersEnabled",
         // Grupos (toggles personales)
         "includeGroupTransactionsInFeed", "includeGroupsInPanelTotal",
         "includeGroupTransactionsInStats", "bridgeGroupExpensesToPersonalAccounts",
