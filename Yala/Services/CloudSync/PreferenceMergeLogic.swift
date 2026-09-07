@@ -14,7 +14,7 @@
 //  4 semánticas del inventario (§I13-INVENTARIO):
 //    1. Strings con guard NO-VACÍO (12) — remoto presente y no vacío y distinto → aplica.
 //    2. Strings del Panel donde "" es estado VÁLIDO (8) — por presencia; "" se escribe.
-//    3. Bools por presencia (9) — presente → set incondicional (paridad exacta: hoy NO hay diff-check).
+//    3. Bools por presencia (10) — presente → set incondicional (paridad exacta: hoy NO hay diff-check).
 //    4. Ints por presencia (3) — presente y distinto → set (+ señal de formato/weekday).
 //    + `onboardingMode`: never-downgrade por `OnboardingMode.rank` (NO LWW).
 //    + `appLanguageOverride`: destino App Group suite, vacío = removeObject, señal `.language`.
@@ -34,7 +34,7 @@ nonisolated enum PrefFamily {
     case stringGuardNonEmpty
     /// Strings del Panel donde "" es estado válido (8). Aplica por presencia si difiere (incl. "").
     case panelPresenceEmptyValid
-    /// Bools por presencia (9). Aplica (set incondicional) si remoto presente — SIN diff-check (oráculo).
+    /// Bools por presencia (10). Aplica (set incondicional) si remoto presente — SIN diff-check (oráculo).
     case boolPresence
     /// Ints por presencia (3). Aplica si remoto presente y distinto.
     case intPresence
@@ -62,7 +62,7 @@ nonisolated enum PrefSideSignal {
 /// Las keys sincronizadas cross-device (SSOT único: el service itera `allCases`). `rawValue` = la key
 /// EXACTA de UserDefaults / iKV / backend (no renombrar: rompería la persistencia y el matching).
 ///
-/// El orden de los cases NO importa para el merge (cada key es independiente). El conteo actual es **37**
+/// El orden de los cases NO importa para el merge (cada key es independiente). El conteo actual es **38**
 /// (34 hasta I13; I14 P5 añadió `cloudConsentAcceptedAt` + `cloudConsentTextVersion`; D1 añadió
 /// `usageFocus`; y C1 SACÓ las dos del consent de Grupos — ver el bloque de abajo).
 nonisolated enum PrefSyncKey: String, CaseIterable {
@@ -95,7 +95,7 @@ nonisolated enum PrefSyncKey: String, CaseIterable {
     case panelPlanificacionHidden
     case panelSectionsHidden
     case panelSectionsOrder
-    // Bools por presencia (9)
+    // Bools por presencia (10)
     case budgetAlertsEnabled
     case expensesOnlyMode
     case colorfulIcons
@@ -105,6 +105,7 @@ nonisolated enum PrefSyncKey: String, CaseIterable {
     case includeGroupsInPanelTotal
     case includeGroupTransactionsInStats
     case bridgeGroupExpensesToPersonalAccounts
+    case groupSettlementRemindersEnabled
     // Ints por presencia (5 — +2 en I14 P5)
     case firstWeekday
     case decimalPlaces
@@ -143,7 +144,8 @@ nonisolated enum PrefSyncKey: String, CaseIterable {
             return .panelPresenceEmptyValid
         case .budgetAlertsEnabled, .expensesOnlyMode, .colorfulIcons, .showVariations,
              .panelAccountsCollapsed, .includeGroupTransactionsInFeed, .includeGroupsInPanelTotal,
-             .includeGroupTransactionsInStats, .bridgeGroupExpensesToPersonalAccounts:
+             .includeGroupTransactionsInStats, .bridgeGroupExpensesToPersonalAccounts,
+             .groupSettlementRemindersEnabled:
             return .boolPresence
         case .firstWeekday, .decimalPlaces, .averageLineMode,
              .cloudConsentAcceptedAt, .cloudConsentTextVersion:

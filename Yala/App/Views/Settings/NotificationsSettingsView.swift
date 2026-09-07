@@ -33,7 +33,8 @@ struct NotificationsSettingsView: View {
                     // En solo-grupos se filtra a la notif de grupos (sin budgetAlerts ni "+").
                     if visibleNotifications.isEmpty {
                         if !isGroupInviteMode {
-                            // Solo mostrar budgetAlertsSection cuando no hay otras notificaciones
+                            // Solo mostrar estas secciones cuando no hay otras notificaciones
+                            settlementRemindersSection
                             budgetAlertsSection
                             emptyState
                         }
@@ -156,6 +157,12 @@ struct NotificationsSettingsView: View {
                 notificationCard(for: notification)
             }
 
+            // Recordatorios de deuda: son de GRUPOS, así que se muestran también en modo solo-grupos
+            // — al revés que las alertas de presupuesto, que son de finanzas personales. (En la rama
+            // de lista vacía sí queda dentro del gate, pero ahí tampoco hay `NotificationItem`
+            // `.groups` que encender, así que el toggle no serviría de nada.)
+            settlementRemindersSection
+
             // Alertas de presupuesto: finanzas personales — ocultas en solo-grupos.
             if !isGroupInviteMode {
                 budgetAlertsSection
@@ -223,6 +230,55 @@ struct NotificationsSettingsView: View {
             await NotificationService.shared.cancelNotification(for: notification)
         }
         viewModel.deleteNotification(notification)
+    }
+
+    // MARK: - Settlement Reminders Section
+
+    /// Toggle del nudge de deuda parada. Hermano de `budgetAlertsSection`: mismo patrón de tarjeta y
+    /// misma mecánica `@Bindable`.
+    ///
+    /// El COLOR sale del SSOT del tipo `.groups`, para que la tarjeta siga cualquier cambio de
+    /// identidad de Grupos. El ICONO, en cambio, es propio y deliberadamente distinto del suyo
+    /// (`person.2.fill`): la tarjeta de Grupos puede quedar justo encima con el mismo círculo morado, y
+    /// dos filas idénticas que hacen cosas distintas se leen mal.
+    private var settlementRemindersSection: some View {
+        @Bindable var prefs = appPreferences
+        return HStack(spacing: DS.Spacing.md) {
+            ZStack {
+                Circle()
+                    .fill(Color(hex: NotificationType.groups.defaultColor))
+                    .frame(width: 44, height: 44)
+
+                Image(systemName: "hand.wave.fill")
+                    .font(DS.Typography.headline)
+                    .foregroundStyle(.white)
+            }
+
+            VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
+                Text(L10n.Notifications.settlementRemindersTitle)
+                    .font(DS.Typography.headline)
+                    .foregroundStyle(.primary)
+
+                Text(L10n.Notifications.settlementRemindersHint)
+                    .font(DS.Typography.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+
+            Spacer()
+
+            Toggle(L10n.Notifications.settlementRemindersTitle, isOn: $prefs.groupSettlementRemindersEnabled)
+                .labelsHidden()
+
+        }
+        .padding(DS.Spacing.lg)
+        .background(.thCard)
+        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.xl))
+        .overlay(
+            RoundedRectangle(cornerRadius: DS.Radius.xl)
+                .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+        )
+        .shadow(color: DS.Shadow.subtle.color, radius: DS.Shadow.medium.radius, x: 0, y: DS.Shadow.medium.y)
     }
 
     // MARK: - Budget Alerts Section

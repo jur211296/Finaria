@@ -5585,3 +5585,15 @@
 
 /* Restore: cuerpo del estado de nube en pausa — tranquiliza sobre los datos sin prometer plazo */
 "welcome.restore.cloudPausedBody" = "データはYalaアカウントに安全に保存されています。同期は現在一時停止中です。しばらくしてからもう一度お試しください。";
+
+/* Push: gentle reminder to the DEBTOR that a group debt has been idle. Args: 1=formatted amount, 2=creditor name. Never dunning/collector tone. */
+"notifications.groups.settlementReminder" = "👋 お知らせです。%2$@さんに%1$@の精算が残っています。都合のよいときにどうぞ。";
+
+/* Push: same gentle reminder when the user owes several people in one group (no args). */
+"notifications.groups.settlementReminderMultiple" = "👋 お知らせです。複数の人と精算が残っています。都合のよいときにどうぞ。";
+
+/* Settings toggle title: gentle reminders for idle group debts. */
+"notifications.settlementReminders.title" = "精算リマインダー";
+
+/* Settings toggle hint under notifications.settlementReminders.title. */
+"notifications.settlementReminders.hint" = "グループの精算が数週間動いていないときに、やさしくお知らせします";
