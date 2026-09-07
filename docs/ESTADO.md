@@ -5,32 +5,35 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-07 (Lima)
 
-**Rama** `2.1` · HEAD `a970de04` — un total con tipo de cambio aproximado ahora lo dice. TestFlight
+**Rama** `2.1` · HEAD `00924924` — el número grande de Estadísticas ya dice qué es. TestFlight
 build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.** `yala-app.pe` sirve la web nueva.
 
 ## Esta sesión, en una línea
 
-**La marca de «aproximado», y el 1:1 que seguía vivo debajo** (PR #84). El encargo pedía que un total
-calculado con tasas incompletas dejara de presentarse como exacto. Al medir la premisa apareció algo
-peor: en la ruta del **TC actual** —el total del Panel, los saldos de Grupos, presupuestos, pagos
-programados— una tabla de tasas incompleta hacía que el importe saliera **sin convertir**. 1000 JPY
-como 1000 PEN, unas 40 veces de más. `fx-partial-rate-rows-silent-1to1` cerró eso en septiembre para
-la ruta con fecha; esta quedó fuera, y el ticket la describía como un problema de presentación.
+**El hero de Estadísticas dice qué es la cifra** (PR #85). Las cuatro pestañas comparten el mismo
+hueco visual y se deslizan entre sí, pero desde #78 ese hueco mostraba dos cosas distintas con el
+mismo período: un saldo de cuentas en Distribución, el neto del período en las otras tres. Tu
+decisión del 6-sep era etiquetar el número, y eso se hizo. **Cero cambio de cálculo.**
 
-**La premisa era falsa por un lado y corta por el otro**, y las dos mitades se midieron ejecutando
-las dos rutas contra un store real. La ruta con fecha ya convertía bien: solo callaba que el número
-era aproximado.
+**La premisa del AC era falsa, y cumplirla al pie de la letra habría metido un bug peor.** El
+ticket pedía un rótulo FIJO por pestaña —Distribución «Saldo de cuentas», las otras tres «Neto del
+período»—. Medido contra el árbol, ninguna de las cuatro cifras es siempre la misma magnitud:
+Distribución solo enseña saldo en `isBalanceMode` y vuelve al flujo con un filtro de categoría, en
+modo solo-gastos o con un chip —que es **tu decisión del 26-ago**, escrita en el propio código—;
+Tendencias pinta uno de tres números según la métrica; Registros deja de ser un neto en cuanto hay
+un chip; y el pie suma con `abs`, así que con las dos naturalezas no es ni neto ni un lado. Un
+rótulo fijo habría mentido en pantalla, que es el mismo defecto del ticket agravado. Por eso el
+rótulo se deriva del estado que elige el número. No se repreguntó: rotular el número que de verdad
+se pinta **es** cumplir tu decisión, no ampliarla.
 
-**La marca no hubo que diseñarla.** `AmountText.isEstimate` y el «≈» ya existían y los saldos de
-Grupos ya los usaban ⇒ **cero copy nuevo en 16 `.lproj`**, contra lo que pedía el AC.
+**Y se vio en pantalla, no solo en el fuente.** En el simulador, Distribución e Insights enseñaban
+S/ 80.018,00 y S/ 72.361,30 en el mismo hueco sin filtros; y la misma pestaña Distribución pasa de
+80.018,00 «Saldo de cuentas» a 204.821,00 «Gastos del período» al tocar un chip. Esa segunda es la
+prueba de que el rótulo fijo mentía. Evidencia en `tickets/qa/`.
 
-**Y la review adversarial volvió a cazar lo mío: cinco defectos, ninguno visible en verde.** El más
-instructivo es que **mi propio arreglo repetía la forma del bug que arreglaba** — sembrar la caché
-con la tabla estática hacía *vacua* la comprobación de cobertura recién escrita, y la tasa real de
-ayer no se usaba nunca (24,79 por una ruta, 40 por la otra, en el mismo instante). También: una tasa
-`0` guardada devolvía el importe crudo sellado como exacto; VoiceOver leía como exacto lo que en
-pantalla llevaba «≈»; y un test que decía probar la acumulación no la probaba. Regla durable nueva
-en `.claude/rules/currency-fx.md`.
+**El source-scan existe porque cablear el rótulo a un valor fijo deja la suite entera en verde** —
+el bug del ticket. Control positivo por mutación: rompe exactamente los 2 tests que debe y deja
+verdes los otros 3.
 
 ## Te espera a ti
 
@@ -47,9 +50,12 @@ en `.claude/rules/currency-fx.md`.
 3. **Publicar la app.** Los avisos de Grupos están completos en servidor y en los dos entornos; falta
    el cliente iOS. Llevaría además el saldo de Distribución, la identidad del recién llegado, los
    predeterminados del Panel, el cierre del detalle, la hoja de «Unirme», el freno de la lista,
-   «Transferir y salir», la puerta del grupo, la puerta del archivado y **la marca de aproximado con
-   su corrección del 1:1**.
-4. **La tanda de QA: 39 tickets, y el guion solo cubre 22.** Guion en **`qa/guion-tanda.md`**. El
+   «Transferir y salir», la puerta del grupo, la puerta del archivado, **la marca de aproximado con
+   su corrección del 1:1** y **el rótulo del hero de Estadísticas**.
+4. **La tanda de QA: 40 tickets, y el guion solo cubre 22.** Entra
+   `hero-estadisticas-stock-vs-flujo-entre-pestanas`, ya verificado en simulador; en el teléfono
+   falta la 4ª pestaña (Registros con sus chips), el estado de las dos naturalezas a la vez y el
+   deslizamiento entre las cuatro con el mismo período, que es donde la incoherencia se nota. Guion en **`qa/guion-tanda.md`**. El
    montaje de dos teléfonos ya lleva ocho, incluido `groups-archived-group-rejects-join` (A archiva → B
    tapea y ve el aviso; A desarchiva → B entra). Los **17 sin montaje asignado** salen a
    `qa-guion-tanda-no-cubre-17-tickets`, con la sugerencia de sostenerlo con un comprobador en vez de
@@ -74,11 +80,15 @@ tuya** (2, las de arriba).
 a pasar entera (**6240 tests en 633 suites**, 84 s) sin un solo rojo. Dos sesiones seguidas sin
 reproducirlo: sigue sin estar descartado, pero tampoco visto.
 
-**El paso 3 del gate no está dando veredicto, y eso es lo más urgente del bloque.** Hoy el runner de
-XCUITest **se cae tras el primer caso de CADA suite** («Restarting after unexpected exit»): 5 suites,
-5 casos ejecutados —uno por suite—, 0 líneas de fallo y 5 nombres en «Failing tests». Ticket nuevo
-`rojo-xcuitest-runner-muere-tras-el-primer-caso` **(high)**, y lo que lo hace `high` no es el falso
-rojo sino que **taparía un rojo de verdad** en cualquier caso que no sea el primero de su suite.
+**El runner de XCUITest: `rojo-xcuitest-runner-muere-tras-el-primer-caso` (high) NO se reprodujo el
+7-sep.** El 6-sep se caía tras el primer caso de CADA suite («Restarting after unexpected exit»): 5
+suites, 5 casos, 5 en «Failing tests». Hoy, en el gate de esta sesión: **8 suites, 15 casos
+ejecutados = 15 declarados, 0 fallos** —y las suites de 2 casos ejecutaron los 2, que es justo lo
+que ayer no pasaba—. Dos diferencias de entorno, ninguna descartada: hoy el disco se subió a 12 GB
+antes de correr (borrando dos `DerivedData` de worktrees ya retirados, 6,6 GB) y el Mac llevaba
+menos horas encendido. **No lo des por cerrado con una sola observación**, pero tampoco arranques
+asumiendo que el paso 3 no da veredicto: hoy lo dio. Lo que lo hace `high` sigue en pie — taparía
+un rojo de verdad en cualquier caso que no sea el primero de su suite.
 
 Que es ajeno está medido en las **dos** direcciones: worktree limpio desde HEAD falla idéntico, y un
 caso que PASA con los cambios FALLA sin ellos. **No lo confundas con
@@ -103,7 +113,7 @@ sigue sin `ok_`. **Cero `ok_` inventado.**
 
 ## Board
 
-**129 tickets · backlog 66 · qa 40 · blocked 2 · done 16 · discarded 5.**
+**129 tickets · backlog 65 · qa 41 · blocked 2 · done 16 · discarded 5.**
 `qa` significa «esperando la tanda», no «cerrado». Índice = disco, verificado comparando **conjuntos**
 (129 = 129, cero huérfanos en ambas direcciones). **Todo cierre incluye `docs/TICKETS.md`**, y lo
 que salga de camino lleva ticket propio — esta sesión sacó **cuatro**:
@@ -111,3 +121,10 @@ que salga de camino lleva ticket propio — esta sesión sacó **cuatro**:
 `fx-approximate-mark-missing-on-secondary-surfaces`, `fx-unknown-currency-code-collapses-to-usd` y
 `rojo-xcuitest-runner-muere-tras-el-primer-caso` (high). Al índice le faltaban además **dos entradas
 que no eran de esta sesión**: se comprueba con conjuntos, no con el contador.
+
+El 7-sep la tabla cuadraba fila a fila (129 = 129, cero huérfanos), pero su línea de *counts*
+seguía diciendo `= 118`. Corregida. **Dos trampas al recontar, las dos me mordieron:** cuenta solo
+`*.md` —hay un `.gitkeep` por carpeta y tres PNG en `done/`, que inflan un `ls` a 132— y si filtras
+las filas con una regex, acepta MAYÚSCULAS en el id: `rojo-heroBuckets-thisWeek-trailing-window` se
+escapa de `[a-z0-9-]+` y aparenta ser un huérfano que no existe. Estuve a punto de "reparar" un
+índice que estaba sano.
