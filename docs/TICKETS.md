@@ -65,7 +65,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | fx-manual-writes-seal-approximate-as-final | backlog | tickets/backlog/fx-manual-writes-seal-approximate-as-final.md |
 | fx-partial-rate-rows-silent-1to1 | qa | tickets/qa/fx-partial-rate-rows-silent-1to1.md |
 | fx-pnl-education-card | backlog | tickets/backlog/fx-pnl-education-card.md |
-| fx-presentation-still-shows-1to1 | backlog | tickets/backlog/fx-presentation-still-shows-1to1.md |
+| fx-presentation-still-shows-1to1 | qa | tickets/qa/fx-presentation-still-shows-1to1.md |
 | fx-unknown-currency-code-collapses-to-usd | backlog | tickets/backlog/fx-unknown-currency-code-collapses-to-usd.md |
 | fx-widget-drops-missing-currency | backlog | tickets/backlog/fx-widget-drops-missing-currency.md |
 | gate-doc-says-swift-testing-only | backlog | tickets/backlog/gate-doc-says-swift-testing-only.md |

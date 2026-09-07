@@ -1,6 +1,6 @@
 ---
 id: fx-presentation-still-shows-1to1
-status: backlog
+status: qa
 priority: medium
 area: currency
 created: 2026-09-03
@@ -100,9 +100,24 @@ aparece cuando debe pero **puede faltar** en totales cuyas transacciones naciero
 
 ## Criterio de hecho (AC)
 
-- [ ] Con una divisa sin tasa ese día, todo total que la incluya lleva la marca de aproximado; con el
-      set de tasas completo, ninguna marca.
-- [ ] El número mostrado es el mismo que hoy (mejor disponible); lo que cambia es que se declara.
-- [ ] Ningún sitio de presentación queda usando `convert` a ciegas: barrido de las ~34 llamadas con
-      control positivo.
-- [ ] Cálculo financiero ⇒ **review adversarial** antes del gate.
+- [x] Con una divisa sin tasa ese día, todo total que la incluya lleva la marca de aproximado; con el
+      set de tasas completo, ninguna marca. **En unit; falta confirmarlo en aparato.**
+- [x] El número mostrado es el mismo que hoy (mejor disponible); lo que cambia es que se declara.
+      **Y en la ruta del TC actual el número además pasó a ser correcto**, que no estaba pedido.
+- [x] Ningún sitio de presentación queda usando `convert` a ciegas: barrido de las 36 llamadas con
+      control positivo. **Clasificadas: 10 persisten (ticket propio) y 26 son de presentación.**
+      Ninguna puede ya devolver el monto crudo — el arreglo está en el converter, no en el
+      call-site. Las que no declaran calidad son las que no alimentan un total marcado.
+- [x] Cálculo financiero ⇒ **review adversarial** antes del gate. Tres lentes; cazaron cinco
+      defectos propios, los cinco arreglados y con test.
+
+## Lo que falta para cerrar: device-QA
+
+Cuenta multimoneda con la fila de tasas del día **incompleta**: comprobar que el «≈» aparece en el
+Panel, Tendencias, Estadísticas y el saldo del panorama — y que **NO** aparece con el set completo.
+En simulador no se reproduce un histórico real de tasas, así que el par «aparece / no aparece» es
+justo lo que no puede afirmarse desde aquí.
+
+Ojo al interpretarlo: hasta que se cierre `fx-manual-writes-seal-approximate-as-final`, la marca
+puede **faltar** en totales cuyas transacciones nacieron mal selladas. Una ausencia de «≈» no
+prueba, por sí sola, que la propagación esté rota.
