@@ -1,6 +1,6 @@
 ---
 name: hipotesis-lista-negra-recomprobadas
-description: Registro de hipótesis de la Lista Negra re-medidas y cuándo. El runner de XCUITest se cayó el 6-sep y NO se reprodujo el 7 (15/15 casos); el CI sigue vivo y `tests` tarda ~1h; qué esconde el informe de disco y qué NO (CoreSimulatorInternal/Devices es el mismo inode, no espacio extra).
+description: Registro de hipótesis de la Lista Negra re-medidas y cuándo. El runner de XCUITest se cayó el 6-sep y NO se reprodujo el 7 (tres corridas de 134 casos); hay un flake NUEVO de 1 rojo por corrida con víctima variable; el CI sigue vivo y su job `tests` corre la suite UI sin timeout; qué esconde el informe de disco y qué NO.
 metadata:
   type: project
 ---
@@ -82,6 +82,39 @@ diferencia; la sospecha de MEMORIA que el ESTADO apuntaba sigue viva.
 tampoco des el ticket por cerrado: son dos observaciones opuestas en dos días, así que **cuenta los
 casos siempre** y, si mueren, sube el disco por encima de 12 GB y repite antes de escribir nada.
 
+
+## «El runner muere tras el primer caso» — NO, y esta vez con volumen (2026-09-07, tarde)
+
+La re-comprobación de la mañana fueron 15 casos. Por la tarde, en el gate de
+`welcome-privacy-branch-has-no-secondary-door`, corrí **la suite `YalaUITests` entera TRES veces**:
+**134 casos ejecutados en cada corrida**, ninguna murió tras el primer caso de ninguna suite. Es la
+segunda sesión seguida sin reproducirlo, ahora con nueve veces más volumen.
+
+**No lo des por cerrado** —son dos días opuestos— pero el paso 3 del gate SÍ da veredicto hoy.
+
+---
+
+## Un flake NUEVO, y no es el runner: 1 rojo por corrida completa con víctima variable
+
+**Qué medí (17 muestras, 2026-09-07):** toda corrida de `YalaUITests` acaba con **exactamente un**
+fallo, siempre el mismo aserto —`XCUIApplication+Yala.swift:208`, «no apareció la pantalla de éxito de
+la transacción»— y **la víctima cambia**: `QuickActionsFavorites` dos veces,
+`EdgeCases.test_extremeMinimumAmountSaves` la tercera, con el anterior pasando esa vez.
+
+**Cómo supe que no era mío**, y es lo que vale la pena repetir: no por tomar más muestras, sino por
+encontrar **la muestra imposible** — falló con un único fichero cambiado cuyo parámetro nuevo no lo
+pasa nadie. El método completo, en [[bisect-de-un-flaky-miente]].
+
+**Dos cosas que descarté con medición, no con intuición:** no es el disco libre absoluto (falla con
+9,0 GB y pasa con 9,6; un `simctl erase` que subió el disco de 7,1 a 12 GB **no** lo eliminó), y no es
+que el test sea lento (las corridas que fallan tardan **menos** que las que pasan).
+
+**How to apply:** cuando el gate te dé UN rojo en ese aserto, mira primero si el nombre del test
+coincide con el de la corrida anterior. Si no coincide, es esto. El ticket
+`transaction-save-helper-flake-one-per-suite` lleva un **reproductor de 3 minutos** (las 4 suites que
+preceden a la víctima más la suya) para no repetir las dos horas de bisección. Y **no lo descartes sin
+medir**: ese mismo aserto ya cazó una rotura real.
+
 ---
 
 ## Los `DerivedData` de worktrees retirados se acumulan — medido el 2026-09-07
@@ -125,6 +158,12 @@ Re-comprobado en el PR #84 (6-sep): mismo workflow `QA`, mismos tres jobs. `chan
 `coverage-index` cierran en segundos; **`tests` tarda mucho más de lo que parece** — una corrida de
 esa misma noche fue de 01:47 a 03:06, casi hora y media. Contar con minutos es lo que lleva a
 mergear antes de tiempo.
+
+**Y el 2026-09-07 medí POR QUÉ tarda: su job `tests` corre `-only-testing:YalaUITests` —la suite UI
+completa— y no lleva `timeout-minutes`.** Es literalmente el ticket `el-job-de-tests-del-ci-no-tiene-timeout`,
+con decisión de Jürgen del 6-sep («UI a nocturna; PR = build + unit con tope») aún sin implementar. En el
+PR #86 seguía `in_progress` a los 31 minutos. Y como corre la suite entera, **va a dar el flake de
+arriba**: su rojo no es señal de tu cambio.
 
 **How to apply:** el gate local sigue siendo mi red —es el que corre XCUITest de verdad— pero **no
 mergees un PR con checks pendientes por creer que no hay CI.** Y si vuelves a leer que está apagado,

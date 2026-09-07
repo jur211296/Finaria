@@ -47,3 +47,23 @@ Dos cosas que aprendí del formato: **la lente refuta además de acusar** —me 
 descarta) y que el `incrementDataVersion` no ciclaba—, y eso vale tanto como los hallazgos. Y **una
 lente de PRODUCTO encuentra lo que las técnicas no ven**: el callejón del dueño con deuda ajena y el
 copy que apuntaba a una pantalla inalcanzable no los vio ninguna lente de código.
+
+
+**Tercer refuerzo, 2026-09-07** (`welcome-privacy-branch-has-no-secondary-door`, tres lentes: flujo del
+Welcome, el seed y los datos del alta, aislamiento de sesión). Y trajo una variante nueva que conviene
+tener presente: **el defecto que más importaba NO estaba en mi diff**.
+
+Una lente siguió el camino del usuario un tap más allá de mi pantalla nueva y encontró que
+`clearResidualPreferencesForFreshStart` —que corre justo detrás del CTA— borraba el nombre y la divisa
+del **dueño del teléfono**, y que la visita entra siempre por esa rama. Deuda previa, no la introduje
+yo. Pero mi pantalla dice *«lo tuyo no se mezcla con lo suyo»*, así que **mi copy era falso una pantalla
+después**: si no lo arreglaba, mi fix heredaba la forma del bug que venía a arreglar.
+
+- **Al pedir la lente, di el camino, no solo el diff.** Lo que la encontró fue el encargo explícito de
+  «recorre qué escribe cada salto y en qué dominio», no «revisa estos ficheros».
+- **Un hallazgo fuera del diff puede ser tuyo igualmente**, si tu cambio lo pone en el camino o hace
+  una promesa que él incumple. Ése se arregla; los demás van a ticket.
+- **Y la lente también refutó bien**: descartó cuatro candidatos con la medición que los mataba —el
+  portal que no puede desviar en secundaria, el `initialStep` que nadie escribe, el presupuesto cuya
+  rama está muerta— y corrigió DOS frases mías que eran imprecisas, incluida una de un ticket que
+  acababa de escribir. Pedir la refutación por escrito es lo que hace eso posible.
