@@ -750,6 +750,23 @@
 "panel.liveAnchorEducation.coachTitle" = "Twoje saldo zmienia się samo";
 "panel.liveAnchorEducation.coachMessage" = "Gdy masz pieniądze w innych walutach, ich wartość zmienia się z dnia na dzień. Dotknij, aby zrozumieć, co się dzieje.";
 "panel.liveAnchorEducation.dotA11yLabel" = "Saldo dzisiaj według aktualnego kursu wymiany. Dotknij, aby zobaczyć szczegóły.";
+
+/* FX P&L card — ganancia/pérdida por tipo de cambio */
+"panel.fxPnL.titleGain" = "Zysk z kursu walut";
+"panel.fxPnL.titleLoss" = "Strata na kursie walut";
+"panel.fxPnL.sentenceHoldingUpFormat" = "Twoje %1$@ są dziś warte o %2$@ więcej niż w chwili, gdy trafiły na Twoje konto.";
+"panel.fxPnL.sentenceHoldingDownFormat" = "Twoje %1$@ są dziś warte o %2$@ mniej niż w chwili, gdy trafiły na Twoje konto.";
+"panel.fxPnL.sentenceDebtUpFormat" = "Twój dług w %1$@ kosztuje dziś o %2$@ więcej niż w chwili jego zaciągnięcia.";
+"panel.fxPnL.sentenceDebtDownFormat" = "Twój dług w %1$@ kosztuje dziś o %2$@ mniej niż w chwili jego zaciągnięcia.";
+"panel.fxPnL.openDetail" = "Zobacz szczegóły według waluty";
+"panel.fxPnL.sheetTitle" = "Wpływ kursu walut";
+"panel.fxPnL.totalLabel" = "Łącznie";
+"panel.fxPnL.sheetIntroFormat" = "Porównujemy, ile Twoje pieniądze w innych walutach są dziś warte w %@, z ich wartością w chwili, gdy trafiły na Twoje konta. Różnica to to, co dał Ci lub zabrał kurs walut, bez żadnego działania z Twojej strony.";
+"panel.fxPnL.rowRatesFormat" = "Wpłynęło po %1$@ · dziś po %2$@";
+"panel.fxPnL.rowValueTodayFormat" = "= %@";
+"panel.fxPnL.averageNote" = "Kurs wejścia to średnia ze wszystkich Twoich operacji w tej walucie, a nie kurs każdego zakupu z osobna.";
+"panel.fxPnL.estimatedRateNote" = "Któreś przeliczenie użyło kursu innego niż dzisiejszy, więc te liczby są przybliżone.";
+
 "widget.today" = "Dzisiaj";
 
 // Widget Preferences

@@ -750,6 +750,23 @@
 "panel.liveAnchorEducation.coachTitle" = "你的余额会自己变动";
 "panel.liveAnchorEducation.coachMessage" = "当你有其他货币的钱时,它的价值每天都会变化。点一下我,看看是怎么回事。";
 "panel.liveAnchorEducation.dotA11yLabel" = "按当前汇率计算的今日余额。点击查看详情。";
+
+/* FX P&L card — ganancia/pérdida por tipo de cambio */
+"panel.fxPnL.titleGain" = "汇率带来的收益";
+"panel.fxPnL.titleLoss" = "汇率带来的损失";
+"panel.fxPnL.sentenceHoldingUpFormat" = "你的%1$@今天比入账时多值%2$@。";
+"panel.fxPnL.sentenceHoldingDownFormat" = "你的%1$@今天比入账时少值%2$@。";
+"panel.fxPnL.sentenceDebtUpFormat" = "你以%1$@计的负债今天比借入时多花%2$@。";
+"panel.fxPnL.sentenceDebtDownFormat" = "你以%1$@计的负债今天比借入时少花%2$@。";
+"panel.fxPnL.openDetail" = "查看各币种明细";
+"panel.fxPnL.sheetTitle" = "汇率的影响";
+"panel.fxPnL.totalLabel" = "合计";
+"panel.fxPnL.sheetIntroFormat" = "我们把你持有的外币按今天的%@价值，与它们入账时的价值作比较。差额就是汇率在你什么都没做的情况下，给你带来或拿走的金额。";
+"panel.fxPnL.rowRatesFormat" = "入账 %1$@ · 今日 %2$@";
+"panel.fxPnL.rowValueTodayFormat" = "= %@";
+"panel.fxPnL.averageNote" = "入账汇率是你在该币种所有交易的平均值，而不是每一笔购买各自的汇率。";
+"panel.fxPnL.estimatedRateNote" = "某次换算使用的不是今天的汇率，因此这些数字为近似值。";
+
 "widget.today" = "今天";
 
 // Widget Preferences

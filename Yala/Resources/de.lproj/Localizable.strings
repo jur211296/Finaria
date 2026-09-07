@@ -748,6 +748,23 @@
 "panel.liveAnchorEducation.coachTitle" = "Ihr Saldo bewegt sich von selbst";
 "panel.liveAnchorEducation.coachMessage" = "Wenn Sie Geld in anderen Währungen haben, ändert sich dessen Wert von Tag zu Tag. Tippen Sie, um zu verstehen, was passiert.";
 "panel.liveAnchorEducation.dotA11yLabel" = "Heutiger Saldo zum aktuellen Wechselkurs. Tippen, um Details zu sehen.";
+
+/* FX P&L card — ganancia/pérdida por tipo de cambio */
+"panel.fxPnL.titleGain" = "Wechselkursgewinn";
+"panel.fxPnL.titleLoss" = "Wechselkursverlust";
+"panel.fxPnL.sentenceHoldingUpFormat" = "Deine %1$@ sind heute %2$@ mehr wert als bei Eingang auf deinem Konto.";
+"panel.fxPnL.sentenceHoldingDownFormat" = "Deine %1$@ sind heute %2$@ weniger wert als bei Eingang auf deinem Konto.";
+"panel.fxPnL.sentenceDebtUpFormat" = "Deine Schulden in %1$@ kosten heute %2$@ mehr als bei der Aufnahme.";
+"panel.fxPnL.sentenceDebtDownFormat" = "Deine Schulden in %1$@ kosten heute %2$@ weniger als bei der Aufnahme.";
+"panel.fxPnL.openDetail" = "Aufschlüsselung nach Währung ansehen";
+"panel.fxPnL.sheetTitle" = "Wechselkurseffekt";
+"panel.fxPnL.totalLabel" = "Insgesamt";
+"panel.fxPnL.sheetIntroFormat" = "Wir vergleichen, was dein Geld in anderen Währungen heute in %@ wert ist, mit dem Wert bei Eingang auf deinen Konten. Die Differenz ist das, was der Wechselkurs dir gegeben oder genommen hat, ganz ohne dein Zutun.";
+"panel.fxPnL.rowRatesFormat" = "Eingang zu %1$@ · heute zu %2$@";
+"panel.fxPnL.rowValueTodayFormat" = "= %@";
+"panel.fxPnL.averageNote" = "Der Eingangskurs ist ein Durchschnitt all deiner Bewegungen in dieser Währung, nicht der Kurs jedes einzelnen Kaufs.";
+"panel.fxPnL.estimatedRateNote" = "Eine Umrechnung nutzte einen Kurs, der nicht der von heute war. Diese Zahlen sind daher ungefähr.";
+
 "widget.today" = "Heute";
 
 // Widget Preferences

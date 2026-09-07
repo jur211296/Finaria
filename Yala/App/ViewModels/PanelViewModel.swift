@@ -517,6 +517,11 @@ final class PanelViewModel {
     /// converter.
     var panelTotalBalanceIsApproximate: Bool = false
 
+    /// Ganancia/pérdida cambiaria del saldo que el Panel está enseñando, o `nil` si el usuario no
+    /// tiene dinero en divisa extranjera. Sale del MISMO `Breakdown` que `panelTotalBalance`, así
+    /// que la card explica exactamente el número de arriba y no otro parecido.
+    var fxPnLSummary: FXPnLLogic.Summary?
+
     var trendChart = PanelTrendData()
     var categoriesWidget = PanelCategoriesData()
     var subcategoriesWidget = PanelSubcategoriesData()
@@ -1357,6 +1362,10 @@ final class PanelViewModel {
         if self.panelTotalBalanceIsApproximate != newBreakdown.amountsAreApproximate {
             self.panelTotalBalanceIsApproximate = newBreakdown.amountsAreApproximate
         }
+        // Recorre las MISMAS cuentas que acaba de sumar el saldo (`eligibleAccountIDs` viaja en
+        // el breakdown), así que la card explica el número de arriba y no otro parecido.
+        let newFXPnL = FXPnLLogic.summary(transactions: transactions, breakdown: newBreakdown)
+        if self.fxPnLSummary != newFXPnL { self.fxPnLSummary = newFXPnL }
 
         if trendVisible, let trendPoints = newTrendPoints {
             let newTrend = PanelTrendData(

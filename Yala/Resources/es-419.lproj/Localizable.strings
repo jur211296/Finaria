@@ -750,6 +750,23 @@
 "panel.liveAnchorEducation.coachTitle" = "Tu saldo se mueve solo";
 "panel.liveAnchorEducation.coachMessage" = "Cuando tienes dinero en otras monedas, su valor cambia día a día. Tócame para entender qué pasa.";
 "panel.liveAnchorEducation.dotA11yLabel" = "Saldo de hoy al tipo de cambio actual. Toca para ver el detalle.";
+
+/* FX P&L card — ganancia/pérdida por tipo de cambio */
+"panel.fxPnL.titleGain" = "Ganancia por tipo de cambio";
+"panel.fxPnL.titleLoss" = "Pérdida por tipo de cambio";
+"panel.fxPnL.sentenceHoldingUpFormat" = "Tus %1$@ valen hoy un %2$@ más que cuando entraron a tu cuenta.";
+"panel.fxPnL.sentenceHoldingDownFormat" = "Tus %1$@ valen hoy un %2$@ menos que cuando entraron a tu cuenta.";
+"panel.fxPnL.sentenceDebtUpFormat" = "Tu deuda en %1$@ cuesta hoy un %2$@ más que cuando la contrajiste.";
+"panel.fxPnL.sentenceDebtDownFormat" = "Tu deuda en %1$@ cuesta hoy un %2$@ menos que cuando la contrajiste.";
+"panel.fxPnL.openDetail" = "Ver el detalle por moneda";
+"panel.fxPnL.sheetTitle" = "Efecto del tipo de cambio";
+"panel.fxPnL.totalLabel" = "En total";
+"panel.fxPnL.sheetIntroFormat" = "Comparamos lo que tu dinero en otras monedas vale hoy en %@ con lo que valía cuando entró a tus cuentas. La diferencia es lo que el tipo de cambio te dio o te quitó, sin que tú hicieras nada.";
+"panel.fxPnL.rowRatesFormat" = "Entró a %1$@ · hoy a %2$@";
+"panel.fxPnL.rowValueTodayFormat" = "= %@";
+"panel.fxPnL.averageNote" = "El tipo de cambio de entrada es un promedio de todos tus movimientos en esa moneda, no el de cada compra por separado.";
+"panel.fxPnL.estimatedRateNote" = "Alguna conversión usó un tipo de cambio que no era el de hoy, así que estas cifras son aproximadas.";
+
 "widget.today" = "Hoy";
 
 // Widget Preferences

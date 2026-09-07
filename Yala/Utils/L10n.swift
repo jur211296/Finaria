@@ -902,6 +902,51 @@ enum L10n {
 
         // MARK: - Live Anchor Education ("Tu saldo hoy" sheet)
 
+        enum FXPnL {
+            static var titleGain: String {
+                ls("panel.fxPnL.titleGain", comment: "FX P&L card title when the user gained value from exchange rates")
+            }
+            static var titleLoss: String {
+                ls("panel.fxPnL.titleLoss", comment: "FX P&L card title when the user lost value from exchange rates")
+            }
+            static func sentenceHoldingUpFormat(_ currency: String, _ percent: String) -> String {
+                String(format: ls("panel.fxPnL.sentenceHoldingUpFormat", comment: "Card sentence, positive balance, rate rose. %1$@ is the plural currency name (e.g. 'dolares'), %2$@ a percentage"), currency, percent)
+            }
+            static func sentenceHoldingDownFormat(_ currency: String, _ percent: String) -> String {
+                String(format: ls("panel.fxPnL.sentenceHoldingDownFormat", comment: "Card sentence, positive balance, rate fell. %1$@ plural currency name, %2$@ percentage"), currency, percent)
+            }
+            static func sentenceDebtUpFormat(_ currency: String, _ percent: String) -> String {
+                String(format: ls("panel.fxPnL.sentenceDebtUpFormat", comment: "Card sentence, NEGATIVE balance (a debt), rate rose so the debt got more expensive. %1$@ plural currency name, %2$@ percentage"), currency, percent)
+            }
+            static func sentenceDebtDownFormat(_ currency: String, _ percent: String) -> String {
+                String(format: ls("panel.fxPnL.sentenceDebtDownFormat", comment: "Card sentence, NEGATIVE balance (a debt), rate fell so the debt got cheaper. %1$@ plural currency name, %2$@ percentage"), currency, percent)
+            }
+            static var openDetail: String {
+                ls("panel.fxPnL.openDetail", comment: "Accessibility hint: opens the per-currency FX detail sheet")
+            }
+            static var sheetTitle: String {
+                ls("panel.fxPnL.sheetTitle", comment: "Title of the FX gain/loss detail sheet")
+            }
+            static var totalLabel: String {
+                ls("panel.fxPnL.totalLabel", comment: "Label above the total FX gain/loss amount in the sheet")
+            }
+            static func sheetIntroFormat(_ currency: String) -> String {
+                String(format: ls("panel.fxPnL.sheetIntroFormat", comment: "Sheet paragraph explaining where the number comes from. %@ is the preferred currency code or symbol"), currency)
+            }
+            static func rowRatesFormat(_ entryRate: String, _ todayRate: String) -> String {
+                String(format: ls("panel.fxPnL.rowRatesFormat", comment: "Per-currency row subtitle: %1$@ is the average entry exchange rate, %2$@ today's rate"), entryRate, todayRate)
+            }
+            static func rowValueTodayFormat(_ value: String) -> String {
+                String(format: ls("panel.fxPnL.rowValueTodayFormat", comment: "Per-currency row: what that balance is worth today in the preferred currency. %@ is the formatted amount"), value)
+            }
+            static var averageNote: String {
+                ls("panel.fxPnL.averageNote", comment: "Honest caveat: the entry rate is a weighted average, not a per-purchase lot")
+            }
+            static var estimatedRateNote: String {
+                ls("panel.fxPnL.estimatedRateNote", comment: "Caveat shown when some conversion used a rate that was not today's")
+            }
+        }
+
         enum LiveAnchorEducation {
             static var title: String {
                 ls("panel.liveAnchorEducation.title", comment: "Sheet title: educative sheet about today's balance at current FX rate")

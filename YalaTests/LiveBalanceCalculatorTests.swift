@@ -373,4 +373,44 @@ struct LiveBalanceCalculatorTests {
         )
         #expect(result == 100)  // suma 0 + 100, sin error
     }
+
+    // MARK: - El conjunto de cuentas que viaja al FX P&L
+
+    @Test func breakdown_exposesTheResolvedAccountSet() {
+        // El FX P&L recorre las transacciones por su cuenta para poder hacer FIFO por fecha, así
+        // que necesita EXACTAMENTE las cuentas que este saldo acabó sumando. Si tuviera que
+        // reconstruir la elegibilidad por su lado, el día que cambie una de estas reglas el P&L
+        // seguiría pareciendo plausible y estaría hablando de otro dinero.
+        let visible = makeAccount(name: "Visible", currencyCode: "USD")
+        let excluded = makeAccount(
+            name: "Excluida", currencyCode: "USD", excludeFromStatistics: true
+        )
+        let other = makeAccount(name: "Otra", currencyCode: "USD")
+
+        let breakdown = LiveBalanceCalculator.liveBalanceBreakdown(
+            accounts: [visible, excluded, other],
+            transactions: [],
+            preferredCurrencyCode: "PEN",
+            selectedAccountIDs: [visible.persistentModelID],
+            converter: MockCurrencyConverter()
+        )
+
+        #expect(breakdown.eligibleAccountIDs == [visible.persistentModelID])
+        #expect(!breakdown.eligibleAccountIDs.contains(excluded.persistentModelID))
+        #expect(!breakdown.eligibleAccountIDs.contains(other.persistentModelID))
+    }
+
+    @Test func breakdown_excludedFromStatistics_neverEnterTheEligibleSet() {
+        let a = makeAccount(name: "A", currencyCode: "USD")
+        let excluded = makeAccount(name: "X", currencyCode: "USD", excludeFromStatistics: true)
+
+        let breakdown = LiveBalanceCalculator.liveBalanceBreakdown(
+            accounts: [a, excluded],
+            transactions: [],
+            preferredCurrencyCode: "PEN",
+            converter: MockCurrencyConverter()
+        )
+
+        #expect(breakdown.eligibleAccountIDs == [a.persistentModelID])
+    }
 }

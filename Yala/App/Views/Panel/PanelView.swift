@@ -511,6 +511,12 @@ struct PanelView: View {
                         // Contextual guide for panel (first visit)
                         ContextualGuideBanner.panel()
 
+                        // Ganancia/pérdida cambiaria del saldo que el Panel suma. La condición vive
+                        // DENTRO de la card, no aquí: con el `if` fuera, cruzar el umbral mientras
+                        // el usuario lee el detalle destruía la hoja abierta, y leer la propiedad
+                        // aquí invalidaba este body entero en cada gasto.
+                        FXPnLCard(viewModel: viewModel)
+
                         // Thematic sections wrapper renders: Tu panorama
                         // (accounts + health), then the filter bar (period + chips),
                         // then each thematic section. Auto-hide uses

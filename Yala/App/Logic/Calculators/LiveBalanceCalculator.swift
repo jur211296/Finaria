@@ -28,6 +28,16 @@ struct LiveBalanceCalculator {
         /// Este saldo usa el TC ACTUAL, así que la vía es siempre el converter — no hay aquí monto
         /// guardado en el que apoyarse, a diferencia de los totales históricos.
         let amountsAreApproximate: Bool
+
+        /// Las cuentas que este desglose acabó sumando, ya resueltas (contables, filtro de
+        /// selección e `isExcludeMode` aplicados).
+        ///
+        /// Se expone para que el cálculo de ganancia/pérdida cambiaria recorra **exactamente** las
+        /// mismas transacciones que este saldo. El FX P&L es una resta contra ese saldo: si cada
+        /// lado resolviera la elegibilidad por su cuenta, el día que cambie una de las reglas el
+        /// resultado seguirá pareciendo plausible y estará mal. Compartir el conjunto ya resuelto
+        /// es lo que hace que no puedan divergir.
+        let eligibleAccountIDs: Set<PersistentIdentifier>
     }
 
     /// Output del helper `liveBalanceOverride`: valor total + breakdown por
@@ -133,7 +143,8 @@ struct LiveBalanceCalculator {
             nativeBalances: nativeBalances,
             convertedTotal: convertedTotal,
             preferredCurrencyCode: preferredCurrencyCode,
-            amountsAreApproximate: amountsAreApproximate
+            amountsAreApproximate: amountsAreApproximate,
+            eligibleAccountIDs: eligibleAccountIDs
         )
     }
 

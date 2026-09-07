@@ -750,6 +750,23 @@
 "panel.liveAnchorEducation.coachTitle" = "Je saldo beweegt vanzelf";
 "panel.liveAnchorEducation.coachMessage" = "Wanneer je geld in andere valuta's hebt, verandert de waarde dag voor dag. Tik om te zien wat er gebeurt.";
 "panel.liveAnchorEducation.dotA11yLabel" = "Saldo van vandaag tegen de huidige wisselkoers. Tik voor details.";
+
+/* FX P&L card — ganancia/pérdida por tipo de cambio */
+"panel.fxPnL.titleGain" = "Wisselkoerswinst";
+"panel.fxPnL.titleLoss" = "Wisselkoersverlies";
+"panel.fxPnL.sentenceHoldingUpFormat" = "Je %1$@ zijn vandaag %2$@ meer waard dan toen ze op je rekening kwamen.";
+"panel.fxPnL.sentenceHoldingDownFormat" = "Je %1$@ zijn vandaag %2$@ minder waard dan toen ze op je rekening kwamen.";
+"panel.fxPnL.sentenceDebtUpFormat" = "Je schuld in %1$@ kost vandaag %2$@ meer dan toen je hem aanging.";
+"panel.fxPnL.sentenceDebtDownFormat" = "Je schuld in %1$@ kost vandaag %2$@ minder dan toen je hem aanging.";
+"panel.fxPnL.openDetail" = "Bekijk de uitsplitsing per valuta";
+"panel.fxPnL.sheetTitle" = "Effect van de wisselkoers";
+"panel.fxPnL.totalLabel" = "In totaal";
+"panel.fxPnL.sheetIntroFormat" = "We vergelijken wat je geld in andere valuta's vandaag waard is in %@ met wat het waard was toen het op je rekeningen kwam. Het verschil is wat de wisselkoers je gaf of afnam, zonder dat je iets deed.";
+"panel.fxPnL.rowRatesFormat" = "Binnengekomen op %1$@ · vandaag op %2$@";
+"panel.fxPnL.rowValueTodayFormat" = "= %@";
+"panel.fxPnL.averageNote" = "De instapkoers is een gemiddelde van al je bewegingen in die valuta, niet die van elke aankoop apart.";
+"panel.fxPnL.estimatedRateNote" = "Een omrekening gebruikte een koers die niet die van vandaag was, dus deze cijfers zijn bij benadering.";
+
 "widget.today" = "Vandaag";
 
 // Widget Preferences

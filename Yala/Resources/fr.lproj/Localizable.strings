@@ -748,6 +748,23 @@
 "panel.liveAnchorEducation.coachTitle" = "Votre solde bouge tout seul";
 "panel.liveAnchorEducation.coachMessage" = "Quand vous avez de l'argent dans d'autres devises, sa valeur change chaque jour. Touchez pour comprendre ce qui se passe.";
 "panel.liveAnchorEducation.dotA11yLabel" = "Solde d'aujourd'hui au taux de change actuel. Touchez pour voir le détail.";
+
+/* FX P&L card — ganancia/pérdida por tipo de cambio */
+"panel.fxPnL.titleGain" = "Gain de change";
+"panel.fxPnL.titleLoss" = "Perte de change";
+"panel.fxPnL.sentenceHoldingUpFormat" = "Tes %1$@ valent aujourd'hui %2$@ de plus qu'à leur arrivée sur ton compte.";
+"panel.fxPnL.sentenceHoldingDownFormat" = "Tes %1$@ valent aujourd'hui %2$@ de moins qu'à leur arrivée sur ton compte.";
+"panel.fxPnL.sentenceDebtUpFormat" = "Ta dette en %1$@ coûte aujourd'hui %2$@ de plus qu'au moment où tu l'as contractée.";
+"panel.fxPnL.sentenceDebtDownFormat" = "Ta dette en %1$@ coûte aujourd'hui %2$@ de moins qu'au moment où tu l'as contractée.";
+"panel.fxPnL.openDetail" = "Voir le détail par devise";
+"panel.fxPnL.sheetTitle" = "Effet du taux de change";
+"panel.fxPnL.totalLabel" = "Au total";
+"panel.fxPnL.sheetIntroFormat" = "Nous comparons ce que ton argent dans d'autres devises vaut aujourd'hui en %@ avec sa valeur à son arrivée sur tes comptes. La différence, c'est ce que le taux de change t'a donné ou repris, sans que tu fasses quoi que ce soit.";
+"panel.fxPnL.rowRatesFormat" = "Arrivé à %1$@ · aujourd'hui à %2$@";
+"panel.fxPnL.rowValueTodayFormat" = "= %@";
+"panel.fxPnL.averageNote" = "Le taux d'entrée est une moyenne de tous tes mouvements dans cette devise, pas celui de chaque achat pris séparément.";
+"panel.fxPnL.estimatedRateNote" = "Une conversion a utilisé un taux qui n'était pas celui du jour : ces chiffres sont donc approximatifs.";
+
 "widget.today" = "Aujourd'hui";
 
 // Widget Preferences
