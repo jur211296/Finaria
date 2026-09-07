@@ -1797,6 +1797,28 @@ enum L10n {
             static var allSettled: String { ls("groups.summary.allSettled", comment: "") }
         }
 
+        /// «Cierre del viaje»: la imagen compartible con los totales del grupo y la lista mínima de
+        /// pagos para saldar. Namespace APARTE de `Summary` (que es la banda de «te deben / debes»
+        /// del header) porque son dos cosas distintas con nombres parecidos: aquel resume TU saldo,
+        /// éste resume el grupo entero para mandarlo al chat. `groups.summary.allSettled` ya existía
+        /// y dice otra cosa, así que estas claves cuelgan de `groups.shareableSummary.*`.
+        enum ShareableSummary {
+            /// Título de la sección en Ajustes del grupo Y del sheet — es literalmente el mismo
+            /// rótulo, así que comparten clave en vez de duplicar texto en dieciséis idiomas.
+            static var title: String { ls("groups.shareableSummary.title", comment: "") }
+            static var action: String { ls("groups.shareableSummary.action", comment: "") }
+            static var hint: String { ls("groups.shareableSummary.hint", comment: "") }
+            static var totalSpent: String { ls("groups.shareableSummary.totalSpent", comment: "") }
+            static var whoPaid: String { ls("groups.shareableSummary.whoPaid", comment: "") }
+            static var paidLabel: String { ls("groups.shareableSummary.paidLabel", comment: "") }
+            static var owedLabel: String { ls("groups.shareableSummary.owedLabel", comment: "") }
+            static var settleUp: String { ls("groups.shareableSummary.settleUp", comment: "") }
+            static var allSettled: String { ls("groups.shareableSummary.allSettled", comment: "") }
+            static var unknownMember: String { ls("groups.shareableSummary.unknownMember", comment: "") }
+            static var footer: String { ls("groups.shareableSummary.footer", comment: "") }
+            static var renderFailed: String { ls("groups.shareableSummary.renderFailed", comment: "") }
+        }
+
         enum Detail {
             static var records: String { ls("groups.detail.records", comment: "") }
             static var balances: String { ls("groups.detail.balances", comment: "") }

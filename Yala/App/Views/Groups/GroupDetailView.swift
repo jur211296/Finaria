@@ -205,6 +205,11 @@ struct GroupDetailView: View {
                         .foregroundStyle(Color.primary)
                 }
                 .accessibilityLabel(L10n.Groups.Settings.title)
+                // Sin identifier, la única forma de alcanzar Ajustes del grupo desde un XCUITest era
+                // el label localizado, que está prohibido — así que ningún test llegaba a esa
+                // pantalla. Lo añade el resumen compartible porque es lo que necesita para probar su
+                // punto de entrada; el botón no cambia en nada más.
+                .accessibilityIdentifier("group_settings_button")
                 .buttonBorderShape(.circle)
             }
         }

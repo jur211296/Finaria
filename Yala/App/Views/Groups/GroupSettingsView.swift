@@ -35,6 +35,11 @@ struct GroupSettingsView: View {
     @State private var showCurrencyPicker: Bool = false
     @State private var defaultSplitType: SplitType = .equal
 
+    /// Resumen compartible («cierre del viaje»).
+    @State private var showShareableSummary = false
+    /// Cache de si hay algo que resumir — ver `recomputeShareableSummary()`.
+    @State private var hasShareableSummary = false
+
     @State private var showArchiveConfirm = false
 
     /// Cache del check `anyMemberHasOutstandingBalance` para evitar 4 fetches SwiftData
@@ -129,6 +134,14 @@ struct GroupSettingsView: View {
                         personalIntegrationSection
                     }
 
+                    // Resumen compartible («cierre del viaje»). Va FUERA de la guarda de
+                    // participación a propósito: es de solo lectura y no enseña nada que quien abre
+                    // esta pantalla no esté viendo ya en el detalle, así que quien salió del grupo
+                    // conserva la foto de cómo quedaron las cuentas.
+                    if hasShareableSummary {
+                        shareableSummarySection
+                    }
+
                     // Leave group (non-owner)
                     if currentOffer.showsLeave {
                         leaveGroupSection
@@ -160,12 +173,16 @@ struct GroupSettingsView: View {
             .scrollContentBackground(.hidden)
             .yalaScreenBackground(.subtle)
             .onDisappear { saveIdentity() }
-            .onAppear { recomputeOwnerExit() }
+            .onAppear {
+                recomputeOwnerExit()
+                recomputeShareableSummary()
+            }
             .onChange(of: sessionState.dataVersion) { _, _ in
                 // Llegó dato nuevo: el rechazo del servidor deja de ser la información más fresca
                 // que tenemos, así que la oferta puede volver a evaluarse con los conteos de ahora.
                 transferRefusedByServer = false
                 recomputeOwnerExit()
+                recomputeShareableSummary()
             }
             .navigationTitle(L10n.Groups.Settings.title)
             .navigationBarTitleDisplayMode(.inline)
@@ -180,6 +197,13 @@ struct GroupSettingsView: View {
                 NavigationStack {
                     CurrencySelectorView(selectedCurrency: $selectedCurrency)
                 }
+            }
+            // Cuelga del stack y no de `shareableSummarySection` a propósito: la sección desaparece
+            // en cuanto el grupo se queda sin gastos, y si un sync la retirase con el resumen
+            // abierto, UIKit tumbaría la presentación dejando el flag en `true` — el cover fantasma
+            // de la regla de presentaciones. El stack, en cambio, siempre está.
+            .sheet(isPresented: $showShareableSummary) {
+                GroupShareableSummarySheet(group: group, viewModel: viewModel)
             }
             .confirmationDialog(
                 L10n.Groups.Settings.leaveGroup,
@@ -561,6 +585,82 @@ struct GroupSettingsView: View {
         case .disabledOff: return L10n.Groups.Settings.personalIntegrationHintBlockedByGlobal
         case .enabledOnInheriting, .enabledOnLocal: return L10n.Groups.Settings.personalIntegrationHintInheritOn
         case .enabledOffLocal: return L10n.Groups.Settings.personalIntegrationHintLocalOff
+        }
+    }
+
+    // MARK: - Resumen compartible («cierre del viaje»)
+
+    /// Si se ofrece el resumen compartible. Es un cache, recalculado en los MISMOS sitios que
+    /// `hasOutstandingDebt` (`.onAppear` + `onChange(dataVersion)`), para no armar el snapshot en
+    /// cada evaluación del body.
+    ///
+    /// Lo decide el SNAPSHOT y no `!viewModel.expenses.isEmpty`, que era un proxy y no coincidía:
+    /// esa lista incluye los saldos iniciales, que el resumen no cuenta como gasto. Un grupo
+    /// importado de Splitwise cuyos únicos «gastos» son saldos iniciales ya liquidados pasaba el
+    /// proxy y producía una tarjeta con la cabecera, la fecha y el pie, y nada en medio: la imagen
+    /// en blanco que el propio gate decía querer evitar.
+    private func recomputeShareableSummary() {
+        // Un grupo migrado y congelado enseña una COPIA de cuando se movió, y la app lo dice en su
+        // banner («puede que no esté al día»). El resumen no tiene dónde poner ese aviso y encima
+        // fecha la imagen HOY, así que sería un documento con pinta de autoritativo sobre datos que
+        // la propia app declara viejos. No se ofrece.
+        //
+        // Ojo: esto NO es `canCurrentUserParticipate`, que junta el congelado con «no eres miembro
+        // activo». Quien salió del grupo sí conserva el resumen — es de solo lectura y no enseña
+        // nada que no esté viendo en el detalle.
+        guard !group.isMigratedFrozen else {
+            hasShareableSummary = false
+            return
+        }
+
+        hasShareableSummary = !GroupShareableSummaryLogic.build(
+            group: group,
+            members: viewModel.members,
+            expenses: viewModel.expenses,
+            shares: viewModel.shares,
+            settlements: viewModel.settlements,
+            unknownMemberName: L10n.Groups.ShareableSummary.unknownMember
+        ).isEmpty
+    }
+
+    private var shareableSummarySection: some View {
+        SectionBox(title: L10n.Groups.ShareableSummary.title) {
+            VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                Button {
+                    showShareableSummary = true
+                } label: {
+                    HStack {
+                        Image(systemName: "square.and.arrow.up")
+                            .foregroundStyle(.thAccent)
+
+                        Text(L10n.Groups.ShareableSummary.action)
+                            .font(DS.Typography.body)
+                            .foregroundStyle(.primary)
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(DS.Typography.captionSmall)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, DS.FormRow.paddingH)
+                    .padding(.vertical, DS.FormRow.paddingV)
+                    // DENTRO del label y tras el padding: el label tiene `Spacer()` y no lleva fondo
+                    // relleno, así que colgado del `Button` dejaría muerto el centro de la fila —
+                    // justo donde caen el dedo y el tap de XCUITest (regla de DS, medida el
+                    // 2026-08-07 en la fila de divisa de `GroupFormView`).
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("group_settings_share_summary_button")
+
+                Text(L10n.Groups.ShareableSummary.hint)
+                    .font(DS.Typography.captionSmall)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, DS.FormRow.paddingH)
+                    .padding(.bottom, DS.FormRow.paddingV)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
     }
 
