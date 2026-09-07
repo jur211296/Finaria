@@ -1,6 +1,6 @@
 ---
 name: hipotesis-lista-negra-recomprobadas
-description: Qué hipótesis de la Lista Negra volví a comprobar y cuándo. Caducan. Al 2026-09-05: el runner de XCUITest SÍ corre en local (130 tests), y el CI de GitHub NO está apagado — el CLAUDE.md global dice lo contrario.
+description: Qué hipótesis de la Lista Negra volví a comprobar y cuándo. Caducan. Al 2026-09-06: el CI de GitHub sigue vivo, el runner de XCUITest SÍ está roto hoy (muere tras el primer caso de cada suite, medido también en árbol limpio), y hay 5,7 GB que el informe de disco no destaca.
 metadata:
   type: project
 ---
@@ -34,7 +34,29 @@ ya no se sostiene solo.
 Relacionado: [[mis-mediciones-fallan-por-el-filtro]] — el décimo caso de esa ficha es justo el error
 inverso, culpar al entorno sin leer el error entero.
 
-## «El CI de GitHub, apagado» — FALSO el 2026-09-05
+## «El runner de XCUITest corre bien en local» — HOY NO, medido el 2026-09-06
+
+La re-comprobación de arriba (5-sep, 8 tests verdes) **caducó en un día**. En el gate de
+`fx-presentation-still-shows-1to1`: **cada suite ejecuta su primer caso, lo pasa, y el runner
+muere** («Restarting after unexpected exit, crash, or test timeout»); la siguiente ejecución
+reporta `Executed 0 tests` y la corrida acaba en `TEST FAILED` listando casos que **nunca
+imprimieron una línea `Test Case … failed`**.
+
+**Cómo supe que no era mío, y es el método que vale la pena repetir:** worktree limpio desde HEAD
+con `Secrets.xcconfig` copiado → falla **idéntico**. Y la comprobación en la dirección contraria,
+que es la que de verdad cierra la pregunta: **un caso que PASA en el árbol con cambios FALLA en el
+árbol limpio**. Un rojo introducido por un cambio no se comporta así.
+
+**Lo que NO se pudo descartar:** el disco. La máquina estuvo entre 8,7 y 15 GB toda la sesión (el
+umbral del repo son 25) y el síntoma siguió igual tras liberar 6,3 GB. O el umbral real está más
+arriba, o la causa es otra. Ticket `rojo-xcuitest-runner-muere-tras-el-primer-caso` (high).
+
+**How to apply:** mientras dure, el paso 3 del `/gate` **no da veredicto** para XCUITest — y lo
+peligroso no es el falso rojo, es que **taparía un rojo real** en cualquier caso que no sea el
+primero de su suite. No archives los nombres que salgan en «Failing tests»: el conjunto depende del
+orden de ejecución, no de qué esté roto.
+
+## «El CI de GitHub, apagado» — FALSO el 2026-09-05, y sigue vivo el 2026-09-06
 
 **Dónde se afirma:** el `CLAUDE.md` global de casa, en el párrafo de ADR-015: «El CI de GitHub,
 apagado».
@@ -49,6 +71,11 @@ encendido: su job `changes` está decidiendo bien qué disparar.
 fallo** — es «checks sin terminar». Mergear en ese estado se salta una red que sí funciona, así que
 se espera (`gh pr checks <n>` hasta que no quede ningún `pending`). Vercel también engancha el PR y
 tarda lo suyo; su rama de producción es `1.0`, así que en un PR a `2.1` es solo preview.
+
+Re-comprobado en el PR #84 (6-sep): mismo workflow `QA`, mismos tres jobs. `changes` y
+`coverage-index` cierran en segundos; **`tests` tarda mucho más de lo que parece** — una corrida de
+esa misma noche fue de 01:47 a 03:06, casi hora y media. Contar con minutos es lo que lleva a
+mergear antes de tiempo.
 
 **How to apply:** el gate local sigue siendo mi red —es el que corre XCUITest de verdad— pero **no
 mergees un PR con checks pendientes por creer que no hay CI.** Y si vuelves a leer que está apagado,
@@ -77,6 +104,15 @@ cada borrado: sin él el espacio no aparece en `df`, y eso hace parecer que el b
 
 Y una nota de herramienta: `rm -rf` sobre `~/Library` pide permiso; `find <dir> -depth -delete` hace
 lo mismo sin prompt.
+
+**Un quinto sitio, y el informe lo esconde dentro de un total (2026-09-06):**
+`CoreSimulator/Devices/<udid>/data/Library/Caches/com.apple.containermanagerd/**Dead**` — los
+contenedores de apps ya desinstaladas que CoreSimulator no recoge. Eran **5,7 GB de los 6,7 GB** de
+caché de ese device. El `disk-report.sh` los cuenta en «Simuladores», que uno lee como «el
+simulador que necesito», así que no se tocan. Es basura pura y se borra sin apagar el simulador. Su
+vecino `com.apple.coresymbolicationd` (660 MB) también es regenerable. Cuando una tanda de builds
+se coma el disco, mirar ahí **antes** de plantearse borrar DerivedData, que cuesta un rebuild
+entero.
 
 **El paso (2) sin adivinar, y lo que rinde (2026-09-06).** El `info.plist` de cada DerivedData
 guarda el árbol al que pertenece, así que la clasificación es un comando, no una inferencia:
