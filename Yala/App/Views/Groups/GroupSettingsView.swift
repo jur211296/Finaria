@@ -35,6 +35,12 @@ struct GroupSettingsView: View {
     @State private var showCurrencyPicker: Bool = false
     @State private var defaultSplitType: SplitType = .equal
 
+    /// Presupuesto del grupo (G14). `budgetInput` es texto porque el importe se teclea y se parsea con
+    /// `AmountInputHelper.parseDecimal`, que respeta el separador decimal de la locale.
+    @State private var showBudgetEditor: Bool = false
+    @State private var budgetInput: String = ""
+    @State private var showBudgetRemoveConfirm: Bool = false
+
     /// Resumen compartible («cierre del viaje»).
     @State private var showShareableSummary = false
     /// Cache de si hay algo que resumir — ver `recomputeShareableSummary()`.
@@ -244,6 +250,29 @@ struct GroupSettingsView: View {
                 Button(L10n.Common.ok) {}
             } message: {
                 Text(actionErrorMessage)
+            }
+            // Presupuesto del grupo (G14).
+            //
+            // DOS botones FIJOS y ningún `if` dentro del builder: el `actions` de un `.alert` no admite
+            // contenido dependiente del estado, y lo que rompe no es la alerta sino un flujo cualquiera
+            // de la app, en una pantalla sin relación (regla medida el 2026-09-06 en `swiftui-ds.md`,
+            // con `TransactionSuccessView` como víctima de una alerta de invitación). Por eso «quitar»
+            // NO vive aquí: tiene su propia fila, más abajo, con su confirmación.
+            .alert(L10n.Groups.Budget.title, isPresented: $showBudgetEditor) {
+                TextField(group.currencyCode, text: $budgetInput)
+                    .keyboardType(.decimalPad)
+                Button(L10n.Action.save) { saveBudgetLimitFromInput() }
+                Button(L10n.Common.cancel, role: .cancel) {}
+            } message: {
+                Text(L10n.Groups.Budget.hint(group.currencyCode))
+            }
+            .confirmationDialog(
+                L10n.Groups.Budget.removeConfirm,
+                isPresented: $showBudgetRemoveConfirm,
+                titleVisibility: .visible
+            ) {
+                Button(L10n.Groups.Budget.remove, role: .destructive) { applyBudgetLimit(nil) }
+                Button(L10n.Common.cancel, role: .cancel) {}
             }
             .confirmationDialog(
                 L10n.Groups.Settings.deleteGroupConfirm,
@@ -463,6 +492,81 @@ struct GroupSettingsView: View {
                     guard newValue.rawValue != group.defaultSplitType else { return }
                     updateMemberOption { $0.defaultSplitType = newValue.rawValue }
                 }
+
+                Divider()
+                    .padding(.leading, DS.FormRow.paddingH)
+
+                // Presupuesto del grupo (G14) — ADMIN-only, y no por criterio de la app: la policy
+                // `split_groups_update` del backend exige `is_group_admin`, así que ofrecérselo a un
+                // miembro normal sería ofrecer un cambio que el server descarta y que se quedaría solo
+                // en su teléfono. Mismo tratamiento visual que el bloque owner-only de arriba.
+                VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                    Button {
+                        budgetInput = budgetInputSeed()
+                        showBudgetEditor = true
+                    } label: {
+                        HStack(spacing: DS.Spacing.md) {
+                            Text(L10n.Groups.Budget.title)
+                                .font(DS.Typography.body)
+                                .foregroundStyle(.primary)
+
+                            Spacer()
+
+                            if let limit = group.budgetLimitAmount {
+                                AmountText(
+                                    value: limit,
+                                    currencyCode: group.currencyCode,
+                                    font: DS.Typography.body,
+                                    tint: .secondary
+                                )
+                            } else {
+                                Text(L10n.Groups.Budget.none)
+                                    .font(DS.Typography.body)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Image(systemName: "chevron.right")
+                                .font(DS.Typography.captionSmall)
+                                .foregroundStyle(.secondary)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+
+                    Text(L10n.Groups.Budget.hint(group.currencyCode))
+                        .font(DS.Typography.captionSmall)
+                        .foregroundStyle(.secondary)
+
+                    if !viewModel.isCurrentUserAdmin {
+                        Text(L10n.Groups.Budget.adminOnly)
+                            .font(DS.Typography.captionSmall)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    // «Quitar» vive AQUÍ y no dentro del alert por dos razones que se juntan: el
+                    // `actions` de un `.alert` no admite un botón condicional (ver el alert), y quitar
+                    // es destructivo — junto al de guardar invitaba a borrar sin querer.
+                    if group.budgetLimitAmount != nil {
+                        Button(role: .destructive) {
+                            showBudgetRemoveConfirm = true
+                        } label: {
+                            Text(L10n.Groups.Budget.remove)
+                                .font(DS.Typography.captionSmall)
+                                .padding(.vertical, DS.Spacing.sm)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(DS.Semantic.errorForeground)
+                    }
+                }
+                // El grupo CONGELADO se gatea igual que en el resto de Grupos (FAB, miembros, form de
+                // gasto, resumen compartible): `setBudgetLimit` llama a `validateGroupIsWritable` ANTES
+                // que al guard de admin, así que sin esto la fila se vería activa y el guardado la
+                // rechazaría — «ves algo que no funciona», que es peor que no verlo.
+                .disabled(!canEditBudget)
+                .opacity(canEditBudget ? 1 : 0.5)
+                .padding(.horizontal, DS.FormRow.paddingH)
+                .padding(.vertical, DS.FormRow.paddingV)
             }
         }
         .onAppear {
@@ -1033,6 +1137,60 @@ struct GroupSettingsView: View {
             }
         } catch {
             actionErrorMessage = error.localizedDescription
+            showActionError = true
+        }
+    }
+
+    /// Quién puede tocar el presupuesto, con el MISMO criterio que el servicio.
+    ///
+    /// `setBudgetLimit` exige árbol escribible (`validateGroupIsWritable`) **y** admin, en ese orden. La
+    /// UI tiene que pedir lo mismo o se rompe por uno de los dos lados: si pide menos, ofrece un botón
+    /// que falla; si pide más, esconde una acción legítima.
+    private var canEditBudget: Bool {
+        viewModel.isCurrentUserAdmin && !group.isMigratedFrozen
+    }
+
+    /// Texto con el que se abre el campo del presupuesto.
+    ///
+    /// SIN separador de miles a propósito: lo que se teclee se vuelve a leer con
+    /// `AmountInputHelper.parseDecimal`, y un "3.000,00" con puntos de millar es exactamente lo que hace
+    /// ambiguo el parseo entre locales (en `es-ES` el punto es millar; en `en` es decimal). Se siembra el
+    /// número pelado con el separador decimal de la locale, y sin decimales si el tope es entero.
+    private func budgetInputSeed() -> String {
+        guard let limit = group.budgetLimitAmount, limit.isFinite, limit > 0 else { return "" }
+        if limit == limit.rounded() { return String(format: "%.0f", limit) }
+        let separator = Locale.current.decimalSeparator ?? "."
+        return String(format: "%.2f", limit).replacingOccurrences(of: ".", with: separator)
+    }
+
+    /// Guarda lo que se tecleó, y NO lo interpreta como "quitar" si no se entiende.
+    ///
+    /// `AmountInputHelper.parseDecimal` devuelve `0` para lo que no sabe leer —vacío, `"abc"`, un pegado
+    /// desde otra app—, y con eso `setBudgetLimit` normalizaría a `nil`, es decir BORRARÍA el
+    /// presupuesto de todo el grupo. El usuario que abre el editor para subir el tope, lo deja en blanco
+    /// un momento y toca Guardar no está pidiendo eso; para quitarlo hay una fila propia con
+    /// confirmación. Así que aquí lo ilegible se contesta con un aviso, no con un borrado.
+    private func saveBudgetLimitFromInput() {
+        let amount = AmountInputHelper.parseDecimal(budgetInput)
+        guard amount.isFinite, amount > 0, amount < GroupService.maxBudgetLimitAmount else {
+            actionErrorMessage = L10n.Groups.Budget.invalidAmount
+            showActionError = true
+            return
+        }
+        applyBudgetLimit(amount)
+    }
+
+    /// Fija (`amount`) o quita (`nil`) el presupuesto.
+    private func applyBudgetLimit(_ amount: Double?) {
+        do {
+            try GroupService.shared.setBudgetLimit(group, amount: amount)
+            viewModel.loadData()
+        } catch {
+            // Localizado, no `error.localizedDescription`: los dos errores que este camino puede lanzar
+            // —`.adminRequired` e `.inactiveMember`— devuelven dev-strings en inglés («GroupService:
+            // Only group admins can perform this action»), y esta fila es código nuevo, así que no
+            // hereda el permiso que el resto del fichero se dio para dejarlo estar.
+            actionErrorMessage = GroupLeaveErrorLogic.classify(error).localizedMessage
             showActionError = true
         }
     }

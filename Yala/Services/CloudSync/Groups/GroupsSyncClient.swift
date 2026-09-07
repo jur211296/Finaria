@@ -2518,6 +2518,12 @@ final class GroupsSyncClient {
             if let v = wireString(f["default_split_type"]) { model.defaultSplitType = v }
             if let v = wireBool(f["is_archived"]) { model.isArchived = v }
             if let v = wireBool(f["is_hidden_for_all"]) { model.isHiddenForAll = v }
+            // G14: se lee por PRESENCIA DE LA CLAVE, no por valor no-nil, y la diferencia es el feature:
+            // `budget_limit_amount: null` significa "el admin quitó el presupuesto" y TIENE que aplicarse;
+            // la clave AUSENTE significa "este delta no habla del presupuesto" (PATCH parcial) y no se
+            // toca. Con el `if let v = wireDouble(...)` de las líneas de arriba, quitar un presupuesto no
+            // llegaría jamás a los demás miembros. Mismo molde que `note`/`subcategory_name` en applyDelta.
+            if let v = f["budget_limit_amount"] { model.budgetLimitAmount = wireDouble(v) }
             if let v = wireDate(f["created_at"]) { model.createdAt = v }
         }
         if isBorn, let model = models.first {
@@ -3012,7 +3018,15 @@ extension GroupsSyncClient {
             return .skipped(reason: "fetch-failed")
         }
         // (4) canon (nunca comparar contratos distintos — divergencia FALSA permanente).
-        guard remote.canonVersion == "c1" else {
+        // G14: `c2` desde el 2026-09-07. Lo que versiona este campo es el CONTRATO DE COLUMNAS, no el
+        // codec (que sigue siendo el c1 de `Canonc1Codec`): al entrar `budget_limit_amount` en el
+        // manifest, el root del server cambió para TODAS las filas —también las que no traen el campo,
+        // porque el canon emite `null`— y un cliente de la versión anterior compararía 11 columnas
+        // contra 12. Sin este bump eso sería una divergencia FALSA en el 100 % de los grupos, con su
+        // reset de cursores y su re-pull por sesión; con él, esos clientes caen aquí y SALTAN la
+        // verificación, que es justo para lo que existe este guard. El canal personal no necesita el
+        // truco porque manda `X-Yala-Capability-Set` y el server le poda las columnas que no conoce.
+        guard remote.canonVersion == "c2" else {
             GroupsSyncBreadcrumb.groupsMerkleSkipped(reason: "canon:\(remote.canonVersion)")
             return .skipped(reason: "canon-version-mismatch")
         }

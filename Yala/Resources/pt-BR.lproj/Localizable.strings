@@ -5621,3 +5621,54 @@
 
 /* Shareable group summary: shown when ImageRenderer returns nil. Never blame the user. */
 "groups.shareableSummary.renderFailed" = "Não conseguimos criar a imagem. Tente de novo.";
+
+/* G14: título de la sección/tarjeta del presupuesto de grupo */
+"groups.budget.title" = "Orçamento do grupo";
+
+/* G14: %@ = código de moneda del grupo */
+"groups.budget.hint" = "Um limite de gastos para o grupo todo, em %@.";
+
+/* G14: el grupo no tiene límite fijado */
+"groups.budget.none" = "Sem orçamento";
+
+/* G14: acción para fijar el límite */
+"groups.budget.set" = "Definir orçamento";
+
+/* G14: acción para borrar el límite */
+"groups.budget.remove" = "Remover orçamento";
+
+/* G14: el server exige is_group_admin */
+"groups.budget.adminOnly" = "Só um administrador pode alterar.";
+
+/* G14: %1 = gastado, %2 = tope; ambos ya formateados */
+"groups.budget.spentOfLimit" = "%1$@ de %2$@";
+
+/* G14: %@ = importe restante formateado */
+"groups.budget.remaining" = "Restam %@";
+
+/* G14: %@ = importe excedido formateado */
+"groups.budget.exceededBy" = "Passou %@";
+
+/* G14: nota del ≈ */
+"groups.budget.convertedNote" = "Inclui gastos em outras moedas, convertidos pelo câmbio de hoje.";
+
+/* G14: %@ = nombre del grupo */
+"groups.budget.alertTitle" = "Orçamento de %@";
+
+/* G14: aviso al cruzar 50 */
+"groups.budget.alertBody50" = "O grupo já gastou metade do orçamento.";
+
+/* G14: aviso al cruzar 75 */
+"groups.budget.alertBody75" = "O grupo já gastou três quartos do orçamento.";
+
+/* G14: aviso al cruzar 90 */
+"groups.budget.alertBody90" = "O grupo está prestes a esgotar o orçamento.";
+
+/* G14: aviso al cruzar 100 */
+"groups.budget.alertBody100" = "O grupo atingiu o orçamento.";
+
+/* G14: el texto tecleado no era un importe valido */
+"groups.budget.invalidAmount" = "Digite um valor maior que zero.";
+
+/* G14: confirmacion de quitar el presupuesto */
+"groups.budget.removeConfirm" = "Remover o orçamento do grupo? Ele deixa de aparecer para todos.";

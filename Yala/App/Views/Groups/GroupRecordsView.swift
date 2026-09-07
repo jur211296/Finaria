@@ -41,6 +41,11 @@ struct GroupRecordsView: View {
     /// acotar el `.refreshable` a este ScrollView y NO heredarlo por environment a los sheets del
     /// detalle (el pull espurio en el form de gasto que arregló el commit `0643525e`).
     var onRefresh: (() async -> Void)?
+    /// Presupuesto del grupo (G14). `nil` = el grupo no tiene → no se pinta la tarjeta.
+    /// Lo calcula `GroupDetailViewModel.recalculate()`, no esta vista.
+    var budgetProgress: GroupBudgetProgress?
+    /// Color del grupo, para la barra. Va como hex suelto porque esta vista no recibe el `SplitGroup`.
+    var budgetColorHex: String = "#8B5CF6"
 
     @Environment(\.yalaTheme) private var theme
     @Environment(AppPreferences.self) private var appPreferences
@@ -64,6 +69,11 @@ struct GroupRecordsView: View {
                             debtsWereConverted: debtsWereConverted,
                             onTap: onTapBalance
                         )
+                    }
+                    // Presupuesto del grupo (G14). Deliberadamente COMPACTA: la primera fila de gastos
+                    // tiene que seguir siendo alcanzable sin scroll (`GroupsSmokeUITests` la tapea así).
+                    if let budgetProgress {
+                        budgetCard(budgetProgress)
                     }
                     ForEach(groupedByDate, id: \.key) { dateString, dayItems in
                         Section {
@@ -135,6 +145,66 @@ struct GroupRecordsView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Budget Card (G14)
+
+    /// Tarjeta del presupuesto del grupo: gastado / tope, barra y lo que queda.
+    ///
+    /// El `≈` va SOLO en el gastado, que es el único número que puede llevar conversión — el tope lo
+    /// fijó un admin en la moneda del grupo y es exacto por definición. Marcar los dos diría que el tope
+    /// también es aproximado, y eso sería falso.
+    ///
+    /// El aviso de excedido va en `DS.Semantic.errorForeground` y NO en `Color.hotPink`, que es lo que
+    /// usa la barra: un color de la paleta de marca sobre tarjeta no llega al mínimo AA de 4,5 para
+    /// TEXTO (`hotPink` mide 3,77, y aquí además es `caption`), mientras que en una superficie RELLENA
+    /// —la barra— sigue siendo el correcto. El requisito es del texto, no del color.
+    private func budgetCard(_ progress: GroupBudgetProgress) -> some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+            HStack {
+                Text(L10n.Groups.Budget.title)
+                    .font(DS.Typography.caption)
+                    .foregroundStyle(.secondary)
+
+                Spacer()
+
+                Text(
+                    progress.isExceeded
+                        ? L10n.Groups.Budget.exceededBy(appPreferences.currency(
+                            progress.exceededAmount, currencyCode: progress.currencyCode))
+                        : L10n.Groups.Budget.remaining(appPreferences.currency(
+                            progress.remainingAmount, currencyCode: progress.currencyCode))
+                )
+                .font(DS.Typography.caption)
+                .foregroundStyle(progress.isExceeded ? DS.Semantic.errorForeground : Color.secondary)
+            }
+
+            Text(L10n.Groups.Budget.spentOfLimit(
+                appPreferences.currency(
+                    progress.spentAmount,
+                    currencyCode: progress.currencyCode,
+                    isEstimate: progress.isEstimate
+                ),
+                appPreferences.currency(progress.limitAmount, currencyCode: progress.currencyCode)
+            ))
+            .font(DS.Typography.headline)
+            .foregroundStyle(.primary)
+
+            BudgetProgressBar(
+                percentage: progress.percentage,
+                color: budgetColorHex,
+                isExceeded: progress.isExceeded
+            )
+
+            if progress.isEstimate {
+                Text(L10n.Groups.Budget.convertedNote)
+                    .font(DS.Typography.captionSmall)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .panelCard()
+        .accessibilityIdentifier("group_budget_card")
     }
 
     // MARK: - Expense Row

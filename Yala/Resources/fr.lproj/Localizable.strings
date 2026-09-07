@@ -5622,3 +5622,54 @@
 
 /* Shareable group summary: shown when ImageRenderer returns nil. Never blame the user. */
 "groups.shareableSummary.renderFailed" = "Impossible de créer l'image. Réessaie.";
+
+/* G14: título de la sección/tarjeta del presupuesto de grupo */
+"groups.budget.title" = "Budget du groupe";
+
+/* G14: %@ = código de moneda del grupo */
+"groups.budget.hint" = "Un plafond de dépenses pour tout le groupe, en %@.";
+
+/* G14: el grupo no tiene límite fijado */
+"groups.budget.none" = "Aucun budget";
+
+/* G14: acción para fijar el límite */
+"groups.budget.set" = "Définir un budget";
+
+/* G14: acción para borrar el límite */
+"groups.budget.remove" = "Supprimer le budget";
+
+/* G14: el server exige is_group_admin */
+"groups.budget.adminOnly" = "Seul un administrateur peut le modifier.";
+
+/* G14: %1 = gastado, %2 = tope; ambos ya formateados */
+"groups.budget.spentOfLimit" = "%1$@ sur %2$@";
+
+/* G14: %@ = importe restante formateado */
+"groups.budget.remaining" = "Reste %@";
+
+/* G14: %@ = importe excedido formateado */
+"groups.budget.exceededBy" = "Dépassement de %@";
+
+/* G14: nota del ≈ */
+"groups.budget.convertedNote" = "Inclut les dépenses dans d'autres devises, converties au taux du jour.";
+
+/* G14: %@ = nombre del grupo */
+"groups.budget.alertTitle" = "Budget de %@";
+
+/* G14: aviso al cruzar 50 */
+"groups.budget.alertBody50" = "Le groupe a dépensé la moitié de son budget.";
+
+/* G14: aviso al cruzar 75 */
+"groups.budget.alertBody75" = "Le groupe a dépensé les trois quarts de son budget.";
+
+/* G14: aviso al cruzar 90 */
+"groups.budget.alertBody90" = "Le groupe est sur le point d'épuiser son budget.";
+
+/* G14: aviso al cruzar 100 */
+"groups.budget.alertBody100" = "Le groupe a atteint son budget.";
+
+/* G14: el texto tecleado no era un importe valido */
+"groups.budget.invalidAmount" = "Saisis un montant supérieur à zéro.";
+
+/* G14: confirmacion de quitar el presupuesto */
+"groups.budget.removeConfirm" = "Supprimer le budget du groupe ? Il disparaîtra pour tout le monde.";

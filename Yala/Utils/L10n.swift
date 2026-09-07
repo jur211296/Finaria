@@ -1960,6 +1960,48 @@ enum L10n {
             static var membersCanInviteHint: String { ls("groups.form.membersCanInviteHint", comment: "") }
         }
 
+        /// Presupuesto del grupo (G14): UN límite por grupo, expresado en `SplitGroup.currencyCode`.
+        enum Budget {
+            static var title: String { ls("groups.budget.title", comment: "") }
+            /// `%@` = código de moneda del grupo (el límite no tiene moneda propia).
+            static func hint(_ currencyCode: String) -> String {
+                String(format: ls("groups.budget.hint", comment: ""), currencyCode)
+            }
+            static var none: String { ls("groups.budget.none", comment: "") }
+            static var set: String { ls("groups.budget.set", comment: "") }
+            static var remove: String { ls("groups.budget.remove", comment: "") }
+            static var adminOnly: String { ls("groups.budget.adminOnly", comment: "") }
+            static var invalidAmount: String { ls("groups.budget.invalidAmount", comment: "") }
+            static var removeConfirm: String { ls("groups.budget.removeConfirm", comment: "") }
+            /// `%1$@` = gastado, `%2$@` = tope. Ambos llegan YA formateados como importe (y el gastado
+            /// puede traer el `≈` si hubo conversión), así que aquí no se formatea ningún número.
+            static func spentOfLimit(_ spent: String, _ limit: String) -> String {
+                String(format: ls("groups.budget.spentOfLimit", comment: ""), spent, limit)
+            }
+            static func remaining(_ amount: String) -> String {
+                String(format: ls("groups.budget.remaining", comment: ""), amount)
+            }
+            static func exceededBy(_ amount: String) -> String {
+                String(format: ls("groups.budget.exceededBy", comment: ""), amount)
+            }
+            static var convertedNote: String { ls("groups.budget.convertedNote", comment: "") }
+            /// `%@` = nombre del grupo.
+            static func alertTitle(_ groupName: String) -> String {
+                String(format: ls("groups.budget.alertTitle", comment: ""), groupName)
+            }
+            /// Cuerpo del aviso por umbral cruzado. Devuelve `nil` para un umbral sin copy propio: quien
+            /// llama no debe inventarse un texto genérico ni mandar la key cruda.
+            static func alertBody(threshold: Int) -> String? {
+                switch threshold {
+                case 50: return ls("groups.budget.alertBody50", comment: "")
+                case 75: return ls("groups.budget.alertBody75", comment: "")
+                case 90: return ls("groups.budget.alertBody90", comment: "")
+                case 100: return ls("groups.budget.alertBody100", comment: "")
+                default: return nil
+                }
+            }
+        }
+
         enum Settings {
             static var title: String { ls("groups.settings.title", comment: "") }
             static var members: String { ls("groups.settings.members", comment: "") }

@@ -636,7 +636,7 @@ select md5(pg_get_functiondef('public.groups_pull_rows_split_settlements(text, b
 -- md5s esperados (aplicadas 2026-07-16, migraciones g7_01_encrypt_groups_columns + g7_02_encrypt_groups_cutover;
 -- recrypt corrido ×2 [corpus: 336 names, 592 display_names, 239+59+3 amounts, 186+45+0 notes/descr; belt m12 en 0];
 -- roundtrip verificado 239/239 pre-cutover):
---   apply_group_delta                    8de5f51dcef93d6f83f78d075816fddc
+--   apply_group_delta                    61c38595cdd8b7b0ab043437f49a7f2c
 --   create_group                         3f2deb9df1eebdd2007fbb3cd79430b6
 --   join_group                           059fae41dd79944a1326e3f5a56aab52
 --   groups_forget_user                   22c36f83da343a53d2e53cd8f02005e8
@@ -644,7 +644,7 @@ select md5(pg_get_functiondef('public.groups_pull_rows_split_settlements(text, b
 --   migrate_group                        4a365198b45c5a1da52f055f417cb5d2
 --   yala_try_decrypt                     4d366c7219d0b22ae25493140e559eea
 --   yala_logging_settings                0cfd11692b7cb9ea08d591a16758032a
---   groups_pull_rows_split_groups        88179f041d193c4158a0c532febe3f44
+--   groups_pull_rows_split_groups        2cac864c6b67ab6da941601e8e53cf2c
 --   groups_pull_rows_group_members       485dff02cffd237caaf96266918c1fd6
 --   groups_pull_rows_split_expenses      b38c3e3c68f7fc49e7c30f0586fef21d
 --   groups_pull_rows_split_shares        33edd4f26580ac66e62736403d35de15
@@ -1554,3 +1554,42 @@ quiescencia bajo un import concurrente.
 (pendiente del owner: `deploy:staging` → `deploy:production`). La función `public.migrate_group` **sigue
 existiendo a propósito** en ambos envs: NO se dropea, y el §4 del DDL, los «33/33» y los md5 de arriba siguen
 siendo verdad. Sus goldens G6 se retiraron con la Fase 1; el fixture de G10 nº2 se re-sembró sin ella.
+
+## g14_01 — presupuesto de grupo: UN límite por grupo (2026-09-07)
+
+**Aplicada en PRODUCCIÓN** el 2026-09-07. **Pendiente en staging**, que arrastra ya TRES: g13_04,
+g13_05 y ésta. El bloqueo es el mismo desde el 4-sep — no hay credencial de DDL de staging (el conector
+MCP solo lista producción, `~/Secrets/yala-supabase-test/` trae usuarios y llave de cifrado, no admin).
+Se cierran aplicando los tres `.sql` en orden.
+
+Qué añade: `split_groups.budget_limit_amount`, columna **† cifrada** (`bytea`, pgcrypto, patrón G7)
+con el tope de gasto del grupo, expresado en su `currency_code` ya existente. Toca dos RPCs:
+`apply_group_delta` (la columna entra en la lista de †, y la normalización de escala deja de estar atada
+al nombre literal `'amount'`) y `groups_pull_rows_split_groups` (la sirve descifrada, al final del
+`returns table`).
+
+**md5 nuevos** (`md5(pg_get_functiondef(…))`, el mismo baremo que la tabla de paridad de arriba, que ya
+está actualizada):
+
+```
+--   apply_group_delta                    61c38595cdd8b7b0ab043437f49a7f2c
+--   groups_pull_rows_split_groups        2cac864c6b67ab6da941601e8e53cf2c
+```
+
+**Lo que hay que saber antes de aplicarla en staging:**
+
+1. **El orden importa y está corregido en el fichero**: la función va ANTES que la columna. Con la
+   columna creada y la función vieja, un push de `budget_limit_amount` la mete por
+   `jsonb_populate_record` en una columna `bytea`, y `byteain` en formato escape acepta texto arbitrario
+   **sin error** ⇒ el importe queda EN CLARO dentro de la columna cifrada, `yala_try_decrypt` falla
+   después y el presupuesto desaparece para todo el grupo. Con el orden correcto, el estado intermedio
+   falla ruidoso (`42703`). En producción se aplicó con el orden inverso y salió bien; el fichero se
+   reordenó al detectarlo, y el estado de llegada es idéntico (verificado por md5).
+2. **`g7_02_encrypt_groups_cutover.sql` sigue en el repo y recrea `apply_group_delta` con
+   `array['name']`.** Re-aplicarlo sobre un esquema post-G14 reabre esa puerta sin ningún aviso.
+3. **La migración es auto-verificada**: comprueba el md5 de partida y el de llegada, y aborta la
+   transacción entera si no cuadran. No es idempotente a propósito — una segunda pasada aborta con el
+   md5 de llegada en el mensaje.
+4. **El manifest sube a `canon_version: c2`**, y eso es coordinación de despliegue, no SQL: ver la nota
+   del PR. Un cliente con el contrato viejo hablando con un gateway nuevo **salta** la verificación
+   Merkle (guard de canon) en vez de reportar una divergencia falsa en todos sus grupos.

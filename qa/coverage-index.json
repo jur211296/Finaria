@@ -1160,6 +1160,22 @@
       "lastVerified": "2026-09-07"
     },
     {
+      "area": "groups-budget",
+      "codeGlobs": [
+        "Yala/App/Logic/GroupBudgetLogic.swift",
+        "Yala/Services/Groups/GroupBudgetAlertService.swift",
+        "Yala/Services/Groups/GroupBudgetAlertTracker.swift",
+        "Yala/App/Views/Groups/GroupRecordsView.swift",
+        "Yala/App/Views/Groups/GroupSettingsView.swift",
+        "Yala/Services/Groups/GroupService.swift"
+      ],
+      "scenarioIDs": [],
+      "classification": "manual",
+      "coverage": "unit:YalaTests/GroupBudgetLogicTests,GroupBudgetAlertTrackerTests (34 casos, 6 suites, verde 2026-09-07) + 3 casos de wire en YalaTests/CloudSync/GroupsSyncClientTests (applyGroupMeta_budgetLimitNull_borraElValorLocal, applyGroupMeta_sinLaClave_noTocaElPresupuesto, applyGroupMeta_budgetLimitComoStringConEscala_seLeeComoNumero). Cubren los AC pure-logic del presupuesto de grupo: que un tope ausente/cero/negativo/no-finito NO es un presupuesto (si lo fuera, la barra saldria al infinito y la alerta del 100% dispararia sola); que se suma el importe TOTAL del gasto compartido y no la porcion de nadie; la frontera del saldo de apertura (arrastra deuda previa, no es gasto del viaje); el dedup por id (un duplicado de sync inflaria la barra y dispararia un aviso por dinero que nadie gasto); la CONVERSION de divisas con su marca de aproximado, que es la decision que separa esta pantalla del resumen compartible (alli no se convierte porque el numero se congela en una imagen; aqui se recalcula al abrir, y NO convertir enseñaria un progreso falsamente bajo); que pasarse del tope no recorta el porcentaje y que lo que queda nunca es negativo; y los umbrales de aviso (se cruza al IGUALAR, orden ascendente, no repite los ya avisados, y un porcentaje no finito no dispara los cuatro de golpe). El WIRE va aparte y esta cubierto por las suites de contrato, todas verdes con la columna nueva: YalaTests/GroupsSyncClientTests/emissionParity_catalogMatchesGroupManifest_minusNonGrantable, YalaTests/GroupMerkleTests/merkleProjection_catalogMatchesGroupManifest_completeColumns y el golden cross-lenguaje fixtureProjection_payloadLeafEntityRoot_byteExact_allFiveEntities (una muestra CON presupuesto y otra sin el). Server: gateway/test/groups.goldens.test.ts 25/25 contra staging real. El DEDUP de los avisos lo pinea GroupBudgetAlertTrackerTests: el importe del tope vive DENTRO de la clave (subir el limite y volver a cruzar el 50% es un aviso legitimo, no un duplicado) y la clave usa la MISMA escala 4 que el wire, para que dos importes que el canal representa igual compartan clave en todos los telefonos. Los tres de wire pinean el contrato de PRESENCIA-DE-CLAVE del apply: el null explicito BORRA (asi se quita un presupuesto) y la clave ausente NO TOCA (PATCH parcial); sin ellos, alinear esa linea con sus diez vecinas reintroduciria el bug con la suite en verde. El borde del tope tiene su propio caso con VARIOS gastos que suman el tope exacto (915,69+53,48+30,83): en Double eso da 1000.0000000000001 y con un > pelado la tarjeta diria 'te pasaste por 0,00' en rojo. MANUAL pendiente (device-QA, no es mio: pide TestFlight y App Attest en enforce): que el limite fijado por un admin aparezca en el telefono de OTRO miembro tras el sync, que un miembro no-admin no pueda cambiarlo, y que el aviso al cruzar un umbral llegue como notificacion.",
+      "owner": "",
+      "lastVerified": "2026-09-07"
+    },
+    {
       "area": "groups-onboarding-tutorial-visual",
       "codeGlobs": [
         "Yala/App/Views/Groups/Onboarding/GroupsOnboardingView.swift",

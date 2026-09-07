@@ -5621,3 +5621,54 @@
 
 /* Shareable group summary: shown when ImageRenderer returns nil. Never blame the user. */
 "groups.shareableSummary.renderFailed" = "Das Bild konnte nicht erstellt werden. Versuch es noch einmal.";
+
+/* G14: título de la sección/tarjeta del presupuesto de grupo */
+"groups.budget.title" = "Gruppenbudget";
+
+/* G14: %@ = código de moneda del grupo */
+"groups.budget.hint" = "Eine Ausgabengrenze für die ganze Gruppe, in %@.";
+
+/* G14: el grupo no tiene límite fijado */
+"groups.budget.none" = "Kein Budget";
+
+/* G14: acción para fijar el límite */
+"groups.budget.set" = "Budget festlegen";
+
+/* G14: acción para borrar el límite */
+"groups.budget.remove" = "Budget entfernen";
+
+/* G14: el server exige is_group_admin */
+"groups.budget.adminOnly" = "Nur Admins können das ändern.";
+
+/* G14: %1 = gastado, %2 = tope; ambos ya formateados */
+"groups.budget.spentOfLimit" = "%1$@ von %2$@";
+
+/* G14: %@ = importe restante formateado */
+"groups.budget.remaining" = "Noch %@";
+
+/* G14: %@ = importe excedido formateado */
+"groups.budget.exceededBy" = "%@ darüber";
+
+/* G14: nota del ≈ */
+"groups.budget.convertedNote" = "Enthält Ausgaben in anderen Währungen, umgerechnet zum heutigen Kurs.";
+
+/* G14: %@ = nombre del grupo */
+"groups.budget.alertTitle" = "Budget von %@";
+
+/* G14: aviso al cruzar 50 */
+"groups.budget.alertBody50" = "Die Gruppe hat die Hälfte ihres Budgets ausgegeben.";
+
+/* G14: aviso al cruzar 75 */
+"groups.budget.alertBody75" = "Die Gruppe hat drei Viertel ihres Budgets ausgegeben.";
+
+/* G14: aviso al cruzar 90 */
+"groups.budget.alertBody90" = "Die Gruppe hat ihr Budget fast aufgebraucht.";
+
+/* G14: aviso al cruzar 100 */
+"groups.budget.alertBody100" = "Die Gruppe hat ihr Budget erreicht.";
+
+/* G14: el texto tecleado no era un importe valido */
+"groups.budget.invalidAmount" = "Gib einen Betrag größer als null ein.";
+
+/* G14: confirmacion de quitar el presupuesto */
+"groups.budget.removeConfirm" = "Gruppenbudget entfernen? Es wird für alle ausgeblendet.";

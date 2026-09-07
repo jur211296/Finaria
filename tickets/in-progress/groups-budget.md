@@ -1,10 +1,10 @@
 ---
 id: groups-budget
-status: backlog
+status: in-progress
 priority: medium
 area: groups
 created: 2026-07-01
-updated: 2026-09-06
+updated: 2026-09-07
 source: YalaWiki/Backlog/groups-presupuesto-de-grupo.md
 ---
 
@@ -340,3 +340,213 @@ por el backend propio, así que el coste de esquema es **DDL + RPCs de pull/push
   antes de considerarlo "solo otro campo más".
 
 migrated from YalaWiki Backlog/groups-presupuesto-de-grupo.md @ 1934e8ad
+
+## 2026-09-07 — implementado (sesión autónoma)
+
+### Lo primero: la premisa de este ticket era FALSA, y por eso el plan de arriba no se siguió
+
+Todo el bloque «⚠️ Riesgo de schema CloudKit» y su checklist de 7 pasos hablan de
+`CKConstants.RecordType`, `CKRecordTranslator`, `SplitSyncManager`, los `.ckdb` y un deploy al
+CloudKit Dashboard. **Nada de eso existe ya.** Medido en este árbol el 2026-09-07: los tres símbolos
+dan **cero ocurrencias de código** en `Yala/` (solo aparecen en comentarios stale y en la cabecera de
+`.claude/rules/swiftdata-cloudkit.md`, que ya avisa de que la Fase 3 del Modo Nube borró el
+transporte). Tampoco existe `CloudKitGroupsSchemaParityTests`, el test que ese checklist invocaba
+como red.
+
+La nota del owner del 6-sep ya lo sospechaba y pedía comprobarlo: queda **confirmado**. El coste de
+esquema es DDL + grants + dos RPCs en Postgres, y **cero** CloudKit.
+
+### Qué se construyó
+
+Un límite por grupo, en la moneda del grupo, tal como se decidió. **Un solo campo nuevo**
+(`budget_limit_amount` / `SplitGroup.budgetLimitAmount`), sin tabla ni modelo nuevos.
+
+- **Servidor** (`qa/cloud/g14_01_group_budget_limit.sql`, **aplicado en producción**): columna
+  `bytea` **cifrada** —el modelo de amenaza de G7 cifra los montos, y un tope de presupuesto lo es—,
+  su grant de UPDATE por columna, y los dos RPCs que enumeran columnas (`apply_group_delta` y
+  `groups_pull_rows_split_groups`).
+- **Wire**: `group_capability_manifest.json`, la emisión, la proyección Merkle y las fixtures golden
+  regeneradas (una muestra CON presupuesto y otra sin él, para que el golden cruce las dos ramas).
+- **App**: fijar/cambiar/quitar el límite en Ajustes del grupo (solo ADMIN), y una tarjeta con barra
+  de progreso en la pestaña de registros.
+
+### Las tres decisiones de diseño que no estaban en el ticket
+
+1. **El límite se cifra.** El ticket no lo menciona porque fue escrito antes de G7. Dejarlo en claro
+   en la misma tabla cuyo `name` está cifrado habría sido una regresión del modelo de amenaza. El
+   coste real fue una entrada en la lista de columnas † y **una trampa que destapó**: la
+   normalización de escala del cifrado estaba atada al nombre literal `'amount'`, con el comentario
+   «`'amount'` es la ÚNICA columna † numérica» — cierto hasta esta migración. Sin tocarlo,
+   `budget_limit_amount` se habría cifrado como texto crudo, sin escala; con el cliente iOS de hoy el
+   resultado habría sido byte-idéntico **por casualidad**, y un cliente que mandara `"3000"` habría
+   dejado un root de Merkle divergente permanente para ese grupo.
+
+2. **El progreso SÍ convierte divisas, y el resumen compartible NO.** Parece una incoherencia y no lo
+   es. La regla del resumen («una moneda, un bloque: los totales nunca se suman entre divisas») tiene
+   un motivo escrito: una conversión al cambio del momento **se congela en una imagen** que cada
+   miembro leería distinto según cuándo se generó. Una barra de progreso no se congela: se recalcula
+   al abrir la pantalla. Lo que sí la alcanzaría es **no** convertir — un viaje con tope en soles y
+   media cuenta en dólares enseñaría una barra falsamente baja, que es la mentira peligrosa, la que
+   deja gastar de más. Es además lo que ya hace el presupuesto PERSONAL
+   (`BudgetsViewModel.budgetAmount`, «coherente con la semántica presupuesto consumido HOY»). Cuando
+   hay conversión, el número va marcado con `≈`.
+
+3. **Fijarlo es de ADMIN, y no por criterio de la app.** La policy `split_groups_update` del backend
+   exige `is_group_admin`. Si la UI se lo ofreciera a un miembro normal, el server devolvería
+   `{"noop":true,"reason":"not_authorized_or_gone"}`, el delta se purgaría como aplicado y el cambio
+   se quedaría **solo en su teléfono**, divergiendo en silencio del resto del grupo.
+
+### Cómo se verificó (medido, no inferido)
+
+- **Migración**: sandbox transaccional contra el esquema y el motor REALES de producción, con el
+  probe previo que confirma que el `rollback` revierte. Control positivo (admin fija 3000,0000 → el
+  pull lo devuelve con la escala intacta y en disco son 75 bytes cifrados) y control negativo (un
+  miembro no-admin recibe `not_authorized_or_gone` y el valor **no cambia**), este último con su
+  propio control positivo: el mismo no-admin sobre `icon_name` —una columna vieja— recibe el mismo
+  rechazo, así que lo que protege es la RLS y no un accidente del campo nuevo. Sin rastro tras el
+  rollback: 0 filas sintéticas y los md5 de ambas funciones de vuelta a los originales.
+- **Sin drift documental**: el `.ddl` del repo y el `prosrc` de producción coinciden **byte a byte**
+  (md5 idénticos) antes y después de aplicar. Se comprobó ANTES de editar, precisamente porque así
+  nació el drift que g13_05 tuvo que cerrar.
+- **App**: 23 tests nuevos de `GroupBudgetLogic` (23/23) y 97/97 de las suites de contrato
+  —paridad emisión↔manifest, proyección Merkle↔manifest y el golden cross-lenguaje—.
+- **Server real**: `gateway/test/groups.goldens.test.ts` **25/25 contra staging**, que además mide
+  algo útil: el manifest con la columna nueva **no rompe un server que no la tiene** mientras nadie
+  fije un presupuesto. El día que alguien lo fije contra staging, fallará.
+
+### Lo que queda abierto, y de quién es
+
+1. **Device-QA de dos teléfonos** (no es mío: pide TestFlight y App Attest en `enforce`): que el
+   límite que fija un admin aparezca en el teléfono de otro miembro tras el sync, que un no-admin no
+   pueda cambiarlo, y —si se implementan los avisos— que la notificación llegue.
+2. **Staging arrastra ya TRES migraciones sin aplicar**: g13_04, g13_05 y ahora g14_01. Mismo
+   bloqueo desde el 4-sep: **no hay credencial de DDL de staging** (el conector MCP solo lista
+   producción). Es acceso de Jürgen. Producción sí está al día y verificada.
+3. **Device-QA de los avisos**, que van dentro de este mismo cambio (ver abajo) pero cuya entrega
+   real solo se puede ver en un teléfono: la notificación al cruzar 50/75/90/100 %.
+
+### Residuales conscientes
+
+- **`budget_limit_amount` no forma unidad de coherencia con `currency_code`**, aunque el límite se
+  exprese en ella. No es un olvido: el manifest es **append-only** y una columna no puede cambiar de
+  grupo después de existir, así que meter `currency_code` en una unidad nueva estaba cerrado. Efecto:
+  si dos personas cambian a la vez la moneda del grupo y el límite, el LWW puede quedarse con una de
+  cada. Cambiar la moneda de un grupo es raro y el arreglo es re-teclear el tope.
+- **La tarjeta no se pinta si el grupo no tiene ningún gasto**, porque el contenedor donde vive es la
+  rama «hay registros» de la pestaña. Con cero gastos la barra diría 0 % y el tope ya se ve en
+  Ajustes, así que no se reestructuró el estado vacío por ello.
+
+### Los avisos al cruzar un umbral (dentro de este cambio)
+
+`GroupBudgetAlertService` + `GroupBudgetAlertTracker`, con el molde de sus dos vecinos:
+`BudgetAlertService` (el del presupuesto personal) para la forma, y `GroupSettlementReminderService`
+para los gates de Grupos. Umbrales **fijos** 50/75/90/100 — la decisión fue un límite con **un** campo
+nuevo, y unos umbrales configurables por grupo habrían pedido una segunda columna que nadie pidió.
+
+Tres cosas que no son obvias y por las que se decidió así:
+
+- **No hay gate de frescura**, y su vecino de dominio sí lo tiene (espera hasta 30 s por evidencia del
+  canal). La diferencia es qué se afirma: el nudge de liquidación avisa de una **ausencia** («esta
+  deuda lleva tres semanas sin moverse»), y una ausencia medida sobre datos sin sincronizar es falsa.
+  Este avisa de una **presencia** («ya lleváis el 75 %»), y los gastos que hay en local ya son gasto
+  real. Si faltan gastos por bajar, el aviso llega **tarde**; si el límite aún no ha bajado, no hay
+  presupuesto y no avisa nada. Los dos errores posibles caen del lado seguro, así que pagar 30 s en
+  cada foreground no compraría corrección.
+- **Una sola notificación por grupo y ciclo**, la del umbral más alto. Un gasto grande puede cruzar
+  cuatro umbrales de golpe, y cuatro avisos casi idénticos son ruido. Los menores se marcan igual; el
+  más alto **solo si iOS confirmó la entrega**, así que un fallo de entrega lo deja reintentable.
+- **El importe del tope vive DENTRO de la clave de dedup.** El presupuesto personal reparte sus claves
+  por período; este no tiene períodos, tiene un tope. Cuando el tope cambia, los avisos se reabren:
+  subir de 3.000 a 6.000 y volver a cruzar el 50 % es un aviso legítimo, no un duplicado — y bajarlo a
+  3.000 con el grupo ya al 80 % avisa en el acto, que es justo lo que hay que decirle a quien acaba de
+  recortar. La clave usa la **misma escala 4 que el wire**, para que dos importes que el canal
+  representa igual compartan clave en todos los teléfonos del grupo.
+
+Reusa el toggle de avisos de presupuesto que ya existe (`budgetAlertsEnabled`) y el maestro de
+notificaciones de Grupos, en vez de inventar un ajuste nuevo. Un grupo archivado, oculto o congelado
+no avisa. Las claves del tracker se barren en `DataWipeService` por prefijo, como las de su vecino.
+
+## La review adversarial cambió el cambio, y en un sitio evitó romper la app
+
+Cuatro lentes independientes (contrato de sync · cálculo financiero · migración y servidor · UI, permisos
+y l10n). **Ninguna dio el visto bueno tal cual**, y lo que encontraron no fueron descuidos de tecleo: casi
+todo eran decisiones mías defendibles que resultaron estar mal.
+
+### Lo que estaba a punto de romper otra cosa
+
+**El `.alert` con un botón condicional.** El editor del tope tenía `if group.budgetLimitAmount != nil {
+Button("Quitar") }` dentro del `actions` builder. `.claude/rules/swiftui-ds.md` tiene medido —el 6-sep,
+bisecando— que un `actions` con contenido dependiente del estado **no rompe la alerta: rompe la app**, en
+una pantalla sin relación (aquel caso dejó de completarse el guardado de una transacción, y el rojo salió
+en `QuickActionsFavoritesUITests`). Dos botones fijos ahora, y «quitar» se mudó a su propia fila con
+confirmación — que además es mejor: era destructivo y estaba pegado a «guardar».
+
+### Los dos que habrían llegado a producción sin que nadie los relacionara con esto
+
+**El Merkle de TODO el parque.** Añadir una columna al manifest de Grupos cambia el root de **todas** las
+filas —el canon emite `null` para las que no la traen—, y el canal de Grupos, a diferencia del personal,
+**no manda `X-Yala-Capability-Set`**, así que el server no puede podar por versión. Un cliente con el
+contrato anterior habría calculado un root distinto en el 100 % de sus grupos: divergencia falsa,
+canario quemado y `resetGroupCursors` + re-pull completo una vez por sesión — el reset que la regla L151
+declara dañino por tres vías. Es **la primera columna que se añade a ese manifest desde que existe**, así
+que el precio no lo había pagado nadie todavía. Mitigado subiendo `canon_version` a `c2`: esos clientes
+caen en el guard de canon y **saltan** la verificación en vez de remediar algo que no está roto. El
+arreglo estructural (portar el capability-set) queda en `groups-canal-sin-capability-set`.
+
+**Un tope de 15 dígitos se perdía en silencio.** `Canonc1Codec.decimalFixed` lanza a partir de 1e14, y
+quien traga ese throw es `appendUpsert`, que devuelve `nil` y **no crea la fila de outbox** (su log vive
+bajo `#if DEBUG`). El tope se guardaba en local, no salía del teléfono sin dejar rastro en Release, y el
+Merkle local saltaba esa fila dejando el grupo en divergencia permanente. Ahora hay cota
+(`GroupService.maxBudgetLimitAmount`) y el formulario lo rebota.
+
+### Y los que eran defectos míos, sin más
+
+- **«Te pasaste por S/ 0,00», en rojo.** `isExceeded` comparaba `Double` con `>` estricto sobre una suma
+  de importes de dos decimales. `915,69 + 53,48 + 30,83` son 1.000,00 exactos y `1000.0000000000001` en
+  coma flotante: en un barrido de repartos de 1.000 en 3-8 importes, **el 16,5 %** cruzaba el `>` por el
+  último bit. Peor: mi test del borde usaba **un solo gasto de 1000**, el único caso donde el `>` y el
+  `>=` decimal coinciden trivialmente — el test decía proteger justo lo que no podía ver.
+- **Guardar con el campo vacío borraba el presupuesto de todo el grupo, sin avisar.**
+  `AmountInputHelper.parseDecimal` devuelve `0` para lo que no sabe leer, y mi `setBudgetLimit`
+  normalizaba `0` a «sin presupuesto». Abrir el editor para subir el tope, borrar el campo para
+  reteclear y tocar Guardar lo quitaba para todos. Ahora lo ilegible se contesta con un aviso.
+- **La fila no gateaba el grupo CONGELADO**, y el servicio sí: fila activa, guardado rechazado. Es
+  literalmente lo que `GroupExpenseService` documenta como «ves algo que no funciona, que es peor que no
+  verlo».
+- **Los errores salían en inglés de desarrollador** (`GroupService: Only group admins…`) en los 16
+  idiomas. El fichero se había dado permiso para dejarlo estar en cuatro acciones viejas «porque no las
+  nombra este cambio»; ésta sí la nombra.
+- **`Color.hotPink` como TEXTO sobre tarjeta**: contraste 3,77 contra el mínimo AA de 4,5, y encima en
+  `caption`, para el único aviso de que te has pasado. En la barra —superficie rellena— sigue siendo
+  correcto; el requisito es del texto.
+- **El aviso miraba hacia atrás.** Sin línea base, reinstalar la app hacía sonar «llegasteis al
+  presupuesto» por un viaje cerrado hace meses, y ponerle hoy un tope a un grupo con año y medio de
+  gastos disparaba los cuatro umbrales de golpe. Ahora la primera vez que se ve un par (grupo, tope) se
+  siembra lo ya cruzado **sin avisar**.
+- **Archivar un grupo le borraba la memoria de avisos** y desarchivarlo volvía a anunciar lo mismo.
+- **El golden del Merkle no ejercitaba el camino real**: emitía el importe como número JS mientras
+  producción sirve **texto** (la columna es † y `yala_try_decrypt` devuelve `text`). Con 3000 coincide
+  por casualidad — el mismo «byte-idéntico por accidente» que esta columna ya había destapado en el
+  servidor, reintroducido en el test.
+- **El orden de la migración.** Con la columna creada y la función vieja, un push metía el importe **en
+  claro** dentro de la columna cifrada (`byteain` en formato escape acepta texto arbitrario sin error) y
+  después `yala_try_decrypt` fallaba y el presupuesto desaparecía para el grupo. Producción se aplicó en
+  ese orden y salió bien; el fichero va reordenado, con transacción explícita y con la firma de la
+  función fijada por `::regprocedure`.
+- **La afirmación central del cambio no tenía ni un test.** El comentario del apply decía que leer por
+  presencia-de-clave es lo que permite QUITAR un presupuesto, y nada lo pinneaba: un `/simplify` que
+  alineara esa línea con sus diez vecinas reintroducía el bug con la suite en verde. Ya hay tres.
+
+### Dos residuales que la review dejó escritos como decisión, no como imposibilidad
+
+1. **`budget_limit_amount` no forma unidad de coherencia con `currency_code`.** El argumento
+   «el manifest es append-only» cierra *mover* `currency_code` a un grupo, pero **no cerraba** una
+   columna `budget_limit_currency_code` propia — se descartó por la decisión de un solo campo. Efecto:
+   si dos admins cambian a la vez la moneda del grupo y el tope, el LWW puede quedarse con una de cada, y
+   **el Merkle no lo detecta** porque cliente y server coinciden en el estado malo. Es una puerta de un
+   solo sentido: si mañana hace falta, ya no se arregla sin romper el append-only.
+2. **El presupuesto cuenta TODO el historial del grupo**, no desde que se fijó. El AC original pedía una
+   «fecha de inicio» y la decisión del 6-sep no la menciona; añadirla sería un segundo campo. Ponerle hoy
+   un tope a un grupo viejo abre la barra ya excedida — coherente con el resumen compartible, que también
+   cubre todo el historial por decisión tuya, pero conviene saberlo. Los AVISOS sí están protegidos por
+   la línea base.

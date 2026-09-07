@@ -36,6 +36,11 @@ final class GroupDetailViewModel {
     private(set) var balances: [MemberBalance] = []
     private(set) var debts: [Debt] = []
 
+    /// Progreso del presupuesto del grupo (G14), o `nil` si el grupo no tiene uno. Se recalcula en
+    /// `recalculate()` como todo lo derivado, y no en la vista: `GroupBudgetLogic` deduplica y convierte
+    /// divisas, y hacerlo en cada `body` lo repetiría en cada scroll.
+    private(set) var budgetProgress: GroupBudgetProgress?
+
     /// `true` tras el primer `fetchData()` con éxito. Mientras es `false` el detalle muestra un
     /// skeleton en vez de contenido a medio poblar (espejo de `GroupsViewModel.hasLoadedOnce`).
     private(set) var isReady: Bool = false
@@ -274,6 +279,12 @@ final class GroupDetailViewModel {
 
         if newBalances != balances { balances = newBalances }
         if newDebts != debts { debts = newDebts }
+
+        // Presupuesto del grupo (G14). Va aquí y no en la vista porque `progress` deduplica y convierte
+        // divisas; recalcularlo en cada `body` lo repetiría en cada scroll. Guard de igualdad como el
+        // resto: sin él, un recálculo que no cambia nada seguiría invalidando la vista.
+        let newBudget = GroupBudgetLogic.progress(group: group, expenses: expenses)
+        if newBudget != budgetProgress { budgetProgress = newBudget }
     }
 
     /// Prefetch TX bridge personal por `splitExpenseID` filtrado a la zona del grupo +

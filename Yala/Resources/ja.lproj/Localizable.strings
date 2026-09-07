@@ -5633,3 +5633,54 @@
 
 /* Shareable group summary: shown when ImageRenderer returns nil. Never blame the user. */
 "groups.shareableSummary.renderFailed" = "画像を作成できませんでした。もう一度お試しください。";
+
+/* G14: título de la sección/tarjeta del presupuesto de grupo */
+"groups.budget.title" = "グループの予算";
+
+/* G14: %@ = código de moneda del grupo */
+"groups.budget.hint" = "グループ全体の支出上限（%@）。";
+
+/* G14: el grupo no tiene límite fijado */
+"groups.budget.none" = "予算なし";
+
+/* G14: acción para fijar el límite */
+"groups.budget.set" = "予算を設定";
+
+/* G14: acción para borrar el límite */
+"groups.budget.remove" = "予算を削除";
+
+/* G14: el server exige is_group_admin */
+"groups.budget.adminOnly" = "変更できるのは管理者のみです。";
+
+/* G14: %1 = gastado, %2 = tope; ambos ya formateados */
+"groups.budget.spentOfLimit" = "%2$@中%1$@";
+
+/* G14: %@ = importe restante formateado */
+"groups.budget.remaining" = "残り%@";
+
+/* G14: %@ = importe excedido formateado */
+"groups.budget.exceededBy" = "%@超過";
+
+/* G14: nota del ≈ */
+"groups.budget.convertedNote" = "他通貨の支出を本日のレートで換算して含みます。";
+
+/* G14: %@ = nombre del grupo */
+"groups.budget.alertTitle" = "%@の予算";
+
+/* G14: aviso al cruzar 50 */
+"groups.budget.alertBody50" = "グループは予算の半分を使いました。";
+
+/* G14: aviso al cruzar 75 */
+"groups.budget.alertBody75" = "グループは予算の4分の3を使いました。";
+
+/* G14: aviso al cruzar 90 */
+"groups.budget.alertBody90" = "グループの予算がまもなく尽きます。";
+
+/* G14: aviso al cruzar 100 */
+"groups.budget.alertBody100" = "グループが予算に達しました。";
+
+/* G14: el texto tecleado no era un importe valido */
+"groups.budget.invalidAmount" = "0より大きい金額を入力してください。";
+
+/* G14: confirmacion de quitar el presupuesto */
+"groups.budget.removeConfirm" = "グループの予算を削除しますか？全員に表示されなくなります。";

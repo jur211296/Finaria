@@ -2581,6 +2581,14 @@ final class AppBootstrapper {
             SettlementReminderTracker.shared.cleanupOldEntries()
         }
 
+        // Presupuesto de grupo: aviso al cruzar 50/75/90/100 % (G14).
+        //
+        // Con `await` en línea, como sus vecinos de presupuesto y NO como el nudge de liquidación de
+        // arriba: este chequeo no espera evidencia del canal (avisa de una presencia, no de una
+        // ausencia — ver la cabecera del servicio), así que no retrasa `lastNotificationCheckDate`.
+        GroupBudgetAlertService.shared.setContext(context)
+        await GroupBudgetAlertService.shared.checkGroupBudgetsAndNotify()
+
         lastNotificationCheckDate = Date.now
     }
 

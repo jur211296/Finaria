@@ -147,6 +147,13 @@ enum GroupEntityEmissionMap {
             ColumnEmitter("default_split_type") { m, _ in .string(m.defaultSplitType) },
             ColumnEmitter("is_archived") { m, _ in .bool(m.isArchived) },
             ColumnEmitter("is_hidden_for_all") { m, _ in .bool(m.isHiddenForAll) },
+            // G14: el límite del presupuesto del grupo. `Emit.money` da `.null` cuando es nil, y ese null
+            // VIAJA a propósito — es como se quita un presupuesto (el server lo cifra solo si no es null).
+            // Sin `group: ` a propósito: su unidad de coherencia es la propia columna, así que fijar el
+            // límite no arrastra el resto de la meta por LWW. NO se agrupa con `currency_code` aunque el
+            // límite se exprese en ella: el manifest es append-only y una columna no puede cambiar de
+            // grupo después de existir (residual documentado en el ticket).
+            ColumnEmitter("budget_limit_amount") { m, _ in Emit.money(m.budgetLimitAmount) },
             // created_at NO se emite: el column-grant del server (supabase-groups-staging.ddl, hallazgo #1
             // de G1) lo excluye del UPDATE de split_groups — emitirlo haría 42501 → rechazo del delta ENTERO
             // de meta. El manifest lo conserva solo para la proyección del PULL (applyGroupMeta sí lo lee).
@@ -162,6 +169,7 @@ enum GroupEntityEmissionMap {
             \SplitGroup.defaultSplitType: ["default_split_type"],
             \SplitGroup.isArchived: ["is_archived"],
             \SplitGroup.isHiddenForAll: ["is_hidden_for_all"],
+            \SplitGroup.budgetLimitAmount: ["budget_limit_amount"],
         ]
     )
 

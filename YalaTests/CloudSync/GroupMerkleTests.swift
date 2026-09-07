@@ -71,7 +71,10 @@ struct GroupMerkleTests {
                             entities: [String: (Int, String)]) -> String {
         let ents = entities.map { "\"\($0.key)\":{\"count\":\($0.value.0),\"hash\":\"\($0.value.1)\"}" }
             .joined(separator: ",")
-        return "{\"canon_version\":\"c1\",\"group_id\":\"g\",\"root\":\"\(root)\",\"entities\":{\(ents)},\"channel2_root\":\"\(channel2)\"}"
+        // G14: `c2` — el contrato de columnas de `split_groups` cambió al entrar `budget_limit_amount`.
+        // El guard de canon es lo que hace que un cliente con el contrato viejo SALTE la verificación en
+        // vez de reportar una divergencia falsa; estos fixtures hablan el contrato de HOY.
+        return "{\"canon_version\":\"c2\",\"group_id\":\"g\",\"root\":\"\(root)\",\"entities\":{\(ents)},\"channel2_root\":\"\(channel2)\"}"
     }
 
     // MARK: - Fixtures (groups_merkle_fixtures.json — oráculo del server)
@@ -145,6 +148,9 @@ struct GroupMerkleTests {
         g.defaultSplitType = str(m, "default_split_type") ?? ""
         g.isArchived = bool(m, "is_archived")
         g.isHiddenForAll = bool(m, "is_hidden_for_all")
+        // G14: opcional a propósito — una muestra lo trae y la otra no, así el golden cruza las dos
+        // ramas de `Emit.money` (valor con escala 4 vs `.null`).
+        g.budgetLimitAmount = (m["budget_limit_amount"] as? NSNumber)?.doubleValue
         g.createdAt = dateForMillis(ms(m, "created_at_ms"))
         return g
     }
@@ -259,7 +265,7 @@ struct GroupMerkleTests {
         let client = GroupsMerkleClient(tokenProvider: { "jwt" }, urlSession: StubSession(json))
         let outcome = await client.fetchMerkle(groupID: "SplitGroup-A")
         guard case .snapshot(let remote) = outcome else { Issue.record("esperaba snapshot, got \(outcome)"); return }
-        #expect(remote.canonVersion == "c1")
+        #expect(remote.canonVersion == "c2")
         #expect(remote.root == "abc")
         #expect(remote.channel2Root == "def")
         #expect(remote.entities["split_groups"]?.count == 0)

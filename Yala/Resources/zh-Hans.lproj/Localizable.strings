@@ -5633,3 +5633,54 @@
 
 /* Shareable group summary: shown when ImageRenderer returns nil. Never blame the user. */
 "groups.shareableSummary.renderFailed" = "图片生成失败，请再试一次。";
+
+/* G14: título de la sección/tarjeta del presupuesto de grupo */
+"groups.budget.title" = "群组预算";
+
+/* G14: %@ = código de moneda del grupo */
+"groups.budget.hint" = "整个群组的支出上限，以 %@ 计。";
+
+/* G14: el grupo no tiene límite fijado */
+"groups.budget.none" = "未设预算";
+
+/* G14: acción para fijar el límite */
+"groups.budget.set" = "设置预算";
+
+/* G14: acción para borrar el límite */
+"groups.budget.remove" = "删除预算";
+
+/* G14: el server exige is_group_admin */
+"groups.budget.adminOnly" = "只有管理员可以更改。";
+
+/* G14: %1 = gastado, %2 = tope; ambos ya formateados */
+"groups.budget.spentOfLimit" = "%1$@ / %2$@";
+
+/* G14: %@ = importe restante formateado */
+"groups.budget.remaining" = "剩余 %@";
+
+/* G14: %@ = importe excedido formateado */
+"groups.budget.exceededBy" = "超出 %@";
+
+/* G14: nota del ≈ */
+"groups.budget.convertedNote" = "包含其他币种的支出，按今日汇率折算。";
+
+/* G14: %@ = nombre del grupo */
+"groups.budget.alertTitle" = "%@ 的预算";
+
+/* G14: aviso al cruzar 50 */
+"groups.budget.alertBody50" = "群组已用掉一半预算。";
+
+/* G14: aviso al cruzar 75 */
+"groups.budget.alertBody75" = "群组已用掉四分之三的预算。";
+
+/* G14: aviso al cruzar 90 */
+"groups.budget.alertBody90" = "群组的预算即将用完。";
+
+/* G14: aviso al cruzar 100 */
+"groups.budget.alertBody100" = "群组已达到预算上限。";
+
+/* G14: el texto tecleado no era un importe valido */
+"groups.budget.invalidAmount" = "请输入大于零的金额。";
+
+/* G14: confirmacion de quitar el presupuesto */
+"groups.budget.removeConfirm" = "删除群组预算？所有人都将不再看到它。";

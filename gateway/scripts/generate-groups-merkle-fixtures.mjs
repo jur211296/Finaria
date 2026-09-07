@@ -140,6 +140,9 @@ const SAMPLES = {
         name: "Viaje ✈️ 2026", icon_name: "airplane", color_hex: "#112233", currency_code: "USD",
         simplify_debts: false, show_debts_in_single_currency: true, members_can_invite: false,
         default_split_type: "percentage", is_archived: true, is_hidden_for_all: false, created_at_ms: T_MS_C,
+        // G14: con presupuesto. La otra muestra lo deja ausente (→ null) a propósito: el golden cubre
+        // los dos caminos del campo opcional, con valor y sin él.
+        budget_limit_amount: 3000,
       },
     },
   ],
@@ -190,7 +193,13 @@ function toDbRow(entity, m) {
         name: m.name, icon_name: m.icon_name, color_hex: m.color_hex, currency_code: m.currency_code,
         simplify_debts: m.simplify_debts, show_debts_in_single_currency: m.show_debts_in_single_currency,
         members_can_invite: m.members_can_invite, default_split_type: m.default_split_type,
-        is_archived: m.is_archived, is_hidden_for_all: m.is_hidden_for_all, created_at: isoOrNull(m.created_at_ms),
+        is_archived: m.is_archived, is_hidden_for_all: m.is_hidden_for_all,
+        // Como los demás montos: TEXTO de escala fija, que es lo que el reader devuelve de verdad
+        // (`yala_try_decrypt` sobre la columna † cifrada da text, no numeric). Emitirlo como número JS
+        // haría que el golden pinneara la rama `double` del canon mientras producción corre la rama
+        // `string` — el mismo "byte-idéntico por casualidad" que esta columna ya destapó en el servidor.
+        budget_limit_amount: m.budget_limit_amount == null ? null : moneyText(m.budget_limit_amount),
+        created_at: isoOrNull(m.created_at_ms),
       };
     case "group_members":
       return {
