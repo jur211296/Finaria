@@ -53,6 +53,22 @@ sitio** en vez de dos copias que pueden separarse.
 de la traducción mecánica `X != nil` → `!Xs.isEmpty`: es correcta en el caso que estás mirando y
 puede no serlo en el modo de al lado.
 
+**Tercer mecanismo, y el más barato de cometer, medido el 2026-09-07 en `fx-pnl-education-card`:
+cito un precedente del repo y copio sólo la mitad que confirma lo que ya iba a hacer.** Al ver que
+`amountInPreferredCurrency` podía venir sellado contra otra moneda preferida, escribí un guard que
+**descartaba** esas transacciones, y en el comentario cité once calculadores del repo como aval
+(`BalanceHelper:46`, `CashFlowCalculator:90`). Los once tienen un `else` **que reconvierte**: me
+quedé con el `if` y tiré el `else`. El comentario sonaba a medición y era una lectura a medias.
+
+Y el arreglo repetía la forma del bug que arreglaba: el bug de fondo era «una muestra sesgada
+produce un número plausible y falso», y descartar transacciones sesga la muestra **justo hacia las
+más antiguas o llegadas de otro dispositivo** — es decir, hacia otro momento del tipo de cambio.
+
+⇒ **Cuando cites un precedente para justificar una decisión, ábrelo y léelo entero.** Un `if` sin su
+`else` es media regla, y la mitad que falta suele ser la que te contradice. Si el comentario dice
+«como hacen los N sitios del repo», ese comentario es una afirmación verificable: mídela.
+
+
 Relacionado: [[mis-mediciones-fallan-por-el-filtro]] (el control positivo también va en los greps de
 auditoría) · [[la-premisa-del-encargo-tambien-se-mide]] (medir la premisa ajena; ésta es su gemela,
 medir la propia) · [[mutante-compilado-zanja-hipotesis]] (cómo comprobar que el test del fix

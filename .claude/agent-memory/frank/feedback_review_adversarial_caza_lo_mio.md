@@ -25,6 +25,20 @@ de outbox y su log vive bajo `#if DEBUG`), y añadir una columna al manifest de 
 divergencia falsa al parque entero. ⇒ **con cuatro lentes, dos convergieron en el hallazgo más grave y
 ninguna de las otras dos lo vio**: el reparto por especialidad no es redundancia, es cobertura.
 
+**2026-09-07, `fx-pnl-education-card`: tres lentes, diez defectos, todos míos — y dos cambiaban el
+SIGNO del número.** No la magnitud: el signo. La tarjeta anunciaba ganancia a quien había perdido,
+por dos vías independientes (un gasto arrastrando el coste de entrada, y un traspaso entre cuentas
+propias contando como compra). El cálculo se reescribió entero a media sesión.
+
+**Y aquí las lentes CONVERGIERON en vez de contradecirse, que es la señal contraria a
+[[lentes-adversariales-se-contradicen]] y hay que saber leerla:** dos lentes distintas, con encargos
+distintos (una de corrección aritmética, otra de coherencia entre superficies), llegaron al MISMO
+defecto de fondo por caminos distintos y con escenarios numéricos distintos. Cuando eso pasa, no es
+redundancia ni casualidad: es que el defecto está en el **diseño**, no en una línea. Un hallazgo que
+sólo ve una lente puede ser su especialidad; uno que ven dos por rutas distintas es estructural, y
+la respuesta correcta suele ser rediseñar, no parchear.
+
+
 **El patrón que más se repite en lo que cazan, y ya van tres sesiones: mi TEST del borde elige el
 fixture que no puede fallar.** Aquí `gastarJustoElTopeNoEsPasarse` usaba UN gasto de 1000 — el único
 caso donde el `>` de `Double` y el `>=` decimal coinciden trivialmente. Con tres importes que suman
