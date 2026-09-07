@@ -5,36 +5,37 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-07 (Lima)
 
-**Rama** `2.1` · HEAD `73e060c1` — el Panel ya suma las cuentas que filtraste, no una de ellas.
+**Rama** `2.1` · HEAD `b7849a64` — con la nube en pausa lo decimos, y volver a tu cuenta ya no pide
+reiniciar.
 TestFlight build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.** `yala-app.pe` sirve la web
 nueva.
 
 ## Esta sesión, en una línea
 
-**El saldo del Panel respeta el conjunto de cuentas filtradas** (PR #87). Con dos cuentas
-seleccionadas el Panel enseñaba el saldo de **una** —y cuál no era predecible, porque `Set.first` no
-tiene orden estable— mientras Distribución sumaba las dos. Era la última vía conocida por la que esos
-dos números seguían sin cuadrar tras `distribution-balance-kpi-skips-fx`. La decisión de Jürgen del
-6-sep revoca su «no tocar Panel» del 26-ago.
+**Bajo el kill-switch la app deja de decirle a alguien que no encontramos sus datos cuando los tiene
+intactos** (PR #88). Con el kill puesto las dos puertas de nube se cierran —es lo deseado— y a quien
+reinstala solo le queda «Restaurar desde iCloud», que busca en **CloudKit**, donde un nacido-en-nube
+nunca tuvo nada. Ahora lee **«La nube de Yala está en pausa»**. Y la re-entrada **arranca el motor en
+sesión**, como ya hacía el alta: se acabó el «Ya casi está — reinicia Yala» sobre un móvil recién
+instalado, donde no había nada que remontar.
 
-**La premisa decía «cuatro sitios» y ninguna de sus rutas existía** (citaba los ficheros sin su
-carpeta). El grep del símbolo devolvió tres vistas más del Panel y **un defecto vivo que el ticket no
-recogía**: `LiveBalanceCalculator` no conoce `isExcludeMode`, y el modo sí viaja con el conjunto
-—`RecordsFiltersView` escribe los dos en el mismo gesto—, así que **«excluir la cuenta A» enseñaba el
-saldo de A**. Entró aquí porque sin eso el AC de paridad era falso.
+**La review adversarial (tres lentes) cazó CUATRO defectos y los cuatro eran míos**, con 6293 tests
+en verde y el mutante ya verificado. El grave: reusé la terminal del alta para la re-entrada **y
+escribí la justificación en el docblock** —«es el mismo hecho por dos caminos»—. Era falso: lo que
+las separa no es el camino sino la precondición. `onAdoptStarted` marca `hasCompletedOnboarding`
+antes del adopt *precisamente* para que «el seed del onboarding jamás corra sobre una cuenta
+existente», y mi botón mandaba allí a alguien con datos ⇒ cuenta duplicada y categorías sembradas,
+**subiendo al backend** porque el mismo chip acababa de arrancar el motor. La lente no discutió mi
+argumento: miró quién más escribe ese flag. Los otros tres: «Reintentar» leía el flag remoto sin
+`force: true` (no-op durante 6 h ⇒ un botón que no podía cambiar su desenlace, el quinto call-site
+del repo y el único sin forzarlo); `startRuntimeIfStable` pedía la tupla `(fase, pendientes)` y
+**tiraba la segunda mitad**, así que podía arrancar el motor sobre una migración a medias; y en
+sesión secundaria el aviso leía el faro **del dueño**, prometiéndole a una invitada datos de una
+cuenta ajena.
 
-**La review adversarial cazó un defecto MÍO que los 6280 tests no veían, y las dos lentes lo
-encontraron por separado.** Al generalizar copié `!selectedAccountIDs.isEmpty` en dos sitios; en modo
-excluir eso es `true` y bypaseaba el toggle `includeGroupsInPanelTotal`, así que las cuentas de
-grupos volvían al agregado: **excluir una cuenta de 200 hacía SUBIR el total 300**. La regla vive
-ahora en `PanelTotalAccountsLogic.hasAccountFilter`, en **un solo sitio**. Y el test que la fija se
-verificó **con un mutante**: sin el arreglo falla con 1500 esperando 1000 — mi primer test pasaba
-igual sin él, que es la forma exacta de escribir una red que no sujeta nada.
-
-**Lo que se preservó a propósito:** el fallback al total cuando la selección no resuelve a ninguna
-cuenta contable (heredado de `BalanceHelper.displayedBalance`, fijado por test). En modo excluir NO
-lo hay: excluir todas da 0, no el total — un fallback ahí convertiría «excluir» en «mostrar el
-total». Cero claves de l10n nuevas: el chip reusa `buildAccountChips`, el helper de Registros.
+**Lo que NO se tocó, a propósito:** el gate de `StorageRowGateLogic` —es el freno de emergencia— y el
+docblock de `MigrationWorkExecutor`, que por decisión del 6-sep solo entra con un cambio que toque
+ese fichero. Se leyó para responder a un AC; leer no es tocar.
 
 ## Te espera a ti
 
@@ -63,7 +64,13 @@ total». Cero claves de l10n nuevas: el chip reusa `buildAccountChips`, el helpe
    predeterminados del Panel, el cierre del detalle, la hoja de «Unirme», el freno de la lista,
    «Transferir y salir», la puerta del grupo, la puerta del archivado, la marca de aproximado con su
    corrección del 1:1, el rótulo del hero de Estadísticas **y el aviso de visita**.
-4. **La tanda de QA: 43 tickets en `qa/`, y el guion solo cubre 22.** Entra
+4. **La tanda de QA: 44 tickets en `qa/`, y el guion solo cubre 22.** Entra
+   **`reentry-killswitch-closes-both-doors`** (7-sep), y es el más caro de montar de los tres: pide
+   **conmutar el kill desde el backend** y un móvil limpio por caso. Bajo `-uitest` los flags remotos
+   cortocircuitan a su default, así que el estado nuevo **no es alcanzable por XCUITest**: su guion
+   está en el ticket, y lleva los identificadores para distinguir las dos terminales, que **se ven
+   iguales** (`welcome_reentry_ready` sale a la app, `welcome_born_cloud_ready` al onboarding). Entra
+   también
    **`panel-colapsa-la-seleccion-de-cuentas-a-la-primera`**, con escenario paso a paso en su ticket:
    filtrar DOS cuentas desde Registros → Filtros y comparar Panel vs Distribución; repetirlo con
    «excluir» y con el toggle de grupos OFF. Hacen falta **tres cuentas con saldo distinto y no cero**.
@@ -103,6 +110,12 @@ aparecer.**
   los dos árboles** —`HEAD` limpio falla idéntico, 11 tests y 1 fallo—. Correr aislado en el base y en
   tanda en la rama diría «es tuyo» y sería falso. **Ninguna de las 21 muestras se ha tomado con el
   disco sobre 25 GB**: es la comprobación barata que queda.
+  **Muestra 18 (7-sep, tarde): falla con CUATRO tests y le toca al PRIMERO por orden alfabético.**
+  Corriendo solo los cuatro candidatos con `-only-testing` —sin las suites que los preceden— sale
+  igualmente un único rojo (`EdgeCases`, 60,4 s) y los otros tres pasan. Eso **debilita la hipótesis
+  de acumulación a lo largo de la corrida**: aquí no hay nada acumulado delante. Quedan en pie la
+  race real en el guardado y el presupuesto de 10 s de la espera — y la primera es la que importaría
+  en un teléfono, donde no hay aserto que la cace.
 - **`rojo-xcuitest-runner-muere-tras-el-primer-caso` (high) NO se reprodujo, y esta vez con volumen.**
   **Tres corridas completas de 134 casos cada una**, todas ejecutando los 134 (el 6-sep moría tras el
   primer caso de CADA suite). Es la segunda sesión seguida sin verlo. Sigue sin descartarse, pero ya
@@ -126,14 +139,20 @@ sigue sin `ok_`. **Cero `ok_` inventado.**
 
 ## Board
 
-**137 tickets · backlog 71 · qa 43 · blocked 2 · done 16 · discarded 5 · in-progress 0.**
+**139 tickets · backlog 72 · qa 44 · blocked 2 · done 16 · discarded 5 · in-progress 0.**
 `qa` significa «esperando la tanda», no «cerrado». Índice = disco, verificado comparando **conjuntos**
-(137 = 137, cero huérfanos en ambas direcciones). **Todo cierre incluye `docs/TICKETS.md`**, y lo que
+(139 = 139, cero huérfanos en ambas direcciones). **Todo cierre incluye `docs/TICKETS.md`**, y lo que
 salga de camino lleva ticket propio — esta sesión sacó **tres**:
 `panel-lee-el-filtro-de-cuentas-en-singular-fuera-del-saldo` (el subtítulo «en N cuentas» cuenta todas
 mientras el saldo filtra; y el prefill del formulario propone una cuenta arbitraria, en modo excluir
 la excluida), `saldo-con-seleccion-no-contable-diverge-entre-panel-y-estadisticas` y
-`filtro-de-cuentas-se-colapsa-al-navegar-a-registros`.
+`filtro-de-cuentas-se-colapsa-al-navegar-a-registros`. La del kill-switch sacó **dos** más, los dos
+de la review adversarial: **`restore-beacon-outlives-account-deletion`** —el faro que decide el
+mensaje sobrevive al borrado de cuenta (su `clear` es best-effort y el `set` tuvo toda la vida de la
+cuenta para propagarse), y de paso deja escrito que **el usuario MIGRADO —el único que existe hoy en
+producción— ve su copia de iCloud congelada pre-migración sin que nada le avise de que es vieja**— y
+**`adopt-terminal-claims-ready-without-checking-engine`**, que la pantalla de «listo» se deriva del
+journal y nunca pregunta si el motor arrancó de verdad.
 
 **Y una lección de higiene del board:** abrí un cuarto ticket para el rojo de
 `EdgeCases.test_extremeMinimumAmountSaves` **sin comprobar que ya existía uno**
