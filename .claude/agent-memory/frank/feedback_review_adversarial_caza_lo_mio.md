@@ -16,6 +16,23 @@ hablaba. Mi test de esa propiedad estaba **verde** — probaba el store llamando
 camino real. Además refutaron una afirmación que yo había escrito en tres sitios como si la hubiera
 medido, y que era falsa.
 
+**Y el 2026-09-07, en `groups-budget`, cuatro lentes encontraron ~20 y una evitó romper OTRA pantalla.**
+El editor del tope tenía un botón condicional dentro del `actions` de un `.alert` — el patrón que
+`swiftui-ds.md` tiene medido como «no rompe la alerta: rompe la app», con la víctima en un área que
+ningún cruce de `codeGlobs` habría señalado. Dos más que ninguna suite podía ver: un tope de 15 dígitos
+se perdía **en silencio** (el codec del wire lanza a partir de 1e14, quien traga el throw no crea la fila
+de outbox y su log vive bajo `#if DEBUG`), y añadir una columna al manifest de Grupos ponía en
+divergencia falsa al parque entero. ⇒ **con cuatro lentes, dos convergieron en el hallazgo más grave y
+ninguna de las otras dos lo vio**: el reparto por especialidad no es redundancia, es cobertura.
+
+**El patrón que más se repite en lo que cazan, y ya van tres sesiones: mi TEST del borde elige el
+fixture que no puede fallar.** Aquí `gastarJustoElTopeNoEsPasarse` usaba UN gasto de 1000 — el único
+caso donde el `>` de `Double` y el `>=` decimal coinciden trivialmente. Con tres importes que suman
+1.000,00 exactos, la coma flotante da 1000.0000000000001 y la tarjeta decía «te pasaste por 0,00» en
+rojo; el 16,5 % de los repartos caen ahí. Es la familia de `.claude/rules/testing.md` L72, cometida por
+mí, en un test escrito para proteger justo eso. ⇒ **al escribir el test de un borde numérico, construye
+el caso con VARIOS sumandos**, no con el número redondo que hace verdad la aserción por accidente.
+
 **How to apply:**
 
 - **Las dos lentes coincidieron, sin verse, en los dos hallazgos gordos.** Esa coincidencia es la señal

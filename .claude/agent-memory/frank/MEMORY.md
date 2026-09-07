@@ -32,6 +32,7 @@
 - [Capturas del simulador para la web](feedback_capturas_simulador_para_la_web.md) — receta y trampas: Secrets.xcconfig, nombre efímero, categorías sembradas, `sips -Z` escala el lado largo.
 
 ## Estado del trabajo
+- [El tope de gasto del grupo ya avisa](project_presupuesto_de_grupo.md) — PR #91 y g14_01 en prod; faltan device-QA, TRES migraciones de staging y el deploy del Worker que reenciende el Merkle.
 - [El recordatorio de deuda ya avisa al deudor](project_recordatorio_liquidacion.md) — PR #89; falta device-QA y una decisión; NO se respeta `simplifyDebts` a propósito.
 - [El Panel ya suma las cuentas filtradas](project_panel_conjunto_de_cuentas.md) — PR #87; falta device-QA y quedan tres preexistentes con ticket propio.
 - [La frontera de la visita](project_la_frontera_de_la_visita.md) — PR #86 cerró la rama privada; faltan device-QA de 2 cuentas y 2 decisiones; el guard que falta suele estar MEDIO puesto.
@@ -47,7 +48,7 @@
 - [El sello del gate ancla en HEAD](reference_gate_sello_ancla_en_head.md) — una tanda de commits obliga a re-sellar entre ellos; mergear `2.1` obliga a re-correr el gate entero.
 - [Avisar a Frank: lo hace el hook, no tú](reference_avisar_a_frank_webhook.md) — el hook ya manda PR y rojos solo (dupliqué el 5-sep); la palabra «prueba» en el texto lo descarta.
 - [El aviso de cierre necesita el cwd del repo](reference_aviso_cierre_necesita_cwd.md) — tras retirar el worktree va a Dan y se descarta en silencio; lee la línea ENVIADO.
-- [Verificar el backend: MCP ve solo prod](reference_verificar_backend_yala.md) — no hay DDL de staging; el sandbox transaccional prueba contra el motor real sin dejar rastro.
+- [Verificar el backend: MCP ve solo prod](reference_verificar_backend_yala.md) — no hay DDL de staging, pero los goldens SÍ corren contra él (hay contraseñas, no solo JWT); sandbox transaccional para lo demás.
 - [El hook de secretos está desactivado](hook_secretos_disparador_substring.md) — retirado del push el 2026-09-01 (ADR-009); nada escanea hoy. Su trampa del substring, si vuelve.
 - [El hook de /cerrar salta con «cerramos»](hook_cerrar_disparador_substring.md) — verifica la premisa contra su mensaje: cerrar un ticket no es cerrar la sesión, y el bloque de disco es irreversible.
 - [DNS de yala-app.pe](reference_dns_yala_app_pe.md) — zona en RCP, registrador punto.pe; los paneles los teclea Jürgen. Un solo NS vivo y caché negativa de 2 h.

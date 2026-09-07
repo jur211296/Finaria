@@ -12,8 +12,21 @@ metadata:
 | **BD de producción** (`kefvaiymtgytemwbltlz`) | **sí**, lectura y DDL | MCP Supabase |
 | **BD de staging** (`fostjbbwstyuunmmefuk`) | **NO** | el conector MCP no la lista |
 | Worker staging y producción | **sí**, deploy | `wrangler`, OAuth `admin@yala-app.pe`, `workers:write` |
-| Usuarios de test de staging | sí, **sólo JWT de usuario** | `~/Secrets/yala-supabase-test/test-users.env` |
+| Usuarios de test de staging | sí, **con CONTRASEÑA** (no solo JWT) | `~/Secrets/yala-supabase-test/test-users.env` — trae `USER_A_PASS`/`USER_B_PASS` |
 | Llaves de cifrado y push | sí | `~/Secrets/yala-groups-enc/` (`staging.key`, `staging-push-role.jwt`, y sus gemelos `prod`) |
+
+**CORREGIDO el 2026-09-07: los goldens del gateway contra staging SÍ se pueden correr.** Esta ficha decía
+«sólo JWT de usuario» y por eso ni lo intenté durante tres sesiones. `test-users.env` trae las CONTRASEÑAS
+(`USER_A_PASS`, `USER_B_PASS`) y la llave de cifrado está en `~/Secrets/yala-groups-enc/staging.key`; con
+las dos exportadas, `npx vitest run test/groups.goldens.test.ts` da **25/25 contra staging real** en ~4,5
+min. Sin `GROUPS_ENC_KEY` el fichero entero falla en su `beforeAll` con los 25 casos en `skipped`, que
+**parece** «no hay credenciales» y es solo una variable de entorno.
+
+    set -a; . ~/Secrets/yala-supabase-test/test-users.env; set +a
+    export GROUPS_ENC_KEY="$(cat ~/Secrets/yala-groups-enc/staging.key)"
+
+Lo que sigue sin haber es **DDL de staging**, que es otra cosa: se pueden EJERCITAR los RPCs que ya están
+allí, no APLICAR una migración nueva.
 
 **La consecuencia incómoda: tengo DDL en producción y no en staging** — al revés de lo que pide el
 orden habitual. No hay credencial de admin de staging en `~/Secrets/`, ni en el keychain, ni en el
