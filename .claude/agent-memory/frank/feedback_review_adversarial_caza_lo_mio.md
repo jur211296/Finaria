@@ -67,3 +67,38 @@ después**: si no lo arreglaba, mi fix heredaba la forma del bug que venía a ar
   portal que no puede desviar en secundaria, el `initialStep` que nadie escribe, el presupuesto cuya
   rama está muerta— y corrigió DOS frases mías que eran imprecisas, incluida una de un ticket que
   acababa de escribir. Pedir la refutación por escrito es lo que hace eso posible.
+
+---
+
+## Segunda vez, y el defecto grave venía envuelto en un razonamiento MÍO (2026-09-07)
+
+`reentry-killswitch-closes-both-doors`. Tres lentes (sync/carrera, producto, regresión), **cuatro
+defectos, los cuatro introducidos por mí**, con 6291 tests en verde y el mutante ya verificado.
+
+El grave: reusé una fase de pantalla existente (`.bornCloudReady`) para la re-entrada, y **escribí en
+el docblock la justificación** — «no son dos hechos distintos sino el mismo por dos caminos, con el
+mismo copy, el mismo `canGoBack` y la misma salida». Sonaba a análisis. Era falso: lo que las separa
+no es el camino sino la **precondición**. La re-entrada llega con `hasCompletedOnboarding` ya marcado
+por `onAdoptStarted` —que existe *literalmente* para que «el seed del onboarding jamás corra sobre una
+cuenta existente»— así que mi CTA mandaba al onboarding de 8 pasos a alguien con datos: cuenta
+duplicada, categorías sembradas, y **subiendo al backend** porque el mismo chip acababa de arrancar el
+motor en sesión. Estaba deshaciendo una defensa explícita del código mientras explicaba por qué era
+seguro.
+
+**Why (lo que esto añade a la ficha):** un razonamiento escrito con seguridad es la forma en que mis
+defectos pasan desapercibidos, incluida a mí mismo al releer. La lente de regresión no discutió mi
+argumento: fue a mirar **quién más escribe ese flag** y encontró la línea que lo invalidaba.
+
+**How to apply:**
+- **Reusar un caso/fase/estado existente porque «es el mismo hecho» es una hipótesis, no un diseño.**
+  La prueba no es que compartan copy o pantalla: es que compartan **precondiciones y salida**. Si el
+  callback único tuviera que adivinar cuál de dos estados tiene delante, son dos casos.
+- **Cuando justifiques un reuso, busca quién más escribe el estado del que depende** (`grep` del
+  setter, no del lector — es el caso 17 de [[mis-mediciones-fallan-por-el-filtro]]). En este chip la
+  respuesta estaba a cuatro líneas del call-site, en un comentario que decía para qué existía.
+- **Las tres lentes encontraron cosas distintas y ninguna sobró**: producto cazó el botón que no podía
+  cambiar su desenlace, sync el guard que tiraba la mitad de su dato, regresión la salida al
+  onboarding y el poll que no paraba. Con dos lentes me habría faltado una.
+- Y una que ya sabía y volvió a cumplirse: **dos de los cuatro los había cazado yo antes** (el
+  `force: true` lo encontré leyendo el patrón del repo). La review no sustituye la auto-revisión;
+  encuentra la clase de cosa que la auto-revisión no ve porque es donde yo *creo* que ya pensé.
