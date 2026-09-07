@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (125)
+## Index (129)
 
 | id | status | path |
 |----|--------|------|
@@ -61,18 +61,21 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | el-saldo-de-distribucion-no-se-entera-de-un-registro-nuevo | backlog | tickets/backlog/el-saldo-de-distribucion-no-se-entera-de-un-registro-nuevo.md |
 | entitlement-sync-forzado-es-noop-si-hay-otro-en-vuelo | backlog | tickets/backlog/entitlement-sync-forzado-es-noop-si-hay-otro-en-vuelo.md |
 | exportable-insights | backlog | tickets/backlog/exportable-insights.md |
+| fx-approximate-mark-missing-on-secondary-surfaces | backlog | tickets/backlog/fx-approximate-mark-missing-on-secondary-surfaces.md |
+| fx-manual-writes-seal-approximate-as-final | backlog | tickets/backlog/fx-manual-writes-seal-approximate-as-final.md |
 | fx-partial-rate-rows-silent-1to1 | qa | tickets/qa/fx-partial-rate-rows-silent-1to1.md |
 | fx-pnl-education-card | backlog | tickets/backlog/fx-pnl-education-card.md |
 | fx-presentation-still-shows-1to1 | backlog | tickets/backlog/fx-presentation-still-shows-1to1.md |
+| fx-unknown-currency-code-collapses-to-usd | backlog | tickets/backlog/fx-unknown-currency-code-collapses-to-usd.md |
 | fx-widget-drops-missing-currency | backlog | tickets/backlog/fx-widget-drops-missing-currency.md |
 | gate-doc-says-swift-testing-only | backlog | tickets/backlog/gate-doc-says-swift-testing-only.md |
 | gateway-has-no-telemetry | backlog | tickets/backlog/gateway-has-no-telemetry.md |
 | group-joiner-flag-consumers-still-narrow | qa | tickets/qa/group-joiner-flag-consumers-still-narrow.md |
 | group-notif-credits-payer-not-editor | done | tickets/done/group-notif-credits-payer-not-editor.md |
 | groups-approval-banner-stays | done | tickets/done/groups-approval-banner-stays.md |
-| groups-background-emitter-no-upload | done | tickets/done/groups-background-emitter-no-upload.md |
 | groups-archived-group-rejects-join | qa | tickets/qa/groups-archived-group-rejects-join.md |
 | groups-archived-still-accepts-changes | backlog | tickets/backlog/groups-archived-still-accepts-changes.md |
+| groups-background-emitter-no-upload | done | tickets/done/groups-background-emitter-no-upload.md |
 | groups-batch-facts-plural-identity | backlog | tickets/backlog/groups-batch-facts-plural-identity.md |
 | groups-budget | backlog | tickets/backlog/groups-budget.md |
 | groups-cloud-identity-loss-on-migrate | discarded | tickets/discarded/groups-cloud-identity-loss-on-migrate.md |
@@ -128,6 +131,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | rejoin-tap-renotifies-admins | qa | tickets/qa/rejoin-tap-renotifies-admins.md |
 | rescue-discarded-groups-pull | discarded | tickets/discarded/rescue-discarded-groups-pull.md |
 | rojo-heroBuckets-thisWeek-trailing-window | done | tickets/done/rojo-heroBuckets-thisWeek-trailing-window.md |
+| rojo-xcuitest-runner-muere-tras-el-primer-caso | backlog | tickets/backlog/rojo-xcuitest-runner-muere-tras-el-primer-caso.md |
 | savings-tracking | backlog | tickets/backlog/savings-tracking.md |
 | scheduled-payment-once-labeled-monthly | backlog | tickets/backlog/scheduled-payment-once-labeled-monthly.md |
 | scheduled-payments-notif-dedup | qa | tickets/qa/scheduled-payments-notif-dedup.md |

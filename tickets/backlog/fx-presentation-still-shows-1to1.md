@@ -60,6 +60,44 @@ Lo que implica: `CurrencyConverting` expone la calidad de la conversión (`conve
 `isExchangeRateProvisional` gana por fin un consumidor de UI. Copy del rótulo en 16 `.lproj`. Cómo se
 pinta la marca (símbolo vs texto, dónde) es diseño y se resuelve en el `/spec`, no aquí.
 
+## Lo que se midió al implementar (2026-09-06, worktree sobre `6d87123e`)
+
+**La premisa del ticket era falsa por un lado y se quedaba corta por el otro.** Se ejecutaron las dos
+rutas contra un store real con la fila del día trayendo USD y PEN pero **no** JPY:
+
+| ruta | resultado | veredicto |
+|---|---|---|
+| `convertWithLatestRate` | 1000 JPY → **1000 PEN** | el monto CRUDO, ~40× de más |
+| `convertWithLatestRate`, sin fila ninguna | 1000 JPY → 24,79 PEN | convierte bien |
+| `convert(_:on:)` | 1000 JPY → 24,99 PEN, `quality = .staticFallback` | convierte, pero no lo declaraba |
+
+- **Para la ruta con fecha la premisa ya no valía**: `fx-partial-rate-rows-silent-1to1` destapó los
+  tres escalones de `resolveRates`, así que `convert` ya no devolvía el monto crudo. Lo que faltaba
+  ahí era exactamente lo que decidió Jürgen: **declararlo**.
+- **Para la ruta del TC actual la premisa se quedaba corta**: ahí no era un número aproximado sin
+  marcar, era un número mal. Su caché se llena con `needing: []` —no puede saber qué divisas le van a
+  pedir— así que una fila parcial de hoy entraba entera y `performConversion` salía por su `guard`.
+  Las dos primeras filas de la tabla juntas son el hallazgo: **la fila parcial volvía a ser
+  estrictamente peor que no tener fila**, la misma forma exacta del bug ya cerrado, en la otra ruta.
+  Y es la ruta que más pinta: saldo vivo del Panel, saldos de Grupos, presupuestos, pagos programados.
+
+**La marca no hubo que diseñarla: ya existe y ya está en producción.** `AmountText.isEstimate`
+antepone «≈ » en el run del símbolo (`AmountText.swift:32,191`) y los saldos de Grupos ya la usan
+(`GroupBalancesView.swift:123`). Por eso **no hace falta copy nuevo en 16 `.lproj`**: el símbolo es
+universal y el AC se cumple reutilizando el precedente en vez de inventar un rótulo paralelo.
+
+**Los saldos de Grupos ya cumplían el AC y no se tocan.** `balancesWereConverted`
+(`GroupDetailViewModel.swift:260`) se enciende cuando alguna divisa difiere del destino — exactamente
+la condición bajo la que se llama al converter, o sea un superconjunto perfecto de «la tasa fue
+inexacta». Marcan de más (también con tasas perfectas), que es una decisión de producto anterior y
+más conservadora; revertirla sería quitarle información al usuario y nadie lo pidió.
+
+**Residual conocido, con ticket propio: la marca infra-reporta.** El camino normal de estos totales
+no pasa por el converter —suma el `amountInPreferredCurrency` ya guardado—, así que se apoya en el
+flag `isExchangeRateProvisional`. Y hay diez escrituras que sellan ese flag en `false` aunque la tasa
+fuera aproximada: `fx-manual-writes-seal-approximate-as-final` (high). Hasta que se cierre, la marca
+aparece cuando debe pero **puede faltar** en totales cuyas transacciones nacieron mal selladas.
+
 ## Criterio de hecho (AC)
 
 - [ ] Con una divisa sin tasa ese día, todo total que la incluya lleva la marca de aproximado; con el
