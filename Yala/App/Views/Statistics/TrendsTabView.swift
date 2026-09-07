@@ -225,7 +225,8 @@ struct TrendsTabView: View {
                 AmountText(
                     value: heroKPIValue(for: summary),
                     currencyCode: defaultCurrencyCode,
-                    font: DS.Typography.heroAmount, secondaryFont: DS.Typography.heroAmountSecondary
+                    font: DS.Typography.heroAmount, secondaryFont: DS.Typography.heroAmountSecondary,
+                    isEstimate: heroKPIIsApproximate(for: summary)
                 )
                 .contentTransition(.numericText())
             }
@@ -1199,6 +1200,17 @@ struct TrendsTabView: View {
         case .balance: return summary.netBalance
         case .income:  return summary.totalIncome
         case .expense: return summary.totalExpense
+        }
+    }
+
+    /// La marca del hero tiene que ser la del número que el hero pinta, y `heroKPIValue` devuelve
+    /// uno de tres según la métrica: con una señal común, un gasto mal convertido le ponía «≈» al
+    /// total de INGRESOS, donde no hubo ninguna conversión.
+    private func heroKPIIsApproximate(for summary: PeriodSummary) -> Bool {
+        switch trendsViewModel.selectedMetric {
+        case .balance: return summary.amountsAreApproximate
+        case .income:  return summary.incomeAmountsAreApproximate
+        case .expense: return summary.expenseAmountsAreApproximate
         }
     }
 

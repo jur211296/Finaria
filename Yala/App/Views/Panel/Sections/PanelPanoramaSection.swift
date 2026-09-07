@@ -126,7 +126,8 @@ struct PanelPanoramaSection: View {
         guard activeCount > 0 else { return nil }
         let formattedBalance = appPreferences.currency(
             viewModel.panelTotalBalance,
-            currencyCode: appPreferences.defaultCurrencyCode.rawValue
+            currencyCode: appPreferences.defaultCurrencyCode.rawValue,
+            isEstimate: viewModel.panelTotalBalanceIsApproximate
         )
         return L10n.Panel.panoramaCollapsedSummary(formattedBalance, accounts: activeCount)
     }
@@ -141,7 +142,8 @@ struct PanelPanoramaSection: View {
         guard activeCount > 0 else { return nil }
         let formattedBalance = appPreferences.currency(
             viewModel.panelTotalBalance,
-            currencyCode: appPreferences.defaultCurrencyCode.rawValue
+            currencyCode: appPreferences.defaultCurrencyCode.rawValue,
+            isEstimate: viewModel.panelTotalBalanceIsApproximate
         )
         let full = L10n.Panel.panoramaCollapsedSummary(formattedBalance, accounts: activeCount)
         let parts = full.components(separatedBy: formattedBalance)
@@ -153,7 +155,8 @@ struct PanelPanoramaSection: View {
         result.append(AmountText.attributedAmount(
             value: viewModel.panelTotalBalance,
             currencyCode: appPreferences.defaultCurrencyCode.rawValue,
-            prefs: appPreferences
+            prefs: appPreferences,
+            isEstimate: viewModel.panelTotalBalanceIsApproximate
         ))
         if parts.count > 1 {
             result.append(AttributedString(parts.dropFirst().joined(separator: formattedBalance)))

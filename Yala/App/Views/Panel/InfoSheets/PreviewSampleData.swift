@@ -50,7 +50,10 @@ extension CashFlowSummary {
             totalExpense: totalExpense,
             netFlow: totalIncome - totalExpense,
             chartData: chartData,
-            currencyCode: "USD"
+            currencyCode: "USD",
+            // Datos sintéticos de preview: monomoneda, sin conversión que juzgar.
+            incomeAmountsAreApproximate: false,
+            expenseAmountsAreApproximate: false
         )
     }
 }
