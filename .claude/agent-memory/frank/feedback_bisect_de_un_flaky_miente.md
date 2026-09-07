@@ -46,6 +46,24 @@ pasando. Un defecto de código no cambia de víctima entre corridas del mismo co
 - **Revertir para bisecar se hace con `cp` desde copias propias**, nunca con `git checkout --` en árbol
   sucio ([[revertir-sin-commit-destruye]]), y `git show HEAD:<path> > <path>` para traer la versión base.
 
+**Re-medido el 2026-09-07 (tarde), en `panel-colapsa-la-seleccion-de-cuentas-a-la-primera`: es el
+MISMO test, y ya sé su condición.** `EdgeCasesUITests.test_extremeMinimumAmountSaves` **falla en
+tanda y pasa en aislado**, y eso se comprobó en los dos árboles con el mismo comando:
+
+| Árbol | Comando | Resultado |
+|---|---|---|
+| Mío | 5 suites juntas | FALLA (11 tests, 1 fallo) |
+| **HEAD limpio** | **5 suites juntas** | **FALLA — el mismo test, 11/1** |
+| Mío | `EdgeCases` solo, ×2 | PASA |
+| HEAD limpio | `EdgeCases` solo | PASA |
+
+**La comparación que zanja no es «base vs mío»: es el MISMO comando en los dos árboles.** Correr el
+test aislado en el base y en tanda en el mío me habría dicho «es tuyo» — y habría sido falso. Las
+cuatro celdas cuestan cuatro corridas y cierran la pregunta sin discusión.
+
+Ticket con la tabla y el reproductor: `edgecases-extreme-minimum-amount-falla-solo-en-tanda`.
+Hipótesis viva sin descartar: el disco estaba a 11-14 GB, por debajo del umbral de 25.
+
 Relacionado: [[rojo-conocido-no-exime-de-bisecar]] (el error inverso: dar por ajeno un rojo que era
 mío) · [[el-arbol-base-contesta-si-es-mio]] (el bisect que SÍ funciona, cuando el rojo es
 determinista) · [[mutante-compilado-zanja-hipotesis]].

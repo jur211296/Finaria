@@ -32,6 +32,7 @@
 - [Capturas del simulador para la web](feedback_capturas_simulador_para_la_web.md) — receta y trampas: Secrets.xcconfig, nombre efímero, categorías sembradas, `sips -Z` escala el lado largo.
 
 ## Estado del trabajo
+- [El Panel ya suma las cuentas filtradas](project_panel_conjunto_de_cuentas.md) — PR #87; falta device-QA y quedan tres preexistentes con ticket propio.
 - [La frontera de la visita](project_la_frontera_de_la_visita.md) — PR #86 cerró la rama privada; faltan device-QA de 2 cuentas y 2 decisiones; el guard que falta suele estar MEDIO puesto.
 - [Salir del grupo: cerrado en código, abierto en decisión](project_salir_del_grupo_espera_decision.md) — PR #75; falta device-QA y qué se le ofrece al dueño con deuda.
 - [El archivado ya cierra la puerta](project_archivado_no_acepta_entradas.md) — g13_05 en prod; falta device-QA, y staging arrastra ya DOS migraciones por falta de credencial.
