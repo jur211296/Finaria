@@ -357,6 +357,18 @@ struct CategoriesTabView: View {
                     font: DS.Typography.heroAmount, secondaryFont: DS.Typography.heroAmountSecondary
                 )
                 .contentTransition(.numericText())
+
+                // Qué es la cifra. NO es fijo: fuera de `isBalanceMode` este hero
+                // vuelve al flujo del período (decisión del owner 2026-08-26), así
+                // que un rótulo fijo "Saldo de cuentas" mentiría en esos estados.
+                Text(StatsHeroCaptionLogic.distribution(
+                    isBalanceMode: isBalanceMode,
+                    natures: viewModel.selectedTransactionNatures
+                ).text)
+                    .font(DS.Typography.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .accessibilityIdentifier("stats_hero_caption")
             }
 
             if hasRecords, let subtitle = heroDimensionalSubtitle() {

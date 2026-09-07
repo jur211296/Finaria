@@ -148,6 +148,18 @@ struct RecordsTabView: View {
                     font: DS.Typography.heroAmount, secondaryFont: DS.Typography.heroAmountSecondary
                 )
                 .accessibilityIdentifier("records_summary_balance")
+
+                // Qué es la cifra. Con un chip de naturaleza activo el otro lado es
+                // 0 y `recordsSummary.balance` deja de ser un neto, así que el
+                // rótulo sigue al filtro. (El hero no se pinta en solo-gastos, de
+                // modo que las naturalezas efectivas son las seleccionadas.)
+                Text(StatsHeroCaptionLogic.records(
+                    natures: viewModel.selectedTransactionNatures
+                ).text)
+                    .font(DS.Typography.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .accessibilityIdentifier("stats_hero_caption")
             }
 
             incomeExpenseChips

@@ -5555,3 +5555,18 @@
 
 /* Cuerpo del aviso al tocar la tarjeta de un grupo pendiente de aprobación */
 "groups.card.pendingNotice.body" = "Administrator grupy jeszcze nie zatwierdził Twojej prośby. Gdy to zrobi, będziesz mieć dostęp do grupy i jej wydatków. Zajrzyj tu za jakiś czas.";
+
+/* Stats hero caption: the figure is the accounts balance (stock), same as Panel KPI */
+"stats.hero.captionAccountsBalance" = "Saldo kont";
+
+/* Stats hero caption: the figure is income minus expenses for the period (flow) */
+"stats.hero.captionNetPeriod" = "Saldo netto okresu";
+
+/* Stats hero caption: the figure is only the income side for the period */
+"stats.hero.captionIncomePeriod" = "Przychody w okresie";
+
+/* Stats hero caption: the figure is only the expense side for the period */
+"stats.hero.captionExpensePeriod" = "Wydatki w okresie";
+
+/* Stats hero caption: the figure sums income and expense magnitudes (pie total), neither a net nor one side */
+"stats.hero.captionTotalPeriod" = "Łącznie w okresie";

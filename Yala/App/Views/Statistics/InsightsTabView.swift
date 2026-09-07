@@ -207,6 +207,14 @@ struct InsightsTabView: View {
                     font: DS.Typography.heroAmount, secondaryFont: DS.Typography.heroAmountSecondary,
                     isEstimate: summary.amountsAreApproximate
                 )
+
+                // Qué es la cifra. Aquí siempre es el neto: el hero no se pinta en
+                // modo solo-gastos, así que no hay caso de un solo lado.
+                Text(StatsHeroCaptionLogic.insights.text)
+                    .font(DS.Typography.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .accessibilityIdentifier("stats_hero_caption")
             }
 
             incomeExpenseChips(summary)

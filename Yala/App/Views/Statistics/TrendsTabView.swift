@@ -229,6 +229,14 @@ struct TrendsTabView: View {
                     isEstimate: heroKPIIsApproximate(for: summary)
                 )
                 .contentTransition(.numericText())
+
+                // Qué es la cifra. Sigue a la métrica: `heroKPIValue` devuelve uno
+                // de tres números, así que el rótulo no puede ser fijo.
+                Text(StatsHeroCaptionLogic.trends(metric: trendsViewModel.selectedMetric).text)
+                    .font(DS.Typography.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .accessibilityIdentifier("stats_hero_caption")
             }
 
             if hasRecords, let summary {
@@ -1194,7 +1202,13 @@ struct TrendsTabView: View {
     /// KPI period-specific para el hero (matches `InsightsTabView.heroSummary`).
     /// Distinto de `currentKPIValue` que para `.balance` retorna el running balance
     /// final del chart (global, no responde al período). El hero usa el agregado del
-    /// período para coherencia cross-tab y para que el largeTitle responda al filtro.
+    /// período para que el largeTitle responda al filtro.
+    ///
+    /// **Ya no se justifica por "coherencia cross-tab"** (2026-09-07). Desde
+    /// `distribution-balance-kpi-skips-fx` (2026-09-06) Distribución puede enseñar un
+    /// SALDO en este mismo hueco visual, así que las cuatro pestañas dejaron de
+    /// mostrar la misma magnitud. La coherencia nueva es otra: mismo hueco, cifra
+    /// distinta, **rotulada** — el rótulo lo deriva `StatsHeroCaptionLogic`.
     private func heroKPIValue(for summary: PeriodSummary) -> Double {
         switch trendsViewModel.selectedMetric {
         case .balance: return summary.netBalance
