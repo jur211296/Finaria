@@ -40,15 +40,45 @@ enum RateQuality: Equatable {
 
     /// Si esto es `false`, quien escriba el monto debe marcarlo `isExchangeRateProvisional`.
     var isExact: Bool { self == .exact }
+
+    /// Cuánto se degradó, para poder quedarse con la peor de dos. Una conversión toca DOS divisas y
+    /// vale lo que valga la peor de las dos: decir `.exact` porque una de ellas lo era es
+    /// exactamente el tipo de verdad a medias que este enum existe para impedir.
+    var severity: Int {
+        switch self {
+        case .exact: return 0
+        case .carriedForward: return 1
+        case .staticFallback: return 2
+        }
+    }
+
+    static func worse(_ lhs: RateQuality, _ rhs: RateQuality) -> RateQuality {
+        lhs.severity >= rhs.severity ? lhs : rhs
+    }
 }
 
 // MARK: - Currency Converting Protocol
 
 /// Protocol for currency conversion without ModelContext dependency.
 /// Enables dependency injection and testing of calculators/helpers.
+///
+/// **Las variantes `…Checked` NO tienen implementación por defecto en una extensión, y es
+/// deliberado.** Un default que devolviera `.exact` haría que cualquier conformer nuevo declarase
+/// tasas perfectas por omisión — exactamente la forma del bug que este protocolo existe para cerrar
+/// (`hasExactRate` respondía por que la FILA existiera, y sus cinco llamadores leían eso como «tengo
+/// la tasa»). Añadir un conformer obliga a decidir qué calidad declara.
 protocol CurrencyConverting {
     func convert(_ amount: Decimal, from: String, to: String, on date: Date) -> Decimal
     func convertWithLatestRate(_ amount: Decimal, from: String, to: String) -> Decimal
+
+    /// `convert` + de dónde salió la tasa. Quien PINTA un total lo usa para decidir si el número
+    /// lleva la marca de aproximado.
+    func convertChecked(_ amount: Decimal, from: String, to: String, on date: Date)
+        -> (amount: Decimal, quality: RateQuality)
+
+    /// `convertWithLatestRate` + de dónde salió la tasa.
+    func convertCheckedWithLatestRate(_ amount: Decimal, from: String, to: String)
+        -> (amount: Decimal, quality: RateQuality)
 }
 
 // MARK: - Currency Converter
@@ -88,8 +118,20 @@ final class CurrencyConverter: CurrencyConverting {
     private let latestRatesCache = OSAllocatedUnfairLock<CachedRates?>(initialState: nil)
 
     private struct CachedRates {
-        let rates: [String: Double]
+        var rates: [String: Double]
         let dayKey: String  // dateKey (yyyy-MM-dd UTC) usado para la lectura
+
+        /// De qué escalón salió **cada** tasa, no el conjunto.
+        ///
+        /// **Guardar una sola calidad para toda la caché no servía, y el motivo se midió.** La
+        /// primera versión la llenaba con `resolveRates(needing: [])`, que sin fila de hoy devuelve
+        /// la tabla estática **entera**; como esa tabla cubre todas las divisas, la comprobación de
+        /// cobertura daba siempre positiva y el escalón de la fila real anterior **no se alcanzaba
+        /// nunca** por esta ruta. Medido el 2026-09-06 con una fila completa de ayer y ninguna de
+        /// hoy: `convertWithLatestRate` devolvía 24,79 (tabla estática) mientras `convert(on:)`
+        /// devolvía 40 (la fila de ayer) — dos APIs, el mismo instante, la que más pinta eligiendo
+        /// la peor fuente. Con el origen por divisa la caché solo afirma lo que sabe.
+        var origins: [String: RateQuality]
     }
 
     private let dateFormatter: DateFormatter = {
@@ -120,18 +162,39 @@ final class CurrencyConverter: CurrencyConverting {
 
     /// Converts using the stored ModelContext, falling back to static rates if unavailable.
     func convert(_ amount: Decimal, from: String, to: String, on date: Date) -> Decimal {
-        guard let context = modelContext else {
-            return convertWithFallback(amount, from: from, to: to)
-        }
-        return convert(amount, from: from, to: to, on: date, context: context)
+        convertChecked(amount, from: from, to: to, on: date).amount
     }
 
     /// Converts using the most recent available rate (context-free).
     func convertWithLatestRate(_ amount: Decimal, from: String, to: String) -> Decimal {
+        convertCheckedWithLatestRate(amount, from: from, to: to).amount
+    }
+
+    func convertChecked(_ amount: Decimal, from: String, to: String, on date: Date)
+        -> (amount: Decimal, quality: RateQuality)
+    {
         guard let context = modelContext else {
-            return convertWithFallback(amount, from: from, to: to)
+            return (convertWithFallback(amount, from: from, to: to), contextFreeQuality(from, to))
         }
-        return convertWithLatestRate(amount, from: from, to: to, context: context)
+        return convertChecked(amount, from: from, to: to, on: date, context: context)
+    }
+
+    func convertCheckedWithLatestRate(_ amount: Decimal, from: String, to: String)
+        -> (amount: Decimal, quality: RateQuality)
+    {
+        guard let context = modelContext else {
+            return (convertWithFallback(amount, from: from, to: to), contextFreeQuality(from, to))
+        }
+        return convertCheckedWithLatestRate(amount, from: from, to: to, context: context)
+    }
+
+    /// Sin `ModelContext` no hay tasas guardadas que consultar: la conversión sale de la tabla
+    /// estática, que es aproximada por definición. La única excepción es la identidad —convertir una
+    /// divisa a sí misma es exacto por construcción, no por dato— y distinguirla importa: sin ella,
+    /// el arranque de la app (antes de `setContext`) marcaría como aproximado cualquier total
+    /// monomoneda, que es el caso de la inmensa mayoría de los usuarios.
+    private func contextFreeQuality(_ from: String, _ to: String) -> RateQuality {
+        normalizeCurrencyCode(from) == normalizeCurrencyCode(to) ? .exact : .staticFallback
     }
 
     // MARK: - Public API (with context)
@@ -200,15 +263,60 @@ final class CurrencyConverter: CurrencyConverting {
         to: String,
         context: ModelContext
     ) -> Decimal {
+        convertCheckedWithLatestRate(amount, from: from, to: to, context: context).amount
+    }
+
+    /// Igual que `convertWithLatestRate`, pero además dice **de dónde salió la tasa**.
+    ///
+    /// **El bug que esto cierra, medido el 2026-09-06 con la fila parcial del día: 1000 JPY salían
+    /// como 1000 PEN.** `fx-partial-rate-rows-silent-1to1` destapó los tres escalones en
+    /// `resolveRates`, pero esta ruta no llegaba a aprovecharlos: la caché se llena con `needing: []`
+    /// —no puede saber qué divisas le van a pedir después— así que una fila parcial de hoy entraba
+    /// entera en la caché y `performConversion` salía por su `guard let`, devolviendo el monto crudo.
+    /// Otra vez la fila parcial resultaba ESTRICTAMENTE PEOR que no tener fila: sin fila la caché se
+    /// llena con la tabla estática, que cubre todas las divisas y convierte bien (medido: 24,79 PEN).
+    ///
+    /// El arreglo es preguntar si la caché cubre de verdad las dos divisas ANTES de usarla, y
+    /// resolver nombrándolas cuando no. El caso normal —fila completa— sigue dando acierto de caché
+    /// y no paga ningún fetch; solo el caso patológico consulta, que es donde importa acertar.
+    func convertCheckedWithLatestRate(
+        _ amount: Decimal,
+        from: String,
+        to: String,
+        context: ModelContext
+    ) -> (amount: Decimal, quality: RateQuality) {
         let fromCode = normalizeCurrencyCode(from)
         let toCode = normalizeCurrencyCode(to)
 
         if fromCode == toCode {
-            return amount
+            return (amount, .exact)
         }
 
-        let rates = cachedLatestRates(context: context)
-        return performConversion(amount: amount, from: fromCode, to: toCode, rates: rates)
+        let cached = cachedLatestRates(context: context)
+        if let fromQuality = cached.origins[fromCode], let toQuality = cached.origins[toCode] {
+            return (
+                performConversion(amount: amount, from: fromCode, to: toCode, rates: cached.rates),
+                .worse(fromQuality, toQuality)
+            )
+        }
+
+        // La caché no cubre alguna de las dos: se resuelve NOMBRÁNDOLAS, que es lo que hace bajar por
+        // los escalones —incluido el de la fila real anterior, que es mejor que la tabla estática—, y
+        // se funde para que la siguiente conversión de esa divisa no repita la consulta. Sin la
+        // fusión, un día sin fila de tasas pagaría dos fetches por cada importe convertido, y hay
+        // llamadores que convierten dentro de un bucle anidado (pagos × ocurrencias).
+        let now = Date.now
+        let resolved = resolveRates(for: now, needing: [fromCode, toCode], context: context)
+        mergeIntoLatestCache(
+            rates: resolved.rates,
+            quality: resolved.quality,
+            for: [fromCode, toCode],
+            dayKey: dateFormatter.string(from: now)
+        )
+        return (
+            performConversion(amount: amount, from: fromCode, to: toCode, rates: resolved.rates),
+            resolved.quality
+        )
     }
 
     /// Invalidates the latest-rates cache. Call after `ExchangeRateService`
@@ -337,7 +445,12 @@ final class CurrencyConverter: CurrencyConverting {
     ) -> (rates: [String: Double], quality: RateQuality) {
         let dateKey = dateFormatter.string(from: date)
 
-        var merged = fetchExchangeRate(for: dateKey, context: context)?.decodedRates() ?? [:]
+        // El filtro NO es decorativo: una tasa `0` guardada pasaba la comprobación de presencia,
+        // nunca contaba como ausente, y `performConversion` acababa devolviendo el monto CRUDO (o un
+        // 0, si el cero estaba en la divisa de destino) etiquetado `.exact`. Tratarla como ausente
+        // desde aquí deja que los escalones la rescaten, que es lo que ya hacen con una que falta.
+        var merged = (fetchExchangeRate(for: dateKey, context: context)?.decodedRates() ?? [:])
+            .filter { Self.isUsableRate($0.value) }
         func missing() -> Set<String> { codes.subtracting(merged.keys) }
 
         if !merged.isEmpty && missing().isEmpty {
@@ -350,8 +463,9 @@ final class CurrencyConverter: CurrencyConverting {
         if !missing().isEmpty {
             for previous in fetchRates(strictlyBefore: dateKey, limit: Self.carryForwardLookback, context: context) {
                 let previousRates = previous.decodedRates()
-                for code in missing() where previousRates[code] != nil {
-                    merged[code] = previousRates[code]
+                for code in missing() {
+                    guard let rate = previousRates[code], Self.isUsableRate(rate) else { continue }
+                    merged[code] = rate
                     if carriedFrom == nil { carriedFrom = previous.dateKey }
                 }
                 if missing().isEmpty { break }
@@ -360,8 +474,9 @@ final class CurrencyConverter: CurrencyConverting {
 
         // Escalón 3: lo que siga faltando, de la tabla estática.
         var usedStatic = false
+        let staticTable = fallbackRates
         for code in missing() {
-            if let staticRate = fallbackRates[code] {
+            if let staticRate = staticTable[code], Self.isUsableRate(staticRate) {
                 merged[code] = staticRate
                 usedStatic = true
             }
@@ -400,19 +515,63 @@ final class CurrencyConverter: CurrencyConverting {
     /// Returns latest rates from cache or fetches and caches them on miss.
     /// Lock-protected for thread-safety (CurrencyConverter is a singleton
     /// reachable from any actor; cache must be safe for concurrent reads).
-    private func cachedLatestRates(context: ModelContext) -> [String: Double] {
-        let now = Date.now
-        let todayKey = dateFormatter.string(from: now)
+    /// Siembra la caché con **solo lo que trae la fila de hoy**, nada más.
+    ///
+    /// No completa con escalones inferiores a propósito: esta caché se llena antes de saber qué
+    /// divisas le van a pedir, y rellenarla «por si acaso» con la tabla estática es justo lo que
+    /// mataba el carry-forward (ver `CachedRates.origins`). Lo que falte se resuelve **nombrándolo**
+    /// en `convertCheckedWithLatestRate`, y se funde aquí para no repetir la consulta.
+    private func cachedLatestRates(context: ModelContext) -> CachedRates {
+        let todayKey = dateFormatter.string(from: Date.now)
         if let cached = latestRatesCache.withLock({ $0 }), cached.dayKey == todayKey {
-            return cached.rates
+            return cached
         }
-        // `needing: []` = «lo que traiga la fila»: esta caché se llena antes de saber qué divisas le
-        // van a pedir, así que no puede completar por adelantado. Los consumidores que sí saben
-        // (`convert`/`convertChecked`) resuelven por su cuenta.
-        let rates = resolveRates(for: now, needing: [], context: context).rates
-        latestRatesCache.withLock { $0 = CachedRates(rates: rates, dayKey: todayKey) }
-        return rates
+        let row = fetchExchangeRate(for: todayKey, context: context)?.decodedRates() ?? [:]
+        let usable = row.filter { Self.isUsableRate($0.value) }
+        let entry = CachedRates(
+            rates: usable,
+            dayKey: todayKey,
+            origins: usable.mapValues { _ in RateQuality.exact }
+        )
+        latestRatesCache.withLock { $0 = entry }
+        return entry
     }
+
+    /// Funde en la caché de hoy las divisas que hubo que resolver aparte, con el escalón del que
+    /// salieron, para que la siguiente conversión de esa misma divisa no repita la consulta.
+    ///
+    /// **Si la caché fue invalidada mientras se resolvía, la fusión se descarta.** Escribir aquí
+    /// resucitaría la entrada previa al refresco y la dejaría viva hasta medianoche, con tasas
+    /// viejas y una etiqueta de calidad que ya no corresponde.
+    private func mergeIntoLatestCache(
+        rates: [String: Double],
+        quality: RateQuality,
+        for codes: Set<String>,
+        dayKey: String
+    ) {
+        latestRatesCache.withLock { entry in
+            guard var current = entry, current.dayKey == dayKey else { return }
+            for code in codes where current.rates[code] == nil {
+                guard let rate = rates[code], Self.isUsableRate(rate) else { continue }
+                current.rates[code] = rate
+                current.origins[code] = quality
+            }
+            entry = current
+        }
+    }
+
+    /// Una tasa solo sirve si es finita y estrictamente positiva.
+    ///
+    /// **Un `0` guardado era indistinguible de una tasa buena** y se colaba por tres sitios que no
+    /// coincidían: la cobertura preguntaba por existencia de la clave, `missing()` también, y solo
+    /// `performConversion` exigía `> 0` — y cuando salía por ahí devolvía el monto **crudo**
+    /// etiquetado `.exact`, que es el bug original de este ticket por otra puerta. Peor en el otro
+    /// sentido: un `0` en la divisa de destino devolvía **0** sellado como exacto. Ahora las tres
+    /// preguntas son la misma y una tasa inservible se trata como ausente, así que los escalones la
+    /// rescatan.
+    /// `nonisolated`: es aritmética pura sobre un `Double` y se consulta desde dentro del closure
+    /// del lock, que no está aislado al main actor.
+    nonisolated static func isUsableRate(_ rate: Double) -> Bool { rate.isFinite && rate > 0 }
 
     private func performConversion(
         amount: Decimal,
@@ -425,7 +584,10 @@ final class CurrencyConverter: CurrencyConverting {
             return amount
         }
 
-        guard fromRate > 0 else {
+        // `toRate` no se comprobaba: un 0 en la divisa de DESTINO no devolvía el monto crudo sino
+        // un **0**, que es peor porque parece un dato. Hoy `resolveRates` ya filtra las inservibles,
+        // así que esto es la segunda red, no la primera.
+        guard Self.isUsableRate(fromRate), Self.isUsableRate(toRate) else {
             return amount
         }
 

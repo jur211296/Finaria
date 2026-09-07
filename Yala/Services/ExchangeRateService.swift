@@ -217,6 +217,13 @@ final class ExchangeRateService: ExchangeRateServiceProtocol {
             }
         }
 
+        // La caché de últimas tasas del converter guarda, con cada tasa, el escalón del que salió.
+        // Si este refresco trajo la fila de HOY —lo hace siempre que hoy estuviera incompleto, que
+        // es su caso normal— y nadie invalida, el converter sigue sirviendo lo que sembró antes y
+        // además lo sigue declarando aproximado hasta medianoche, con la fila buena ya en disco.
+        // Los otros dos escritores de tasas ya postean esta señal; éste se quedó sin ella.
+        NotificationCenter.default.post(name: .yalaExchangeRatesUpdated, object: nil)
+
         #if DEBUG
         print("ExchangeRateService: Force refresh complete")
         #endif
