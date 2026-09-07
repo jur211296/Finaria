@@ -82,7 +82,39 @@ hay que reescribirlo para que diga la coherencia nueva: mismo hueco, cifra disti
       calculador. El diff sobre `Yala/` es un `Text` nuevo por vista + un fichero de lógica pura.
 - [x] El comentario de `TrendsTabView.swift` que justificaba el hero por «coherencia cross-tab» se
       reescribe: ya no describe lo que hay. Fijado por test para que no vuelva.
-- [ ] Device-QA de las cuatro pestañas deslizando con el mismo período (**es lo único que falta**).
+- [~] Device-QA: **verificado en simulador** (iPhone 17 Pro, iOS 26.5, seed `realista`, 2320
+      movimientos) — ver «Verificado en simulador» abajo. Falta la pasada en **teléfono físico**,
+      que la corre Jürgen.
+
+## Verificado en simulador el 2026-09-07
+
+No basta un source-scan: fija el cableado, no que el rótulo se VEA. Recorrido real con la app
+instalada y datos sembrados. Lo medido, en orden:
+
+| Pestaña / estado | Cifra en pantalla | Rótulo |
+|---|---|---|
+| Resumen (Insights) | S/ 72.361,30 | «Neto del período» |
+| Distribución, sin filtros | S/ **80.018,00** | «Saldo de cuentas» |
+| Tendencias, métrica Balance | S/ 72.361,30 | «Neto del período» |
+| Tendencias, métrica Gasto | S/ **204.821,00** | «Gastos del período» |
+| Distribución, con chip Gasto | S/ **204.821,00** | «Gastos del período» |
+
+Dos observaciones que valen más que el «pasa»:
+
+1. **Distribución e Insights enseñaban 80.018,00 y 72.361,30 en el mismo hueco visual**, con el
+   mismo período y sin filtros. Ese es el bug del ticket, ahora visible y rotulado.
+2. **La misma pestaña Distribución muestra dos magnitudes distintas** según el chip: 80.018,00
+   (saldo) sin filtros y 204.821,00 (gastos) con el chip de Gasto. Es la prueba en pantalla de que
+   un rótulo fijo «Saldo de cuentas» habría mentido — habría llamado saldo a 204.821 de gastos.
+
+Evidencia: `qa-hero-caption-distribucion-gastos-20260907.jpg` (Distribución con el chip de Gasto).
+
+**Qué falta comprobar en el teléfono**, que el simulador no cubrió: la 4ª pestaña (Registros) con
+sus chips de ingresos/gastos, el estado de las dos naturalezas a la vez («Total del período»), y
+el deslizamiento entre las cuatro con el mismo período —que es donde la incoherencia se nota—.
+Nota de diseño, no bloqueante: en Distribución el rótulo y el subtítulo dimensional quedan como dos
+líneas secundarias seguidas; se lee bien, pero si a Jürgen le carga la vista, es un ajuste de
+`spacing`, no de lógica.
 
 ## La premisa del AC era falsa, y un rótulo fijo habría mentido en pantalla
 
