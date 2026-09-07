@@ -333,4 +333,48 @@ final class GroupsSmokeUITests: XCTestCase {
             "GroupsGlobalSettingsView no montó (groups_bridge_toggle)."
         )
     }
+
+    /// groups-crud-balances-settlements: el resumen compartible («cierre del viaje») se ofrece en
+    /// Ajustes del grupo y su sheet llega a producir la imagen.
+    ///
+    /// Es el primer XCUITest que entra en `GroupSettingsView`: hasta ahora esa pantalla no tenía ni
+    /// un `accessibilityIdentifier` y su engranaje solo se podía targetear por el label localizado,
+    /// que está prohibido. Aterriza por deeplink y navega card → engranaje, sin scroll de
+    /// `LazyVGrid` de por medio.
+    ///
+    /// La aserción fuerte es `group_summary_preview`: ese id lo lleva la `Image(uiImage:)`, así que
+    /// solo existe si `ImageRenderer` devolvió algo — es la prueba de que la imagen se generó de
+    /// verdad, no solo de que el sheet montó. El seed `grupos` trae 3 gastos, que es lo que hace
+    /// aparecer la sección.
+    func test_groupShareableSummaryOpensAndRendersImage() {
+        let app = launchOnGroups()
+
+        let card = app.descendants(matching: .any).matching(identifier: "group_card").firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 20), "No apareció la tarjeta del grupo sembrado.")
+        // `exists` no implica alcanzable: sin esto el tap puede perderse en {-1,-1}.
+        XCTAssertTrue(card.waitForHittable(timeout: 10), "La tarjeta del grupo no es alcanzable.")
+        card.tap()
+
+        let gear = app.buttons["group_settings_button"]
+        XCTAssertTrue(gear.waitForExistence(timeout: 20), "No se abrió el detalle del grupo (group_settings_button).")
+        XCTAssertTrue(gear.waitForHittable(timeout: 10), "El engranaje de ajustes no es alcanzable.")
+        gear.tap()
+
+        let shareRow = app.buttons["group_settings_share_summary_button"]
+        XCTAssertTrue(
+            shareRow.waitForExistence(timeout: 10),
+            "GroupSettingsView no ofreció «Compartir resumen» con un grupo que tiene gastos."
+        )
+        XCTAssertTrue(shareRow.waitForHittable(timeout: 10), "La fila del resumen no es alcanzable.")
+        shareRow.tap()
+
+        XCTAssertTrue(
+            app.images["group_summary_preview"].waitForExistence(timeout: 15),
+            "El sheet del resumen no llegó a renderizar la imagen (group_summary_preview)."
+        )
+        XCTAssertTrue(
+            app.buttons["group_summary_share_button"].waitForExistence(timeout: 5),
+            "El sheet del resumen no ofreció el botón de compartir."
+        )
+    }
 }
