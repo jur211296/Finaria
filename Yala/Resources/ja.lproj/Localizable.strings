@@ -750,6 +750,23 @@
 "panel.liveAnchorEducation.coachTitle" = "残高は自然と動きます";
 "panel.liveAnchorEducation.coachMessage" = "他の通貨でお金をお持ちのとき、その価値は日々変わります。タップして詳しく見てみましょう。";
 "panel.liveAnchorEducation.dotA11yLabel" = "現在の為替レートでの本日の残高。タップして詳細を確認してください。";
+
+/* FX P&L card — ganancia/pérdida por tipo de cambio */
+"panel.fxPnL.titleGain" = "為替による利益";
+"panel.fxPnL.titleLoss" = "為替による損失";
+"panel.fxPnL.sentenceHoldingUpFormat" = "あなたの%1$@は、口座に入ったときより今日%2$@高くなっています。";
+"panel.fxPnL.sentenceHoldingDownFormat" = "あなたの%1$@は、口座に入ったときより今日%2$@安くなっています。";
+"panel.fxPnL.sentenceDebtUpFormat" = "%1$@建ての借入は、負ったときより今日%2$@高くついています。";
+"panel.fxPnL.sentenceDebtDownFormat" = "%1$@建ての借入は、負ったときより今日%2$@安くなっています。";
+"panel.fxPnL.openDetail" = "通貨ごとの内訳を見る";
+"panel.fxPnL.sheetTitle" = "為替の影響";
+"panel.fxPnL.totalLabel" = "合計";
+"panel.fxPnL.sheetIntroFormat" = "他の通貨で保有しているお金が、口座に入ったときの価値と比べて今日%@でいくらになるかを比較しています。その差が、あなたが何もしなくても為替がもたらした、または奪った金額です。";
+"panel.fxPnL.rowRatesFormat" = "入金時 %1$@ · 本日 %2$@";
+"panel.fxPnL.rowValueTodayFormat" = "= %@";
+"panel.fxPnL.averageNote" = "入金時のレートは、その通貨のすべての取引の平均であり、個々の購入ごとのレートではありません。";
+"panel.fxPnL.estimatedRateNote" = "一部の換算に本日以外のレートを使用したため、これらの数値は概算です。";
+
 "widget.today" = "今日";
 
 // Widget Preferences

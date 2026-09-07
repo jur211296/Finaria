@@ -748,6 +748,23 @@
 "panel.liveAnchorEducation.coachTitle" = "Seu saldo se move sozinho";
 "panel.liveAnchorEducation.coachMessage" = "Quando você tem dinheiro em outras moedas, o valor dele muda dia a dia. Toque para entender o que está acontecendo.";
 "panel.liveAnchorEducation.dotA11yLabel" = "Saldo de hoje na taxa de câmbio atual. Toque para ver os detalhes.";
+
+/* FX P&L card — ganancia/pérdida por tipo de cambio */
+"panel.fxPnL.titleGain" = "Ganho com o câmbio";
+"panel.fxPnL.titleLoss" = "Perda com o câmbio";
+"panel.fxPnL.sentenceHoldingUpFormat" = "Seus %1$@ valem hoje %2$@ a mais do que quando entraram na sua conta.";
+"panel.fxPnL.sentenceHoldingDownFormat" = "Seus %1$@ valem hoje %2$@ a menos do que quando entraram na sua conta.";
+"panel.fxPnL.sentenceDebtUpFormat" = "Sua dívida em %1$@ custa hoje %2$@ a mais do que quando você a contraiu.";
+"panel.fxPnL.sentenceDebtDownFormat" = "Sua dívida em %1$@ custa hoje %2$@ a menos do que quando você a contraiu.";
+"panel.fxPnL.openDetail" = "Ver o detalhe por moeda";
+"panel.fxPnL.sheetTitle" = "Efeito do câmbio";
+"panel.fxPnL.totalLabel" = "No total";
+"panel.fxPnL.sheetIntroFormat" = "Comparamos quanto o seu dinheiro em outras moedas vale hoje em %@ com quanto valia quando entrou nas suas contas. A diferença é o que o câmbio te deu ou tirou, sem que você fizesse nada.";
+"panel.fxPnL.rowRatesFormat" = "Entrou a %1$@ · hoje a %2$@";
+"panel.fxPnL.rowValueTodayFormat" = "= %@";
+"panel.fxPnL.averageNote" = "O câmbio de entrada é uma média de todas as suas movimentações nessa moeda, não o de cada compra separadamente.";
+"panel.fxPnL.estimatedRateNote" = "Alguma conversão usou um câmbio que não era o de hoje, então estes valores são aproximados.";
+
 "widget.today" = "Hoje";
 
 // Widget Preferences

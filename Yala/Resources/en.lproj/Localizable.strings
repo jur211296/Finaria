@@ -750,6 +750,23 @@
 "panel.liveAnchorEducation.coachTitle" = "Your balance moves on its own";
 "panel.liveAnchorEducation.coachMessage" = "When you have money in other currencies, its value changes day by day. Tap me to find out what's going on.";
 "panel.liveAnchorEducation.dotA11yLabel" = "Today's balance at the current exchange rate. Tap to see details.";
+
+/* FX P&L card — ganancia/pérdida por tipo de cambio */
+"panel.fxPnL.titleGain" = "Exchange rate gain";
+"panel.fxPnL.titleLoss" = "Exchange rate loss";
+"panel.fxPnL.sentenceHoldingUpFormat" = "Your %1$@ are worth %2$@ more today than when they came into your account.";
+"panel.fxPnL.sentenceHoldingDownFormat" = "Your %1$@ are worth %2$@ less today than when they came into your account.";
+"panel.fxPnL.sentenceDebtUpFormat" = "Your debt in %1$@ costs %2$@ more today than when you took it on.";
+"panel.fxPnL.sentenceDebtDownFormat" = "Your debt in %1$@ costs %2$@ less today than when you took it on.";
+"panel.fxPnL.openDetail" = "See the breakdown by currency";
+"panel.fxPnL.sheetTitle" = "Exchange rate effect";
+"panel.fxPnL.totalLabel" = "In total";
+"panel.fxPnL.sheetIntroFormat" = "We compare what your money in other currencies is worth today in %@ with what it was worth when it came into your accounts. The difference is what the exchange rate gave you or took from you, without you doing anything.";
+"panel.fxPnL.rowRatesFormat" = "Came in at %1$@ · today at %2$@";
+"panel.fxPnL.rowValueTodayFormat" = "= %@";
+"panel.fxPnL.averageNote" = "The entry rate is an average of all your movements in that currency, not the rate of each individual purchase.";
+"panel.fxPnL.estimatedRateNote" = "Some conversion used a rate that wasn't today's, so these figures are approximate.";
+
 "widget.today" = "Today";
 
 // Widget Preferences

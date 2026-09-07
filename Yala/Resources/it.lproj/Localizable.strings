@@ -748,6 +748,23 @@
 "panel.liveAnchorEducation.coachTitle" = "Il tuo saldo si muove da solo";
 "panel.liveAnchorEducation.coachMessage" = "Quando hai soldi in altre valute, il loro valore cambia giorno per giorno. Tocca per capire cosa succede.";
 "panel.liveAnchorEducation.dotA11yLabel" = "Saldo di oggi al tasso di cambio attuale. Tocca per vedere i dettagli.";
+
+/* FX P&L card — ganancia/pérdida por tipo de cambio */
+"panel.fxPnL.titleGain" = "Guadagno di cambio";
+"panel.fxPnL.titleLoss" = "Perdita di cambio";
+"panel.fxPnL.sentenceHoldingUpFormat" = "I tuoi %1$@ valgono oggi il %2$@ in più rispetto a quando sono entrati nel tuo conto.";
+"panel.fxPnL.sentenceHoldingDownFormat" = "I tuoi %1$@ valgono oggi il %2$@ in meno rispetto a quando sono entrati nel tuo conto.";
+"panel.fxPnL.sentenceDebtUpFormat" = "Il tuo debito in %1$@ costa oggi il %2$@ in più rispetto a quando l'hai contratto.";
+"panel.fxPnL.sentenceDebtDownFormat" = "Il tuo debito in %1$@ costa oggi il %2$@ in meno rispetto a quando l'hai contratto.";
+"panel.fxPnL.openDetail" = "Vedi il dettaglio per valuta";
+"panel.fxPnL.sheetTitle" = "Effetto del tasso di cambio";
+"panel.fxPnL.totalLabel" = "In totale";
+"panel.fxPnL.sheetIntroFormat" = "Confrontiamo quanto vale oggi in %@ il tuo denaro in altre valute con quanto valeva quando è entrato nei tuoi conti. La differenza è ciò che il tasso di cambio ti ha dato o tolto, senza che tu facessi nulla.";
+"panel.fxPnL.rowRatesFormat" = "Entrato a %1$@ · oggi a %2$@";
+"panel.fxPnL.rowValueTodayFormat" = "= %@";
+"panel.fxPnL.averageNote" = "Il tasso d'ingresso è una media di tutti i tuoi movimenti in quella valuta, non quello di ogni singolo acquisto.";
+"panel.fxPnL.estimatedRateNote" = "Una conversione ha usato un tasso che non era quello di oggi, quindi queste cifre sono approssimative.";
+
 "widget.today" = "Oggi";
 
 // Widget Preferences
