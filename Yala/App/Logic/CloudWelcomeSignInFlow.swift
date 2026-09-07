@@ -45,6 +45,23 @@ nonisolated enum CloudWelcomeSignInPhase: Equatable {
     /// los distingue es el testigo de mount, no la pantalla. Colapsarlos obligaría a la vista a re-derivar
     /// la decisión.
     case bornCloudReady
+    /// **R3 (2026-09-06): la RE-ENTRADA terminó sin relanzar.** Mismo hecho visible que
+    /// `.bornCloudReady` —el almacenamiento nube quedó activo en este proceso, con el motor arrancado en
+    /// sesión, y no hay nada que reabrir— y por eso comparte su pantalla y su copy.
+    ///
+    /// **Es una fase propia por su SALIDA, y la diferencia no es de camino sino de precondición.** El
+    /// alta llega aquí con `hasCompletedOnboarding` en `false`: su usuario no tiene datos y el onboarding
+    /// de 8 pasos es su siguiente paso legítimo. La re-entrada llega con ese flag ya en `true`, porque
+    /// `onAdoptStarted` lo marca ANTES de conducir la máquina para «cerrar el hazard kill-mid-adopt → el
+    /// seed del onboarding jamás corre sobre una cuenta existente» (`ContentView`, su propio comentario).
+    /// Mandarla al onboarding desharía esa defensa: `createOnboardingAccount` inserta una cuenta sin
+    /// comprobar existencia y `seedCategoriesIfNeeded` siembra si el pull aún no aterrizó — y con el motor
+    /// ya corriendo, ambas cosas SUBEN al backend y se abanican a los demás devices del usuario.
+    ///
+    /// Su salida es la del relanzamiento de antes: cerrar el cover y caer a la app. Colapsar las dos
+    /// fases en una obliga al callback único a adivinar cuál de las dos precondiciones tiene delante, que
+    /// es exactamente lo que no puede hacer.
+    case reentryReady
     /// M1: confirmación explícita ANTES de escribir nada de la sesión secundaria
     /// ("entrarás con tu cuenta; los datos del dueño no se tocan").
     case secondaryConfirm
@@ -130,8 +147,29 @@ nonisolated enum CloudWelcomeSignInFlow {
         case .needsRelaunch(.toCloud):
             return .relaunch
         case .cloudActive:
-            // El relaunch ya se resolvió en otro proceso — terminal equivalente.
-            return .relaunch
+            // **Terminal de LISTA, no de relanzamiento** (decisión owner 2026-09-06).
+            //
+            // Hasta el 2026-09-07 esto devolvía `.relaunch` justificado con «el relaunch ya se
+            // resolvió en otro proceso — terminal equivalente», y esa frase describía mal el caso que
+            // más importa: en un móvil recién instalado NINGÚN proceso resolvió nada. El store nació
+            // NEUTRO, así que `derive` nunca pasa por `.needsRelaunch(.toCloud)` —ese término exige
+            // `mirrorStillAttached`— y cae aquí con el mirror inexistente y nada que remontar. Pedirle
+            // a ese usuario que cerrara y reabriera Yala era cobrarle un relanzamiento que no hacía
+            // falta.
+            //
+            // Llegar aquí significa, por los DOS productores, que la app ya funciona sin reabrirse:
+            //  · mount neutro (re-entrada en móvil limpio) — el motor lo arranca en sesión
+            //    `startAdoptWithExistingSession`, igual que el alta;
+            //  · el relanzamiento SÍ ocurrió en otro proceso — y entonces el motor arrancó en su boot
+            //    (`resumeIfNeeded` → `startRuntimeIfStable`).
+            // El caso que todavía DEBE relanzar tiene su propio `case` arriba y no pasa por aquí.
+            //
+            // Fase PROPIA y no `.bornCloudReady`: comparten pantalla y copy, pero no salida. Quien
+            // llega aquí ya tiene `hasCompletedOnboarding` marcado por `onAdoptStarted`, así que su
+            // siguiente paso es la app, no el onboarding de 8 pasos —que sobre una cuenta existente
+            // insertaría una cuenta duplicada y podría sembrar categorías encima del pull—. El
+            // razonamiento completo, en el docblock de `.reentryReady`.
+            return .reentryReady
         case .waitingForLeader:
             return .waitingLeader
         case .failed:
@@ -212,7 +250,9 @@ nonisolated enum BornCloudSignUpFlow {
 /// de las entradas públicas (`runGuarded`) ⇒ `isWorking == false` con fase `.adopting` significa
 /// que NADIE conduce — sostenido N ticks es una aparcada real, no una ventana entre awaits.
 /// La acotación a transicionales de adopt es estructural en el caller (el poll retorna en
-/// `.relaunch`/`.error`/`.waitingLeader`) y en el destino (`resumeIfNeeded` → `MigrationBootDecision`,
+/// `.relaunch`/`.reentryReady`/`.error`/`.waitingLeader`/`.accountBlocked` — la lista creció el
+/// 2026-09-07, cuando el adopt sobre mount neutro dejó de terminar en `.relaunch`) y en el destino
+/// (`resumeIfNeeded` → `MigrationBootDecision`,
 /// que devuelve `.none` en terminales de fallo — contrato del boot: jamás auto-re-kick de rollbacks).
 nonisolated enum WelcomeAdoptAutoResume {
 

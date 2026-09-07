@@ -373,6 +373,25 @@ final class CloudMigrationController {
         await r.submit(.consentAccepted)         // consent → authenticating
         await r.submit(.signInSucceeded)         // authenticating → claimingMigration → drive
         refresh()
+        // Decisión owner (2026-09-06): el motor arranca EN SESIÓN también en la re-entrada, como ya
+        // hacía el alta (`BornCloudSignUpService.activateBornCloudStorage`). Dos caminos que montan el
+        // mismo store neutro no deberían terminar en pantallas distintas: hasta aquí el adopt dependía
+        // del relanzamiento para que algo arrancara el sync, y era el ÚNICO entrypoint del controller
+        // que no lo intentaba (`resume`, `pollLeader` y `resumeIfNeeded` ya lo llamaban).
+        //
+        // **Lo que hace esto seguro es el MOUNT, no el marcador** — la precisión importa porque es la
+        // frase de la que se fiará el siguiente. `startShared` → `start()` → `guard canRunDomain()`, y
+        // ese gate incluye `personalMountMismatch`: un proceso que montó CON el mirror de CloudKit vivo
+        // no arranca el motor aunque el par ya diga `.cloud`, y ahí `derive` sigue dando
+        // `.needsRelaunch(.toCloud)` ⇒ esta llamada es no-op y la terminal sigue siendo el
+        // relanzamiento. Un device que YA relanzó conserva su fila `CloudMigrationMarker` y monta
+        // `.cloudMirrorOff` (sin mirror), así que SÍ pasa el gate — y arrancar ahí es lo correcto.
+        // Decir «no-op cuando hay marcador» habría sido falso en ese caso.
+        //
+        // Y la puerta de Ajustes no llega hasta aquí: los dos únicos call-sites de este método están en
+        // `WelcomeCloudSignInView`; Ajustes conduce `startMigration`/`resume`/`resetAfterRollback`. Lo
+        // que el AC pedía comprobar de esa puerta es que su recorrido no cambia, y no cambia.
+        startRuntimeIfStable()
     }
 
     /// Push-all del cierre de sesión (H4, camino `.cloud`): cicla el runtime (drain + push + prefs,
@@ -554,9 +573,23 @@ final class CloudMigrationController {
 
     /// Re-arranca el runtime del dominio si la fase ya es estable (post-resume). Idempotente
     /// (`startShared` es no-op si ya corre).
+    ///
+    /// **`hasPending` es un término del guard, no un dato que se tira** (2026-09-07). La fase estable no
+    /// basta: `notStarted` LO ES —device adoptado, #30— y es también la fase que el adopt journalea
+    /// ANTES de ejecutar su efecto, así que un `.adoptBackendAccount` que falló de forma retomable
+    /// (quiescencia, red transitoria en el reconcile) deja el par `(notStarted, pendiente)`. Y falla en
+    /// SILENCIO: `MigrationRunner.runGuarded` traga `Stop.effectFailed` sin ruido porque «el próximo
+    /// resume() retoma». Arrancar el motor ahí es arrancarlo sobre una migración a medias, con el
+    /// executor y el runtime compitiendo por el mismo outbox y el mismo cursor de History.
+    ///
+    /// Es la MISMA regla que `MigrationBootDecision.decide` ya aplica —«un efecto pendiente FUERZA
+    /// `.resume` aunque la fase sea estable (AJUSTE review #3)»—, y hasta hoy esta función era el único
+    /// consumidor de la fase que no la respetaba. No se notaba porque sus tres call-sites llamaban justo
+    /// después de drenar; el cuarto (`startAdoptWithExistingSession`) no tiene esa garantía.
     private func startRuntimeIfStable() {
-        let phase = readJournalDecisionInputs().phase
+        let (phase, hasPending) = readJournalDecisionInputs()
         guard CloudSyncFlags.storageMode == .cloud,
+              !hasPending,
               MigrationRuntimeGate.isDomainStablePhase(phase) else { return }
         let ctx = context
         Task { await CloudSyncRuntime.startShared(context: ctx) }

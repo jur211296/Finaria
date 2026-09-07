@@ -18,6 +18,11 @@ struct WelcomeRestoreView: View {
         case searching
         case found(ICloudAccountSummary)
         case notFound
+        /// Búsqueda vacía **porque la nube está en pausa**, no porque no haya datos: el kill-switch
+        /// remoto está puesto y el faro dice que este Apple ID ya tiene cuenta nube. Caso propio y no
+        /// un `.notFound` con otro copy — los dos afirman hechos OPUESTOS sobre los datos del usuario
+        /// (`WelcomeRestorePauseLogic`).
+        case cloudPaused
         case wiped
         case iCloudDisabled
         case error
@@ -38,9 +43,13 @@ struct WelcomeRestoreView: View {
     var onBack: () -> Void
 
     /// Computed: `if case` no es válido dentro de `ToolbarItem` content closure.
+    ///
+    /// `.cloudPaused` lo lleva por la MISMA razón que `.notFound`: reintentar es lo único que puede
+    /// cambiar el desenlace — allí porque el import de CloudKit puede no haber terminado, aquí porque
+    /// el kill se conmuta desde el backend y el re-encendido llega sin que la app haga nada.
     private var showRefreshToolbar: Bool {
         switch state {
-        case .notFound, .error: return true
+        case .notFound, .cloudPaused, .error: return true
         default: return false
         }
     }
@@ -53,12 +62,20 @@ struct WelcomeRestoreView: View {
                 switch state {
                 case .searching:
                     RestoreProgressView { summary in
-                        state = summary.hasAnyData ? .found(summary) : .notFound
+                        // Con datos se resuelve en el acto: el aviso de la nube jamás tapa un restore
+                        // que sí puede ocurrir, y ese caso no necesita preguntarle nada al backend.
+                        if summary.hasAnyData {
+                            state = .found(summary)
+                        } else {
+                            Task { await resolveEmptyState() }
+                        }
                     }
                 case .found(let summary):
                     foundView(summary: summary)
                 case .notFound:
                     notFoundView
+                case .cloudPaused:
+                    cloudPausedView
                 case .wiped:
                     wipedView
                 case .iCloudDisabled:
@@ -131,6 +148,41 @@ struct WelcomeRestoreView: View {
         // el tap moriría con el proceso — este punto vive ya en el proceso que importa.
         ICloudRestoreSessionSignal.noteRestoreStarted()
         state = .searching
+    }
+
+    /// Desenlace de una búsqueda que terminó SIN datos: cuál de los dos hechos opuestos afirmar
+    /// —«no hay datos» o «la nube está en pausa»—, y lo decide `WelcomeRestorePauseLogic`.
+    ///
+    /// **El `force: true` no es cosmético, y aquí carga más peso que en sus hermanos.** `refreshIfDue`
+    /// sin él es un no-op mientras el último fetch tenga menos de 6 h, que es el caso NORMAL: el boot
+    /// acaba de refrescar. Sin forzar, el flag que se lee es el del arranque, y como el botón primario
+    /// de esta pantalla es «Reintentar», el usuario podría pulsarlo indefinidamente leyendo siempre el
+    /// mismo snapshot — un botón que no puede cambiar su desenlace. El kill se conmuta desde el
+    /// backend, así que preguntar es la única forma de enterarse, y tapear «Restaurar» ya es evidencia
+    /// de que quiere saberlo AHORA (mismo criterio que `WelcomeGroupsGateView.evaluate`).
+    ///
+    /// El faro y el flag se leen AQUÍ y no se heredan del `WelcomeFlowContainer` a propósito: elegir
+    /// «Restaurar» con el mount neutro RELANZA la app
+    /// (`WelcomeMirrorRelaunchLogic.requiresMirror(.restoreICloud)`), así que este proceso no vio esa
+    /// pantalla. Los dos sobreviven al relanzamiento por su cuenta —el faro porque vive en el
+    /// iCloud-KV, el flag porque es remote-config— y por eso se re-consultan en vez de pasarse.
+    private func resolveEmptyState() async {
+        // Hermeticidad: bajo `-uitest` no se toca red (mismo criterio que el resto del Welcome). Los
+        // getters devuelven su default, así que el recorrido determinista no cambia.
+        if !SwiftDataConfiguration.isUITesting {
+            await RemoteConfigClient.shared.refreshIfDue(force: true)
+        }
+        // La cancelación es COOPERATIVA y `refreshIfDue` solo la mira entre fetches, así que sin este
+        // guard un usuario que toca «volver» durante el refresco vería la pantalla cambiar bajo el
+        // dedo cuando la red conteste. Es el único punto de suspensión de la rama.
+        guard !Task.isCancelled else { return }
+
+        let paused = WelcomeRestorePauseLogic.isCloudPaused(
+            beaconLinked: CloudBeacon().isCloudAccountLinked,
+            remoteCloudEnabled: CloudRemoteFlags.cloudModeEnabled,
+            isSecondaryActive: SecondarySessionStore.isActive())
+        if paused { RestoreBreadcrumb.cloudPaused() }
+        state = paused ? .cloudPaused : .notFound
     }
 
     // MARK: - State views
@@ -314,6 +366,31 @@ struct WelcomeRestoreView: View {
             primaryTitle: L10n.Welcome.Restore.retry,
             primaryAction: { state = .searching; startSearch() }
         )
+    }
+
+    /// Nube en pausa: los datos EXISTEN y el mensaje no debe decir lo contrario.
+    ///
+    /// Naranja y no el gris de `.notFound` a propósito: el gris es el estado vacío («no hay nada»),
+    /// y aquí sí hay algo — es la misma familia que `.iCloudDisabled`, «falta una condición externa
+    /// para poder traerlo». Por eso comparte también su forma de dos botones: reintentar primero
+    /// (el kill se re-enciende desde el backend, sin actualizar la app) y empezar de cero como
+    /// salida, nunca al revés.
+    private var cloudPausedView: some View {
+        emptyStateView(
+            icon: "cloud.slash",
+            tint: .orange,
+            title: L10n.Welcome.Restore.cloudPausedTitle,
+            body: L10n.Welcome.Restore.cloudPausedBody,
+            primaryTitle: L10n.Welcome.Restore.retry,
+            primaryAction: { state = .searching; startSearch() },
+            secondaryTitle: L10n.Welcome.Restore.startFresh,
+            // Reusa el `confirmationDialog` del camino `.found` en vez de llamar directo, y es el único
+            // estado vacío que lo pide: los otros tres no afirman nada sobre los datos del usuario —
+            // éste afirma que EXISTEN. Empezar de cero desde aquí arranca un dataset paralelo que, al
+            // levantarse el kill, convive con la cuenta que este mismo texto acaba de prometer intacta.
+            secondaryAction: { showStartFreshConfirm = true }
+        )
+        .accessibilityIdentifier("welcome_restore_cloud_paused")
     }
 
     /// Respeto al wipe: el usuario borró sus datos en este dispositivo → no

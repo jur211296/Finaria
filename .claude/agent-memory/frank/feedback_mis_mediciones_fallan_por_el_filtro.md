@@ -400,3 +400,33 @@ grep del identificador suelto** (`grep -n "<id>" fichero`). Si aparece y mi rege
 defecto es del filtro. Y en este repo, las clases de caracteres para ids llevan `[A-Za-z0-9._-]`:
 hay ids en camelCase y con puntos. Lo que me salvó fue un `assert` de sanidad antes de escribir —
 si hubiera hecho el `replace` a ciegas, el parche habría "funcionado" y roto el índice.
+
+---
+
+**Caso 14 (2026-09-07): diez XCUITest en rojo que eran de mi COMANDO, no del árbol.** Corrí la suite
+entera con `-scheme Yala` y salieron 10 rojos —Grupos, Cuentas, Onboarding, SecondarySession—,
+ninguno del área que había tocado. Iba a bisecarlos contra un worktree desde HEAD (que ya tenía
+montado y compilando). Antes, medí los dos schemes:
+
+    Yala        SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG
+    Yala Dev    SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG DEV_BUILD
+
+`.claude/rules/testing.md` lo dice en su primera línea de XCUITest —«Scheme **Yala Dev**»— y explica
+por qué: los flags de Grupos nacen ON en XCUITest **porque** `DEV_BUILD` hace que el default-ausente
+de remote-config sea `true`. Sin ese flag, esas pantallas pintan otra cosa y los tests fallan **por
+diseño**. El árbol estaba sano; el roto era el scheme que elegí.
+
+**Why:** es la familia del universo equivocado (casos 9 y 17), pero con una diferencia que la hace
+peor: aquí el instrumento **sí ejecutó** los tests y **sí dio conteo** —10 failed, 112 passed—, así
+que todas mis redes habituales (conteo, denominador, control positivo del grep) daban verde. Lo único
+que lo delataba era la CONFIGURACIÓN del arnés.
+
+**How to apply:**
+- **El scheme es parte del universo, no un detalle de invocación.** En Yala: unit → `Yala`,
+  XCUITest → `Yala Dev`, y el gate corre el build en los DOS. Antes de bisecar un rojo de XCUITest,
+  comprueba con qué scheme lo produjiste.
+- **Un rojo en un área que no tocaste es primero una hipótesis sobre el arnés, y solo después sobre
+  el código.** Cuesta un `-showBuildSettings | grep COMPILATION_CONDITIONS` comprobarlo, y monté un
+  worktree entero (1,6 GB de DerivedData) antes de gastar esos diez segundos.
+- El worktree base **no se tira**: sigue siendo la respuesta correcta a «¿es mío?» cuando el arnés ya
+  está descartado. Lo que cambia es el ORDEN — arnés primero, porque es más barato.

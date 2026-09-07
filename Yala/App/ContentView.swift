@@ -1627,6 +1627,13 @@ private struct WelcomeFlowModifier: ViewModifier {
                         // tras reabrir la app. `hasShownWelcomeChooser` ya quedó `true` al elegir la card
                         // nube, así que no hay chooser al que volver.
                         //
+                        // **Sigue siendo SOLO del alta, y conviene saber por qué** (2026-09-07): la
+                        // re-entrada terminó teniendo su propia fase (`.reentryReady`) y sale por
+                        // `onFinishedToApp`. Mandarla aquí habría deshecho el `onAdoptStarted` de cuatro
+                        // líneas más arriba —que marca `hasCompletedOnboarding` para que el seed no corra
+                        // sobre una cuenta existente— y con el motor ya arrancado en sesión, la cuenta
+                        // duplicada y las categorías sembradas habrían SUBIDO al backend.
+                        //
                         // `hasCompletedOnboarding` NO se marca aquí: el onboarding es real y lo marca él.
                         // Por eso `showOnboarding` se enciende EXPLÍCITAMENTE en vez de dejar que el
                         // `onDismiss` decida — su rama de respaldo devuelve al chooser.

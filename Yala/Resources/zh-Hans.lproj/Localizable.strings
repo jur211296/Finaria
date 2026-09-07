@@ -5579,3 +5579,9 @@
 
 /* Secondary session on the private branch: CTA that continues to the private onboarding (informs, does not block) */
 "welcome.private.secondaryCta" = "继续";
+
+/* Restore: el kill-switch remoto está puesto y el usuario nació en la nube — sus datos existen, la sincronización no está disponible ahora */
+"welcome.restore.cloudPausedTitle" = "Yala 云同步已暂停";
+
+/* Restore: cuerpo del estado de nube en pausa — tranquiliza sobre los datos sin prometer plazo */
+"welcome.restore.cloudPausedBody" = "你的数据仍安全地保存在 Yala 账户中。同步暂时已暂停，请稍后再试。";

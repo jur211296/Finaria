@@ -56,9 +56,34 @@ struct CloudWelcomeSignInFlowPhaseTests {
         #expect(CloudWelcomeSignInFlow.phase(for: .needsRelaunch(.toCloud)) == .relaunch)
     }
 
+    /// Decisión owner 2026-09-06: `.cloudActive` es una terminal de LISTA, no de relanzamiento.
+    /// Llegar ahí significa que el store montado no tiene mirror que remontar (si lo tuviera, el
+    /// deriver habría dado `.needsRelaunch(.toCloud)`, fijado por el test de arriba), así que pedir
+    /// «cierra y reabre Yala» cobraba un relanzamiento que no hace falta.
     @Test
-    func cloudActive_isRelaunch_defensive() {
-        #expect(CloudWelcomeSignInFlow.phase(for: .cloudActive) == .relaunch)
+    func cloudActive_isReady_notRelaunch() {
+        #expect(CloudWelcomeSignInFlow.phase(for: .cloudActive) == .reentryReady)
+    }
+
+    /// `.reentryReady` y `.bornCloudReady` comparten pantalla pero NO salida, y por eso son fases
+    /// distintas: quien re-entra llega con `hasCompletedOnboarding` ya marcado por `onAdoptStarted`
+    /// (para que el seed no corra sobre una cuenta existente) y su siguiente pantalla es la app. Si
+    /// alguien las colapsa, el adopt acabaría mandando al onboarding de 8 pasos a un usuario con
+    /// datos — cuenta duplicada y categorías sembradas, subiendo por el motor que ya arrancó.
+    @Test("El adopt jamás produce la terminal del ALTA")
+    func adoptNeverProducesTheSignUpTerminal() {
+        for uiState in [CloudMigrationUIState.cloudActive, .needsRelaunch(.toCloud)] {
+            #expect(CloudWelcomeSignInFlow.phase(for: uiState) != .bornCloudReady)
+        }
+    }
+
+    /// El par que se lee junto: son los dos desenlaces del MISMO adopt y lo que los separa es el
+    /// mount. Escribirlos en un solo test es lo que impide que alguien "unifique" las dos terminales
+    /// y devuelva a la re-entrada su «reinicia Yala».
+    @Test("Las dos terminales del adopt se distinguen por el mount, no por el camino")
+    func adoptTerminals_splitByMount() {
+        #expect(CloudWelcomeSignInFlow.phase(for: .needsRelaunch(.toCloud)) == .relaunch)
+        #expect(CloudWelcomeSignInFlow.phase(for: .cloudActive) == .reentryReady)
     }
 
     @Test
@@ -122,8 +147,10 @@ struct CloudWelcomeSignInFlowClaimBlockerTests {
     func terminalsWin_overStaleBlocker() {
         #expect(CloudWelcomeSignInFlow.phase(for: .needsRelaunch(.toCloud),
                                              claimBlocker: .accountUnavailable) == .relaunch)
+        // Lo que este caso fija es que el blocker NO gana sobre un terminal de éxito; cuál de los dos
+        // terminales sea es cosa del mount (ver `adoptTerminals_splitByMount`).
         #expect(CloudWelcomeSignInFlow.phase(for: .cloudActive,
-                                             claimBlocker: .accountUnavailable) == .relaunch)
+                                             claimBlocker: .accountUnavailable) == .reentryReady)
     }
 
     @Test("El seguidor que espera a otro device también reporta el bloqueo (mismo POST, mismo 403)")
