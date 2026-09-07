@@ -52,6 +52,33 @@ Además de las tres corridas completas, un reproductor de 3 min (las cuatro suit
    empezadas. Un `simctl erase` (que devolvió el disco de 7,1 a 12 GB) **no lo elimina**: la 3ª
    corrida completa, hecha desde un simulador recién borrado, volvió a dar su único rojo.
 
+## Muestra 18 (2026-09-07, sesión `reentry-killswitch-closes-both-doors`): falla con CUATRO tests
+
+Corriendo **solo los cuatro candidatos** con `-only-testing` (sin las suites que los preceden, en un
+árbol distinto y con 13 GB libres): **un único rojo**, `EdgeCasesUITests.test_extremeMinimumAmountSaves`,
+con el aserto y el mensaje idénticos. Los otros tres pasaron, incluida `QuickActionsFavorites`.
+
+| Caso | Resultado | Duración |
+|---|---|---|
+| `EdgeCases.test_extremeMinimumAmountSaves` | **failed** | 60,4 s |
+| `QuickActionsFavorites.test_saveAsFavorite…` | passed | 61,7 s |
+| `TransactionsCrud.test_createTransaction` | passed | 70,4 s |
+| `InboxConvertToGroup.…preservesDraftDate` | passed | 24,1 s |
+
+**Lo que esta muestra añade, y es contra la hipótesis 3:** el ticket propone «acumulación en el
+simulador a lo largo de la corrida» como candidato. Aquí la corrida tiene **cuatro casos**, no 134, y
+el rojo aparece igual — y le toca al PRIMERO por orden alfabético, sin nada acumulado delante. La
+acumulación queda muy debilitada; los candidatos 1 (race en el guardado) y 2 (presupuesto de la
+espera) siguen en pie.
+
+Confirma además el punto 2 del apartado anterior: el fallido es el más rápido de los tres que guardan
+una transacción, o sea que la espera se rinde antes de que la pantalla aparezca, no después de un
+proceso largo.
+
+**Y el uso que se le dio:** clasificar los rojos del CI del PR #88. Bisecados contra el CI del commit
+base (`8b2aa939`), los mismos tests fallaban allí ⇒ ninguno era del chip. Esta corrida local fue la
+comprobación que lo cerró sin depender de la estadística del CI.
+
 ## Por dónde empezar
 
 El aserto vive en `YalaUITests/Support/XCUIApplication+Yala.swift:208`, dentro del helper de guardado
