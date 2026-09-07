@@ -412,9 +412,12 @@ enum GroupBackendInviteEntryHandler {
                 String(localized: "groups.invite.channelUnavailable")
             ))
             logger.error("BackendInvite[\(source.rawValue, privacy: .public)]: channel killed server-side for \(groupID, privacy: .public) → intent kept, informing user")
-        case .invalidInvite, .groupDeleted, .notAuthorized, .generic:
+        case .invalidInvite, .groupDeleted, .groupArchived, .notAuthorized, .generic:
             // PERMANENTE: canario + limpiar intent + alerta localizada (cero silencios).
             MetricsService.canary(.groupJoinFailed, detail: GroupBackendAcceptErrorLogic.slug(for: error))
+            // El nombre del grupo se lee ANTES del `clear`: vive en el intent (`branded.name`, el `n=` del
+            // enlace) y `.groupArchived` lo necesita para su título. Leerlo después daría siempre nil.
+            let brandedName = PendingJoinStore.entry(zoneName: groupID)?.branded?.name
             PendingJoinStore.clear(zoneName: groupID)
             // Señala el fallo a la vista de onboarding (failedStep) en vez de dejarla en
             // joining/takingLong con el alert retenido detrás del cover; recoverable: false
@@ -434,6 +437,21 @@ enum GroupBackendInviteEntryHandler {
                 // enlace ya no lleva a ninguna parte. Lo que cambia es que el cuerpo explica por qué en
                 // vez de dar un consejo que no se puede seguir.
                 RouterEntryGate.shared.submit(.showInviteError(String(localized: "groups.reconnect.deletedForAll.body")))
+            } else if kind == .groupArchived {
+                // g13_05. NO es `.showInviteError`: su título dice «Enlace no válido» y aquí sería FALSO
+                // —el enlace es correcto y el grupo existe—, el mismo motivo por el que `.channelDisabled`
+                // tampoco lo usa. Y tampoco `.showGroupSyncError` («Hubo un problema con el grupo»), que
+                // convertiría en avería lo que es una decisión deliberada de su admin.
+                //
+                // El intent SÍ se limpia (es permanente): a diferencia del canal apagado, aquí nada se
+                // arregla solo — el enlace no volverá a funcionar hasta que alguien desarchive el grupo, y
+                // reintentarlo en cada arranque durante siete días solo gastaría batería.
+                //
+                // Sin `n=` en el enlace no hay nombre que poner, y para eso existe `fallbackGroupName`
+                // («este grupo»), que es exactamente el hueco para el que se escribió.
+                let trimmed = (brandedName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                let name = trimmed.isEmpty ? L10n.Groups.Reconnect.fallbackGroupName : trimmed
+                RouterEntryGate.shared.submit(.showGroupArchivedNotice(groupID: groupID, groupName: name))
             } else if kind == .invalidInvite {
                 RouterEntryGate.shared.submit(.showInviteError(String(localized: "groups.invite.linkInvalidDetail")))
             } else {

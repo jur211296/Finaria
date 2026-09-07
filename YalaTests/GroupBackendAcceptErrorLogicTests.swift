@@ -2,7 +2,7 @@
 //  GroupBackendAcceptErrorLogicTests.swift
 //  YalaTests
 //
-//  Contrato C4 (G4-invites): los 13 casos de `GroupsRPCError` → 6 `ErrorKind` + isPermanent + slug.
+//  Contrato C4 (G4-invites): los 14 casos de `GroupsRPCError` → 7 `ErrorKind` + isPermanent + slug.
 //
 
 import Foundation
@@ -14,8 +14,10 @@ struct GroupBackendAcceptErrorLogicTests {
 
     typealias L = GroupBackendAcceptErrorLogic
 
-    @Test func classify_allThirteenCases() {
+    @Test func classify_allFourteenCases() {
         #expect(L.classify(.invalidInvite) == .invalidInvite)
+        #expect(L.classify(.groupDeleted) == .groupDeleted)
+        #expect(L.classify(.groupArchived) == .groupArchived)
         #expect(L.classify(.sessionExpired) == .sessionRequired)
         #expect(L.classify(.notAuthorized) == .notAuthorized)
         #expect(L.classify(.transient(status: 503)) == .transient)
@@ -37,6 +39,7 @@ struct GroupBackendAcceptErrorLogicTests {
 
     @Test func isPermanent_onlyPermanentKinds() {
         #expect(L.isPermanent(.invalidInvite))
+        #expect(L.isPermanent(.groupArchived))
         #expect(L.isPermanent(.notAuthorized))
         #expect(L.isPermanent(.generic))
         // NO permanentes: el reconciler reintenta / re-presenta sign-in.
@@ -96,5 +99,42 @@ struct GroupBackendAcceptErrorLogicTests {
     /// clientes viejos trataron `yala_group_deleted` como rechazo permanente, igual que antes.
     @Test func unknownCode_staysUnmapped() {
         #expect(GroupsRPCError(yalaCode: "yala_algo_que_no_existe") == nil)
+    }
+
+    // MARK: - g13_05 · el grupo archivado no acepta miembros nuevos
+
+    /// Los TRES estados que el servidor sabe distinguir tras validar el token siguen separados hasta el
+    /// mensaje. Colapsar cualquiera de ellos devuelve un consejo que no se puede seguir: al del grupo
+    /// archivado, «pide otro enlace» (el que tiene ya es bueno); al del borrado, «pídeselo al admin» (no
+    /// hay admin).
+    @Test func groupArchived_hasItsOwnKind() {
+        #expect(L.classify(.groupArchived) == .groupArchived)
+        #expect(L.classify(.groupDeleted) == .groupDeleted)
+        #expect(L.classify(.invalidInvite) == .invalidInvite)
+    }
+
+    /// PERMANENTE, y esto es lo que lo separa de `.channelDisabled` —el otro caso en que el enlace es
+    /// bueno—: un canal apagado vuelve solo con un deploy, así que allí el intent se conserva. Un grupo
+    /// archivado NO se desarchiva solo; conservar el intent haría que el reconciler reintentara en cada
+    /// arranque durante los siete días del TTL sin que nada cambie.
+    @Test func groupArchived_isPermanent_unlikeChannelDisabled() {
+        #expect(L.isPermanent(.groupArchived))
+        #expect(!L.isPermanent(.channelDisabled))
+    }
+
+    /// Slug propio en el canario. «Llegó por el enlace de un grupo archivado» y «llegó por el de un grupo
+    /// borrado» son incidencias distintas: la primera es reversible y dice que alguien tiene enlaces
+    /// vivos repartidos de un grupo que ya guardó; la segunda no tiene vuelta.
+    @Test func groupArchived_reportsItsOwnSlug() {
+        #expect(L.slug(for: .groupArchived) == "groupArchived")
+        #expect(L.slug(for: .groupDeleted) == "groupDeleted")
+    }
+
+    /// El mapeo del código del servidor (g13_05). Si esto se rompe, el error llega como
+    /// `.permanentRejected` → `.generic` y el usuario ve «Hubo un problema con el grupo» en vez del
+    /// estado real: no entra igualmente, pero sin enterarse de por qué. Fallo silencioso, no un rojo.
+    @Test func serverCode_mapsToGroupArchived() {
+        #expect(GroupsRPCError(yalaCode: "yala_group_archived") == .groupArchived)
+        #expect(GroupsRPCError(yalaCode: "yala_group_deleted") == .groupDeleted)
     }
 }

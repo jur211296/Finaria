@@ -327,6 +327,11 @@ struct GroupsMembershipClientTests {
         #expect((GroupsRPCError.ownerCannotLeave as NSError).code == 11)
         #expect((GroupsRPCError.channelDisabled as NSError).code == 12)
         #expect((GroupsRPCError.decoding as NSError).code == 13)
+        // g13_05 (2026-09-06). Declarado al FINAL del enum justamente para que esta tabla no se
+        // renumere: ponerlo junto a `groupDeleted`, que es su hermano semántico, habría corrido en uno
+        // los ocho casos siguientes y habría invalidado la lectura de los reportes de device de los
+        // builds ya publicados. Este test lo cazó, que es exactamente para lo que está.
+        #expect((GroupsRPCError.groupArchived as NSError).code == 14)
     }
 
     /// La contraprueba de que el número ya no llega a ninguna pantalla de salida: las dos superficies

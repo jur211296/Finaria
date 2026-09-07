@@ -56,6 +56,13 @@ enum RouterIntent: Identifiable, Equatable {
     // C) Groups & invites
     case showInviteError(String)
     case showGroupSyncError(String)
+    /// g13_05: se tapeó el enlace de un grupo ARCHIVADO. No es un error y no se presenta como tal — ni
+    /// `.showInviteError` (su título dice «Enlace no válido», y aquí el enlace es perfecto) ni
+    /// `.showGroupSyncError` («Hubo un problema con el grupo», cuando no ha habido ninguno). Es un
+    /// ESTADO del grupo, reversible por su admin, y por eso trae su propia tarjeta con el copy
+    /// `groups.reconnect.archived.*` — los tres strings ya traducidos a 16 idiomas y hasta hoy sin
+    /// consumidor. `groupName` viene del `n=` del enlace, o del fallback genérico si no lo traía.
+    case showGroupArchivedNotice(groupID: String, groupName: String)
     case presentFullModeActivation
     /// G4-invites (DARK): un link backend llegó con sesión pero sin consentimiento de
     /// grupos → presentar la pantalla de consent. Payload = keying `zoneName`
@@ -109,6 +116,7 @@ extension RouterIntent {
              .presentGroupsOrganizerStep,
              .showInviteError,
              .showGroupSyncError,
+             .showGroupArchivedNotice,
              .iCloudMismatch, .remoteWipe, .remoteOnboardingCompleted,
              .presentFullModeActivation:
             return .contentView
@@ -133,7 +141,11 @@ extension RouterIntent {
     /// same consumer.
     var priority: Priority {
         switch self {
-        case .iCloudMismatch, .remoteWipe, .showInviteError:
+        // `.showGroupArchivedNotice` va con `.showInviteError` y no con `.showGroupSyncError`: la
+        // prioridad la fija el MOMENTO, no la gravedad. Los dos contestan a un tap de enlace que el
+        // usuario acaba de dar y cuya respuesta está esperando; si otra cosa se cuela delante, se queda
+        // sin saber por qué no entró.
+        case .iCloudMismatch, .remoteWipe, .showInviteError, .showGroupArchivedNotice:
             return .critical
         case .showInboxAlert, .presentSharedImage, .presentDowngradeResolution,
              .presentTrialExpired, .requestAIConsent, .showGroupSyncError,
@@ -188,6 +200,10 @@ extension RouterIntent {
             return "inviteError:\(detail.hashValue)"
         case .showGroupSyncError(let detail):
             return "groupSyncError:\(detail.hashValue)"
+        // Dedup por GRUPO y no por el texto: dos taps al mismo enlace archivado son el mismo aviso, y el
+        // nombre puede variar entre ellos (un enlace con `n=` y otro sin él) sin que sean cosas distintas.
+        case .showGroupArchivedNotice(let groupID, _):
+            return "groupArchived:\(groupID)"
         case .presentFullModeActivation:
             return "fullMode"
         case .presentGroupsConsent(let pendingJoin):

@@ -421,6 +421,16 @@ end $$;
 -- ============================================================================
 -- G7 (g7_02): +p_key text — display_name is encrypted with pgp_sym_encrypt in the rebind/revive/insert branches; DROP
 -- the 3-arg signature first + search_path adds `extensions`.
+--
+-- ⚠️ Este bloque estuvo DESFASADO respecto a producción hasta el 2026-09-06: le faltaban g13_03 y
+-- g13_04, aplicadas en la BD y nunca traídas al molde. Ahora refleja el `prosrc` vivo e incluye:
+--   · g13_03 (`qa/cloud/g13_03_join_group_distinguishes_deleted.sql`) — el segundo `raise` pasa de
+--     `yala_invalid_invite` a `yala_group_deleted`: «el grupo ya no existe» ≠ «el enlace no sirve».
+--   · g13_04 (`…/g13_04_join_group_reports_transition.sql`) — la clave `changed`, que distingue el
+--     alta/revive real del no-op del re-tap y evita re-despertar a los admins.
+--   · g13_05 (`…/g13_05_join_group_rejects_archived.sql`) — un grupo ARCHIVADO no acepta miembros
+--     nuevos (`yala_group_archived`). Gateado SOLO en las dos ramas de entrada nueva: el rebind legacy
+--     y el no-op de quien ya está dentro pasan intactos. Razonamiento completo en la cabecera del .sql.
 drop function if exists public.join_group(text, text, text);
 create function public.join_group(
   p_token text,
@@ -434,6 +444,7 @@ declare
   v_hlc      text;
   v_display  text;
   v_group    text;
+  v_archived boolean;
   v_inv      record;
   v_row      record;
 begin
@@ -442,6 +453,8 @@ begin
   end if;
 
   select * into v_inv from group_invites where token = p_token for update;
+  -- Las CUATRO causas que sí describen un enlace inservible siguen colapsadas a propósito: distinguirlas
+  -- sí sería un oráculo (permitiría sondear qué tokens existen).
   if v_inv.token is null
      or v_inv.revoked = true
      or (v_inv.expires_at is not null and v_inv.expires_at <= now())
@@ -449,8 +462,12 @@ begin
     raise exception 'yala_invalid_invite' using errcode = 'P0001';
   end if;
   v_group := v_inv.group_id;
-  if not exists (select 1 from split_groups where group_id = v_group and deleted = false) then
-    raise exception 'yala_invalid_invite' using errcode = 'P0001';
+  -- g13_03: el token era válido, pero el grupo ya no está. g13_05 aprovecha la MISMA lectura para
+  -- traerse `is_archived` — una consulta, no dos, y el estado del grupo se decide en un solo sitio.
+  select coalesce(s.is_archived, false) into v_archived
+    from split_groups s where s.group_id = v_group and s.deleted = false;
+  if not found then
+    raise exception 'yala_group_deleted' using errcode = 'P0001';
   end if;
 
   v_display := btrim(coalesce(p_display_name, ''));
@@ -463,6 +480,7 @@ begin
   insert into profiles (id) values (v_uid) on conflict (id) do nothing;
 
   -- 4. REBIND legacy: la fila del member migrado existe SIN reclamar (user_id null). Queda pendingApproval.
+  --    NO se gatea por archivado: esa fila ya está en el grupo (es reclamar el sitio propio, no entrar).
   if p_legacy_member_key is not null then
     select * into v_row from group_members
       where group_id = v_group and member_key = p_legacy_member_key for update;
@@ -481,7 +499,7 @@ begin
         where group_id = v_group and member_key = p_legacy_member_key;
       update group_invites set uses = uses + 1 where token = p_token;
       return jsonb_build_object('group_id', v_group, 'member_key', p_legacy_member_key,
-                                'status', 'pendingApproval', 'rebound', true);
+                                'status', 'pendingApproval', 'rebound', true, 'changed', true);
     end if;
   end if;
 
@@ -491,9 +509,16 @@ begin
     order by member_key asc limit 1 for update;
   if v_row.member_key is not null then
     if v_row.deleted = false and v_row.status in ('active', 'pendingApproval') then
+      -- NO-OP: sigues como estabas. `changed:false` es lo que evita que el re-tap del enlace vuelva a
+      -- despertar a los admins. Es la ÚNICA rama que no escribe nada. Tampoco se gatea por archivado:
+      -- quien ya está dentro re-tapeando su enlace no debe recibir un aviso donde hoy no pasa nada.
       return jsonb_build_object('group_id', v_group, 'member_key', v_row.member_key,
-                                'status', v_row.status, 'rebound', false);
+                                'status', v_row.status, 'rebound', false, 'changed', false);
     else
+      -- g13_05: RE-ENTRADA de quien está fuera (rejected/left/removed/deleted). Es entrada nueva.
+      if v_archived then
+        raise exception 'yala_group_archived' using errcode = 'P0001';
+      end if;
       update group_members set
         status       = 'pendingApproval',
         deleted      = false,
@@ -507,11 +532,14 @@ begin
         where group_id = v_group and member_key = v_row.member_key;
       update group_invites set uses = uses + 1 where token = p_token;
       return jsonb_build_object('group_id', v_group, 'member_key', v_row.member_key,
-                                'status', 'pendingApproval', 'rebound', false);
+                                'status', 'pendingApproval', 'rebound', false, 'changed', true);
     end if;
   end if;
 
-  -- 6. INSERT nuevo member (pendingApproval).
+  -- 6. INSERT nuevo member (pendingApproval). g13_05: el caso del ticket — entrada nueva pura.
+  if v_archived then
+    raise exception 'yala_group_archived' using errcode = 'P0001';
+  end if;
   insert into group_members (
     group_id, member_key, user_id, display_name, role, status,
     joined_at, field_hlcs, hlc, deleted, schema_version
@@ -521,7 +549,7 @@ begin
   );
   update group_invites set uses = uses + 1 where token = p_token;
   return jsonb_build_object('group_id', v_group, 'member_key', v_uid::text,
-                            'status', 'pendingApproval', 'rebound', false);
+                            'status', 'pendingApproval', 'rebound', false, 'changed', true);
 end $$;
 
 -- ============================================================================

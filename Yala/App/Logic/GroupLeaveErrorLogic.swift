@@ -47,7 +47,10 @@ nonisolated enum GroupLeaveErrorLogic {
                 return .sessionExpired
             case .transient, .channelDisabled:
                 return .retryLater
-            case .notAuthorized, .invalidInvite, .groupDeleted, .badInput, .groupExists,
+            // `.groupArchived` cae aquí a propósito: `leave_group` no lo devuelve (el gate de g13_05 vive
+            // solo en `join_group`), así que es inalcanzable por este camino. Está en la lista por
+            // exhaustividad del switch, no porque tenga un mensaje propio que dar al salir de un grupo.
+            case .notAuthorized, .invalidInvite, .groupDeleted, .groupArchived, .badInput, .groupExists,
                  .invalidGroupID, .memberNotFound, .cannotRemoveOwner, .permanentRejected, .decoding:
                 return .generic
             }

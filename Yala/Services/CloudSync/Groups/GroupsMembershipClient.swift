@@ -34,7 +34,7 @@ enum GroupsRPCError: Error, Equatable {
     case memberNotFound          // yala_member_not_found
     case cannotRemoveOwner       // yala_cannot_remove_owner
     case ownerCannotLeave        // yala_owner_cannot_leave
-    /// HTTP 400 con un `yala_*` fuera de los 8 conocidos (A5) — rechazo PERMANENTE, jamás reintentable.
+    /// HTTP 400 con un `yala_*` fuera de los 10 conocidos (A5) — rechazo PERMANENTE, jamás reintentable.
     case permanentRejected(code: String)
     /// 403 `yala_groups_disabled` — el KILL-SWITCH server-side del canal está puesto
     /// (`GROUPS_BACKEND_ROLLOUT_PERCENT = 0`). Apagado DELIBERADO, no un fallo de red: `callWithRetry`
@@ -47,13 +47,26 @@ enum GroupsRPCError: Error, Equatable {
     case transient(status: Int)
     /// 200 pero el body no decodifica al struct esperado.
     case decoding
+    /// yala_group_archived (g13_05) — el enlace es BUENO y el grupo EXISTE: está archivado, y un grupo
+    /// archivado no acepta miembros nuevos. Caso propio y no `.invalidInvite` porque aquí no hay nada
+    /// roto que arreglar ni enlace que regenerar — es un estado del grupo, reversible por su admin.
+    ///
+    /// **Declarado AL FINAL a propósito, y no junto a `groupDeleted`, que es su hermano semántico.** El
+    /// orden de declaración de este enum se ve FUERA del código: es el número que Foundation imprime al
+    /// puentear a `NSError` («Error de Yala.GroupsRPCError 10»), el que llega en un reporte de device y
+    /// con el que se diagnostica. Insertarlo en medio habría corrido en uno los ocho casos siguientes y
+    /// habría invalidado la lectura de los reportes de los builds ya publicados — el mismo enredo que
+    /// `nsErrorCode_perCase_isMeasuredNotInferred` documenta que ya costó un diagnóstico en agosto. La
+    /// agrupación semántica se paga con un comentario; la numeración, con una tarde de diagnóstico.
+    case groupArchived           // yala_group_archived
 
-    /// Traduce un código `yala_*` del DDL a su caso. `nil` si no es uno de los 9 conocidos.
+    /// Traduce un código `yala_*` del DDL a su caso. `nil` si no es uno de los 10 conocidos.
     init?(yalaCode: String) {
         switch yalaCode {
         case "yala_not_authorized":     self = .notAuthorized
         case "yala_invalid_invite":     self = .invalidInvite
         case "yala_group_deleted":      self = .groupDeleted
+        case "yala_group_archived":     self = .groupArchived
         case "yala_bad_input":          self = .badInput
         case "yala_group_exists":       self = .groupExists
         case "yala_invalid_group_id":   self = .invalidGroupID
