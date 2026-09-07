@@ -39,6 +39,13 @@ nonisolated enum GroupBackendAcceptErrorLogic {
         /// como `.invalidInvite`, pero con su propio mensaje: aquí el consejo de «pide otro enlace» no
         /// solo es inútil, es imposible de seguir.
         case groupDeleted
+        /// El enlace es bueno y el grupo EXISTE: está archivado (`yala_group_archived`, g13_05), y un
+        /// grupo archivado no acepta miembros nuevos. Permanente —el enlace no va a empezar a funcionar
+        /// solo—, pero NO es un fallo: es un ESTADO del grupo, reversible por su admin en un tap. Por eso
+        /// tiene kind propio y no se colapsa en `.invalidInvite` (que mandaría a pedir un enlace nuevo,
+        /// inútil aquí: el enlace ya es correcto) ni en `.generic` (que enseñaría «hubo un problema»,
+        /// cuando no ha habido ninguno).
+        case groupArchived
         /// Cualquier otro (badInput, permanentRejected, decoding, invalidGroupID, …).
         case generic
     }
@@ -47,6 +54,7 @@ nonisolated enum GroupBackendAcceptErrorLogic {
         switch error {
         case .invalidInvite:    return .invalidInvite
         case .groupDeleted:     return .groupDeleted
+        case .groupArchived:    return .groupArchived
         case .sessionExpired:   return .sessionRequired
         case .notAuthorized:    return .notAuthorized
         case .transient:        return .transient
@@ -61,7 +69,7 @@ nonisolated enum GroupBackendAcceptErrorLogic {
     /// `sessionRequired`/`transient` NO son permanentes: el reconciler reintenta y conserva el intent.
     static func isPermanent(_ kind: ErrorKind) -> Bool {
         switch kind {
-        case .invalidInvite, .groupDeleted, .notAuthorized, .generic:
+        case .invalidInvite, .groupDeleted, .groupArchived, .notAuthorized, .generic:
             return true
         case .sessionRequired, .transient, .channelDisabled:
             // `channelDisabled` NO es permanente A PROPÓSITO: limpiar el intent aquí quemaría la
@@ -81,6 +89,10 @@ nonisolated enum GroupBackendAcceptErrorLogic {
         // sirve» son incidencias distintas, y colapsarlas escondería cuánta gente llega por un grupo
         // borrado — que es justo lo que este cambio existe para hacer visible.
         case .groupDeleted:     return "groupDeleted"
+        // Slug propio: en el dashboard, «llegó por un enlace de un grupo archivado» mide algo distinto de
+        // «el grupo ya no existe» — el primero es reversible y dice que a alguien se le quedó un enlace
+        // vivo repartido, el segundo no tiene vuelta.
+        case .groupArchived:    return "groupArchived"
         case .sessionRequired:  return "sessionRequired"
         case .notAuthorized:    return "notAuthorized"
         case .transient:        return "transient"

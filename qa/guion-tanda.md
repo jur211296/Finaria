@@ -5,8 +5,12 @@
 > ahorro — siete de ellos necesitan dos teléfonos, y montar eso una vez en lugar de siete es la mitad
 > del trabajo de la tanda.
 >
-> **Actualizado: 2026-09-03 · 20 tickets.** Al mover algo a `qa/` o sacarlo de ahí, actualiza también
-> este guion; si no, en dos semanas manda a montar cosas que ya no hacen falta.
+> **Actualizado: 2026-09-06 · 22 tickets con montaje asignado.** Al mover algo a `qa/` o sacarlo de ahí,
+> actualiza también este guion; si no, en dos semanas manda a montar cosas que ya no hacen falta.
+>
+> ⚠️ **Medido el 2026-09-06: en `tickets/qa/` hay 39 tickets y aquí se nombran 22.** Los 17 restantes no
+> tienen montaje asignado, así que una tanda guiada solo por este fichero los deja fuera sin avisar.
+> Repartirlos es trabajo aparte → [[qa-guion-tanda-no-cubre-17-tickets]].
 >
 > `qa` NO significa «terminado»: significa que el código está hecho y verificado hasta donde el
 > simulador alcanza, y que falta la comprobación en aparato real.
@@ -19,9 +23,9 @@ en una sesión sola.
 
 ---
 
-## Grupo A · Dos teléfonos con TestFlight (7 tickets)
+## Grupo A · Dos teléfonos con TestFlight (8 tickets)
 
-**Montaje único para los siete**: dos aparatos con TestFlight, dos cuentas distintas (A y B), la misma
+**Montaje único para los ocho**: dos aparatos con TestFlight, dos cuentas distintas (A y B), la misma
 build. App Attest está en `enforce`, así que **nada de esto sale en simulador ni en build de Xcode** —
 ése es el motivo de que lleven aquí y no se hayan podido cerrar antes.
 
@@ -38,6 +42,7 @@ de uno de entrega.
 | `siri-intent-dual-container` | El atajo de Siri escribe donde debe |
 | `storekit-appgroup-siri-pro-gate` | El gate Pro del atajo — **sus pasos 1 y 2 ya están corridos**, mira el ticket antes de repetirlos |
 | `applepay-shortcut-warm-launch-empty-data` | Tras la automatización de Apple Pay, la app NO queda vacía |
+| `groups-archived-group-rejects-join` | A **archiva** el grupo → B tapea el enlace y ve «<grupo> fue archivado», **no** «Enlace no válido». Luego A **desarchiva** → B vuelve a tapear y ahora **sí** entra como pendiente |
 
 **Dos avisos medidos que ahorran una tarde:**
 

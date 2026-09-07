@@ -44,3 +44,20 @@ residual de un ticket de `qa/` que dice «decisión aparte» es una decisión hu
 Quedan como abiertas del ESTADO solo las dos de la web (legal de Grupos, Vercel `1.0`/`2.1`).
 
 Relacionado: [[el-tablero-antes-que-el-bug]] · [[jurgen-levanta-sus-reglas]]
+
+## Alta del 2026-09-06 (tarde): `groups-archived-still-accepts-changes`
+
+Salió de **cumplir un AC al pie de la letra**, no de buscar trabajo: el ticket
+`groups-archived-group-rejects-join` pedía «revisar que el cuerpo del copy siga siendo verdad palabra
+por palabra», y no lo era. La app promete que un grupo archivado «ya no acepta cambios» y en realidad
+acepta todos: gastos, ediciones, liquidaciones, ajustes, invitaciones.
+
+**Why:** es una decisión de producto de las que no puede tomar quien implementa —«archivar» puede
+significar congelar (opción 1) o solo apartar de las listas (opción 2)— y las dos son razonables. El
+encargo además prohibía expresamente inventar otra semántica de archivado, así que salió a ticket con
+las tres opciones y su coste, en el formato que funciona.
+
+**How to apply:** va en la próxima tanda que se le ponga delante. Y la lección que se repite: **un AC
+que dice «revisa que X siga siendo verdad» es una tarea de medición real, no una fórmula** — éste
+destapó un desajuste que llevaba meses en 16 idiomas.
+

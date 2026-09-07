@@ -116,7 +116,7 @@ struct ContentView: View {
     /// Inbox alert payload, driven by .contentView drain of .showInboxAlert.
     @State private var activeInboxNotification: PendingInboxNotification = .init()
     /// Invite error detail, carried by .showInviteError intent.
-    @State private var activeInviteError: String?
+    @State private var activeInviteError: InviteAlertContent?
     /// Group bridge/sync error message, carried by .showGroupSyncError intent (P0-1).
     @State private var activeGroupSyncError: String?
     @Environment(\.scenePhase) private var scenePhase
@@ -905,7 +905,21 @@ struct ContentView: View {
             whatsNewData = (features: features, version: version)
             showWhatsNew = true
         case .showInviteError(let detail):
-            activeInviteError = detail
+            // El fallback del cuerpo vacío vivía en la vista; se mueve al productor para que la alerta
+            // no tenga que saber de qué camino viene el texto.
+            activeInviteError = InviteAlertContent(
+                title: String(localized: "groups.invite.linkInvalidTitle"),
+                message: detail.isEmpty ? String(localized: "groups.invite.linkInvalidDetail") : detail
+            )
+        case .showGroupArchivedNotice(_, let groupName):
+            // g13_05: el enlace es bueno y el grupo existe — está archivado. Se enseña como ESTADO, con
+            // el título (que lleva el nombre del grupo) y el cuerpo de `groups.reconnect.archived.*`, ya
+            // traducidos a 16 idiomas y hasta hoy sin ningún consumidor. Su tercer string, `.cta`
+            // («Entendido»), NO se usa: ver el aviso medido en `InviteAlertContent`.
+            activeInviteError = InviteAlertContent(
+                title: L10n.Groups.Reconnect.archivedTitle(groupName),
+                message: L10n.Groups.Reconnect.archivedBody
+            )
         case .showGroupSyncError(let message):
             activeGroupSyncError = message
         case .iCloudMismatch:
@@ -1994,6 +2008,31 @@ fileprivate extension Binding where Value == Bool {
 
 // MARK: - Group Invite Modifier (GC-08)
 
+/// Contenido de la alerta que cierra un tap de enlace de grupo. Nació como un `String?` con el título
+/// FIJADO a «Enlace no válido» en la vista, y eso dejaba de valer en cuanto apareció un segundo productor:
+/// g13_05 rechaza la entrada a un grupo ARCHIVADO, y ahí el enlace es perfecto —lo que pasa es que el
+/// grupo ya no admite gente—. Con el título en la vista, ese caso solo podía mentir o irse a la alerta de
+/// «Hubo un problema con el grupo», que también miente: no ha habido ningún problema.
+///
+/// Por eso título y cuerpo viajan juntos desde el productor. Reusa el MISMO anchor
+/// (`activeInviteError`), que es lo que mantiene el aviso dentro de los gates de readiness ya existentes
+/// (`hasActiveInviteError`) sin abrir una segunda superficie de presentación que habría que enseñarle al
+/// router.
+///
+/// ⚠️ **NO añadas aquí el texto del BOTÓN.** El copy de archivado trae el suyo
+/// (`groups.reconnect.archived.cta`, «Entendido») y el primer intento fue pasarlo por este struct para
+/// pintarlo con `Button(activeInviteError?.cta ?? …)`. **Eso rompe la app entera, no solo esta alerta**:
+/// con el label del `Button` dependiendo del `@State`, el `actions` builder de `.alert` deja la vista sin
+/// alcanzar `idle`, y lo que se rompió al medirlo fue **guardar una transacción** —
+/// `TransactionSuccessView` no llegaba a montarse y `QuickActionsFavoritesUITests` se caía a 10 s de
+/// espera. Aislado por bisección el 2026-09-06 con control en las dos direcciones: CTA literal pasa (×2),
+/// CTA dinámico falla (×4); el TÍTULO dinámico, en cambio, pasa sin problema. El botón se queda en
+/// `common.ok`, y lo que se pierde es el matiz «Entendido» vs «Aceptar».
+struct InviteAlertContent: Equatable {
+    let title: String
+    let message: String
+}
+
 /// Extracted to a ViewModifier to avoid type-checker complexity in ContentView body.
 private struct GroupInviteModifier: ViewModifier {
 
@@ -2001,23 +2040,23 @@ private struct GroupInviteModifier: ViewModifier {
     @Binding var pendingInviteMetadata: InviteLinkService.BrandedMetadata?
     @Binding var pendingInviteZone: String?
     @Binding var hasCompletedOnboarding: Bool
-    @Binding var activeInviteError: String?
+    @Binding var activeInviteError: InviteAlertContent?
     @Binding var activeGroupSyncError: String?
 
     func body(content: Content) -> some View {
         content
             .alert(
-                String(localized: "groups.invite.linkInvalidTitle"),
+                activeInviteError?.title ?? String(localized: "groups.invite.linkInvalidTitle"),
                 isPresented: Binding(
                     get: { activeInviteError != nil },
                     set: { if !$0 { activeInviteError = nil } }
                 )
             ) {
+                // Literal a propósito — ver el aviso en `InviteAlertContent`. Un label dinámico aquí
+                // deja la app sin llegar a `idle` y rompe el guardado de transacciones.
                 Button(String(localized: "common.ok"), role: .cancel) {}
             } message: {
-                Text((activeInviteError?.isEmpty ?? true)
-                     ? String(localized: "groups.invite.linkInvalidDetail")
-                     : (activeInviteError ?? ""))
+                Text(activeInviteError?.message ?? "")
             }
             .alert(
                 String(localized: "groups.bridge.alertTitle"),

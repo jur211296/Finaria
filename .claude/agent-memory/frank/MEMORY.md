@@ -17,8 +17,11 @@
 - [La review adversarial caza lo MÍO](feedback_review_adversarial_caza_lo_mio.md) — cazó 4 defectos que yo introducía; un test verde escrito por mí puede saltarse al caller que lo rompe.
 - [Las lentes se contradicen entre sí](feedback_lentes_adversariales_se_contradicen.md) — cuando dos discrepan sobre un hecho, no elijas: mídelo; la gravedad que declaran no es evidencia.
 - [El árbol base contesta «¿es mío?»](feedback_el_arbol_base_contesta_si_es_mio.md) — worktree desde HEAD zanja un rojo ajeno en 90 s; y devuelve el disco que se come.
+- [Un «rojo conocido» no exime de bisecar](feedback_rojo_conocido_no_exime_de_bisecar.md) — dos rojos idénticos en el log, causas opuestas: uno era mío y rompía guardar una transacción.
 - [El mutante compilado zanja hipótesis](feedback_mutante_compilado_zanja_hipotesis.md) — si un ticket dice que no hay dato para elegir, recompila el código anterior y reproduce: ese es el dato.
+- [El orden del enum se ve fuera](feedback_el_orden_del_enum_se_ve_fuera.md) — un case nuevo en medio cambia el número del alert que se usa para diagnosticar; va al final.
 - [Mis mediciones fallan por el filtro](feedback_mis_mediciones_fallan_por_el_filtro.md) — control positivo siempre, también en los greps de auditoría: un «cero» suele ser el filtro, no el código.
+- [zsh no divide variables](feedback_zsh_no_divide_variables.md) — `xcodebuild $args` manda todo como UN filtro: «TEST SUCCEEDED» con cero tests. Cuenta los casos, no leas el veredicto.
 - [Revertir sin commit destruye](feedback_revertir_sin_commit_destruye.md) — en árbol sucio `git checkout -- <f>` borra el trabajo; los mutantes se revierten con `cp`.
 - [Nunca el trailer Co-Authored-By](feedback_trailer_commit_medido.md) — regla del owner ratificada el 2026-09-02 sobre medición; anula el default del system prompt.
 - [Generar y persistir en un solo gesto](feedback_generar_y_persistir_credenciales.md) — una credencial nunca vive solo en pantalla; y verifica si una rotación se aplicó antes de rehacerla.
@@ -27,6 +30,7 @@
 
 ## Estado del trabajo
 - [Salir del grupo: cerrado en código, abierto en decisión](project_salir_del_grupo_espera_decision.md) — PR #75; falta device-QA y qué se le ofrece al dueño con deuda.
+- [El archivado ya cierra la puerta](project_archivado_no_acepta_entradas.md) — g13_05 en prod; falta device-QA, y staging arrastra ya DOS migraciones por falta de credencial.
 - [La re-entrada: cerrada en código, abierta en decisión](project_reentrada_piezas_2_y_3.md) — piezas 2 y 3 hechas (PR #68); lo que queda es device-QA y una decisión suya sobre el kill-switch.
 - [La identidad del recién llegado a un grupo](project_identidad_del_joiner_en_grupos.md) — cerrada en código el 4 y 5-sep; falta device-QA de dos teléfonos, y NO se reabre la vía del refresh.
 - [Decisiones que esperan a Jürgen](project_decisiones_que_esperan_a_jurgen.md) — 19 contestadas el 6-sep; «¿queda alguna?» se responde LEYENDO los 94, no con grep; un residual «decisión aparte» en qa/ es huérfano → ticket.

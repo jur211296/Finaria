@@ -46,3 +46,48 @@ si los otros tres rojos comparten causa**: dos de ellos también tocan pantallas
 
 Y de paso, corregir el mensaje del assert: hoy afirma «no conservó la fecha» cuando lo que sabe es
 «el texto no coincide».
+
+---
+
+## Medición del 2026-09-06 (Frank, desde `groups-archived-group-rejects-join`)
+
+Los cuatro rojos de arriba se citaron aquí como un bloque con **una** causa sospechada (el locale).
+Medidos hoy **en local**, uno por uno, no se comportan igual — y la diferencia importa para quien
+venga a arreglarlos:
+
+- **`QuickActionsFavoritesUITests.test_saveAsFavoriteFromTransactionAppearsInList` PASA en local**
+  sobre `2.1` limpio (comprobado en un worktree desde `e28a93ec`: verde en 50,7 s). Encaja con lo que
+  este ticket ya explica —el runner del CI no corre en el idioma del Mac—, así que su rojo es del CI y
+  no se reproduce aquí.
+- **`EdgeCasesUITests.test_extremeMinimumAmountSaves` FALLA también en local**, y **no por una fecha**:
+  cae en `XCUIApplication+Yala.swift:208`, esperando `transaction_success_accept` — la pantalla de
+  éxito de la transacción no aparece en 10 s. Comprobado que es preexistente revirtiendo
+  `ContentView.swift` a HEAD: falla igual.
+
+- **`TransactionsCrudUITests.test_createTransaction` PASA aislado** (36,9 s) y **falla dentro de una
+  tanda** de 4 suites. Mismo patrón que `QuickActionsFavorites`, que también pasa aislado (47 s) y cae
+  en tanda.
+
+⇒ **No son cuatro instancias de la misma causa, y al menos dos ni siquiera son deterministas.** El
+patrón medido hoy, sobre 133 casos en seis tandas: los tres que fallaron **crean o guardan una
+transacción** y los tres caen en el mismo helper (`transaction_success_accept`), pero
+`TransactionsCrud` y `QuickActionsFavorites` pasan al correrlos solos, mientras `EdgeCases` falla
+también aislado. ⇒ hay **dos** cosas mezcladas aquí: una fragilidad por CARGA (la espera de 10 s del
+helper no llega cuando la máquina va justa) y, en `EdgeCases`, un fallo propio. Fijar el locale no
+arregla ninguna de las dos.
+
+Contexto de la máquina ese día, porque cambia cómo leer estos números: 8-13 GB libres (umbral 25) y
+presión de memoria suficiente para que el sistema **matara** la corrida de `xcodebuild` tres veces.
+Antes de perseguir estos tres, correr `bash qa/scripts/disk-report.sh` y repetirlos aislados.
+
+Sugerencia barata antes de tocar nada: subir el timeout de `dismissTransactionSuccess()` (hoy 10 s)
+tiene el mismo argumento que ya se aceptó para el paso lento de `PaywallInboxAlertRoutingUITests`
+—45 s y no 10, "el umbral solo se consume en el caso malo"— y quitaría el ruido de carga sin tapar el
+fallo de `EdgeCases`, que agota cualquier margen.
+
+**Aviso de método, pagado hoy:** ese mismo helper de la línea 208 es el que delató un bug REAL
+introducido en otra sesión (una alerta con el label del botón dependiendo del `@State` dejaba la vista
+sin alcanzar `idle` y el guardado no completaba). ⇒ **un fallo en `transaction_success_accept` no se
+archiva como «rojo conocido» sin bisecar contra el árbol base**: el síntoma es idéntico en los dos
+casos y solo esa medición los distingue.
+
