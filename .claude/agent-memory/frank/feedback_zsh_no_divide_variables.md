@@ -1,0 +1,35 @@
+---
+name: zsh-no-divide-variables
+description: En zsh una variable escalar NO se divide en palabras, así que `xcodebuild $args` manda todos los filtros como UN argumento — y sale «TEST SUCCEEDED» con cero tests.
+metadata:
+  type: feedback
+---
+
+**El shell de estas sesiones es zsh, y ahí `$args` NO hace word splitting.** Una variable que contiene
+varios argumentos separados por espacios llega al comando como **un solo argumento**.
+
+**Why:** el 2026-09-06, montando tandas de XCUITest, construí los filtros en una variable y llamé
+`xcodebuild test … $args`. La invocación real fue:
+
+    "-only-testing:YalaUITests/A -only-testing:YalaUITests/B -only-testing:YalaUITests/C "
+
+un filtro único con espacios dentro, que no casa con ninguna suite. Resultado: **`** TEST SUCCEEDED **`
+con `Executed 0 tests`**, cuatro veces seguidas, y un resumen que decía `exit=0 fallos=0`. Es
+exactamente el «cero casos con exit 0» que `.claude/rules/testing.md` manda cazar, y estuve a un paso
+de sellar el gate con él. Lo delató contar los casos, no leer el veredicto.
+
+Y la trampa de dentro de la trampa: **`$(cat fichero)` SÍ se divide** en zsh, así que el mismo patrón
+funciona por un camino y falla por el otro. Las tandas grandes de ese día usaban `$(cat tanda.args)` y
+corrieron 70 casos; la que usaba `$args` corrió cero. Idénticas a la vista.
+
+**How to apply:**
+
+- Para pasar N argumentos construidos al vuelo: escríbelos a un fichero y usa `$(cat f.args)`, o en
+  zsh fuerza el split con `${=args}`, o usa un array (`args=(...)` + `"${args[@]}"`).
+- **Y la comprobación que vale por todas: cuenta los casos ejecutados, no leas el veredicto.**
+  `grep -c '^Test Case .* \(passed\|failed\)'` para XCUITest (XCTest) y la línea `Test run with N tests
+  in M suites` para Swift Testing. Un número que no cuadra con lo que pediste es el fallo, aunque
+  ponga SUCCEEDED.
+
+Relacionado: [[mis-mediciones-fallan-por-el-filtro]] — misma familia: el «cero» no era del código, era
+del filtro. Y [[gate-paso3-no-detecta-cero-casos]], que es este mismo hueco en el propio gate.
