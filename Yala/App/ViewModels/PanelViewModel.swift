@@ -165,6 +165,16 @@ struct PanelHeroPeriodData: Equatable {
             PreviousPeriodHelper.calculateVariation(currentAmount: expense, previousAmount: $0)
         }
     }
+    /// Encienden la marca «≈» del número grande del Panel. Vienen del bucket de período de
+    /// `HeroBucketsCalculator`, o sea del flag `isExchangeRateProvisional` de las transacciones
+    /// sumadas: el importe se muestra igual, pero deja de presentarse como exacto.
+    ///
+    /// Separadas por lado porque el hero pinta `expense` en modo Solo Gastos y `available` —que sí
+    /// agrega los dos— en el normal.
+    var incomeApproximate: Bool = false
+    var expenseApproximate: Bool = false
+    /// Para `available`, que resta un lado del otro.
+    var amountsAreApproximate: Bool { incomeApproximate || expenseApproximate }
 }
 
 @MainActor
@@ -477,6 +487,12 @@ final class PanelViewModel {
     /// SIEMPRE — independiente de la visibilidad del widget de Tendencias (cuyo
     /// `trendChart.currentBalance` solo se actualiza si el widget está visible).
     var panelTotalBalance: Double = 0
+
+    /// Si el saldo total del panorama se compuso con alguna tasa que no era la de hoy. Este número
+    /// es el caso más puro de conversión en vivo —agrupa saldos por divisa nativa y los pasa al TC
+    /// ACTUAL, sin ningún monto guardado en el que apoyarse—, así que su señal viene entera del
+    /// converter.
+    var panelTotalBalanceIsApproximate: Bool = false
 
     var trendChart = PanelTrendData()
     var categoriesWidget = PanelCategoriesData()
@@ -1042,18 +1058,21 @@ final class PanelViewModel {
     /// seleccionada (vivo, TC actual sobre saldo nativo). En el total respeta
     /// `includeGroupsInPanelTotal`: con el toggle OFF excluye las cuentas sistema
     /// de grupos del agregado. Con una cuenta seleccionada el toggle no aplica.
+    /// Devuelve el desglose y no un `Double` a secas para que el llamador pueda además saber si
+    /// alguna divisa se convirtió con una tasa que no era la de hoy — el número grande del
+    /// panorama lleva «≈» cuando así es.
     func displayedBalanceInDefaultCurrency(
         accounts: [Account],
         transactions: [TransactionItem],
         defaultCurrencyCode: String
-    ) -> Double {
+    ) -> LiveBalanceCalculator.Breakdown {
         let includeGroups = appPreferences?.includeGroupsInPanelTotal ?? true
         let effectiveAccounts = PanelTotalAccountsLogic.accountsForTotal(
             accounts,
             includeGroups: includeGroups,
             hasSelectedAccount: self.selectedAccountID != nil
         )
-        return LiveBalanceCalculator.liveBalance(
+        return LiveBalanceCalculator.liveBalanceBreakdown(
             accounts: effectiveAccounts,
             transactions: transactions,
             preferredCurrencyCode: defaultCurrencyCode,
@@ -1297,15 +1316,19 @@ final class PanelViewModel {
         // @Observable notifications into ~6 struct-level comparisons.
         enforceTrendLock(sessionState: sessionState)
 
-        let newBalance = displayedBalanceInDefaultCurrency(
+        let newBreakdown = displayedBalanceInDefaultCurrency(
             accounts: accounts,
             transactions: transactions,
             defaultCurrencyCode: defaultCurrencyCode
         )
+        let newBalance = (newBreakdown.convertedTotal as NSDecimalNumber).doubleValue
         // El saldo total del panorama debe reflejar cambios (toggle de grupos,
         // cuentas, TC) aunque el widget de Tendencias esté oculto — `trendChart`
         // de abajo solo se reasigna cuando `trendVisible`.
         if self.panelTotalBalance != newBalance { self.panelTotalBalance = newBalance }
+        if self.panelTotalBalanceIsApproximate != newBreakdown.amountsAreApproximate {
+            self.panelTotalBalanceIsApproximate = newBreakdown.amountsAreApproximate
+        }
 
         if trendVisible, let trendPoints = newTrendPoints {
             let newTrend = PanelTrendData(
@@ -2872,6 +2895,8 @@ final class PanelViewModel {
 
         var newPeriod = PanelHeroPeriodData(income: buckets.periodIncome, expense: buckets.periodExpense)
         newPeriod.periodPrevExpense = periodPrevInterval == nil ? nil : buckets.periodPrevExpense
+        newPeriod.incomeApproximate = buckets.periodIncomeApproximate
+        newPeriod.expenseApproximate = buckets.periodExpenseApproximate
         if newPeriod != heroPeriodWidget { heroPeriodWidget = newPeriod }
 
         let totalMonthlyBudget = budgets

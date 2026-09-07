@@ -14,6 +14,7 @@
 ## Cómo mido y cómo entrego
 - [La premisa del ENCARGO también se mide](feedback_la_premisa_del_encargo_tambien_se_mide.md) — hereda los errores del ticket y llega con tono de hecho; medirla cuesta un script.
 - [El paso 3 del gate no detecta cero casos](feedback_gate_paso3_no_detecta_cero_casos.md) — XCUITest es XCTest: cuenta «Test Suite» y «Executed», no «Test run with».
+- [Mi fix hereda la forma del bug](feedback_mi_fix_hereda_la_forma_del_bug.md) — el arreglo repite el error del bug; enuncia el bug en una frase y aplícasela al arreglo.
 - [La review adversarial caza lo MÍO](feedback_review_adversarial_caza_lo_mio.md) — cazó 4 defectos que yo introducía; un test verde escrito por mí puede saltarse al caller que lo rompe.
 - [Las lentes se contradicen entre sí](feedback_lentes_adversariales_se_contradicen.md) — cuando dos discrepan sobre un hecho, no elijas: mídelo; la gravedad que declaran no es evidencia.
 - [El árbol base contesta «¿es mío?»](feedback_el_arbol_base_contesta_si_es_mio.md) — worktree desde HEAD zanja un rojo ajeno en 90 s; y devuelve el disco que se come.
@@ -35,7 +36,7 @@
 - [La identidad del recién llegado a un grupo](project_identidad_del_joiner_en_grupos.md) — cerrada en código el 4 y 5-sep; falta device-QA de dos teléfonos, y NO se reabre la vía del refresh.
 - [Decisiones que esperan a Jürgen](project_decisiones_que_esperan_a_jurgen.md) — 19 contestadas el 6-sep; «¿queda alguna?» se responde LEYENDO los 94, no con grep; un residual «decisión aparte» en qa/ es huérfano → ticket.
 - [Web: lo que Jürgen decidió, y lo que no](project_web_pr62_espera_a_jurgen.md) — PR #62 mergeado el 4-sep; siguen abiertas dos suyas: legal de Grupos y autoalojar fuentes.
-- [Hipótesis de la Lista Negra, re-comprobadas](project_hipotesis_lista_negra_recomprobadas.md) — el runner de XCUITest SÍ corre en local y el CI de GitHub NO está apagado (5-sep); y qué del disco NO se puede borrar.
+- [Hipótesis de la Lista Negra, re-comprobadas](project_hipotesis_lista_negra_recomprobadas.md) — el CI sigue vivo y `tests` tarda ~1h; el runner de XCUITest SÍ está roto hoy (6-sep); y los 5,7 GB que el informe de disco esconde.
 
 ## Entorno y herramientas
 - [El sello del gate ancla en HEAD](reference_gate_sello_ancla_en_head.md) — una tanda de commits obliga a re-sellar entre ellos; mergear `2.1` obliga a re-correr el gate entero.

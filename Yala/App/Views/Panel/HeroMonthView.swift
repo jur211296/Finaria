@@ -98,7 +98,9 @@ struct HeroMonthView: View {
                     value: periodSummary.expense,
                     currencyCode: currencyCode,
                     font: DS.Typography.panelHeroAmount,
-                    secondaryFont: DS.Typography.panelHeroAmountSecondary
+                    secondaryFont: DS.Typography.panelHeroAmountSecondary,
+                    // Solo el lado del gasto: este número no incluye los ingresos.
+                    isEstimate: periodSummary.expenseApproximate
                 )
 
                 // Gateado también por `showVariations`: `VariationChip` se
@@ -117,7 +119,8 @@ struct HeroMonthView: View {
                     value: periodSummary.available,
                     currencyCode: currencyCode,
                     font: DS.Typography.panelHeroAmount,
-                    secondaryFont: DS.Typography.panelHeroAmountSecondary
+                    secondaryFont: DS.Typography.panelHeroAmountSecondary,
+                    isEstimate: periodSummary.amountsAreApproximate
                 )
 
                 HStack(spacing: DS.Spacing.md) {
@@ -192,7 +195,15 @@ struct HeroMonthView: View {
         let valor = sessionState.isExpensesOnlyMode
             ? periodSummary.expense
             : periodSummary.available
-        let monto = appPreferences.currency(valor, currencyCode: currencyCode)
+        // El `isEstimate` va aquí también, o VoiceOver leería como exacto el mismo número que en
+        // pantalla lleva el «≈»: la marca es información, y dejarla solo en el glifo la esconde de
+        // quien no lo ve.
+        let esAproximado = sessionState.isExpensesOnlyMode
+            ? periodSummary.expenseApproximate
+            : periodSummary.amountsAreApproximate
+        let monto = appPreferences.currency(
+            valor, currencyCode: currencyCode, isEstimate: esAproximado
+        )
         return "\(summaryLabel) · \(selectedPeriod.displayName), \(monto)"
     }
 

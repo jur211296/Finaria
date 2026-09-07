@@ -23,12 +23,23 @@ struct LiveBalanceCalculator {
         let nativeBalances: [String: Decimal]
         let convertedTotal: Decimal
         let preferredCurrencyCode: String
+
+        /// `true` si alguna de las divisas nativas se convirtió con una tasa que no era la de hoy.
+        /// Este saldo usa el TC ACTUAL, así que la vía es siempre el converter — no hay aquí monto
+        /// guardado en el que apoyarse, a diferencia de los totales históricos.
+        let amountsAreApproximate: Bool
     }
 
     /// Output del helper `liveBalanceOverride`: valor total + breakdown por
     /// moneda nativa. El breakdown habilita UX educativa sobre composición
     /// multi-currency (sheet "Tu saldo hoy"). Stats consumers ignoran el
     /// breakdown y usan solo `value`.
+    /// **No lleva la señal de aproximado a propósito.** Se le añadió y se retiró en la misma
+    /// sesión: su único consumidor es `TrendDataProcessor`, que toma de aquí `value` y
+    /// `nativeBalances` para el punto «hoy» de la curva, y llevarla hasta la sheet educativa del
+    /// saldo exigía atravesar el processor y los dos ViewModels. Un campo que nadie lee parece
+    /// cobertura en cualquier auditoría posterior y no lo es. Queda en `Breakdown`, que sí tiene
+    /// consumidor. Pendiente: `fx-live-anchor-sheet-and-distribution-kpi-unmarked`.
     struct LiveAnchorInfo: Equatable, Sendable {
         let value: Double
         let nativeBalances: [String: Decimal]
@@ -85,20 +96,24 @@ struct LiveBalanceCalculator {
         }
 
         var convertedTotal: Decimal = 0
+        var amountsAreApproximate = false
         for (code, amount) in nativeBalances {
             if code == preferredCurrencyCode {
                 convertedTotal += amount
             } else {
-                convertedTotal += converter.convertWithLatestRate(
+                let outcome = converter.convertCheckedWithLatestRate(
                     amount, from: code, to: preferredCurrencyCode
                 )
+                convertedTotal += outcome.amount
+                amountsAreApproximate = amountsAreApproximate || !outcome.quality.isExact
             }
         }
 
         return Breakdown(
             nativeBalances: nativeBalances,
             convertedTotal: convertedTotal,
-            preferredCurrencyCode: preferredCurrencyCode
+            preferredCurrencyCode: preferredCurrencyCode,
+            amountsAreApproximate: amountsAreApproximate
         )
     }
 

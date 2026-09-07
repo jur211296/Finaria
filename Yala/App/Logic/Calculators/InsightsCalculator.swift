@@ -47,6 +47,16 @@ struct PeriodSummary {
     let dailyAverageExpense: Double
     let dailyAverageVariation: Double?
     let previousPeriodLabel: String
+
+    /// Si algún importe agregado aquí salió de una tasa que no era la de su día — **por lado**,
+    /// porque el hero de Tendencias pinta uno de los tres números según la métrica elegida y una
+    /// señal única le ponía «≈» al total de ingresos por culpa de un gasto. Vienen del
+    /// `CashFlowSummary` que calcula los totales.
+    let incomeAmountsAreApproximate: Bool
+    let expenseAmountsAreApproximate: Bool
+
+    /// Para `netBalance`, que agrega los dos lados.
+    var amountsAreApproximate: Bool { incomeAmountsAreApproximate || expenseAmountsAreApproximate }
 }
 
 struct QuickStats {
@@ -306,7 +316,9 @@ struct InsightsCalculator {
             dailyAverageCount: dailyAverageCount,
             dailyAverageExpense: dailyAverageExpense,
             dailyAverageVariation: dailyAverageVariation,
-            previousPeriodLabel: previousPeriodLabel
+            previousPeriodLabel: previousPeriodLabel,
+            incomeAmountsAreApproximate: cashFlow.incomeAmountsAreApproximate,
+            expenseAmountsAreApproximate: cashFlow.expenseAmountsAreApproximate
         )
 
         // Weekday Spending (computed before Quick Stats for highestAvgWeekday)

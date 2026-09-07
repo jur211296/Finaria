@@ -204,7 +204,8 @@ struct InsightsTabView: View {
                 AmountText(
                     value: summary.netBalance,
                     currencyCode: defaultCurrencyCode,
-                    font: DS.Typography.heroAmount, secondaryFont: DS.Typography.heroAmountSecondary
+                    font: DS.Typography.heroAmount, secondaryFont: DS.Typography.heroAmountSecondary,
+                    isEstimate: summary.amountsAreApproximate
                 )
             }
 

@@ -43,6 +43,17 @@ enum HeroBucketsCalculator {
         /// pasa `periodPrevInterval == nil` (p.ej. `.allTime`, sin previo
         /// acotado).
         let periodPrevExpense: Double
+
+        /// Si algún importe del bucket de PERÍODO —el que se pinta en el hero— trae su monto
+        /// convertido con una tasa que no era la de su día. **Separado por lado**: en modo Solo
+        /// Gastos el hero pinta únicamente `periodExpense`, y una señal común le ponía «≈» por
+        /// culpa de un ingreso antiguo que no entra en ese número.
+        ///
+        /// Aquí no hay converter que consultar: este calculador suma `amountInPreferredCurrency`,
+        /// que se convirtió al guardarse. Quien sabe si aquella tasa era la del día es el flag de la
+        /// propia transacción, y por eso es la única fuente de verdad de esta señal.
+        let periodIncomeApproximate: Bool
+        let periodExpenseApproximate: Bool
     }
 
     static func calculate(
@@ -61,6 +72,8 @@ enum HeroBucketsCalculator {
         var periodIncome: Double = 0
         var periodExpense: Double = 0
         var periodPrevExpense: Double = 0
+        var periodIncomeApproximate = false
+        var periodExpenseApproximate = false
 
         for tx in transactions where tx.balanceAdjustmentType == nil {
             guard let account = tx.account,
@@ -84,7 +97,13 @@ enum HeroBucketsCalculator {
             // independientes para que la card "Disponible" sea exacta tanto
             // si el periodo coincide con el mes como si difiere.
             if periodInterval.contains(tx.date) {
-                if isIncome { periodIncome += amount } else { periodExpense += amount }
+                if isIncome {
+                    periodIncome += amount
+                    periodIncomeApproximate = periodIncomeApproximate || tx.isExchangeRateProvisional
+                } else {
+                    periodExpense += amount
+                    periodExpenseApproximate = periodExpenseApproximate || tx.isExchangeRateProvisional
+                }
             }
 
             // Ventana previa comparable (solo gasto). Estrictamente disjunta de
@@ -111,7 +130,9 @@ enum HeroBucketsCalculator {
             prevHasAnyTx: prevHasAnyTx,
             periodIncome: periodIncome,
             periodExpense: periodExpense,
-            periodPrevExpense: periodPrevExpense
+            periodPrevExpense: periodPrevExpense,
+            periodIncomeApproximate: periodIncomeApproximate,
+            periodExpenseApproximate: periodExpenseApproximate
         )
     }
 
