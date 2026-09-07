@@ -45,21 +45,23 @@ struct LiveBalanceCalculator {
         let nativeBalances: [String: Decimal]
     }
 
-    /// Saldo total "hoy" en moneda preferida. Si `selectedAccountID` apunta a
-    /// una cuenta excluida, hace fallback al total agregado (replica behavior
-    /// del antiguo `BalanceHelper.displayedBalance`).
+    /// Saldo total "hoy" en moneda preferida. Si `selectedAccountIDs` no
+    /// resuelve a ninguna cuenta contable, hace fallback al total agregado
+    /// (replica behavior del antiguo `BalanceHelper.displayedBalance`).
     static func liveBalance(
         accounts: [Account],
         transactions: [TransactionItem],
         preferredCurrencyCode: String,
-        selectedAccountID: PersistentIdentifier? = nil,
+        selectedAccountIDs: Set<PersistentIdentifier> = [],
+        isExcludeMode: Bool = false,
         converter: CurrencyConverting = CurrencyConverter.shared
     ) -> Double {
         let breakdown = liveBalanceBreakdown(
             accounts: accounts,
             transactions: transactions,
             preferredCurrencyCode: preferredCurrencyCode,
-            selectedAccountID: selectedAccountID,
+            selectedAccountIDs: selectedAccountIDs,
+            isExcludeMode: isExcludeMode,
             converter: converter
         )
         return (breakdown.convertedTotal as NSDecimalNumber).doubleValue
@@ -67,24 +69,42 @@ struct LiveBalanceCalculator {
 
     /// Versión que retorna el desglose completo. La versión `liveBalance` la
     /// llama internamente.
+    ///
+    /// El filtro de cuentas es un **conjunto**, no una cuenta: `SessionState`
+    /// admite varias (Registros → Filtros hace `insert` sin `removeAll`, y un
+    /// presupuesto vuelca su conjunto resuelto), y colapsarlo a un elemento
+    /// hacía que el saldo del Panel mostrase UNA cuenta —cuál, no era estable,
+    /// porque `Set.first` no lo es— mientras Distribución sumaba todas.
+    /// `isExcludeMode` viaja con el conjunto por la misma razón: sin él, "excluir
+    /// la cuenta A" enseñaba justamente el saldo de A.
     static func liveBalanceBreakdown(
         accounts: [Account],
         transactions: [TransactionItem],
         preferredCurrencyCode: String,
-        selectedAccountID: PersistentIdentifier? = nil,
+        selectedAccountIDs: Set<PersistentIdentifier> = [],
+        isExcludeMode: Bool = false,
         converter: CurrencyConverting = CurrencyConverter.shared
     ) -> Breakdown {
+        // Las cuentas marcadas "excluir de estadísticas" nunca entran, se filtre
+        // por cuenta o no.
+        let countableIDs = Set(
+            accounts.filter { !$0.excludeFromStatistics }
+                .map { $0.persistentModelID }
+        )
+
         let eligibleAccountIDs: Set<PersistentIdentifier>
-        if let selectedID = selectedAccountID,
-            let acc = accounts.first(where: { $0.persistentModelID == selectedID }),
-            !acc.excludeFromStatistics
-        {
-            eligibleAccountIDs = [selectedID]
+        if selectedAccountIDs.isEmpty {
+            eligibleAccountIDs = countableIDs
+        } else if isExcludeMode {
+            // "Todas menos las seleccionadas". Si se excluyen todas, el saldo es
+            // 0 y no el total: aquí NO hay fallback, igual que en Estadísticas.
+            eligibleAccountIDs = countableIDs.subtracting(selectedAccountIDs)
         } else {
-            eligibleAccountIDs = Set(
-                accounts.filter { !$0.excludeFromStatistics }
-                    .map { $0.persistentModelID }
-            )
+            let filtered = countableIDs.intersection(selectedAccountIDs)
+            // Fallback al total agregado cuando la selección no resuelve a
+            // ninguna cuenta contable (p. ej. la única elegida está excluida de
+            // estadísticas). Comportamiento heredado, fijado por test.
+            eligibleAccountIDs = filtered.isEmpty ? countableIDs : filtered
         }
 
         var nativeBalances: [String: Decimal] = [:]

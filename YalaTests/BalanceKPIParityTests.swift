@@ -182,6 +182,187 @@ struct BalanceKPIParityTests {
         #expect(distribution == panel, "Distribución y Panel divergieron: \(distribution) vs \(panel)")
     }
 
+    // MARK: - Paridad con DOS cuentas filtradas
+
+    /// Regla de elegibilidad de `StatisticsViewModel.computeEligibleAccounts`,
+    /// que es `private`. El Panel la espeja desde que respeta el conjunto; si
+    /// las dos vuelven a divergir, este fichero es donde se ve.
+    private func eligibleAccounts(
+        _ accounts: [Account],
+        selected: Set<PersistentIdentifier>,
+        isExcludeMode: Bool = false
+    ) -> [Account] {
+        accounts.filter { account in
+            guard !account.excludeFromStatistics else { return false }
+            if selected.isEmpty { return true }
+            if isExcludeMode {
+                return !selected.contains(account.persistentModelID)
+            } else {
+                return selected.contains(account.persistentModelID)
+            }
+        }
+    }
+
+    /// El AC del ticket: con dos cuentas seleccionadas, Panel y Distribución
+    /// muestran el mismo saldo.
+    ///
+    /// Los dos caminos son asimétricos a propósito, y esa asimetría era el bug:
+    /// el **Panel** recibe TODAS las cuentas más el conjunto filtrado y resuelve
+    /// dentro; **Distribución** recibe las cuentas ya filtradas. Antes el Panel
+    /// colapsaba el conjunto a `.first` y devolvía el saldo de UNA.
+    @Test func twoSelectedAccounts_panelMatchesDistribution() {
+        let accA = makeAccount(name: "A", currencyCode: "PEN")
+        let accB = makeAccount(name: "B", currencyCode: "PEN")
+        let accC = makeAccount(name: "C", currencyCode: "PEN")
+        let txA = makeTransaction(amount: 10_000, account: accA, amountInPreferredCurrency: 10_000)
+        let txB = makeTransaction(amount: 5_000, account: accB, amountInPreferredCurrency: 5_000)
+        let txC = makeTransaction(amount: 777, account: accC, amountInPreferredCurrency: 777)
+
+        let all = [accA, accB, accC]
+        let transactions = [txA, txB, txC]
+        let selected: Set<PersistentIdentifier> = [accA.persistentModelID, accB.persistentModelID]
+        let converter = MockCurrencyConverter()
+
+        // Camino Panel: todas las cuentas + el conjunto.
+        let panel = LiveBalanceCalculator.liveBalance(
+            accounts: all,
+            transactions: transactions,
+            preferredCurrencyCode: "PEN",
+            selectedAccountIDs: selected,
+            converter: converter
+        )
+
+        // Camino Distribución: cuentas ya filtradas, sin conjunto.
+        let distribution = LiveBalanceCalculator.liveBalance(
+            accounts: eligibleAccounts(all, selected: selected),
+            transactions: transactions,
+            preferredCurrencyCode: "PEN",
+            converter: converter
+        )
+
+        #expect(panel == distribution, "Panel y Distribución divergieron: \(panel) vs \(distribution)")
+        #expect(panel == 15_000)
+        // El bug, explícito: 10_000 o 5_000 es el saldo de UNA de las dos.
+        #expect(panel != 10_000)
+        #expect(panel != 5_000)
+    }
+
+    /// Mismo AC en modo excluir, que es el otro camino por el que el conjunto
+    /// llega al Panel desde Registros → Filtros.
+    @Test func twoExcludedAccounts_panelMatchesDistribution() {
+        let accA = makeAccount(name: "A", currencyCode: "PEN")
+        let accB = makeAccount(name: "B", currencyCode: "PEN")
+        let accC = makeAccount(name: "C", currencyCode: "PEN")
+        let txA = makeTransaction(amount: 10_000, account: accA, amountInPreferredCurrency: 10_000)
+        let txB = makeTransaction(amount: 5_000, account: accB, amountInPreferredCurrency: 5_000)
+        let txC = makeTransaction(amount: 777, account: accC, amountInPreferredCurrency: 777)
+
+        let all = [accA, accB, accC]
+        let transactions = [txA, txB, txC]
+        let selected: Set<PersistentIdentifier> = [accA.persistentModelID, accB.persistentModelID]
+        let converter = MockCurrencyConverter()
+
+        let panel = LiveBalanceCalculator.liveBalance(
+            accounts: all,
+            transactions: transactions,
+            preferredCurrencyCode: "PEN",
+            selectedAccountIDs: selected,
+            isExcludeMode: true,
+            converter: converter
+        )
+        let distribution = LiveBalanceCalculator.liveBalance(
+            accounts: eligibleAccounts(all, selected: selected, isExcludeMode: true),
+            transactions: transactions,
+            preferredCurrencyCode: "PEN",
+            converter: converter
+        )
+
+        #expect(panel == distribution, "Panel y Distribución divergieron: \(panel) vs \(distribution)")
+        #expect(panel == 777)
+    }
+
+    /// El toggle `includeGroupsInPanelTotal` aplica SOLO al total agregado: con
+    /// un filtro de cuentas activo —una o varias— no debe recortar nada.
+    @Test func includeGroupsToggle_appliesOnlyToAggregateTotal() {
+        let normal = makeAccount(name: "Normal", currencyCode: "PEN")
+        let groups = makeAccount(name: "Grupos PEN", currencyCode: "PEN")
+        groups.isSystemAccount = true
+
+        let all = [normal, groups]
+
+        // Sin filtro: el toggle OFF sí recorta la cuenta sistema.
+        let total = PanelTotalAccountsLogic.accountsForTotal(
+            all, includeGroups: false, hasSelectedAccount: false
+        )
+        #expect(total.count == 1)
+        #expect(total.first?.name == "Normal")
+
+        // Con dos cuentas filtradas: el toggle no aplica.
+        let filtered = PanelTotalAccountsLogic.accountsForTotal(
+            all, includeGroups: false, hasSelectedAccount: true
+        )
+        #expect(filtered.count == 2)
+    }
+
+    /// El modo excluir es un AGREGADO: "todas menos éstas". El toggle de grupos
+    /// tiene que seguir aplicando.
+    ///
+    /// Sin esto, excluir una cuenta devolvía al total las cuentas sistema que el
+    /// toggle había apagado, y el saldo del Panel **subía** al excluir una cuenta
+    /// con saldo positivo. El test de `accountsForTotal` aislado no lo veía: el
+    /// defecto estaba en quién calcula el flag, no en la función que lo recibe.
+    @Test func excludeMode_isAggregate_soGroupsToggleStillApplies() {
+        let normal = makeAccount(name: "Normal", currencyCode: "PEN")
+        let groups = makeAccount(name: "Grupos PEN", currencyCode: "PEN")
+        groups.isSystemAccount = true
+        let other = makeAccount(name: "Otra", currencyCode: "PEN")
+
+        let all = [normal, groups, other]
+        let transactions = [
+            makeTransaction(amount: 1_000, account: normal, amountInPreferredCurrency: 1_000),
+            makeTransaction(amount: 500, account: groups, amountInPreferredCurrency: 500),
+            makeTransaction(amount: 200, account: other, amountInPreferredCurrency: 200),
+        ]
+        let converter = MockCurrencyConverter()
+        let excluded: Set<PersistentIdentifier> = [other.persistentModelID]
+
+        // El flag: en modo excluir NO hay "filtro de cuenta" a efectos del toggle.
+        #expect(
+            PanelTotalAccountsLogic.hasAccountFilter(
+                selectedAccountIDs: excluded, isExcludeMode: true
+            ) == false
+        )
+        #expect(
+            PanelTotalAccountsLogic.hasAccountFilter(
+                selectedAccountIDs: excluded, isExcludeMode: false
+            ) == true
+        )
+
+        // Y el número que ve el usuario, componiendo como el Panel.
+        let effective = PanelTotalAccountsLogic.accountsForTotal(
+            all,
+            includeGroups: false,
+            hasSelectedAccount: PanelTotalAccountsLogic.hasAccountFilter(
+                selectedAccountIDs: excluded, isExcludeMode: true
+            )
+        )
+        let balance = LiveBalanceCalculator.liveBalance(
+            accounts: effective,
+            transactions: transactions,
+            preferredCurrencyCode: "PEN",
+            selectedAccountIDs: excluded,
+            isExcludeMode: true,
+            converter: converter
+        )
+
+        // Solo `Normal`: `Grupos` sigue apagada por el toggle y `Otra` está excluida.
+        #expect(balance == 1_000)
+        // 1_500 es el defecto: la cuenta de grupos reaparece al excluir.
+        #expect(balance != 1_500)
+        // Y el conteo "en N cuentas" del panorama tiene que decir lo mismo.
+        #expect(effective.count == 2)
+    }
+
     /// El bug original en una línea: el hero mostraba el gasto del período.
     /// Este test falla si alguien vuelve a cablear el KPI de Balance al flujo.
     @Test func balanceKPI_isNotThePeriodExpenseFlow() {

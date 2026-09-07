@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (134)
+## Index (138)
 
 | id | status | path |
 |----|--------|------|
@@ -56,11 +56,13 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | distribucion-recalcula-dos-veces-por-toque-y-sin-debounce | backlog | tickets/backlog/distribucion-recalcula-dos-veces-por-toque-y-sin-debounce.md |
 | distribution-balance-kpi-skips-fx | qa | tickets/qa/distribution-balance-kpi-skips-fx.md |
 | doble-conteo-dia1-previo-thismonth | done | tickets/done/doble-conteo-dia1-previo-thismonth.md |
+| edgecases-extreme-minimum-amount-falla-solo-en-tanda | backlog | tickets/backlog/edgecases-extreme-minimum-amount-falla-solo-en-tanda.md |
 | edgecases-extreme-minimum-flaky-under-load | backlog | tickets/backlog/edgecases-extreme-minimum-flaky-under-load.md |
 | el-job-de-tests-del-ci-no-tiene-timeout | backlog | tickets/backlog/el-job-de-tests-del-ci-no-tiene-timeout.md |
 | el-saldo-de-distribucion-no-se-entera-de-un-registro-nuevo | backlog | tickets/backlog/el-saldo-de-distribucion-no-se-entera-de-un-registro-nuevo.md |
 | entitlement-sync-forzado-es-noop-si-hay-otro-en-vuelo | backlog | tickets/backlog/entitlement-sync-forzado-es-noop-si-hay-otro-en-vuelo.md |
 | exportable-insights | backlog | tickets/backlog/exportable-insights.md |
+| filtro-de-cuentas-se-colapsa-al-navegar-a-registros | backlog | tickets/backlog/filtro-de-cuentas-se-colapsa-al-navegar-a-registros.md |
 | fx-approximate-mark-missing-on-secondary-surfaces | backlog | tickets/backlog/fx-approximate-mark-missing-on-secondary-surfaces.md |
 | fx-manual-writes-seal-approximate-as-final | backlog | tickets/backlog/fx-manual-writes-seal-approximate-as-final.md |
 | fx-partial-rate-rows-silent-1to1 | qa | tickets/qa/fx-partial-rate-rows-silent-1to1.md |
@@ -117,8 +119,9 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | only-testing-filters-may-be-silently-empty | backlog | tickets/backlog/only-testing-filters-may-be-silently-empty.md |
 | orphan-alerts-behind-fullscreen-covers | backlog | tickets/backlog/orphan-alerts-behind-fullscreen-covers.md |
 | panel-accounts-redesign | backlog | tickets/backlog/panel-accounts-redesign.md |
-| panel-colapsa-la-seleccion-de-cuentas-a-la-primera | backlog | tickets/backlog/panel-colapsa-la-seleccion-de-cuentas-a-la-primera.md |
+| panel-colapsa-la-seleccion-de-cuentas-a-la-primera | qa | tickets/qa/panel-colapsa-la-seleccion-de-cuentas-a-la-primera.md |
 | panel-defaults-four-sections-four-widgets | qa | tickets/qa/panel-defaults-four-sections-four-widgets.md |
+| panel-lee-el-filtro-de-cuentas-en-singular-fuera-del-saldo | backlog | tickets/backlog/panel-lee-el-filtro-de-cuentas-en-singular-fuera-del-saldo.md |
 | prefs-domain-per-secondary-session | qa | tickets/qa/prefs-domain-per-secondary-session.md |
 | prefs-synced-keys-upload-not-download | qa | tickets/qa/prefs-synced-keys-upload-not-download.md |
 | push-client-ignores-yala-kind | backlog | tickets/backlog/push-client-ignores-yala-kind.md |
@@ -132,6 +135,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | rescue-discarded-groups-pull | discarded | tickets/discarded/rescue-discarded-groups-pull.md |
 | rojo-heroBuckets-thisWeek-trailing-window | done | tickets/done/rojo-heroBuckets-thisWeek-trailing-window.md |
 | rojo-xcuitest-runner-muere-tras-el-primer-caso | backlog | tickets/backlog/rojo-xcuitest-runner-muere-tras-el-primer-caso.md |
+| saldo-con-seleccion-no-contable-diverge-entre-panel-y-estadisticas | backlog | tickets/backlog/saldo-con-seleccion-no-contable-diverge-entre-panel-y-estadisticas.md |
 | savings-tracking | backlog | tickets/backlog/savings-tracking.md |
 | scheduled-payment-once-labeled-monthly | backlog | tickets/backlog/scheduled-payment-once-labeled-monthly.md |
 | scheduled-payments-notif-dedup | qa | tickets/qa/scheduled-payments-notif-dedup.md |

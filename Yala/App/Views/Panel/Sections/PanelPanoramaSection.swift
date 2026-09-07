@@ -117,7 +117,10 @@ struct PanelPanoramaSection: View {
         return PanelTotalAccountsLogic.accountsForTotal(
             active,
             includeGroups: appPreferences.includeGroupsInPanelTotal,
-            hasSelectedAccount: viewModel.selectedAccountID != nil
+            hasSelectedAccount: PanelTotalAccountsLogic.hasAccountFilter(
+                selectedAccountIDs: viewModel.selectedAccountIDs,
+                isExcludeMode: viewModel.isExcludeMode
+            )
         ).count
     }
 

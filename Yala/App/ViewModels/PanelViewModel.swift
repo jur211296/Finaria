@@ -297,6 +297,29 @@ final class PanelViewModel {
 
     // MARK: - Filter Properties (SSOT: Read/Write from SessionState)
 
+    /// Filtro de cuentas del Panel. Es un **conjunto** y hay que tratarlo como
+    /// tal: `SessionState` es global y sus escritores admiten varias cuentas
+    /// (Registros → Filtros, y `applyBudgetFilters`). Todo cálculo del Panel lee
+    /// de aquí.
+    var selectedAccountIDs: Set<PersistentIdentifier> {
+        get { SessionState.shared.selectedAccountIDs }
+        set { SessionState.shared.selectedAccountIDs = newValue }
+    }
+
+    /// Conveniencia para las **escrituras** que son de una cuenta por diseño:
+    /// el tap del carrusel en modo incluir (elegir ésta reemplaza el filtro) y
+    /// limpiar el filtro entero con `= nil` —el setter hace `removeAll()`, así
+    /// que la X del chip borra las N, no solo una—.
+    ///
+    /// **No la uses para leer ni para calcular.** `.first` de un `Set` no es
+    /// estable, y con dos cuentas filtradas devuelve una arbitraria: ése era
+    /// exactamente el bug por el que el Panel y Distribución mostraban saldos
+    /// distintos. Para filtrar, `selectedAccountIDs`.
+    ///
+    /// Queda una lectura viva en `PanelSheetsModifier` (prefill del formulario
+    /// de transacción), y **no es legítima**: precarga una cuenta arbitraria, y
+    /// en modo excluir precarga justo la que el usuario acaba de excluir. Ticket:
+    /// `panel-lee-el-filtro-de-cuentas-en-singular-fuera-del-saldo`.
     var selectedAccountID: PersistentIdentifier? {
         get { SessionState.shared.selectedAccountIDs.first }
         set {
@@ -1054,10 +1077,11 @@ final class PanelViewModel {
         }
     }
 
-    /// Calcula el balance mostrado: total de todas las cuentas o de la cuenta
-    /// seleccionada (vivo, TC actual sobre saldo nativo). En el total respeta
-    /// `includeGroupsInPanelTotal`: con el toggle OFF excluye las cuentas sistema
-    /// de grupos del agregado. Con una cuenta seleccionada el toggle no aplica.
+    /// Calcula el balance mostrado: total de todas las cuentas o de **las
+    /// cuentas filtradas** (vivo, TC actual sobre saldo nativo). En el total
+    /// respeta `includeGroupsInPanelTotal`: con el toggle OFF excluye las cuentas
+    /// sistema de grupos del agregado. Con un filtro de cuentas activo —una o
+    /// varias— el toggle no aplica.
     /// Devuelve el desglose y no un `Double` a secas para que el llamador pueda además saber si
     /// alguna divisa se convirtió con una tasa que no era la de hoy — el número grande del
     /// panorama lleva «≈» cuando así es.
@@ -1070,13 +1094,17 @@ final class PanelViewModel {
         let effectiveAccounts = PanelTotalAccountsLogic.accountsForTotal(
             accounts,
             includeGroups: includeGroups,
-            hasSelectedAccount: self.selectedAccountID != nil
+            hasSelectedAccount: PanelTotalAccountsLogic.hasAccountFilter(
+                selectedAccountIDs: self.selectedAccountIDs,
+                isExcludeMode: self.isExcludeMode
+            )
         )
         return LiveBalanceCalculator.liveBalanceBreakdown(
             accounts: effectiveAccounts,
             transactions: transactions,
             preferredCurrencyCode: defaultCurrencyCode,
-            selectedAccountID: self.selectedAccountID
+            selectedAccountIDs: self.selectedAccountIDs,
+            isExcludeMode: self.isExcludeMode
         )
     }
 
@@ -1410,13 +1438,16 @@ final class PanelViewModel {
 
     /// Compute eligible accounts and their IDs (archived accounts still count)
     private func computeEligibleAccounts(from accounts: [Account]) -> (accounts: [Account], ids: Set<PersistentIdentifier>) {
+        // Espeja `StatisticsViewModel.computeEligibleAccounts`: el filtro es un
+        // conjunto y las dos pantallas tienen que resolverlo igual, o sus
+        // números vuelven a divergir.
         let eligible = accounts.filter { account in
             guard !account.excludeFromStatistics else { return false }
-            guard let selectedID = selectedAccountID else { return true }
+            if selectedAccountIDs.isEmpty { return true }
             if isExcludeMode {
-                return account.persistentModelID != selectedID
+                return !selectedAccountIDs.contains(account.persistentModelID)
             } else {
-                return account.persistentModelID == selectedID
+                return selectedAccountIDs.contains(account.persistentModelID)
             }
         }
         return (eligible, Set(eligible.map { $0.persistentModelID }))
