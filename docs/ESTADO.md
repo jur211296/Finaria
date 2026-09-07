@@ -5,37 +5,35 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-07 (Lima)
 
-**Rama** `2.1` · HEAD `b7849a64` — con la nube en pausa lo decimos, y volver a tu cuenta ya no pide
-reiniciar.
+**Rama** `2.1` · HEAD `9329812a` — si le debes dinero a alguien en un grupo y la cuenta lleva semanas
+quieta, Yala te lo recuerda con buenas maneras.
 TestFlight build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.** `yala-app.pe` sirve la web
 nueva.
 
 ## Esta sesión, en una línea
 
-**Bajo el kill-switch la app deja de decirle a alguien que no encontramos sus datos cuando los tiene
-intactos** (PR #88). Con el kill puesto las dos puertas de nube se cierran —es lo deseado— y a quien
-reinstala solo le queda «Restaurar desde iCloud», que busca en **CloudKit**, donde un nacido-en-nube
-nunca tuvo nada. Ahora lee **«La nube de Yala está en pausa»**. Y la re-entrada **arranca el motor en
-sesión**, como ya hacía el alta: se acabó el «Ya casi está — reinicia Yala» sobre un móvil recién
-instalado, donde no había nada que remontar.
+**El recordatorio amable de liquidación pendiente ya existe** (PR #89). Si le debes dinero a alguien
+en un grupo y esa cuenta lleva **tres semanas sin moverse**, Yala te avisa **a ti** —quien puede
+resolverlo— sin que abras la app: «👋 Te recordamos que le debes S/ 50 a Ana. Cuando puedas, ponte al
+día». Debiendo a varias personas del mismo grupo llega **un** aviso, no tres; no se repite antes de
+una semana; y cualquier gasto o pago entre vosotros dos reinicia el contador. Nace **apagado**, en
+Ajustes → Notificaciones. V1 sin tocar el schema de CloudKit: el rate-limit vive en `UserDefaults`.
 
-**La review adversarial (tres lentes) cazó CUATRO defectos y los cuatro eran míos**, con 6293 tests
-en verde y el mutante ya verificado. El grave: reusé la terminal del alta para la re-entrada **y
-escribí la justificación en el docblock** —«es el mismo hecho por dos caminos»—. Era falso: lo que
-las separa no es el camino sino la precondición. `onAdoptStarted` marca `hasCompletedOnboarding`
-antes del adopt *precisamente* para que «el seed del onboarding jamás corra sobre una cuenta
-existente», y mi botón mandaba allí a alguien con datos ⇒ cuenta duplicada y categorías sembradas,
-**subiendo al backend** porque el mismo chip acababa de arrancar el motor. La lente no discutió mi
-argumento: miró quién más escribe ese flag. Los otros tres: «Reintentar» leía el flag remoto sin
-`force: true` (no-op durante 6 h ⇒ un botón que no podía cambiar su desenlace, el quinto call-site
-del repo y el único sin forzarlo); `startRuntimeIfStable` pedía la tupla `(fase, pendientes)` y
-**tiraba la segunda mitad**, así que podía arrancar el motor sobre una migración a medias; y en
-sesión secundaria el aviso leía el faro **del dueño**, prometiéndole a una invitada datos de una
-cuenta ajena.
+**Las tres lentes cazaron ocho defectos míos, y el más caro fue una decisión que yo había razonado
+al revés.** Respetaba `simplifyDebts` «para que el aviso diga lo mismo que la pantalla», y el caso
+numérico lo tumbó: con simplificación, la arista «yo → X» es un **enrutado sobre saldos de terceros**,
+así que el aviso podía afirmar «lleva semanas quieta» sobre dinero de anoche con un importe **7×** el
+real — y el rate-limit se rompía, porque su clave cambiaba cuando dos personas **que no eres tú** se
+pagaban algo. Ahora usa deudas directas, y el precio (el importe puede no coincidir con la pantalla en
+grupos con simplificación) está escrito en el código. Los otros: «varias personas» cuando era **una**
+en dos monedas; una espera de frescura que **salía en el primer poll** porque un solo grupo legacy en
+el store cuenta como fresco — el feature habría quedado mudo al arrancar, en verde y sin síntoma; y
+la identidad sin filtrar por `isActive`, que mandaba el push a quien ya salió del grupo.
 
-**Lo que NO se tocó, a propósito:** el gate de `StorageRowGateLogic` —es el freno de emergencia— y el
-docblock de `MigrationWorkExecutor`, que por decisión del 6-sep solo entra con un cambio que toque
-ese fichero. Se leyó para responder a un AC; leer no es tocar.
+**Y el conteo de call-sites del gate de frescura no se ponía rojo solo:** su lista de ficheros es
+explícita, así que un cuarto consumidor **en un fichero nuevo** le era invisible. Ampliado a cuatro,
+con la diferencia escrita — los otros tres preguntan «¿esto no existe?» y este «¿está completa mi foto
+de deudas?», y por eso exige `belongsToBackendChannel` además de `isFresh`.
 
 ## Te espera a ti
 
@@ -55,6 +53,13 @@ ese fichero. Se leyó para responder a un AC; leer no es tocar.
      visita sonando en un móvil prestado, quizá no. **Decisión key por key, no un barrido.**
    - **`secondary-visit-data-lost-on-signout-unannounced` (nuevo)** — el wipe de salida borra lo que
      la visita apuntó. Es correcto; qué se le cuenta y cuándo son cuatro salidas con contrapartidas.
+   - **`groups-settlement-reminder-discoverability` (nuevo, 7-sep)** — el recordatorio de deuda
+     funciona y **casi nadie lo va a recibir**: nace apagado (correcto, es dinero que le debes a
+     alguien) pero **no entra en el primer de notificaciones**, que es donde se enciende su hermano
+     `budgetAlertsEnabled` — se heredó el default sin heredar el encendido —, y además depende de un
+     **segundo interruptor invisible**, el `NotificationItem` de Grupos, que también nace apagado:
+     quien lo encienda con los avisos de Grupos apagados no recibe nada y nadie se lo dice. Tres
+     preguntas dentro; solo la primera es de producto.
    - **`saldo-con-seleccion-no-contable-diverge-entre-panel-y-estadisticas` (nuevo, 7-sep)** — al
      filtrar una cuenta «excluida de estadísticas», el saldo grande muestra el TOTAL, los widgets 0 y
      el KPI 0: **la pantalla se contradice consigo misma**. Tres salidas dentro (0 en las tres, total
@@ -128,6 +133,15 @@ corridas encadenadas; un `simctl erase` lo devolvió a 12 GB — y **no eliminó
 volvió a salir en la corrida hecha desde el simulador recién borrado. El disco libre absoluto **no**
 es su variable. Antes de perseguir un rojo de UI: mirar memoria **y** disco, y repetir aislado.
 
+**Y una causa nueva del disco, medida el 7-sep: un SNAPSHOT LOCAL de Time Machine nacido a mitad de
+la corrida.** Con él puesto, **liberar espacio no libera nada** — retiene los bloques borrados —, así
+que un `simctl erase` que quitó 4,4 GB del simulador dejó el disco **peor** (10 → 5 GB) en vez de
+mejor. Borrarlo (`tmutil deletelocalsnapshots <timestamp>`, solo el timestamp: el nombre completo da
+«is not a valid disk») devolvió **9 GB de golpe**, 4,2 → 13 GB. `disk-report.sh` **sí** los cuenta,
+pero el informe del arranque decía 0 porque el snapshot **nació después**. ⇒ cuando liberar disco no
+suba el número, mira los snapshots antes de seguir borrando; y re-mide el disco **durante** la sesión,
+no solo al abrirla.
+
 **Al retomar cualquiera: las coordenadas de los tickets están sistemáticamente caducadas.** Greppea, no
 abras la línea citada. **Y la premisa del ticket —y la del encargo— también caduca.**
 
@@ -139,9 +153,12 @@ sigue sin `ok_`. **Cero `ok_` inventado.**
 
 ## Board
 
-**139 tickets · backlog 72 · qa 44 · blocked 2 · done 16 · discarded 5 · in-progress 0.**
+**141 tickets · backlog 73 · qa 45 · blocked 2 · done 16 · discarded 5 · in-progress 0.**
 `qa` significa «esperando la tanda», no «cerrado». Índice = disco, verificado comparando **conjuntos**
-(139 = 139, cero huérfanos en ambas direcciones). **Todo cierre incluye `docs/TICKETS.md`**, y lo que
+(141 = 141, cero huérfanos en ambas direcciones, y ningún estado discrepante entre fila y carpeta).
+**El índice traía dos defectos que nadie había visto**, los dos arreglados: una fila de datos **por
+encima de la cabecera de la tabla**, y dos punteros del mapa de origen apuntando a `in-progress/`,
+que está vacío desde hace días. **Todo cierre incluye `docs/TICKETS.md`**, y lo que
 salga de camino lleva ticket propio — esta sesión sacó **tres**:
 `panel-lee-el-filtro-de-cuentas-en-singular-fuera-del-saldo` (el subtítulo «en N cuentas» cuenta todas
 mientras el saldo filtra; y el prefill del formulario propone una cuenta arbitraria, en modo excluir
@@ -152,7 +169,11 @@ mensaje sobrevive al borrado de cuenta (su `clear` es best-effort y el `set` tuv
 cuenta para propagarse), y de paso deja escrito que **el usuario MIGRADO —el único que existe hoy en
 producción— ve su copia de iCloud congelada pre-migración sin que nada le avise de que es vieja**— y
 **`adopt-terminal-claims-ready-without-checking-engine`**, que la pantalla de «listo» se deriva del
-journal y nunca pregunta si el motor arrancó de verdad.
+journal y nunca pregunta si el motor arrancó de verdad. La del recordatorio de liquidación sacó
+**dos**: **`groups-settlement-reminder-stale-clock`** —el reloj del nudge no ve las ediciones de un
+gasto viejo ni los pagos retro-fechados, porque `SplitSettlement` no tiene `createdAt` ni
+`SplitExpense` tiene `updatedAt`; cerrarlo pide campo nuevo y migración— y
+**`groups-settlement-reminder-discoverability`**, que es decisión tuya y está arriba.
 
 **Y una lección de higiene del board:** abrí un cuarto ticket para el rojo de
 `EdgeCases.test_extremeMinimumAmountSaves` **sin comprobar que ya existía uno**
