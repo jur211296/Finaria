@@ -7166,6 +7166,26 @@ enum L10n {
                 ls("stats.sankey.subtitle", comment: "Sankey widget internal subtitle (above the KPI total amount)")
             }
         }
+        /// Rótulo bajo el hero de las cuatro pestañas: dice QUÉ magnitud es la cifra.
+        /// El caso lo deriva `StatsHeroCaptionLogic` del mismo estado que elige el número
+        /// — no es fijo por pestaña (ver la cabecera de ese fichero).
+        enum Hero {
+            static var captionAccountsBalance: String {
+                ls("stats.hero.captionAccountsBalance", comment: "Stats hero caption: the figure is the accounts balance (stock), same as Panel KPI")
+            }
+            static var captionNetPeriod: String {
+                ls("stats.hero.captionNetPeriod", comment: "Stats hero caption: the figure is income minus expenses for the period (flow)")
+            }
+            static var captionIncomePeriod: String {
+                ls("stats.hero.captionIncomePeriod", comment: "Stats hero caption: the figure is only the income side for the period")
+            }
+            static var captionExpensePeriod: String {
+                ls("stats.hero.captionExpensePeriod", comment: "Stats hero caption: the figure is only the expense side for the period")
+            }
+            static var captionTotalPeriod: String {
+                ls("stats.hero.captionTotalPeriod", comment: "Stats hero caption: the figure sums income and expense magnitudes (pie total), neither a net nor one side")
+            }
+        }
     }
 
 }

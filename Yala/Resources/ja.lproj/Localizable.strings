@@ -5555,3 +5555,18 @@
 
 /* Cuerpo del aviso al tocar la tarjeta de un grupo pendiente de aprobación */
 "groups.card.pendingNotice.body" = "グループの管理者がまだリクエストを承認していません。承認されると、グループを開いて支出を見られるようになります。しばらくしてからもう一度確認してください。";
+
+/* Stats hero caption: the figure is the accounts balance (stock), same as Panel KPI */
+"stats.hero.captionAccountsBalance" = "口座残高";
+
+/* Stats hero caption: the figure is income minus expenses for the period (flow) */
+"stats.hero.captionNetPeriod" = "期間の収支";
+
+/* Stats hero caption: the figure is only the income side for the period */
+"stats.hero.captionIncomePeriod" = "期間の収入";
+
+/* Stats hero caption: the figure is only the expense side for the period */
+"stats.hero.captionExpensePeriod" = "期間の支出";
+
+/* Stats hero caption: the figure sums income and expense magnitudes (pie total), neither a net nor one side */
+"stats.hero.captionTotalPeriod" = "期間の合計";

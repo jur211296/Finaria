@@ -103,7 +103,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | groups-transfer-leave-write-ahead | backlog | tickets/backlog/groups-transfer-leave-write-ahead.md |
 | guest-decline-has-no-screen | qa | tickets/qa/guest-decline-has-no-screen.md |
 | guest-journey-dead-screens | done | tickets/done/guest-journey-dead-screens.md |
-| hero-estadisticas-stock-vs-flujo-entre-pestanas | backlog | tickets/backlog/hero-estadisticas-stock-vs-flujo-entre-pestanas.md |
+| hero-estadisticas-stock-vs-flujo-entre-pestanas | qa | tickets/qa/hero-estadisticas-stock-vs-flujo-entre-pestanas.md |
 | history-token-guard-echo-blind-spot | backlog | tickets/backlog/history-token-guard-echo-blind-spot.md |
 | inbox-convert-draft-to-group-expense | done | tickets/done/inbox-convert-draft-to-group-expense.md |
 | inbox-crash-convert-to-group-expense | done | tickets/done/inbox-crash-convert-to-group-expense.md |
@@ -162,7 +162,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | yala-android | backlog | tickets/backlog/yala-android.md |
 | zone-decisions-still-per-row | backlog | tickets/backlog/zone-decisions-still-per-row.md |
 
-Counts by folder: backlog 59 · in-progress 0 · qa 36 · blocked 2 · done 16 · discarded 5 = 118. *(Recontados sobre disco el 2026-09-06, junto con el índice de arriba. La línea llevaba cuatro sesiones desviada — decía `= 96` con `in-progress 7` — y el ESTADO lo venía señalando sin recontar.)*
+Counts by folder: backlog 65 · in-progress 0 · qa 41 · blocked 2 · done 16 · discarded 5 = 129. *(Recontados sobre disco el 2026-09-07; la tabla de arriba ya cuadraba fila a fila con el disco —129 y 129—, era solo esta línea la desviada, que decía `= 118`. Dos trampas al recontar: cuenta solo `*.md` (`tickets/` lleva además un `.gitkeep` por carpeta y tres PNG de evidencia en `done/`, que inflan un `ls` a 132), y si filtras las filas con una regex, acepta MAYÚSCULAS en el id — `rojo-heroBuckets-thisWeek-trailing-window` se escapa de `[a-z0-9-]+` y aparenta ser un huérfano que no existe.)*
 
 Frank 2026-09-06 (decisiones): Jürgen respondió en una sentada las **seis** decisiones de producto que tenían
 tickets parados sin código que escribir; cada una está en su ticket bajo «Decisión Jürgen (2026-09-06)», con
