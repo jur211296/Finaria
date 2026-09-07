@@ -4839,3 +4839,12 @@
 
 /* Stats hero caption: the figure sums income and expense magnitudes (pie total), neither a net nor one side */
 "stats.hero.captionTotalPeriod" = "Total del período";
+
+/* Secondary session on the private branch: title of the notice shown after choosing the private account, before the onboarding */
+"welcome.private.secondaryTitle" = "Lo tuyo no se mezcla con lo suyo";
+
+/* Secondary session on the private branch: body of the notice — the fact, the guarantee, and the measured detail that the secondary store is cloudKitDatabase .none */
+"welcome.private.secondaryBody" = "Estás usando Yala en el dispositivo de otra persona. Lo que apuntes aquí se guarda solo para ti y solo en este dispositivo: la otra persona no lo ve, y no se sincroniza con ningún iCloud.";
+
+/* Secondary session on the private branch: CTA that continues to the private onboarding (informs, does not block) */
+"welcome.private.secondaryCta" = "Continuar";

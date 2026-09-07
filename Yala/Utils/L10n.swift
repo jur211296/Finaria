@@ -4956,6 +4956,23 @@ enum L10n {
             // sobrevive (16 locales).
         }
 
+        /// Aviso de la rama PRIVADA en sesión secundaria (2026-09-06): la visita entra al onboarding
+        /// sabiendo que está en el móvil de otra persona. Informa y sigue — «encauzar, no bloquear».
+        enum Private {
+            /// Copy PROPIO y no el de `welcome.groups.secondary*`, aunque nombren el mismo hecho: allí
+            /// el camino se acaba («vuelve desde tu dispositivo») y aquí continúa, así que la de Grupos
+            /// tiene que sonar a «no puedes» justo donde ésta suena a «puedes, y esto es lo que pasa».
+            /// Compartir la key ataría las dos pantallas a evolucionar juntas para siempre.
+            static var secondaryTitle: String { ls("welcome.private.secondaryTitle", comment: "") }
+            /// «Solo en este dispositivo» es un hecho MEDIDO, no una cautela: el store de la sesión
+            /// secundaria se monta con `cloudKitDatabase: .none` y no se espeja a ninguna CloudKit —
+            /// ni a la del dueño ni a la de la visita.
+            static var secondaryBody: String { ls("welcome.private.secondaryBody", comment: "") }
+            /// El CTA CONTINÚA (a diferencia del `gateBack` de las tres pantallas de bloqueo de Grupos,
+            /// cuyo único botón es volver). Esa es la diferencia entera entre informar y bloquear.
+            static var secondaryCta: String { ls("welcome.private.secondaryCta", comment: "") }
+        }
+
         /// Step de dos caminos de «Vengo por un grupo» (G2 de Grupos-first). La card del chooser dejó de
         /// hablarle solo al invitado con enlace: aquí elige entre organizar su primer grupo o pegar la
         /// invitación que ya tiene.

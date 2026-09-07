@@ -228,4 +228,87 @@ final class SecondarySessionGateUITests: XCTestCase {
             """
         )
     }
+
+    // MARK: - La rama privada: informa y sigue
+
+    /// Recorre el Welcome hasta la rama privada: Hero → «Es mi primera vez». **Bajo `-uitest` no hay
+    /// sub-chooser** —`visibleNewOptions` deja una sola card, igual que en producción con el percent
+    /// remoto en 0— así que la card de nivel 1 lleva directa a `handleNewOption(.privateAccount)`, que es
+    /// exactamente el recorrido que hace hoy todo usuario nuevo.
+    private func walkToPrivateBranch(secondarySession: Bool) -> XCUIApplication {
+        let app = XCUIApplication()
+        // **Sin `onboarding:`**, que salta el Welcome entero (`UITestHooks.startAtOnboarding`) y dejaría
+        // este recorrido sin la pantalla que viene a comprobar. Misma combinación que
+        // `walkToOrganizerGate`, que es el recorrido hermano por la otra rama del chooser.
+        app.launchForUITest(
+            reset: true,
+            skipOnboarding: false,
+            seed: nil,
+            secondarySession: secondarySession
+        )
+
+        let heroCTA = app.buttons["welcome_hero_cta"]
+        XCTAssertTrue(heroCTA.waitForExistence(timeout: 60), "No apareció el CTA del Hero.")
+        heroCTA.tap()
+
+        let newBranch = app.buttons["welcome_chooser_new"]
+        XCTAssertTrue(newBranch.waitForExistence(timeout: 10), "No apareció la card «Es mi primera vez».")
+        newBranch.tap()
+        return app
+    }
+
+    /// **El hueco que este cambio cierra.** Hasta el 2026-09-07 la visita elegía «privacidad total» y
+    /// entraba al onboarding sin que nadie le dijera que estaba en el móvil de otra persona, mientras la
+    /// rama de al lado —la organizador, dos casos más arriba— sí se lo decía. La app se contradecía
+    /// según por dónde entraras.
+    ///
+    /// **Informa y NO bloquea**, y esa es la mitad que hay que afirmar: no basta con que salga la
+    /// pantalla, porque una pantalla sin salida sería un camino muerto (y la decisión del owner del
+    /// 2026-09-02 para esta familia es «encauzar, no bloquear»). Por eso el caso continúa: tras el CTA,
+    /// el onboarding tiene que montar.
+    func test_privateBranch_inSecondarySession_informsAndThenContinues() {
+        let app = walkToPrivateBranch(secondarySession: true)
+
+        let notice = gateScreen(app, "welcome_private_secondary_notice")
+        XCTAssertTrue(
+            notice.waitForExistence(timeout: 20),
+            """
+            De visita en el móvil de otro, «Es mi primera vez → privacidad total» tiene que decirlo antes \
+            de seguir. Si no aparece, o el término `SecondarySessionStore.isActive()` salió de \
+            `handleNewOption`, o el seam de la sesión secundaria dejó de encender el descriptor.
+            """
+        )
+
+        let cta = app.buttons["welcome_private_secondary_continue"]
+        XCTAssertTrue(cta.waitForExistence(timeout: 5), "El aviso se quedó sin su CTA de continuar.")
+        cta.tap()
+
+        XCTAssertTrue(
+            app.textFields["onboarding_name_field"].waitForExistence(timeout: 20),
+            """
+            El aviso INFORMA, no bloquea: tras continuar, el onboarding privado tiene que montar. Si se \
+            queda aquí, la pantalla se convirtió en el camino muerto que el spec del flujo prohíbe.
+            """
+        )
+    }
+
+    /// **El control positivo, y el que impide que el anterior pase por casualidad**: el mismo recorrido,
+    /// el mismo build y la misma card, con la ÚNICA diferencia del seam. Sin sesión secundaria el aviso
+    /// no existe y el usuario cae directo en el onboarding — que es el recorrido de producción de hoy y
+    /// no puede haber cambiado ni un paso.
+    func test_privateBranch_withoutSecondarySession_goesStraightToOnboarding() {
+        let app = walkToPrivateBranch(secondarySession: false)
+
+        XCTAssertTrue(
+            app.textFields["onboarding_name_field"].waitForExistence(timeout: 30),
+            "Sin sesión secundaria, «Es mi primera vez» tiene que llevar directo al onboarding."
+        )
+        XCTAssertFalse(
+            gateScreen(app, "welcome_private_secondary_notice").exists,
+            """
+            El aviso de visita salió para un usuario que NO está de visita. Es una pantalla de más en el \
+            camino por el que pasa todo usuario nuevo de producción.
+            """
+        )
+    }
 }

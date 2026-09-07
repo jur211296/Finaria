@@ -34,6 +34,10 @@ enum WelcomeFlowStep {
     /// `.alert(` en este fichero, y porque una pantalla de bloqueo con salida no es un camino muerto.
     /// **Nada se escribe hasta que esta puerta dice que sí.**
     case groupsGate
+    /// La rama privada, en sesión secundaria: **informa y sigue**. No es una puerta como `.groupsGate` —no
+    /// hay nada que impedir desde que el dominio de preferencias por sesión cerró las escrituras al dueño—
+    /// sino el paso que faltaba para que la app no se contradijera según por dónde entres.
+    case privateSecondaryNotice
     /// R2 · TERMINAL: este proceso montó el store NEUTRO y el destino elegido necesita el mirror de
     /// CloudKit ⇒ hay que reabrir la app. Vive DENTRO de este cover a propósito: un cover propio sería una
     /// presentación nueva colgando del anchor de `ContentView` (matriz de readiness, regla (3) de
@@ -191,6 +195,19 @@ struct WelcomeFlowContainer: View {
                     onBack: { goTo(.chooser) }
                 )
                 .transition(.opacity)
+            case .privateSecondaryNotice:
+                WelcomeSecondaryNoticeView(
+                    onContinue: {
+                        leaveWelcome(to: .privateOnboarding) { onSelectPrivateAccount() }
+                    },
+                    // Al step del que vino, que es el MISMO término que decidió si se mostraba: con dos
+                    // cards visibles el usuario pasó por el sub-chooser, y con bypass —el recorrido de
+                    // producción de hoy— nunca lo vio, así que devolverlo ahí sería enseñarle una pantalla
+                    // nueva al retroceder. Derivarlo de `visibleNewOptions` en vez de recordarlo en un
+                    // `@State` es lo que impide que las dos condiciones diverjan.
+                    onBack: { goTo(newBranchOriginStep) }
+                )
+                .transition(.opacity)
             case .mirrorRelaunch:
                 WelcomeMirrorRelaunchView()
                     .transition(.opacity)
@@ -284,9 +301,35 @@ struct WelcomeFlowContainer: View {
         }
     }
 
+    /// De dónde vino quien está en `.privateSecondaryNotice`, y por tanto a dónde lo devuelve su «volver».
+    /// Es el MISMO término que `handleNewBranch` usa para decidir si enseña el sub-chooser: con bypass no
+    /// hubo 2º nivel y el origen es el chooser de primer nivel.
+    ///
+    /// Se RE-DERIVA en el «volver» en vez de capturarse al entrar, y conviene ser exacto sobre lo que eso
+    /// compra y lo que cuesta: compra que no haya un segundo sitio donde escribir la condición —un `@State`
+    /// que alguien actualice mal manda al usuario a una pantalla que no vio—, y cuesta que un refresco de
+    /// remote-config entre el tap y el «volver» cambie la respuesta. Esa ventana es estrecha (min-interval
+    /// de 6 h, y el `.task` del container ya gastó el suyo al aparecer) y su peor caso es aterrizar en
+    /// `.newChooser` en vez de `.chooser`: una pantalla viva, no un camino muerto. El container ya asume
+    /// esa misma falta de live-update para las cards que pinta.
+    private var newBranchOriginStep: WelcomeFlowStep {
+        WelcomeAccountChoiceLogic.bypass(visibleNewOptions) == nil ? .newChooser : .chooser
+    }
+
     private func handleNewOption(_ option: WelcomeAccountChoiceLogic.NewOption) {
         switch option {
         case .privateAccount:
+            // **En sesión secundaria se informa ANTES de salir del cover.** Hasta el 2026-09-07 esta rama
+            // llevaba a la visita al onboarding privado sin decirle que estaba en el móvil de otra persona,
+            // mientras la rama de al lado sí se lo decía: la app se contradecía según por dónde entraras.
+            // El descriptor es el predicado canónico —el MISMO que consulta la puerta de la rama
+            // organizador— y no el corpus: `hasLocalDataNow` mide el store de la INVITADA, que en una
+            // sesión recién montada está VACÍO y daría vía libre justo en el caso que hay que atender.
+            // Informa y no bloquea: el step sale por este mismo portal en cuanto la visita continúa.
+            if SecondarySessionStore.isActive() {
+                goTo(.privateSecondaryNotice)
+                return
+            }
             // R2: **es el bypass de producción** (percent remoto de la elección nube en 0 ⇒ el sub-chooser
             // ni se muestra), así que este es el camino por el que pasa hoy todo usuario nuevo — y el que
             // paga el relanzamiento que el alta nube deja de pagar. Es el reparto que la Opción C aprueba.

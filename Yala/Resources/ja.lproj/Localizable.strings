@@ -5570,3 +5570,12 @@
 
 /* Stats hero caption: the figure sums income and expense magnitudes (pie total), neither a net nor one side */
 "stats.hero.captionTotalPeriod" = "期間の合計";
+
+/* Secondary session on the private branch: title of the notice shown after choosing the private account, before the onboarding */
+"welcome.private.secondaryTitle" = "あなたのデータは分けて保存されます";
+
+/* Secondary session on the private branch: body of the notice — the fact, the guarantee, and the measured detail that the secondary store is cloudKitDatabase .none */
+"welcome.private.secondaryBody" = "他の人の端末で Yala を使っています。ここで記録したものはあなただけのもので、この端末にだけ保存されます。相手には見えず、どの iCloud にも同期されません。";
+
+/* Secondary session on the private branch: CTA that continues to the private onboarding (informs, does not block) */
+"welcome.private.secondaryCta" = "続ける";
