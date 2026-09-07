@@ -18,7 +18,7 @@
 
 ## Índice (23 entradas)
 
-> **No hace falta leer este fichero entero** — son 191 KB. Localiza la entrada
+> **No hace falta leer este fichero entero** — son 193 KB. Localiza la entrada
 > aquí y salta a ella.
 
 - `—` [Sync de Grupos (CKSyncEngine) NO debe arrancar/`save()` sobre el `mainContext` compartido antes](#sync-de-grupos-cksyncengine-no-debe-arrancarsave-sobre-el-maincontext-compartido-antes)
@@ -395,3 +395,35 @@ falsa.
   reconstruido porque `xcodebuild build` no compila los targets de test (hace falta
   `build-for-testing`). **Un `TEST EXECUTE FAILED` sin conteo no es un test en rojo: es que no
   arrancó.**
+
+---
+
+## Un guard puesto en una mitad hace más daño que ninguno: parece cerrado
+
+**2026-09-07.** `OnboardingResetHelper.clearResidualPreferencesForFreshStart` borra `userName` y
+`defaultCurrencyCode` en **dos** sitios: el iCloud key-value y el `UserDefaults` local. Cuando se
+blindó la frontera de la sesión secundaria, la mitad iKV recibió su puerta (`OwnerKeyValueStore`) y
+un comentario que dice exactamente por qué:
+
+> *La PUERTA, no el store crudo: en sesión secundaria el iCloud KV es el del DUEÑO, y este barrido le
+> dejaría su nombre y su divisa en blanco en todos sus dispositivos.*
+
+**La mitad local, tres líneas más arriba, se quedó en `UserDefaults.standard`.** Y era la que se
+ejecutaba siempre: en sesión secundaria la visita que elige «empezar de cero» entra SIEMPRE por esa
+rama —`hasExistingData` mide el store de la invitada, que nace vacío— así que le borraba al dueño su
+nombre y su divisa. Sin cura para el caso que más importa: la reposición del arranque siguiente sale
+de `readRemoteIKV`, que devuelve `nil` si la key no está en el iKV, o sea para un dueño **sin
+iCloud**, que es justamente el público de la rama «privacidad total».
+
+Lo caro no es el bug: es que **el comentario correcto de al lado hacía la zona parecer revisada**.
+Un lector —humano o no— que busque «¿está protegido este fichero?» encuentra la puerta, el motivo
+bien escrito y la sesión secundaria nombrada, y sigue adelante.
+
+- **La pregunta no es «¿está protegido este fichero?» sino «¿están protegidas todas las mitades de
+  esta operación?».** Una función que escribe en dos almacenes tiene dos fronteras que cruzar.
+- **Un comentario que explica un guard es una señal de que ALGUIEN pensó en el problema, no de que
+  lo resolviera entero.** Cuando encuentres uno, lee la función completa antes de darla por buena.
+- Cómo se caza: no por lectura dirigida —la zona pasa el ojo— sino recorriendo **el camino del
+  usuario** paso a paso y preguntando en cada salto «¿esto qué escribe, y en qué dominio?». Aquí lo
+  encontró una lente adversarial a la que se le pidió justo eso, sobre un cambio que solo añadía una
+  pantalla informativa. El defecto no estaba en el diff.

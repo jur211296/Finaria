@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (129)
+## Index (134)
 
 | id | status | path |
 |----|--------|------|
@@ -138,6 +138,8 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | secondary-entry-healing-writes-owner-not-session | backlog | tickets/backlog/secondary-entry-healing-writes-owner-not-session.md |
 | secondary-groups-off-wipes-owner | qa | tickets/qa/secondary-groups-off-wipes-owner.md |
 | secondary-guest-exit-lock-and-outbox | qa | tickets/qa/secondary-guest-exit-lock-and-outbox.md |
+| secondary-onboarding-still-crosses-owner-domain | backlog | tickets/backlog/secondary-onboarding-still-crosses-owner-domain.md |
+| secondary-visit-data-lost-on-signout-unannounced | backlog | tickets/backlog/secondary-visit-data-lost-on-signout-unannounced.md |
 | secondary-visitor-writes-owner-domain | qa | tickets/qa/secondary-visitor-writes-owner-domain.md |
 | siri-intent-dual-container | qa | tickets/qa/siri-intent-dual-container.md |
 | smart-ai-notifications | backlog | tickets/backlog/smart-ai-notifications.md |
@@ -146,6 +148,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | storekit-appgroup-siri-pro-gate | qa | tickets/qa/storekit-appgroup-siri-pro-gate.md |
 | subscription-success-without-pro | done | tickets/done/subscription-success-without-pro.md |
 | synced-prefs-outside-prefsynckey | discarded | tickets/discarded/synced-prefs-outside-prefsynckey.md |
+| transaction-save-helper-flake-one-per-suite | backlog | tickets/backlog/transaction-save-helper-flake-one-per-suite.md |
 | trends-comparison-kpi-vs-curve | done | tickets/done/trends-comparison-kpi-vs-curve.md |
 | trends-insight-card-v2-bullets | backlog | tickets/backlog/trends-insight-card-v2-bullets.md |
 | uitest-compara-fechas-sin-fijar-locale | backlog | tickets/backlog/uitest-compara-fechas-sin-fijar-locale.md |
@@ -154,15 +157,17 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | update-banner-appstore-criteria | qa | tickets/qa/update-banner-appstore-criteria.md |
 | verify-dual-channel-zone-in-supabase | backlog | tickets/backlog/verify-dual-channel-zone-in-supabase.md |
 | web-domain-has-no-spf-dkim-dmarc | backlog | tickets/backlog/web-domain-has-no-spf-dkim-dmarc.md |
+| welcome-beacon-reads-owner-icloud-in-secondary | backlog | tickets/backlog/welcome-beacon-reads-owner-icloud-in-secondary.md |
 | welcome-copy-blames-owner | qa | tickets/qa/welcome-copy-blames-owner.md |
 | welcome-fresh-start-alert-leaves-blank-screen | qa | tickets/qa/welcome-fresh-start-alert-leaves-blank-screen.md |
-| welcome-privacy-branch-has-no-secondary-door | backlog | tickets/backlog/welcome-privacy-branch-has-no-secondary-door.md |
+| welcome-privacy-branch-has-no-secondary-door | qa | tickets/qa/welcome-privacy-branch-has-no-secondary-door.md |
+| welcome-private-card-promises-icloud-in-visit | backlog | tickets/backlog/welcome-private-card-promises-icloud-in-visit.md |
 | welcome-start-fresh-wipes-before-ask | qa | tickets/qa/welcome-start-fresh-wipes-before-ask.md |
 | widget-snapshot-visitor-overwrites-owner | qa | tickets/qa/widget-snapshot-visitor-overwrites-owner.md |
 | yala-android | backlog | tickets/backlog/yala-android.md |
 | zone-decisions-still-per-row | backlog | tickets/backlog/zone-decisions-still-per-row.md |
 
-Counts by folder: backlog 65 · in-progress 0 · qa 41 · blocked 2 · done 16 · discarded 5 = 129. *(Recontados sobre disco el 2026-09-07; la tabla de arriba ya cuadraba fila a fila con el disco —129 y 129—, era solo esta línea la desviada, que decía `= 118`. Dos trampas al recontar: cuenta solo `*.md` (`tickets/` lleva además un `.gitkeep` por carpeta y tres PNG de evidencia en `done/`, que inflan un `ls` a 132), y si filtras las filas con una regex, acepta MAYÚSCULAS en el id — `rojo-heroBuckets-thisWeek-trailing-window` se escapa de `[a-z0-9-]+` y aparenta ser un huérfano que no existe.)*
+Counts by folder: backlog 69 · in-progress 0 · qa 42 · blocked 2 · done 16 · discarded 5 = 134. *(Recontados sobre disco el 2026-09-07; la tabla de arriba ya cuadraba fila a fila con el disco —129 y 129—, era solo esta línea la desviada, que decía `= 118`. Dos trampas al recontar: cuenta solo `*.md` (`tickets/` lleva además un `.gitkeep` por carpeta y tres PNG de evidencia en `done/`, que inflan un `ls` a 132), y si filtras las filas con una regex, acepta MAYÚSCULAS en el id — `rojo-heroBuckets-thisWeek-trailing-window` se escapa de `[a-z0-9-]+` y aparenta ser un huérfano que no existe.)*
 
 Frank 2026-09-06 (decisiones): Jürgen respondió en una sentada las **seis** decisiones de producto que tenían
 tickets parados sin código que escribir; cada una está en su ticket bajo «Decisión Jürgen (2026-09-06)», con
@@ -474,3 +479,35 @@ Gate verde entero: build ×2 schemes sin warnings nuevos · 6134 unit / 623 suit
 suite completa** · índice de QA validado. Verificado por MUTACIÓN en las dos rondas. **Queda device-QA de
 dos teléfonos**, que es lo que los tests no ven.
 
+
+---
+
+Frank 2026-09-07 (welcome-privacy-branch-has-no-secondary-door): **la rama privada del Welcome deja de
+callarse en visita, y el onboarding deja de prometer categorías que no crea.** `backlog → qa` — el código
+está hecho y pinneado; falta el e2e con dos cuentas reales, que el seam de simulador no puede fingir
+(enciende el descriptor pero **no monta** un store secundario). Counts `backlog 65 → 67`, `qa 41 → 42`,
+total `129 → 132`.
+
+**La premisa del ticket se midió otra vez y trajo dos hechos que no estaban escritos.** El primero cambió
+el copy: la card que la visita acaba de tocar promete «se sincronizan por tu iCloud privado» y el store
+secundario es `cloudKitDatabase: .none` (`SwiftDataConfiguration.swift:1188`) — no se espeja a ninguna
+CloudKit, ni a la del dueño ni a la de la visita. El aviso dice por eso «solo para ti y solo en este
+dispositivo», que es el hecho verdadero. El segundo era un defecto vivo del mismo patrón: **en visita, el
+saldo inicial que la persona teclea se descartaba en silencio** — el seed no corría (cinturón M1), nadie
+creaba «Ajuste de saldo» y `createOnboardingAccount` no encontraba dónde colgar el importe. No hizo falta
+arreglo aparte: tratar la visita como «sin seed» —que es lo que la decisión pedía— entra por la rama que
+ya la crea.
+
+**Y la pantalla cazó lo que el fuente escondía.** La primera captura mostraba el copy VIEJO con el fichero
+ya corregido: `es.lproj` y `pt.lproj` son copias regeneradas de `es-419` y `pt-BR`, así que editar los
+`.strings` después de correr `add-l10n-key.sh` los dejó atrás, con un `[NEEDS_TRANSLATION]` vivo en `pt`.
+Se resincronizó y se volvió a mirar.
+
+Tres tickets nuevos, todos salidos de camino y ninguno colado en este PR:
+**`welcome-private-card-promises-icloud-in-visit`** (low — hoy esa card casi no se lee: en producción el
+sub-chooser hace bypass; deja de ser low en cuanto el percent suba de 0),
+**`secondary-visit-data-lost-on-signout-unannounced`** (medium — el wipe de salida es correcto y borra lo
+que la visita apuntó; qué se le cuenta y cuándo es decisión de producto, con cuatro salidas y
+contrapartidas reales) y **`welcome-beacon-reads-owner-icloud-in-secondary`** (medium — el faro lee el
+iCloud del DUEÑO y decide antes que nada en «Soy nuevo»; medido que no mira la sesión secundaria, **no**
+medido dónde aterriza la visita, y el ticket lo dice así).

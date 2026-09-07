@@ -1,0 +1,89 @@
+---
+id: transaction-save-helper-flake-one-per-suite
+status: backlog
+priority: medium
+area: qa
+created: 2026-09-07
+updated: 2026-09-07
+---
+
+# Un rojo por corrida completa en el helper que guarda transacciones, y la víctima cambia
+
+## El síntoma
+
+Toda corrida de la suite XCUITest completa termina con **exactamente un fallo**, siempre el mismo
+aserto y siempre el mismo mensaje:
+
+```
+YalaUITests/Support/XCUIApplication+Yala.swift:208: XCTAssertTrue failed -
+No apareció la pantalla de éxito de la transacción (transaction_success_accept) — el guardado no completó.
+```
+
+**Lo que cambia es a quién le toca.** Tres corridas completas del mismo árbol, el mismo día:
+
+| Corrida | Víctima | Resultado del otro candidato |
+|---|---|---|
+| 1ª (134 tests) | `QuickActionsFavoritesUITests.test_saveAsFavoriteFromTransactionAppearsInList` | — |
+| 2ª (134 tests) | la misma | — |
+| 3ª (134 tests, simulador recién borrado) | **`EdgeCasesUITests.test_extremeMinimumAmountSaves`** | `QuickActionsFavorites` **pasó** (46,5 s) |
+
+Un rojo que se muda de test entre corridas del mismo commit no es un defecto de producto: el defecto
+está en el **helper compartido** que todos ellos usan para guardar, o en el entorno que lo sostiene.
+
+## Lo medido (2026-09-07) — 17 muestras
+
+Además de las tres corridas completas, un reproductor de 3 min (las cuatro suites que preceden a
+`QuickActionsFavorites` en el orden alfabético, más la suya) da ~50 % de fallo, con el disco entre
+7,7 y 9,6 GB libres y con el simulador recién borrado o no.
+
+**Tres cosas que descartan las explicaciones fáciles:**
+
+1. **No es el código.** Se bisecó contra el árbol base durante
+   [[welcome-privacy-branch-has-no-secondary-door]], y la muestra que lo zanja es ésta: **falló con
+   un único fichero modificado, `OnboardingStepPlan.swift`, cuyo cambio es un parámetro nuevo con
+   default `false` que el call-site de esa versión ni siquiera pasa** ⇒ el `Set` de pasos resultante
+   es idéntico y ningún camino de ejecución cambia. Un fallo sin causa posible en el código prueba
+   ruido en el instrumento, no una regresión. (Y esa muestra es la que salva de perseguir el diff:
+   la correlación aparente era 4/6 con cambios contra 0/2 sin ellos.)
+2. **No es «el test es lento».** Las corridas que FALLAN tardan **menos** (45-46 s) que las que
+   pasan (47-49 s): la espera interna se rinde a los 10 s y el caso termina antes. El reparto es
+   binario —la pantalla de éxito aparece o no—, no marginal.
+3. **No es el disco libre.** Falla con 9,0 GB y pasa con 9,6; pasa con 7,7 en series recién
+   empezadas. Un `simctl erase` (que devolvió el disco de 7,1 a 12 GB) **no lo elimina**: la 3ª
+   corrida completa, hecha desde un simulador recién borrado, volvió a dar su único rojo.
+
+## Por dónde empezar
+
+El aserto vive en `YalaUITests/Support/XCUIApplication+Yala.swift:208`, dentro del helper de guardado
+que comparten todos los tests que crean una transacción. Ese es el sitio, y los candidatos son:
+
+1. **Una race en el propio flujo de guardado** que el helper destapa 1 vez de cada ~130. Es la
+   hipótesis que más explicaría, y la única que sería un defecto de PRODUCTO y no de QA. Merece
+   mirarse antes que las otras dos: si el guardado de una transacción falla 1 de cada 130 veces en
+   un simulador, en un teléfono real también pasará alguna vez, y ahí no hay aserto que lo cace.
+2. **El presupuesto de la espera** (10 s) es corto para un simulador cargado. Subirlo taparía el
+   síntoma — y si el candidato 1 es cierto, taparía la única señal que tenemos de él.
+3. **Acumulación en el simulador** a lo largo de la corrida. Encaja con que la víctima varíe, pero
+   no con que la 3ª corrida golpeara a un test TEMPRANO (la E) y perdonara al tardío (la Q).
+
+## Por qué esto merece un ticket y no una línea en la Lista Negra
+
+Porque su síntoma ya engañó una vez, en sentido contrario: el caso del `.alert` con label dinámico
+(`.claude/rules/swiftui-ds.md`) fue **una rotura real** que se manifestó exactamente así, en
+`QuickActionsFavoritesUITests`, tras un cambio en invitaciones de grupo que no tenía ninguna relación
+aparente. ⇒ **Un rojo de este aserto no se puede dar por ruido sin medirlo**, y medirlo cuesta dos
+horas de bisección si no se sabe por dónde. Este ticket existe para que la próxima sesión tenga el
+reproductor de 3 minutos y la tabla, y para que tampoco lo descarte a la ligera.
+
+## Criterio de hecho
+
+- [ ] Diagnóstico de por qué `transaction_success_accept` no aparece — empezando por si es una race
+      del producto y no del test.
+- [ ] 3 corridas completas de `YalaUITests` en verde, sin haber subido ningún timeout.
+
+## Relacionados
+
+- [[welcome-privacy-branch-has-no-secondary-door]] — la sesión que lo midió (no lo causó)
+- `.claude/rules/swiftui-ds.md` — el precedente donde este MISMO aserto cazó una rotura real
+- `.claude/rules/testing.md` — «NO apagar el simulador entre corridas» y «la primera corrida tras
+  bootear no cuenta», las dos reglas de entorno que rodean esto
