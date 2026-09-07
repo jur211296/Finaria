@@ -209,8 +209,10 @@ struct WelcomeCloudSignInView: View {
         // `.creating`: el claim está en vuelo y puede CREAR la cuenta server-side — salir a mitad
         // dejaría al usuario sin saber si se dio de alta. Mismo criterio que `.checking`.
         // `.bornCloudReady` es terminal como `.relaunch`: la cuenta está creada y el par escrito.
+        // `.reentryReady` lo es por la otra mitad del mismo hecho: la cuenta ya existía y es el ADOPT
+        // el que terminó — el par está escrito y el motor corriendo, así que no hay a dónde volver.
         case .checking, .creating, .adopting, .waitingLeader, .relaunch, .bornCloudReady,
-             .secondaryConfirm, .relaunchSecondary: false
+             .reentryReady, .secondaryConfirm, .relaunchSecondary: false
         }
     }
 
@@ -233,6 +235,8 @@ struct WelcomeCloudSignInView: View {
             relaunchContent
         case .bornCloudReady:
             bornCloudReadyContent
+        case .reentryReady:
+            reentryReadyContent
         case .secondaryConfirm:
             secondaryConfirmContent
         case .relaunchSecondary:
@@ -535,6 +539,31 @@ struct WelcomeCloudSignInView: View {
     /// espera: por eso lleva CTA y no un texto pasivo. El copy no promete sincronización todavía —el motor
     /// acaba de arrancar— sino que la cuenta está lista, que es lo único medido en este instante.
     private var bornCloudReadyContent: some View {
+        readyContent(id: "welcome_born_cloud_ready", action: onBornCloudCompleted)
+    }
+
+    /// R3 · la RE-ENTRADA terminó y no hay nada que reabrir. **Misma pantalla que el alta y a propósito**
+    /// —mismo copy, mismo icono, mismo botón— porque el hecho que anuncia es el mismo: la cuenta quedó
+    /// lista en este proceso. Lo único que cambia es a dónde lleva el botón.
+    ///
+    /// `onFinishedToApp` y NO `onBornCloudCompleted`: quien re-entra ya tiene `hasCompletedOnboarding`
+    /// marcado por `onAdoptStarted` —que existe justamente para que el seed del onboarding no corra sobre
+    /// una cuenta existente— así que su siguiente pantalla es la app. Es también el destino EXACTO al que
+    /// llegaba antes de este chip: tras el relanzamiento, `checkInitialSyncState` ve el flag puesto y sale
+    /// por `runReturningUserPostChecks` sin pasar por `presentNextOnboardingScreen`. El chip le ahorra el
+    /// relanzamiento sin cambiarle el destino, que era la condición de la decisión del 6-sep.
+    private var reentryReadyContent: some View {
+        readyContent(id: "welcome_reentry_ready", action: onFinishedToApp)
+    }
+
+    /// El cuerpo compartido de las dos terminales de «listo». **Una sola definición a propósito:** son la
+    /// MISMA pantalla para el usuario y lo único que las separa es a dónde va su botón. Duplicar el layout
+    /// dejaba dos copias del mismo copy que divergirían al primer retoque — que es exactamente la clase de
+    /// deriva que el ticket de este chip vino a corregir en otro sitio.
+    ///
+    /// El identificador de accesibilidad SÍ es distinto por terminal: el device-QA necesita distinguirlas,
+    /// porque el defecto que se comprueba ahí es precisamente cuál de las dos salidas se tomó.
+    private func readyContent(id: String, action: @escaping () -> Void) -> some View {
         VStack(spacing: DS.Spacing.lg) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 44))
@@ -549,13 +578,11 @@ struct WelcomeCloudSignInView: View {
                 .foregroundStyle(.white.opacity(0.7))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, DS.Spacing.xl)
-            YalaPrimaryButton(L10n.Welcome.BornCloud.readyCta) {
-                onBornCloudCompleted()
-            }
-            .padding(.horizontal, DS.Spacing.xl)
-            .accessibilityIdentifier("welcome_born_cloud_ready_cta")
+            YalaPrimaryButton(L10n.Welcome.BornCloud.readyCta, action: action)
+                .padding(.horizontal, DS.Spacing.xl)
+                .accessibilityIdentifier("\(id)_cta")
         }
-        .accessibilityIdentifier("welcome_born_cloud_ready")
+        .accessibilityIdentifier(id)
     }
 
     private var secondaryConfirmContent: some View {
@@ -861,6 +888,12 @@ struct WelcomeCloudSignInView: View {
             phase = next
             switch next {
             case .relaunch, .error:
+                return
+            case .reentryReady:
+                // Terminal de ÉXITO del adopt sin relanzamiento. Para igual que `.relaunch`, y el
+                // motivo de nombrarla explícitamente es que antes este caso LLEGABA como `.relaunch`:
+                // dejarla caer al `default` mantendría el poll vivo a 1 Hz por debajo de una pantalla
+                // terminal, reasignando `phase` y refetcheando el outbox en cada tick.
                 return
             case .accountBlocked:
                 // Terminal: el poll para. Seguir tickeando solo repetiría un claim que el backend ya

@@ -310,3 +310,110 @@ struct WelcomeNewChooserWiringTests {
         #expect(CloudSyncFlags.bornCloudChoiceEnabled)
     }
 }
+
+// MARK: - Nube en pausa bajo el kill (decisión owner 2026-09-06)
+
+/// El mensaje del ÚNICO camino que queda abierto bajo el kill. Con las dos puertas de nube cerradas,
+/// quien vuelve solo puede tocar «Restaurar desde iCloud» — y esa pantalla busca en CloudKit, donde un
+/// nacido-en-nube nunca tuvo nada. La tabla de abajo fija que el aviso aparece SOLO cuando el hecho es
+/// cierto: hay cuenta nube (faro) y la nube está apagada (kill).
+@Suite("Restore bajo el kill — datos que existen no se anuncian como ausentes")
+struct WelcomeRestorePauseLogicTests {
+
+    @Test("La tabla 2×2 completa: hace falta faro Y kill")
+    func table() {
+        // El caso que motiva el chip: cuenta nube + kill puesto ⇒ «la nube está en pausa».
+        #expect(WelcomeRestorePauseLogic.isCloudPaused(
+            beaconLinked: true, remoteCloudEnabled: false, isSecondaryActive: false))
+
+        // Sin faro no hay nada que prometer: este Apple ID no tiene cuenta nube, así que una búsqueda
+        // vacía SÍ significa "no hay datos" y el copy honesto es el de siempre.
+        #expect(!WelcomeRestorePauseLogic.isCloudPaused(
+            beaconLinked: false, remoteCloudEnabled: false, isSecondaryActive: false))
+
+        // Con la nube encendida el vacío tampoco se explica por una pausa. Y además este usuario no
+        // llega aquí: con el kill apagado tiene sus cards de sign-in.
+        #expect(!WelcomeRestorePauseLogic.isCloudPaused(
+            beaconLinked: true, remoteCloudEnabled: true, isSecondaryActive: false))
+
+        #expect(!WelcomeRestorePauseLogic.isCloudPaused(
+            beaconLinked: false, remoteCloudEnabled: true, isSecondaryActive: false))
+    }
+
+    /// **La visita NUNCA lee el faro del dueño.** El faro vive en el iCloud-KV del Apple ID del
+    /// teléfono y las lecturas de `OwnerKeyValueStore` no están bloqueadas, así que sin este término
+    /// una invitada en sesión secundaria —cuyo store va sin CloudKit y por tanto SIEMPRE da búsqueda
+    /// vacía— leería «tus datos están a salvo en tu cuenta» sobre la cuenta de otra persona.
+    @Test("En sesión secundaria el aviso no aparece, aunque el faro del dueño esté encendido")
+    func secondarySessionNeverSeesTheOwnersBeacon() {
+        // Exactamente el estado que dispararía el aviso, más la visita: gana la visita.
+        #expect(!WelcomeRestorePauseLogic.isCloudPaused(
+            beaconLinked: true, remoteCloudEnabled: false, isSecondaryActive: true))
+
+        // Y el control en la otra dirección, para que el término no sea un `false` constante:
+        // mismo par de entradas sin visita ⇒ sí avisa.
+        #expect(WelcomeRestorePauseLogic.isCloudPaused(
+            beaconLinked: true, remoteCloudEnabled: false, isSecondaryActive: false))
+    }
+
+    /// **El término que hace útil al botón «Reintentar», y el que alguien retiraría por limpieza.**
+    /// `refreshIfDue` SIN `force` es un no-op mientras el último fetch tenga menos de 6 h — el caso
+    /// normal, porque el boot acaba de refrescar. Sin forzar, esta pantalla leería el flag del
+    /// arranque y su botón primario no podría cambiar nunca el desenlace: el kill se conmuta desde el
+    /// backend. Es el mismo no-op que ya mordió en `WelcomeGroupsGateView` y en `GroupsContainerView`.
+    @Test("La decisión de la pausa se toma con el flag FRESCO, no con el del arranque")
+    func pauseIsDecidedOnAFreshFlag() throws {
+        let source = try String(
+            contentsOf: URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent()   // YalaTests/
+                .deletingLastPathComponent()   // repo root
+                .appendingPathComponent("Yala/App/Views/Onboarding/WelcomeRestoreView.swift"),
+            encoding: .utf8)
+        let marker = "private func resolveEmptyState() async {"
+        let start = try #require(source.range(of: marker), "la firma de `resolveEmptyState` cambió")
+        let chars = Array(source[start.upperBound...])
+        var depth = 1, i = 0
+        while i < chars.count {
+            if chars[i] == "{" { depth += 1 }
+            if chars[i] == "}" { depth -= 1; if depth == 0 { break } }
+            i += 1
+        }
+        let body = String(chars[0..<min(i, chars.count)])
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
+            .joined(separator: "\n")
+
+        #expect(body.contains("refreshIfDue(force: true)"), """
+            La resolución de la pausa tiene que forzar el refresco del flag remoto. Sin `force: true`
+            el fetch es un no-op durante 6 h y «Reintentar» se convierte en un botón que no puede
+            cambiar su propio desenlace.
+            """)
+        #expect(body.contains("Task.isCancelled"), """
+            tras el único punto de suspensión hace falta el guard: la cancelación de `refreshIfDue` es
+            cooperativa y sin él la pantalla cambia bajo el dedo de quien ya tocó «volver».
+            """)
+        #expect(!body.contains("hasAnyData"), """
+            esta rama es solo para búsquedas VACÍAS; si vuelve a decidir sobre `hasAnyData`, alguien
+            metió el camino con datos detrás de una llamada de red que no necesita.
+            """)
+    }
+
+    /// Control de coherencia entre las dos mitades de la decisión: el aviso solo puede verse en el
+    /// mismo estado remoto que cierra las cards. Si alguien relaja el kill en `visibleExistingOptions`
+    /// sin tocar esto, el usuario tendría su card Y el aviso de pausa a la vez.
+    @Test("El aviso vive exactamente en el estado que cierra la card de sign-in")
+    func pausedOnlyWhenTheCardIsGone() {
+        for beaconLinked in [true, false] {
+            for remote in [true, false] {
+                let cards = WelcomeAccountChoiceLogic.visibleExistingOptions(
+                    isConfigured: true, isUITest: false, remoteCloudEnabled: remote)
+                let paused = WelcomeRestorePauseLogic.isCloudPaused(
+                    beaconLinked: beaconLinked, remoteCloudEnabled: remote, isSecondaryActive: false)
+                if paused {
+                    #expect(!cards.contains(.cloudSignIn),
+                            "el aviso de pausa no puede convivir con la card de sign-in")
+                }
+            }
+        }
+    }
+}

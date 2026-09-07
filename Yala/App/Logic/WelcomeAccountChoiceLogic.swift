@@ -55,8 +55,23 @@ nonisolated enum WelcomeAccountChoiceLogic {
     }
 
     /// `remoteCloudEnabled` (DIFERIDOS #34): con el kill-switch OFF las cards de sign-in nube se
-    /// ocultan (bypass a restore, = prod DARK de hoy). Residual ratificado por el owner: un usuario
-    /// nube que REINSTALA bajo el kill no ve la card → no re-entra hasta re-encendido.
+    /// ocultan (bypass a restore, = prod DARK de hoy).
+    ///
+    /// **Residual ratificado por el owner (2026-09-06) — y son DOS puertas, no una.** Bajo el kill,
+    /// un usuario nube que REINSTALA no re-entra hasta el re-encendido, y eso ocurre por los dos
+    /// caminos a la vez:
+    ///  1. **La card del Welcome** — esta función: sin `remoteCloudEnabled` no se ofrece el sign-in.
+    ///     Y con ella se va el encaminamiento por faro, porque `cloudEntryAvailable` se DERIVA de
+    ///     aquí (`routeNewBranch`, y el callsite en `WelcomeFlowContainer`).
+    ///  2. **La fila «Dónde viven tus datos» de Ajustes** — `StorageRowGateLogic.isVisible`, cuyo
+    ///     gate es `remoteEnabled || isEngaged`: una reinstalación NO puede estar engaged (el estado
+    ///     que lo prueba es local y se fue con la app), así que la fila tampoco aparece.
+    ///
+    /// Hasta el 2026-09-07 esta línea solo nombraba la primera, y describir media política es como
+    /// se acaba «arreglando» la puerta equivocada. Las dos cerradas es lo DESEADO: el kill significa
+    /// nube en pausa para todos, también para volver. Lo que sí se corrigió es el mensaje del único
+    /// camino que queda abierto —«Restaurar desde iCloud»—, que le decía a un nacido-en-nube con sus
+    /// datos intactos que no los encontrábamos: ver `WelcomeRestorePauseLogic`.
     static func visibleExistingOptions(
         isConfigured: Bool,
         isUITest: Bool,
@@ -113,6 +128,50 @@ nonisolated enum WelcomeAccountChoiceLogic {
         }
         if let single = bypass(options) { return .single(single) }
         return .chooser
+    }
+}
+
+/// El estado honesto del restore bajo el kill-switch (decisión owner 2026-09-06).
+///
+/// **El problema que cierra:** con las dos puertas de nube cerradas, el ÚNICO camino que le queda a
+/// quien vuelve es «Restaurar desde iCloud», y esa pantalla busca en **CloudKit**. Un nacido-en-nube
+/// jamás tuvo datos ahí —los suyos viven en el backend— así que su búsqueda termina siempre vacía y
+/// leía «No encontramos tus datos» con sus datos perfectamente intactos. El hecho es el contrario:
+/// los datos existen y lo que está en pausa es la nube.
+///
+/// **Por qué el faro es el detector correcto** y no un flag local: vive en el iCloud-KV
+/// (`CloudBeacon`), así que es lo ÚNICO de la cuenta nube que sobrevive a una reinstalación — que es
+/// exactamente el recorrido que este mensaje describe. Cualquier testigo local es `false` en un
+/// móvil recién instalado, por construcción.
+///
+/// **Deliberadamente NO sustituye a `.found`**: solo se consulta cuando la búsqueda no encontró nada.
+/// Un usuario de iCloud privado que además tenga el faro puesto (dos devices, dos modos) sigue viendo
+/// sus datos de iCloud y su botón de restaurar; taparle eso con un aviso de la nube sería cambiar un
+/// mensaje equivocado por otro.
+nonisolated enum WelcomeRestorePauseLogic {
+
+    /// ¿La búsqueda vacía se debe a que la nube está en pausa, y no a que no haya datos?
+    ///
+    /// - Parameters:
+    ///   - beaconLinked: `CloudBeacon.isCloudAccountLinked` — este Apple ID YA tiene cuenta nube.
+    ///   - remoteCloudEnabled: `CloudRemoteFlags.cloudModeEnabled` — el kill-switch remoto.
+    ///   - isSecondaryActive: `SecondarySessionStore.isActive()` — hay una VISITA usando el device.
+    ///
+    /// **El término M1 no es defensivo: sin él el mensaje habla de la cuenta de otra persona.** El faro
+    /// vive en el iCloud-KV del Apple ID, que es el del DUEÑO del teléfono, y `OwnerKeyValueStore` no
+    /// bloquea las lecturas a propósito. Una invitada en sesión secundaria monta con
+    /// `cloudKitDatabase: .none`, así que su búsqueda sale vacía SIEMPRE — y sin este término leería
+    /// «tus datos están a salvo en tu cuenta» sobre una cuenta que no es suya, enterándose de paso de
+    /// que el dueño del móvil tiene una. `.notFound` era inexacto para ella; esto habría sido peor,
+    /// porque afirma. La rama «Ya tengo cuenta» no tiene cinturón M1 propio (su hermana privada sí:
+    /// `WelcomeFlowContainer` la manda a `.privateSecondaryNotice`), así que se pone aquí.
+    static func isCloudPaused(
+        beaconLinked: Bool,
+        remoteCloudEnabled: Bool,
+        isSecondaryActive: Bool
+    ) -> Bool {
+        guard !isSecondaryActive else { return false }
+        return beaconLinked && !remoteCloudEnabled
     }
 }
 

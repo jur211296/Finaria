@@ -5127,6 +5127,11 @@ enum L10n {
             static var continueAction: String { ls("welcome.restore.continue", comment: "") }
             static var notFoundTitle: String { ls("welcome.restore.notFoundTitle", comment: "") }
             static var notFoundBody: String { ls("welcome.restore.notFoundBody", comment: "") }
+            /// Kill-switch remoto puesto + faro de cuenta nube encendido: los datos EXISTEN, lo que
+            /// no está disponible es la nube. Copy propio y no una variante de `notFound` porque los
+            /// dos hechos son opuestos — ver `WelcomeRestorePauseLogic`.
+            static var cloudPausedTitle: String { ls("welcome.restore.cloudPausedTitle", comment: "") }
+            static var cloudPausedBody: String { ls("welcome.restore.cloudPausedBody", comment: "") }
             static var startFresh: String { ls("welcome.restore.startFresh", comment: "") }
             static var retry: String { ls("welcome.restore.retry", comment: "") }
             static var errorTitle: String { ls("welcome.restore.errorTitle", comment: "") }

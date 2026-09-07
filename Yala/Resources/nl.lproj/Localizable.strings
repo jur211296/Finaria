@@ -5579,3 +5579,9 @@
 
 /* Secondary session on the private branch: CTA that continues to the private onboarding (informs, does not block) */
 "welcome.private.secondaryCta" = "Doorgaan";
+
+/* Restore: el kill-switch remoto está puesto y el usuario nació en la nube — sus datos existen, la sincronización no está disponible ahora */
+"welcome.restore.cloudPausedTitle" = "De cloud van Yala is gepauzeerd";
+
+/* Restore: cuerpo del estado de nube en pausa — tranquiliza sobre los datos sin prometer plazo */
+"welcome.restore.cloudPausedBody" = "Je gegevens staan nog steeds veilig in je Yala-account. De synchronisatie is nu gepauzeerd. Probeer het later opnieuw.";

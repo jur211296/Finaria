@@ -11,6 +11,16 @@
 //  el backend ya está configurado (D-R1 paso 1) y lo que apaga la fila es el flag remoto, porque el
 //  gateway sirve `CLOUD_MODE_ROLLOUT_PERCENT = "0"`.
 //
+//  **Esta fila es la SEGUNDA de las dos puertas de la nube, y bajo el kill se cierran las dos**
+//  (ratificado 2026-09-06). La primera es la card de sign-in del Welcome
+//  (`WelcomeAccountChoiceLogic.visibleExistingOptions`, donde vive el residual completo). Aquí el
+//  cierre no es un término propio sino una consecuencia: quien REINSTALA no puede estar `isEngaged`
+//  —ese estado es local y se fue con la app—, así que `remoteEnabled || isEngaged` es falso por los
+//  dos lados. Conviene saberlo antes de "arreglar" una puerta sin mirar la otra.
+//
+//  Lo que NO se toca bajo el kill es este gate: un usuario ya engaged conserva su fila y su reversa,
+//  que es el escape ante incidente. Tocarlo sería tocar el freno de emergencia.
+//
 
 import Foundation
 

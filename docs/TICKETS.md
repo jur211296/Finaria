@@ -28,8 +28,9 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (137)
+## Index (139)
 
+| adopt-terminal-claims-ready-without-checking-engine | backlog | tickets/backlog/adopt-terminal-claims-ready-without-checking-engine.md |
 | id | status | path |
 |----|--------|------|
 | account-goldens-freeze-read-test-times-out | backlog | tickets/backlog/account-goldens-freeze-read-test-times-out.md |
@@ -127,11 +128,12 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | qa-guion-tanda-no-cubre-17-tickets | backlog | tickets/backlog/qa-guion-tanda-no-cubre-17-tickets.md |
 | records-standalone-amount-discrepancy | backlog | tickets/backlog/records-standalone-amount-discrepancy.md |
 | reentry-counts-as-fresh-install | qa | tickets/qa/reentry-counts-as-fresh-install.md |
-| reentry-killswitch-closes-both-doors | backlog | tickets/backlog/reentry-killswitch-closes-both-doors.md |
+| reentry-killswitch-closes-both-doors | qa | tickets/qa/reentry-killswitch-closes-both-doors.md |
 | registros-calendario-cuenta-gastos-por-signo | qa | tickets/qa/registros-calendario-cuenta-gastos-por-signo.md |
 | rejected-member-cold-tap-does-nothing | qa | tickets/qa/rejected-member-cold-tap-does-nothing.md |
 | rejoin-tap-renotifies-admins | qa | tickets/qa/rejoin-tap-renotifies-admins.md |
 | rescue-discarded-groups-pull | discarded | tickets/discarded/rescue-discarded-groups-pull.md |
+| restore-beacon-outlives-account-deletion | backlog | tickets/backlog/restore-beacon-outlives-account-deletion.md |
 | rojo-heroBuckets-thisWeek-trailing-window | done | tickets/done/rojo-heroBuckets-thisWeek-trailing-window.md |
 | rojo-xcuitest-runner-muere-tras-el-primer-caso | backlog | tickets/backlog/rojo-xcuitest-runner-muere-tras-el-primer-caso.md |
 | saldo-con-seleccion-no-contable-diverge-entre-panel-y-estadisticas | backlog | tickets/backlog/saldo-con-seleccion-no-contable-diverge-entre-panel-y-estadisticas.md |
@@ -170,7 +172,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | yala-android | backlog | tickets/backlog/yala-android.md |
 | zone-decisions-still-per-row | backlog | tickets/backlog/zone-decisions-still-per-row.md |
 
-Counts by folder: backlog 69 · in-progress 0 · qa 42 · blocked 2 · done 16 · discarded 5 = 134. *(Recontados sobre disco el 2026-09-07; la tabla de arriba ya cuadraba fila a fila con el disco —129 y 129—, era solo esta línea la desviada, que decía `= 118`. Dos trampas al recontar: cuenta solo `*.md` (`tickets/` lleva además un `.gitkeep` por carpeta y tres PNG de evidencia en `done/`, que inflan un `ls` a 132), y si filtras las filas con una regex, acepta MAYÚSCULAS en el id — `rojo-heroBuckets-thisWeek-trailing-window` se escapa de `[a-z0-9-]+` y aparenta ser un huérfano que no existe.)*
+Counts by folder: backlog 72 · in-progress 0 · qa 44 · blocked 2 · done 16 · discarded 5 = 139. *(Recontados sobre disco el 2026-09-07; la tabla de arriba ya cuadraba fila a fila con el disco —129 y 129—, era solo esta línea la desviada, que decía `= 118`. Dos trampas al recontar: cuenta solo `*.md` (`tickets/` lleva además un `.gitkeep` por carpeta y tres PNG de evidencia en `done/`, que inflan un `ls` a 132), y si filtras las filas con una regex, acepta MAYÚSCULAS en el id — `rojo-heroBuckets-thisWeek-trailing-window` se escapa de `[a-z0-9-]+` y aparenta ser un huérfano que no existe.)*
 
 Frank 2026-09-06 (decisiones): Jürgen respondió en una sentada las **seis** decisiones de producto que tenían
 tickets parados sin código que escribir; cada una está en su ticket bajo «Decisión Jürgen (2026-09-06)», con
@@ -181,8 +183,11 @@ la opción elegida, las descartadas y el AC ya resuelto. Los tres del encargo:
 kill las dos puertas cerradas es lo deseado y se arregla el mensaje; la re-entrada arranca el motor en
 sesión). Dos extra que también decían «decisión antes de código»: **`fx-presentation-still-shows-1to1`**
 (número con marca de aproximado) y **`welcome-privacy-branch-has-no-secondary-door`** (pantalla propia
-«estás de visita», sin bloquear). Los cinco siguen en `backlog/` **listos para lanzar**; todos piden
-device-QA al final, cuatro copy en 16 idiomas y dos review adversarial. **Siguen en `blocked/` por
+«estás de visita», sin bloquear). De los cinco, **`reentry-killswitch-closes-both-doors` pasó a `qa/` el 2026-09-07** (PR de esa
+sesión: las dos puertas escritas, el mensaje de pausa en 16 idiomas y el motor arrancando en sesión;
+le queda solo el device-QA, que necesita conmutar el kill desde el backend). Los otros cuatro siguen
+en `backlog/` **listos para lanzar**; todos piden device-QA al final, tres copy en 16 idiomas y uno
+review adversarial. **Siguen en `blocked/` por
 device, no por decisión:** `apppreferences-rewritten-on-launch` y `groups-join-intent-reconciler`.
 
 Frank 2026-09-06 (barrido completo, misma sesión): Jürgen preguntó si YA no quedaba ningún ticket

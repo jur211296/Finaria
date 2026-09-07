@@ -34,4 +34,13 @@ enum RestoreBreadcrumb {
     static func wiped() {
         logger.notice("WIPED — restore no ofrecido (último acto fue wipe)")
     }
+
+    /// La búsqueda terminó vacía y el faro dice que este Apple ID SÍ tiene cuenta nube: lo que falta
+    /// no son los datos, es la nube (kill-switch remoto puesto). Vale la pena en el log porque
+    /// distingue, sobre un mismo recorrido «no encontré nada», los dos desenlaces opuestos — y el
+    /// término que los separa se conmuta desde el backend, así que el device no tiene otra forma de
+    /// contar por qué enseñó lo que enseñó.
+    static func cloudPaused() {
+        logger.notice("CLOUD-PAUSED — sin datos en iCloud, faro linked y kill remoto puesto")
+    }
 }
