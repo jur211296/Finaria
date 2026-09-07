@@ -5,55 +5,42 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-07 (Lima)
 
-**Rama** `2.1` · HEAD `7f3fed41` — un grupo puede tener un tope de gasto, con barra de progreso y
-aviso al acercarse.
+**Rama** `2.1` · HEAD `bd48c87f` — la ganancia y la pérdida por tipo de cambio ya tienen número, con
+su detalle por moneda.
 TestFlight build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.** `yala-app.pe` sirve la web
 nueva.
 
 ## Esta sesión, en una línea
 
-**El presupuesto de grupo ya existe** (PR #91, mergeado). En Ajustes de un grupo, un administrador fija
-un tope de gasto para todos —en la moneda del grupo— y la pestaña de registros enseña una barra con
-cuánto lleva gastado el grupo y cuánto queda. Al cruzar el 50, el 75, el 90 y el 100 % llega un aviso.
-Quitarlo es una acción aparte, con confirmación. **Un solo campo nuevo**, como decidiste el 6-sep: sin
-tabla de presupuestos, sin moneda propia y sin multi-presupuesto.
+**La ganancia y la pérdida por tipo de cambio ya se ven** (PR #92, mergeado). Quien tiene dinero en
+varias monedas veía un saldo que no cuadraba con lo que recordaba haber ingresado; la diferencia es
+el tipo de cambio y hasta hoy era invisible. Ahora el Panel enseña una tarjeta con ese número y una
+frase en su idioma —«Tus dólares valen hoy un 8,6 % más que cuando entraron a tu cuenta»—, y al
+tocarla se abre el detalle por moneda: cuánto tienes, a qué cambio entró, a cuánto está hoy, cuánto
+vale ahora. Aparece poco a propósito: sólo con dinero en moneda extranjera y si el movimiento supera
+el 0,5 % de esa exposición. **Gratis**, como decidiste el 6-sep.
 
-**La premisa del ticket era falsa, y por eso el plan que traía no se siguió.** Describía un checklist de
-CloudKit —`CKRecordTranslator`, `SplitSyncManager`, deploy al Dashboard— y esos tres símbolos dan **cero
-ocurrencias** en `Yala/`: ese transporte lo borró la Fase 3. El coste real fue DDL + grants + dos RPCs.
-Tu nota del 6-sep ya lo sospechaba y pedía comprobarlo: queda confirmado.
+**La premisa del ticket era falsa en un punto y la comprobación costó un grep:** no existe sección
+«Para ti» —los siete casos de `PanelSectionKind` no la incluyen—, así que la tarjeta va suelta en el
+Panel. Lo que sí se confirmó, y es lo único que hace que la resta signifique algo, es que
+`amountInPreferredCurrency` guarda el valor al cambio del **día** de la transacción.
 
-**Tres decisiones que el ticket no traía.** El tope se **cifra** (es un monto, y dejarlo en claro en la
-tabla cuyo `name` está cifrado sería una regresión del modelo de amenaza) — y eso destapó que la
-normalización de escala del cifrado estaba atada al nombre literal `'amount'`, así que una segunda
-columna numérica se habría cifrado sin escala y habría dejado el root del Merkle divergente para
-siempre. La barra **sí convierte divisas**, al revés que el resumen compartible: allí la regla existe
-porque el número se congela en una imagen, y una barra se recalcula al abrirla; lo que sí engañaría es
-**no** convertir. Y fijarlo es **de admin por construcción**, no por criterio de la app: la policy del
-backend lo exige, y a un miembro normal el server le devolvería un noop que dejaría el cambio solo en su
-teléfono.
+**El cálculo cambió entero a media sesión, y ese es el titular técnico.** El primer diseño promediaba
+todos los movimientos de cada moneda. Parece equivalente y no lo es: comprar 1.000 USD a 3,00 y
+revenderlos arrastra el coste de 100 dólares comprados a 4,00, y la tarjeta **anuncia ganancia a
+quien ha perdido**. Y un traspaso entre cuentas propias movía el número de +300 a +33 por mover
+dinero de bolsillo. Reescrito a **FIFO por lotes**, excluyendo traspasos.
 
-**El servidor ya está en producción** (`g14_01`), verificado en sandbox transaccional contra el motor
-real con control positivo y **control negativo con su propio control positivo**: el no-admin recibe
-`not_authorized_or_gone` y el valor no cambia, y el mismo no-admin sobre una columna vieja recibe el
-mismo rechazo — así que lo que protege es la RLS y no un accidente del campo nuevo. Sin drift: el `.ddl`
-del repo y el `prosrc` de producción coinciden byte a byte.
+**La review adversarial (3 lentes) cazó diez defectos y todos eran míos**, dos de ellos capaces de
+cambiar el signo del número. El que más enseña: **mi primer arreglo heredó la forma del bug que
+arreglaba** — al ver que el importe guardado podía venir sellado contra otra moneda preferida, añadí
+un guard que **descartaba** esas transacciones citando once precedentes del repo; los precedentes
+**reconvierten** en su `else`. Me quedé con el `if` y tiré el `else`. Y descartar no es neutro: sesga
+la muestra hacia las transacciones más antiguas, que es donde el tipo de cambio era distinto.
 
-**Y una coordinación de despliegue que hay que tener presente:** `canon_version` sube a `c2`. Añadir una
-columna al manifest de Grupos cambia el root del Merkle de **todas** las filas, y ese canal —a diferencia
-del personal— no manda `X-Yala-Capability-Set`, así que el server no puede podar por versión. Sin el
-bump, cada cliente con el contrato anterior habría reportado divergencia falsa en el 100 % de sus grupos,
-con reset de cursores y re-pull por sesión. Con él, **saltan** la verificación. Mientras convivan las dos
-versiones el Merkle de Grupos queda apagado, y vuelve solo cuando el parque converge.
-
-**Las cuatro lentes volvieron a cazar lo mío, y una evitó romper otra pantalla.** El editor del tope
-tenía un botón condicional dentro del `actions` de un `.alert` — el patrón que el repo tiene medido como
-«no rompe la alerta: rompe la app». Además: un tope de 15 dígitos se perdía en silencio y dejaba el grupo
-en divergencia permanente (el codec del wire lanza a partir de 1e14 y quien traga el throw no crea la
-fila de outbox, con el log bajo `#if DEBUG`); «te pasaste por S/ 0,00» en rojo por comparar `Double` con
-`>` sobre una suma de importes de dos decimales —el 16,5 % de los repartos que dan el tope exacto lo
-cruzan, y mi test del borde usaba un solo gasto, el único caso que no puede fallar—; y guardar con el
-campo vacío borraba el presupuesto de todo el grupo sin avisar.
+**Y la localización me pilló repitiendo un incidente escrito.** Dejé `pt` en portugués europeo
+cuando el contrato dice que es copia de `pt-BR`; lo cazó `LocalizationParityTests`, que existe porque
+esa misma divergencia ya duró tres meses en 272 claves.
 
 ## Te espera a ti
 
@@ -95,7 +82,13 @@ campo vacío borraba el presupuesto de todo el grupo sin avisar.
    «Transferir y salir», la puerta del grupo, la puerta del archivado, la marca de aproximado con su
    corrección del 1:1, el rótulo del hero de Estadísticas, el aviso de visita **y el resumen
    compartible del grupo**.
-4. **La tanda de QA: 46 tickets en `qa/`, y el guion solo cubre 22.** Entra
+4. **La tanda de QA: 47 tickets en `qa/`, y el guion solo cubre 22.** Entra
+   **`fx-pnl-education-card`** (7-sep), y su device-QA **no es simulable**: la tarjeta de ganancia
+   cambiaria sólo aparece con una cuenta multi-moneda con histórico real, y **ningún perfil de seed
+   la produce** —son todos PEN—, así que su cobertura de UI es cero por construcción. Hace falta
+   dinero en al menos una divisa extranjera, con movimientos a tipos de cambio distintos, para ver
+   la tarjeta y su hoja de detalle.
+    Entra
    **`groups-shareable-summary`**, y su device-QA tiene algo que el simulador no da: **«Guardar en
    Fotos» es camino nuevo** —la app nunca había escrito en la fototeca— y estrena
    `NSPhotoLibraryAddUsageDescription`; hay que ver además cómo llega la imagen a un chat de WhatsApp
@@ -183,7 +176,9 @@ sigue sin `ok_`. **Cero `ok_` inventado.**
 
 ## Board
 
-**146 tickets · backlog 76 · qa 46 · blocked 2 · done 16 · discarded 5 · in-progress 1.**
+**150 tickets · backlog 79 · qa 47 · blocked 2 · done 16 · discarded 5 · in-progress 1.**
+Recontado sobre disco el 7-sep tras la ganancia cambiaria: `fx-pnl-education-card` pasa a `qa` y entran **cuatro** hallazgos de su review adversarial que **no son suyos** — `panel-no-recalcula-al-llegar-tasas-nuevas` (llegan las tasas del día y el Panel sigue con las de ayer, con la marca de aproximado encendida), `reparacion-de-tasas-no-avisa-al-panel` (el reparador de importes provisionales corrige el disco en el arranque y no bumpea `dataVersion`), `hoja-del-saldo-vivo-ignora-los-filtros-de-sesion` (la hoja «Tu saldo hoy» y el saldo del panorama suman cuentas distintas, así que la misma pantalla da dos cifras del mismo dinero) y `widget-de-tc-no-localiza-separadores`. **El índice traía DOS filas sin registrar** —`groups-budget` y `rojo-heroBuckets-thisWeek-trailing-window`, las dos con commits ya en `2.1`—: se indexan con el estado que tienen en disco, sin reclasificar. Verificado por conjuntos: **150 = 150**, cero huérfanos en ambas direcciones y ningún estado discrepante. Dos trampas al medirlo, las dos mías: `in-progress` lleva guion (no casa `\w+`) y hay ids con mayúsculas (`rojo-heroBuckets-…`), así que un regex estrecho da un «todo cuadra» falso.
+
 Recontado sobre disco el 7-sep tras el presupuesto de grupo: `groups-budget` pasa a `in-progress` y entran **tres** hallazgos de su review adversarial que **no son suyos** — `groups-canal-sin-capability-set` (el canal de Grupos no manda capability-set, así que cada columna nueva apaga el Merkle del parque viejo), `groups-stats-no-deduplica-gastos` (Estadísticas no dedupe y ahora se contradice con la barra de presupuesto, a un tap de distancia) y `gateway-typecheck-roto-y-fuera-del-ci` (tres errores de tipos que nadie ve porque el CI no corre `typecheck` y `@types/node` no está declarado).
 `qa` significa «esperando la tanda», no «cerrado». Índice = disco, verificado comparando **conjuntos**
 (143 = 143, cero huérfanos en ambas direcciones, y ningún estado discrepante entre fila y carpeta).
