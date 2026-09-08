@@ -44,9 +44,12 @@ quedaba para siempre, viajaba por la nube y alimentaba los informes.
   derivation logic») en vez de llamar al servicio. Siguieron verdes con este bug dentro. El peor de
   los catorce sitios no tenía ninguna red. Ya está demostrado que **sí es testeable de
   comportamiento y barato**: `ensureRates` no toca red si la fila del rango ya existe.
-- `chat-assistant-plants-exchange-rate-one` (low) — esa ruta guarda `exchangeRate = 1.0` literal en
-  vez de derivar la tasa. Con el PR se cura sola cuando la conversión fue aproximada; queda el caso
-  exacto.
+- `chat-assistant-plants-exchange-rate-one` — **CERRADO el 2026-09-08**. Subió a `medium` y se
+  arregló: la ruta del chat deriva la tasa como las otras seis. Lo que aquí se dio por bueno era
+  falso — «se cura sola cuando la conversión fue aproximada» describe la MINORÍA de las ejecuciones;
+  en el caso exacto el flag queda `false`, la fila sale del `#Predicate` del reparador y el 1.0 se
+  sellaba para siempre. El barrido de las 18 construcciones de `TransactionItem` confirmó que era el
+  ÚNICO sitio del árbol que plantaba tasa falsa habiendo conversión real.
 
 Relacionado: [[fx-pnl-card]] · [[mi-fix-hereda-la-forma-del-bug]] (el barrido de este ticket nació
 con el bug que persigue) · [[mutante-compilado-zanja-hipotesis]] (así se verificó).

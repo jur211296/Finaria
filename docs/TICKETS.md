@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (167)
+## Index (171)
 
 | id | status | path |
 |----|--------|------|
@@ -46,7 +46,9 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | bulk-update-account-leaves-converted-amount-stale | backlog | tickets/backlog/bulk-update-account-leaves-converted-amount-stale.md |
 | canarios-y-breadcrumbs-sin-emisor | backlog | tickets/backlog/canarios-y-breadcrumbs-sin-emisor.md |
 | cashflow-spend-prediction | backlog | tickets/backlog/cashflow-spend-prediction.md |
-| chat-assistant-plants-exchange-rate-one | backlog | tickets/backlog/chat-assistant-plants-exchange-rate-one.md |
+| chat-assistant-plants-exchange-rate-one | qa | tickets/qa/chat-assistant-plants-exchange-rate-one.md |
+| chat-draft-drops-the-expense-sign | backlog | tickets/backlog/chat-draft-drops-the-expense-sign.md |
+| chat-rows-sealed-before-the-fix-have-no-repair-path | backlog | tickets/backlog/chat-rows-sealed-before-the-fix-have-no-repair-path.md |
 | ci-allowlist-no-cubre-encargos-ni-qa-scripts | backlog | tickets/backlog/ci-allowlist-no-cubre-encargos-ni-qa-scripts.md |
 | ci-checkout-v4-runs-on-deprecated-node | backlog | tickets/backlog/ci-checkout-v4-runs-on-deprecated-node.md |
 | ci-destination-assumes-a-simulator-that-may-not-exist | backlog | tickets/backlog/ci-destination-assumes-a-simulator-that-may-not-exist.md |
@@ -74,6 +76,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | el-saldo-de-distribucion-no-se-entera-de-un-registro-nuevo | backlog | tickets/backlog/el-saldo-de-distribucion-no-se-entera-de-un-registro-nuevo.md |
 | ensure-rates-for-existing-transactions-has-no-callers | backlog | tickets/backlog/ensure-rates-for-existing-transactions-has-no-callers.md |
 | entitlement-sync-forzado-es-noop-si-hay-otro-en-vuelo | backlog | tickets/backlog/entitlement-sync-forzado-es-noop-si-hay-otro-en-vuelo.md |
+| exchange-rate-detail-shows-zero-for-low-denomination-currencies | backlog | tickets/backlog/exchange-rate-detail-shows-zero-for-low-denomination-currencies.md |
 | exportable-insights | backlog | tickets/backlog/exportable-insights.md |
 | filtro-de-cuentas-se-colapsa-al-navegar-a-registros | backlog | tickets/backlog/filtro-de-cuentas-se-colapsa-al-navegar-a-registros.md |
 | fx-approximate-mark-missing-on-secondary-surfaces | backlog | tickets/backlog/fx-approximate-mark-missing-on-secondary-surfaces.md |
@@ -81,6 +84,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | fx-partial-rate-rows-silent-1to1 | qa | tickets/qa/fx-partial-rate-rows-silent-1to1.md |
 | fx-pnl-education-card | qa | tickets/qa/fx-pnl-education-card.md |
 | fx-presentation-still-shows-1to1 | qa | tickets/qa/fx-presentation-still-shows-1to1.md |
+| fx-rate-derivation-threshold-reseals-one-to-one | backlog | tickets/backlog/fx-rate-derivation-threshold-reseals-one-to-one.md |
 | fx-unknown-currency-code-collapses-to-usd | backlog | tickets/backlog/fx-unknown-currency-code-collapses-to-usd.md |
 | fx-widget-drops-missing-currency | backlog | tickets/backlog/fx-widget-drops-missing-currency.md |
 | gate-doc-says-swift-testing-only | backlog | tickets/backlog/gate-doc-says-swift-testing-only.md |

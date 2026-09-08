@@ -1,12 +1,22 @@
 ---
 name: mis-mediciones-fallan-por-el-filtro
-description: Mis errores de medición se repiten con la misma forma — el filtro descarta justo lo que busco y la ausencia se lee como resultado. Quince casos entre el 2026-09-02 y el 2026-09-08, incluidas las variantes inversas: el filtro INVENTA un defecto, el filtro FABRICA el no-determinismo que se investigaba, y el INSTRUMENTO entero que acabo de escribir da un cero idéntico al cero bueno si nadie lo calibra.
+description: Mis errores de medición se repiten con la misma forma — el filtro descarta justo lo que busco y la ausencia se lee como resultado. Diecisiete casos entre el 2026-09-02 y el 2026-09-08, incluidas las variantes inversas: el filtro INVENTA un defecto, el filtro FABRICA el no-determinismo que se investigaba, y el INSTRUMENTO entero que acabo de escribir da un cero idéntico al cero bueno si nadie lo calibra.
 metadata:
   type: feedback
 ---
 
 **Antes de creerme una medición mía, compruebo que el instrumento sabe producir el resultado
 contrario.** Es la regla; lo que sigue es por qué me hace falta tenerla escrita.
+
+**El caso más barato de todos, y por eso el que más se repite: el conjunto de caracteres de mi
+regex** (2026-09-08, dos veces en la MISMA sesión). Comparando el índice de tickets contra el disco,
+`[a-z0-9\-]+` no aceptaba mayúsculas y se comió la fila `rojo-heroBuckets-thisWeek-trailing-window`:
+declaré el índice desincronizado y estuve a punto de «arreglar» un índice correcto. Media hora
+después, comprobando el orden alfabético, otra regex laxa coló la fila de cabecera y me dijo que yo
+había roto el orden. **Las dos veces el fallo estaba en mi instrumento y las dos veces la conclusión
+era la contraria a la realidad.** ⇒ cuando una medición mía diga que un documento del repo está mal,
+el primer sospechoso es el filtro, no el documento: cuesta un `git show HEAD:<fichero>` comparar
+contra el estado anterior y ver si el «defecto» ya estaba.
 
 **Why:** el 2026-09-02, en una sola sesión, tropecé **cuatro veces con la misma forma de error** —
 un filtro que descarta lo que busco, y una ausencia que leo como dato:
