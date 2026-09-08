@@ -5,50 +5,53 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-08 (Lima)
 
-**Rama** `2.1` · HEAD `7c3ef266` — sesión de desbloqueo (PR #100). Último cambio de **producto**: la
-tasa del borrador del chat (PR #99); hoy no se tocó producto a propósito.
+**Rama** `2.1` · HEAD `385e80d3` — las tres decisiones del desbloqueo, implementadas (PR #101).
 TestFlight build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.** `yala-app.pe` sirve la web
 nueva y firma su correo (SPF + DKIM + DMARC, los tres en `pass`).
 
 ## Esta sesión, en una línea
 
-**Cinco decisiones llevaban semanas esperando y no estaban en condiciones de contestarse: ahora sí.**
-Cada una tiene su página con el problema en lenguaje de usuario, las opciones **con coste medido en
-ficheros**, una recomendación con motivo y el criterio de hecho por opción. Van avisadas en dos
-mensajes, agrupadas para que se contesten con una letra.
+**Cinco decisiones que llevaban semanas quietas se contestaron y las tres que llevaban código están
+dentro.** Jürgen las ratificó todas; se prepararon con opciones, coste medido en ficheros y una
+recomendación con motivo, y se contestaron con una letra cada una.
 
-**Lo que cambia para el usuario: nada todavía, y es deliberado.** No se implementó producto. Lo que
-cambia es que las cinco cosas que lo bloqueaban dejaron de estar en el limbo.
+**Lo que cambia para el usuario:**
 
-**Tres premisas de los propios tickets eran falsas, y medirlas movió dos recomendaciones.**
+1. **El dueño de un grupo con deuda y sin heredero ya no está atrapado.** Tenía las tres salidas
+   cerradas y la app se lo decía con honestidad… callándose la que tenía delante: **«Archivar» ya
+   existía en esa misma pantalla y ya funcionaba con deuda**. Ahora el aviso la nombra. No es una
+   salida nueva: es dejar de esconderla. «Eliminar» sigue bloqueado, que era el principio a proteger.
+2. **El recordatorio de deudas ya llega a quien dijo que sí.** Estaba construido y correcto, y no lo
+   recibía casi nadie: nació apagado —bien— pero **se copió ese default de su hermano sin copiar su
+   encendido**. Ahora entra en el «sí, avísame» inicial, y su interruptor ya no se puede encender si
+   los avisos de Grupos están apagados: antes se podía, se veía en verde y no llegaba nada.
+3. **El «≈» vuelve a significar algo.** Bastaba UNA transacción con tasa aproximada para marcar el
+   mes entero —editar la nota de una de hace dos años lo conseguía—. Ahora hay que ganárselo: se
+   marca cuando lo aproximado pesa **≥5 %** de su propio lado.
 
-- **El «≈»**: el ticket daba `LiveBalanceCalculator` por «no afectado». Acumula con **el mismo OR**
-  (`:138`) y lo pinta en tres sitios del Panorama. Y la opción que el ticket proponía como modelo
-  —marcar por divisa— resultó **la más cara y la que menos resuelve**: el hero es un número solo, y
-  no hay dónde enseñar un desglose.
-- **El dueño de grupo atrapado**: la salida (b) **no funciona tal como estaba escrita**. Los netos
-  suman cero por moneda, así que si el que se fue debe 50, el dueño activo tiene +50 y filtrar por
-  «miembros activos» sigue bloqueando. En cambio la (c) es casi gratis: **Archivar ya existe**, ya
-  funciona con deuda y vive en esa misma pantalla; lo único que falta es que el aviso la nombre.
-- **La cobertura de UI**: el criterio de descarte que el propio ticket define **se cumplió hoy**.
+## Lo que hay que recordar de cómo salió, porque vuelve a pasar
 
-**Y eso último es la noticia del día: el `schedule` de GitHub Actions revivió.** Llevaba sin disparar
-nunca; hoy la nocturna de `qa.yml` nació a las **12:52 UTC**, con **4 h 35 min** de retraso sobre su
-ventana de las 08:17 (controles positivos en la misma tanda: `push`→1103, `workflow_dispatch`→4).
-**Ese retraso destapó un fallo armado:** el vigilante comprueba a las 11:43 con 3 h 26 min de margen,
-así que habría mirado **1 h 09 min antes de que la nocturna naciera** y habría cantado un rojo falso
-en el único canal que vigila la cobertura de UI. No ha explotado porque el vigilante nunca ha
-disparado por `schedule` — vive del `push`. Ticket propio.
+**La review adversarial se lanzó con los 6448 tests en verde y encontró una regresión mía.** El
+«Disponible» del Panel perdía el «≈» justo en el caso peligroso: dos lados grandes, cada uno por
+debajo del 5 %, y un neto de 1.000 con 49.000 de incertidumbre. Con el código anterior sí marcaba.
+Ningún test lo cubría porque **no existía ningún test del neto**.
 
-**El runbook de staging existe y está en un solo sitio**: `docs/RUNBOOK-staging-ddl.md`, las tres
-migraciones en orden con idempotencia, verificación y trampas. De camino, `gateway/README.md` decía
-dos cosas falsas: que `wrangler` no está autenticado (medido: **sí lo está**) y que las migraciones ya
-estaban en staging (**faltan tres**). Las dos corregidas. ⇒ **el deploy del Worker no lo bloquea una
-credencial**, lo bloquea que su último deploy es del 12-ago y arrastra commits ajenos.
+**Y el patrón que más escuece: mi fichero nuevo citaba a `FXPnLLogic` como modelo y hacía lo
+contrario que él.** `FXPnLLogic` ya había rechazado acumular con signo —«posiciones que se cancelan…
+cualquier céntimo pasa el filtro»— y adoptado `Σ|costBasis|`. Yo acumulé con signo, así que un gasto
+aproximado y su reembolso aproximado se anulaban y el número salía limpio precisamente cuando menos
+lo estaba. **Citar un precedente no es haberlo leído.**
 
-**El board ya no miente.** `groups-budget` llevaba desde el merge del PR #91 en `in-progress` con lo
-que le queda siendo device-QA, no trabajo: está en `qa/`, y `in-progress` quedó **vacío** — lo
-coherente con la cola en pausa. El índice tenía además una fila fuera de la tabla.
+**Ningún test existente cambió de color** al pasar del OR al umbral: los 14 usaban importes iguales,
+donde una de seis pesa un 16,7 %. O sea que la batería **no distinguía un criterio del otro**. Un
+verde que no se mueve cuando cambias el comportamiento no es una verificación, es un silencio. Los
+dos tests que sí lo demuestran están verificados con mutante.
+
+## Las otras dos decisiones, sin código
+
+- **Cobertura de UI**: no se monta el `launchd`. El cron de GitHub **revivió el 8-sep** tras no
+  disparar nunca, con 4 h 35 min de retraso. Se re-mira el **22-sep** con muestra de dos semanas.
+- **DMARC**: fecha confirmada, **15-sep**. No espera a nadie: espera al calendario.
 
 ## Antes, hoy mismo — el correo de `yala-app.pe` (PR #97)
 
@@ -99,16 +102,9 @@ control, donde `1.0` es el valor correcto, sigue verde. CI leído por dentro y n
 
 ## Te espera a ti
 
-0. **CINCO DECISIONES, contestables con una letra** — es lo que desbloquea todo lo demás. Van
-   avisadas en dos mensajes; cada ticket trae opciones, coste medido y mi recomendación:
-
-   | Ticket | Qué se pregunta | Recomiendo |
-   |---|---|---|
-   | `groups-owner-debt-no-heir-dead-end` | dueño con deuda y sin heredero, sin salida | **(c)** ofrecer Archivar, que ya existe |
-   | `groups-settlement-reminder-discoverability` | ¿el recordatorio entra en el «sí, avísame»? | **sí**, + apagar el toggle si Grupos está off; sin banner |
-   | `approximate-mark-ors-over-whole-period` | cuándo se gana el «≈» un total | **(b)** umbral 5 % sobre su propio lado |
-   | `cobertura-ui-diaria-cuelga-del-push` | ¿reloj propio o dejar el cron? | **(3)** dejarlo; re-mirar el 22-sep |
-   | `dmarc-sube-la-politica-tras-observar` | solo confirmar fecha | **15-sep**, sin cambio |
+0. **Las cinco decisiones están CONTESTADAS** (8-sep) y escritas en sus tickets. Las tres con código
+   están dentro (PR #101) y pasaron a `qa/`: lo que les queda es device-QA, no trabajo. Las dos de
+   calendario siguen en `backlog` — el 15-sep la de DMARC, el 22-sep la de cobertura.
 
 1. **Subir la política DMARC, y no antes del 15-sep** (fecha ratificada al preparar la decisión). Hoy está en `p=none`: observa quién suplanta
    el dominio pero **no lo impide** — un correo falsificado sigue llegando a la bandeja, solo que
@@ -337,8 +333,8 @@ sigue sin `ok_`. **Cero `ok_` inventado.**
 
 ## Board
 
-**174 tickets · backlog 95 · qa 51 · blocked 2 · done 21 · discarded 5 · in-progress 0.**
-Recontado sobre disco el 8-sep en `2.1` tras mergear el PR #100, con
+**176 tickets · backlog 94 · qa 54 · blocked 2 · done 21 · discarded 5 · in-progress 0.**
+Recontado sobre disco el 8-sep en `2.1` tras mergear el PR #101, con
 `find tickets/<estado> -maxdepth 1 -name '*.md'`. **`in-progress` queda VACÍO**, que es lo coherente
 con la cola autónoma en pausa: `groups-budget` llevaba ahí desde el merge del PR #91 diciendo que
 había trabajo cuando lo que queda es device-QA, y pasó a `qa/`. Entran dos hallazgos de esta sesión
