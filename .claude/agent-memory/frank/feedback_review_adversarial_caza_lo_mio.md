@@ -161,3 +161,37 @@ llamando bien?» sino **«¿mi pregunta es la misma que la suya?»**. `GroupChan
 cuarto consumidor **no se puso rojo**: su lista de ficheros es explícita y un fichero nuevo le es
 invisible. ⇒ **un escáner de cableado prueba que el cambio se aplicó, nunca que sea correcto**, y
 ese punto ciego concreto —lista explícita de ficheros— hay que mirarlo antes de confiar en él.
+
+---
+
+**2026-09-07, `fx-manual-writes`: tres lentes. Un defecto de producto y CUATRO puntos ciegos de la
+red que yo mismo acababa de escribir. Y el primero de ellos es el párrafo de arriba, incumplido dos
+días después de escribirlo.**
+
+El escáner que escribí ese día enumeraba cinco ficheros. La advertencia decía, literal, que un
+escáner con lista explícita de ficheros no ve el fichero nuevo. La había escrito yo. ⇒ **cuando vaya
+a escribir un escáner de cableado, la lista va invertida por defecto: se barre el árbol y se exime
+nombrando.** No es una consideración a sopesar cada vez; es el punto de partida.
+
+Tres lecciones nuevas, todas sobre cómo se diseña el detector:
+
+- **Un centinela que no puede fallar no guarda nada.** Eximí `DevSeedTransactions.swift` del barrido
+  «porque es código de desarrollo» y puse como centinela la cadena `"DevSeed"` — que aparece en el
+  nombre del propio tipo. Certificaba que el fichero se llama como se llama. El centinela tiene que
+  ser **la razón** de la exención (`#if DEBUG`), no algo correlacionado con ella. Prueba: ¿qué
+  edición realista lo pondría rojo? Si no hay ninguna, no es un centinela.
+- **Ampliar un detector cambia una ceguera por un falso positivo, y la salida no es volver atrás.**
+  Mi detector enumeraba receptores (`currencyConverter.convert(`) y era ciego a `converter.convert(`.
+  Al buscar el nombre del método a secas, empezó a acusar una **mención en un comentario**. La
+  tentación es volver a enumerar; lo correcto es **acotar el dominio** —buscar sobre código sin
+  comentarios— y quedarse con el patrón ancho.
+- **Un conteo agregado no ve un cruce.** Mi barrido comprobaba «decisiones ≥ escrituras» por fichero.
+  En una función con dos conversiones y cuatro escrituras, cruzar las patas (`inTransaction` usando
+  `outOutcome`) deja el conteo intacto. Lo demostré con mutación, y lo que lo hace concluyente es que
+  **el test de conteo siguió VERDE mientras el nuevo se ponía rojo**. ⇒ si un fichero tiene dos
+  fuentes de verdad para el mismo campo, hace falta una comprobación de EMPAREJAMIENTO, no de volumen.
+
+Y una del lado bueno, que conviene recordar para no sobrecorregir: la lente que intentó falsear el
+censo de catorce escrituras —siete patrones, con controles positivos, incluyendo widgets, share
+extension e intents— **no encontró un decimoquinto sitio**. Cuando una lente adversarial busca en
+serio y no encuentra nada, ese silencio sí es información.

@@ -602,13 +602,16 @@ final class NewTransactionViewModel {
         let finalAmount = transactionType.isNegative ? -amount : amount
         let preferredCode = CurrencyDefaults.currentPreferred
 
-        let amountInPreferred = CurrencyConverter.shared.convert(
+        // `convertChecked`: el flujo principal de la app PERSISTE este número. `convert` tira la
+        // calidad de la tasa, así que una conversión aproximada nacía sellada como definitiva.
+        let outcome = CurrencyConverter.shared.convertChecked(
             Decimal(finalAmount),
             from: account.currencyCode,
             to: preferredCode,
             on: transactionDate,
             context: context
         )
+        let amountInPreferred = outcome.amount
 
         let effectiveRate: Double
         if abs(finalAmount) > 0.0001 {
@@ -645,6 +648,7 @@ final class NewTransactionViewModel {
             transaction.amountInPreferredCurrency =
                 (amountInPreferred as NSDecimalNumber).doubleValue
             transaction.preferredCurrencyCode = preferredCode
+            transaction.isExchangeRateProvisional = !outcome.quality.isExact
             // Save need override if different from subcategory's need
             transaction.needOverride = selectedNeed?.rawValue
         } else {
@@ -659,7 +663,8 @@ final class NewTransactionViewModel {
                 tags: selectedTags,
                 exchangeRate: abs(effectiveRate),
                 amountInPreferredCurrency: (amountInPreferred as NSDecimalNumber).doubleValue,
-                preferredCurrencyCode: preferredCode
+                preferredCurrencyCode: preferredCode,
+                isExchangeRateProvisional: !outcome.quality.isExact
             )
             // Save need override for new transactions
             transaction.needOverride = selectedNeed?.rawValue
@@ -685,26 +690,31 @@ final class NewTransactionViewModel {
 
         // --- OUTFLOW (Source) ---
         let outAmount = -amount
-        let outAmountInPreferred = CurrencyConverter.shared.convert(
+        let outOutcome = CurrencyConverter.shared.convertChecked(
             Decimal(outAmount),
             from: source.currencyCode,
             to: preferredCode,
             on: transactionDate,
             context: context
         )
+        let outAmountInPreferred = outOutcome.amount
         let outRate =
             abs(outAmount) > 0.0001
             ? (outAmountInPreferred as NSDecimalNumber).doubleValue / outAmount : 1.0
 
         // --- INFLOW (Dest) ---
         let inAmount = needsExchangeRate ? destinationAmount : amount
-        let inAmountInPreferred = CurrencyConverter.shared.convert(
+        // Cada pata lleva SU calidad, no la peor de las dos: son dos transacciones distintas, con
+        // divisas distintas, y cada una se repara por su cuenta. Colapsarlas marcaría como
+        // aproximada una pata cuya tasa sí era exacta.
+        let inOutcome = CurrencyConverter.shared.convertChecked(
             Decimal(inAmount),
             from: dest.currencyCode,
             to: preferredCode,
             on: transactionDate,
             context: context
         )
+        let inAmountInPreferred = inOutcome.amount
         let inRate =
             abs(inAmount) > 0.0001
             ? (inAmountInPreferred as NSDecimalNumber).doubleValue / inAmount : 1.0
@@ -730,6 +740,7 @@ final class NewTransactionViewModel {
             outTransaction.amountInPreferredCurrency =
                 (outAmountInPreferred as NSDecimalNumber).doubleValue
             outTransaction.preferredCurrencyCode = preferredCode
+            outTransaction.isExchangeRateProvisional = !outOutcome.quality.isExact
             outTransaction.balanceAdjustmentType = TransactionItem.adjustmentTypeTransfer
 
             // Update In (Ingresos/Transferencia entre cuentas)
@@ -745,6 +756,7 @@ final class NewTransactionViewModel {
             inTransaction.amountInPreferredCurrency =
                 (inAmountInPreferred as NSDecimalNumber).doubleValue
             inTransaction.preferredCurrencyCode = preferredCode
+            inTransaction.isExchangeRateProvisional = !inOutcome.quality.isExact
             inTransaction.balanceAdjustmentType = TransactionItem.adjustmentTypeTransfer
 
         } else {
@@ -760,7 +772,8 @@ final class NewTransactionViewModel {
                 tags: selectedTags,
                 exchangeRate: abs(outRate),
                 amountInPreferredCurrency: (outAmountInPreferred as NSDecimalNumber).doubleValue,
-                preferredCurrencyCode: preferredCode
+                preferredCurrencyCode: preferredCode,
+                isExchangeRateProvisional: !outOutcome.quality.isExact
             )
             outTransaction.balanceAdjustmentType = TransactionItem.adjustmentTypeTransfer
 
@@ -776,7 +789,8 @@ final class NewTransactionViewModel {
                 tags: selectedTags,
                 exchangeRate: abs(inRate),
                 amountInPreferredCurrency: (inAmountInPreferred as NSDecimalNumber).doubleValue,
-                preferredCurrencyCode: preferredCode
+                preferredCurrencyCode: preferredCode,
+                isExchangeRateProvisional: !inOutcome.quality.isExact
             )
             inTransaction.balanceAdjustmentType = TransactionItem.adjustmentTypeTransfer
 

@@ -16,7 +16,7 @@
 - [El CI se verifica en LOCAL](feedback_el_ci_se_verifica_en_local.md) — el `run:` de un paso se extrae del YAML y se corre con matriz de escenarios; actionlint con control negativo; y el comentario con que justifiqué mi diseño era falso.
 - [El paso 3 del gate no detecta cero casos](feedback_gate_paso3_no_detecta_cero_casos.md) — XCUITest es XCTest: cuenta «Test Suite» y «Executed», no «Test run with».
 - [Mi fix hereda la forma del bug](feedback_mi_fix_hereda_la_forma_del_bug.md) — el arreglo repite el error del bug; enuncia el bug en una frase y aplícasela al arreglo.
-- [La review adversarial caza lo MÍO](feedback_review_adversarial_caza_lo_mio.md) — 4 defectos el 6-sep y 8 el 7-sep, todos míos; el peor no es un descuido sino un razonamiento explícito y equivocado.
+- [La review adversarial caza lo MÍO](feedback_review_adversarial_caza_lo_mio.md) — 4 el 6-sep, 8 el 7-sep y 5 más esa tarde; un escáner con lista de ficheros es ciego al fichero nuevo, y un centinela que no puede fallar no guarda nada.
 - [Las lentes se contradicen entre sí](feedback_lentes_adversariales_se_contradicen.md) — cuando dos discrepan sobre un hecho, no elijas: mídelo; la gravedad que declaran no es evidencia.
 - [El árbol base contesta «¿es mío?»](feedback_el_arbol_base_contesta_si_es_mio.md) — worktree desde HEAD zanja un rojo ajeno en 90 s; y devuelve el disco que se come.
 - [Un «rojo conocido» no exime de bisecar](feedback_rojo_conocido_no_exime_de_bisecar.md) — dos rojos idénticos en el log, causas opuestas: uno era mío y rompía guardar una transacción.
@@ -33,6 +33,7 @@
 - [Capturas del simulador para la web](feedback_capturas_simulador_para_la_web.md) — receta y trampas: Secrets.xcconfig, nombre efímero, categorías sembradas, `sips -Z` escala el lado largo.
 
 ## Estado del trabajo
+- [Las escrituras a mano ya no sellan una tasa aproximada](project_fx_escrituras_a_mano.md) — PR #94; eran 14 y no 10, el device-QA NO es simulable, y el AC nº2 pedía algo que no procede.
 - [La ganancia cambiaria ya tiene número](project_fx_pnl_card.md) — PR #92; falta device-QA y NO es simulable (ningún seed es multi-divisa); el FIFO no se simplifica.
 - [El tope de gasto del grupo ya avisa](project_presupuesto_de_grupo.md) — PR #91 y g14_01 en prod; faltan device-QA, TRES migraciones de staging y el deploy del Worker que reenciende el Merkle.
 - [El recordatorio de deuda ya avisa al deudor](project_recordatorio_liquidacion.md) — PR #89; falta device-QA y una decisión; NO se respeta `simplifyDebts` a propósito.

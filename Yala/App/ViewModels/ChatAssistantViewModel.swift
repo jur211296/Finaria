@@ -502,13 +502,22 @@ final class ChatAssistantViewModel {
         // Convertir Decimal → Double para TransactionItem (el modelo usa Double)
         let amountDouble = NSDecimalNumber(decimal: amount).doubleValue
         let preferredCurrency = CurrencyDefaults.currentPreferred
-        let convertedDecimal = CurrencyConverter.shared.convertWithLatestRate(
+        // `on: draft.date` y no la tasa de HOY. La transacción se estampa con `draft.date`, que el
+        // parseo resuelve como `parsed.date ?? Date.now`: el usuario puede dictar «un café ayer» y
+        // esta ruta convertía ese gasto a la tasa de hoy. Las otras seis rutas de creación convierten
+        // en la fecha que persisten, y sobre todo **el reparador también**
+        // (`TransactionItem.recalculatePreferredCurrency` usa `on: date`) — así que el número que se
+        // guardaba aquí no era reproducible por el proceso que existe para repararlo: al pasar por él
+        // habría cambiado. Y con la fila de hoy completa, la calidad salía `.exact` y lo sellaba
+        // como definitivo: una tasa de otra fecha, marcada como la buena.
+        let outcome = CurrencyConverter.shared.convertChecked(
             amount,
             from: draft.currencyCode,
             to: preferredCurrency,
+            on: draft.date,
             context: context
         )
-        let amountInPreferred = NSDecimalNumber(decimal: convertedDecimal).doubleValue
+        let amountInPreferred = NSDecimalNumber(decimal: outcome.amount).doubleValue
 
         let transaction = TransactionItem(
             date: draft.date,
@@ -521,7 +530,13 @@ final class ChatAssistantViewModel {
             tags: tags,
             exchangeRate: 1.0,
             amountInPreferredCurrency: amountInPreferred,
-            preferredCurrencyCode: preferredCurrency
+            preferredCurrencyCode: preferredCurrency,
+            // El `exchangeRate: 1.0` de arriba es un valor plantado, no la tasa que se usó — está
+            // así desde que existe la ruta, y **este flag NO lo arregla en el caso normal**: cuando
+            // la tasa es exacta el flag queda `false`, la transacción sale de la cola del reparador
+            // (`#Predicate` = `== true`) y el 1.0 mentiroso se sella. Sigue en
+            // `chat-assistant-plants-exchange-rate-one`; aquí solo se decide la provisionalidad.
+            isExchangeRateProvisional: !outcome.quality.isExact
         )
 
         // Inyectar context defensivamente — TransactionService es singleton y otras

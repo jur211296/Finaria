@@ -942,13 +942,14 @@ struct InboxDraftEditSheet: View {
 
         // Calculate amount in preferred currency for charts/statistics
         let preferredCode = CurrencyDefaults.currentPreferred
-        let amountInPreferred = currencyConverter.convert(
+        let outcome = currencyConverter.convertChecked(
             Decimal(finalAmount),
             from: account.currencyCode,
             to: preferredCode,
             on: transactionDate,
             context: modelContext
         )
+        let amountInPreferred = outcome.amount
         let exchangeRate: Double
         if abs(finalAmount) > 0.0001 {
             exchangeRate = (amountInPreferred as NSDecimalNumber).doubleValue / finalAmount
@@ -969,6 +970,7 @@ struct InboxDraftEditSheet: View {
         transaction.exchangeRate = abs(exchangeRate)
         transaction.amountInPreferredCurrency = (amountInPreferred as NSDecimalNumber).doubleValue
         transaction.preferredCurrencyCode = preferredCode
+        transaction.isExchangeRateProvisional = !outcome.quality.isExact
 
         // Set nature override if user changed it
         if let need = selectedNeed, need != subcategory.need {

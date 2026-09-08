@@ -69,6 +69,30 @@ más antiguas o llegadas de otro dispositivo** — es decir, hacia otro momento 
 «como hacen los N sitios del repo», ese comentario es una afirmación verificable: mídela.
 
 
+**Cuarto mecanismo, y el que menos se ve venir, medido el 2026-09-07 en
+`fx-manual-writes-seal-approximate-as-final`: no lo hereda el fix, lo hereda el DETECTOR.** El bug
+era «un patrón de búsqueda no ve la mitad de las escrituras, así que el conteo dice que no hay nada
+que arreglar» — el ticket contaba diez sitios y eran catorce, porque su grep buscaba la asignación y
+no veía las cuatro que pasan el monto por init. Escribí un test de barrido para que eso no volviera a
+pasar… y su regex usaba `^` sin `.anchorsMatchLines`, así que **contaba cero inits** y declaró
+«ninguna escritura» justo sobre el único fichero cuyo único sitio es un init. El detector del bug
+tenía el bug.
+
+Lo grave no es el descuido: es **que su control positivo no lo cazó**. El control traía sólo la forma
+de asignación, así que pasaba en verde con el patrón de init roto. Lo destapó el barrido real un paso
+después, por casualidad de que un fichero tuviera solo la forma ciega.
+
+⇒ **Un control positivo debe contener TODAS las formas que el detector dice cubrir, no una de
+muestra.** Si el escáner cuenta dos sintaxis, el fragmento sintético lleva las dos. Un control
+positivo que cubre la mitad certifica la mitad, y se lee igual que uno que certifica todo.
+
+Y el corolario que ya se cumplió dos veces el mismo día: **los dos fallos de medición que este
+fichero ya tenía anotados —el glob de zsh sin comillas y el patrón que no coge la asignación
+multilínea— los volví a cometer los dos**, en los primeros cinco minutos. Tenerlos escritos no basta;
+la defensa que sí funcionó fue el control negativo (correr el patrón ingenuo al lado del bueno y
+comparar los conteos), no el recuerdo.
+
+
 Relacionado: [[mis-mediciones-fallan-por-el-filtro]] (el control positivo también va en los greps de
 auditoría) · [[la-premisa-del-encargo-tambien-se-mide]] (medir la premisa ajena; ésta es su gemela,
 medir la propia) · [[mutante-compilado-zanja-hipotesis]] (cómo comprobar que el test del fix

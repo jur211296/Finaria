@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (152)
+## Index (158)
 
 | id | status | path |
 |----|--------|------|
@@ -38,13 +38,17 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | apple-watch | backlog | tickets/backlog/apple-watch.md |
 | applepay-shortcut-warm-launch-empty-data | qa | tickets/qa/applepay-shortcut-warm-launch-empty-data.md |
 | apppreferences-rewritten-on-launch | blocked | tickets/blocked/apppreferences-rewritten-on-launch.md |
+| approximate-mark-ors-over-whole-period | backlog | tickets/backlog/approximate-mark-ors-over-whole-period.md |
 | appstorage-onboarding-desarma-el-aislamiento-de-tests | backlog | tickets/backlog/appstorage-onboarding-desarma-el-aislamiento-de-tests.md |
 | aviso-de-nuevo-miembro-no-llega-hasta-abrir-la-app | qa | tickets/qa/aviso-de-nuevo-miembro-no-llega-hasta-abrir-la-app.md |
 | budget-days-left-counts-today | backlog | tickets/backlog/budget-days-left-counts-today.md |
 | budget-tied-to-income-or-expense | backlog | tickets/backlog/budget-tied-to-income-or-expense.md |
+| bulk-update-account-leaves-converted-amount-stale | backlog | tickets/backlog/bulk-update-account-leaves-converted-amount-stale.md |
 | canarios-y-breadcrumbs-sin-emisor | backlog | tickets/backlog/canarios-y-breadcrumbs-sin-emisor.md |
 | cashflow-spend-prediction | backlog | tickets/backlog/cashflow-spend-prediction.md |
+| chat-assistant-plants-exchange-rate-one | backlog | tickets/backlog/chat-assistant-plants-exchange-rate-one.md |
 | ci-checkout-v4-runs-on-deprecated-node | backlog | tickets/backlog/ci-checkout-v4-runs-on-deprecated-node.md |
+| ci-destination-assumes-a-simulator-that-may-not-exist | backlog | tickets/backlog/ci-destination-assumes-a-simulator-that-may-not-exist.md |
 | ci-no-corre-la-suite-del-gateway | backlog | tickets/backlog/ci-no-corre-la-suite-del-gateway.md |
 | ci-suite-simulador-duplicada-y-allowlist-incompleta | done | tickets/done/ci-suite-simulador-duplicada-y-allowlist-incompleta.md |
 | ci-verde-con-la-suite-en-rojo | done | tickets/done/ci-verde-con-la-suite-en-rojo.md |
@@ -53,6 +57,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | cloud-fx-rates-blob-two-faces | qa | tickets/qa/cloud-fx-rates-blob-two-faces.md |
 | cloud-tx-epoch-orphan-relations | backlog | tickets/backlog/cloud-tx-epoch-orphan-relations.md |
 | creategroup-throw-after-commit-loses-owner | backlog | tickets/backlog/creategroup-throw-after-commit-loses-owner.md |
+| currency-change-service-tests-mirror-the-logic | backlog | tickets/backlog/currency-change-service-tests-mirror-the-logic.md |
 | debounce-sync-imported-transactions | backlog | tickets/backlog/debounce-sync-imported-transactions.md |
 | debt-simplification-nondeterministic-ties | backlog | tickets/backlog/debt-simplification-nondeterministic-ties.md |
 | debt-tracking | backlog | tickets/backlog/debt-tracking.md |
@@ -67,7 +72,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | exportable-insights | backlog | tickets/backlog/exportable-insights.md |
 | filtro-de-cuentas-se-colapsa-al-navegar-a-registros | backlog | tickets/backlog/filtro-de-cuentas-se-colapsa-al-navegar-a-registros.md |
 | fx-approximate-mark-missing-on-secondary-surfaces | backlog | tickets/backlog/fx-approximate-mark-missing-on-secondary-surfaces.md |
-| fx-manual-writes-seal-approximate-as-final | backlog | tickets/backlog/fx-manual-writes-seal-approximate-as-final.md |
+| fx-manual-writes-seal-approximate-as-final | qa | tickets/qa/fx-manual-writes-seal-approximate-as-final.md |
 | fx-partial-rate-rows-silent-1to1 | qa | tickets/qa/fx-partial-rate-rows-silent-1to1.md |
 | fx-pnl-education-card | qa | tickets/qa/fx-pnl-education-card.md |
 | fx-presentation-still-shows-1to1 | qa | tickets/qa/fx-presentation-still-shows-1to1.md |
@@ -143,6 +148,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | registros-calendario-cuenta-gastos-por-signo | qa | tickets/qa/registros-calendario-cuenta-gastos-por-signo.md |
 | rejected-member-cold-tap-does-nothing | qa | tickets/qa/rejected-member-cold-tap-does-nothing.md |
 | rejoin-tap-renotifies-admins | qa | tickets/qa/rejoin-tap-renotifies-admins.md |
+| repair-queue-has-no-exit-for-partial-rate-rows | backlog | tickets/backlog/repair-queue-has-no-exit-for-partial-rate-rows.md |
 | reparacion-de-tasas-no-avisa-al-panel | backlog | tickets/backlog/reparacion-de-tasas-no-avisa-al-panel.md |
 | rescue-discarded-groups-pull | discarded | tickets/discarded/rescue-discarded-groups-pull.md |
 | restore-beacon-outlives-account-deletion | backlog | tickets/backlog/restore-beacon-outlives-account-deletion.md |

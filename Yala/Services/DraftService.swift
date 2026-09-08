@@ -220,13 +220,16 @@ final class DraftService {
         if draft.sourceType == .groupSettlement, let account = draft.account,
            let amount = draft.amount, let subcategory = draft.subcategory {
             let preferredCode = CurrencyDefaults.currentPreferred
-            let amountInPreferred = currencyConverter.convert(
+            // `convertChecked` y no `convert`: lo que sigue PERSISTE el monto convertido, y
+            // `convert` tira la calidad de la tasa.
+            let outcome = currencyConverter.convertChecked(
                 Decimal(amount),
                 from: account.currencyCode,
                 to: preferredCode,
                 on: draft.effectiveDate,
                 context: context
             )
+            let amountInPreferred = outcome.amount
 
             let exchangeRate: Double = abs(amount) > 0.0001
                 ? (amountInPreferred as NSDecimalNumber).doubleValue / amount
@@ -244,6 +247,7 @@ final class DraftService {
             tx.exchangeRate = abs(exchangeRate)
             tx.amountInPreferredCurrency = (amountInPreferred as NSDecimalNumber).doubleValue
             tx.preferredCurrencyCode = preferredCode
+            tx.isExchangeRateProvisional = !outcome.quality.isExact
             // D7: NO setear tx.splitSettlementID ni tx.splitGroupZoneID — TX queda manual independiente.
 
             context.insert(tx)
@@ -273,13 +277,14 @@ final class DraftService {
 
         // Calculate amount in preferred currency for charts/statistics
         let preferredCode = CurrencyDefaults.currentPreferred
-        let amountInPreferred = currencyConverter.convert(
+        let outcome = currencyConverter.convertChecked(
             Decimal(amount),
             from: account.currencyCode,
             to: preferredCode,
             on: draft.effectiveDate,
             context: context
         )
+        let amountInPreferred = outcome.amount
 
         let exchangeRate: Double
         if abs(amount) > 0.0001 {
@@ -313,6 +318,7 @@ final class DraftService {
         transaction.exchangeRate = abs(exchangeRate)
         transaction.amountInPreferredCurrency = (amountInPreferred as NSDecimalNumber).doubleValue
         transaction.preferredCurrencyCode = preferredCode
+        transaction.isExchangeRateProvisional = !outcome.quality.isExact
 
         context.insert(transaction)
 
@@ -406,13 +412,14 @@ final class DraftService {
                   let subcategory = draft.subcategory else { continue }
 
             // Calculate amount in preferred currency
-            let amountInPreferred = currencyConverter.convert(
+            let outcome = currencyConverter.convertChecked(
                 Decimal(amount),
                 from: account.currencyCode,
                 to: preferredCode,
                 on: draft.effectiveDate,
                 context: context
             )
+            let amountInPreferred = outcome.amount
 
             let exchangeRate: Double
             if abs(amount) > 0.0001 {
@@ -445,6 +452,7 @@ final class DraftService {
             transaction.exchangeRate = abs(exchangeRate)
             transaction.amountInPreferredCurrency = (amountInPreferred as NSDecimalNumber).doubleValue
             transaction.preferredCurrencyCode = preferredCode
+            transaction.isExchangeRateProvisional = !outcome.quality.isExact
 
             context.insert(transaction)
 
@@ -710,13 +718,14 @@ final class DraftService {
             realSubcat = (matchedSubcat?.isAnySystem == true) ? nil : matchedSubcat
         }
         let preferredCode = CurrencyDefaults.currentPreferred
-        let amountInPreferred = currencyConverter.convert(
+        let outcome = currencyConverter.convertChecked(
             Decimal(amount),
             from: expense.currencyCode,
             to: preferredCode,
             on: draft.effectiveDate,
             context: context
         )
+        let amountInPreferred = outcome.amount
         let exchangeRate: Double = abs(amount) > 0.0001
             ? (amountInPreferred as NSDecimalNumber).doubleValue / amount
             : 1.0
@@ -737,6 +746,7 @@ final class DraftService {
         realTx.exchangeRate = abs(exchangeRate)
         realTx.amountInPreferredCurrency = (amountInPreferred as NSDecimalNumber).doubleValue
         realTx.preferredCurrencyCode = preferredCode
+        realTx.isExchangeRateProvisional = !outcome.quality.isExact
         context.insert(realTx)
 
         // 4 + 5. Invocar bridge con flag para no borrar este draft activo.
@@ -903,10 +913,11 @@ final class DraftService {
         guard let amount = draft.amount else { throw DraftServiceError.missingAmount }
 
         let preferredCode = CurrencyDefaults.currentPreferred
-        let amountInPreferred = currencyConverter.convert(
+        let outcome = currencyConverter.convertChecked(
             Decimal(amount), from: account.currencyCode, to: preferredCode,
             on: draft.effectiveDate, context: context
         )
+        let amountInPreferred = outcome.amount
         let exchangeRate: Double = abs(amount) > 0.0001
             ? (amountInPreferred as NSDecimalNumber).doubleValue / amount
             : 1.0
@@ -925,6 +936,7 @@ final class DraftService {
         tx.exchangeRate = abs(exchangeRate)
         tx.amountInPreferredCurrency = (amountInPreferred as NSDecimalNumber).doubleValue
         tx.preferredCurrencyCode = preferredCode
+        tx.isExchangeRateProvisional = !outcome.quality.isExact
         // NO setear splitSettlementID / splitGroupZoneID — preserva edición independiente.
 
         context.insert(tx)
