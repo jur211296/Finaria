@@ -5,50 +5,50 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-07 (Lima)
 
-**Rama** `2.1` · HEAD `1c137edf` — una tasa aproximada ya no nace sellada como definitiva.
+**Rama** `2.1` · HEAD `cd49617c` — la suite de tests no era no-determinista; lo era el grep.
 TestFlight build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.** `yala-app.pe` sirve la web
 nueva.
 
 ## Esta sesión, en una línea
 
-**Crear un gasto en una divisa cuya tasa del día aún no ha llegado ya no guarda el número aproximado
-como si fuera definitivo** (PR #94, mergeado). El importe convertido se marca como pendiente y **se
-corrige solo** en cuanto llegan las tasas reales. Afecta al flujo principal —crear y editar—, a las
-transferencias, a aprobar borradores del Inbox, a crear desde el chat y, el caso más caro, a
-**cambiar la moneda preferida**, que reescribe el histórico entero de un gesto. Si la tasa del día sí
-estaba, nada cambia: sigue guardándose como definitiva, y hay una pareja de control por test que lo
-fija.
+**La suite de tests no era no-determinista: lo era el grep con el que se contaba** (PR #95,
+mergeado). El ticket `high` decía que `YalaTests` completa daba rojos DISTINTOS en cada corrida.
+Tres corridas completas del mismo árbol dan **6414 tests en 653 suites y `failedTests: 0`** en el
+result bundle. No hay un solo rojo.
 
-**No eran diez escrituras: son catorce.** El grep del ticket buscaba la asignación
-(`.amountInPreferredCurrency =`) y no podía ver las cuatro que pasan el monto por **init** — entre
-ellas **las tres ramas de creación** de `NewTransactionViewModel`, o sea que el «flujo principal» que
-el ticket declaraba cubierto lo estaba a medias, y `ChatAssistantViewModel`, que no salía en ninguna
-lista.
+**El no-determinismo era real, pero estaba en la LECTURA del log.** Los `print` de la app bajo
+`#if DEBUG` y el reporter de Swift Testing escriben en el mismo stdout **sin lock**, así que un log
+que cae a media línea la parte en dos. Literal de la corrida 2, con el nombre del test cortado por
+la mitad:
 
-**El AC nº 2 pedía un comportamiento que no procede, y no se hizo.** Decía que
-`CurrencyChangeService` no bajara el flag de una transacción ya marcada; ese bucle **no tocaba el
-flag en absoluto** y el daño real era el contrario. La decisión quedó incondicional, como en
-`recalculatePreferredCurrency`: el flag describe la calidad del número que hay AHORA, no un
-historial. La lectura literal dejaría transacciones ya exactas marcadas para siempre.
+    ✔ Test exact_amountGreaterTh…[Push] PUSH TOKEN_OK…
+    anTotal_returnsNil() passed after 0.001 seconds.
 
-**La review adversarial (3 lentes) cazó un defecto de producto y cuatro puntos ciegos míos.** El de
-producto: el chat convertía con la tasa de **hoy** y estampaba `draft.date` —«un café ayer» se
-guardaba a la tasa de hoy—, y lo decisivo es que **el reparador convierte `on: date`**, así que el
-número guardado no era reproducible por el proceso que existe para repararlo. Los cuatro míos, todos
-en la red que yo mismo acababa de escribir: el barrido contaba por fichero y dejaba pasar un cruce
-entre las patas de una transferencia; el detector de `convert` enumeraba receptores y era ciego a
-`converter.convert(`; el barrido no entraba en `YalaWidgets/` ni `YalaShare/`; y el centinela que
-eximía a los seeds era la cadena `"DevSeed"` — que está en el nombre del propio tipo, o sea
-infalsificable. ⇒ **un detector de este bug puede tener este bug**, y su control positivo no lo ve si
-solo cubre una de las formas.
+Ninguna de las dos mitades casa con `^✔ Test .* passed`. El grep anclado **pierde 43-50 líneas de
+6403 por corrida, y pierde otras distintas cada vez**; `Test run with` dio 6414 las tres veces. Eso
+basta para fabricar la apariencia de «conjuntos disjuntos» sin que nada falle. **Y lo que le pasa a
+un `✔` le puede pasar a un `✘`: un rojo partido es un rojo que el gate no ve.**
 
-**El rojo del CI no era del código.** El runner que tocó no traía el iPhone 17 Pro
-(`Unable to find a device…`, exit 70 a los 2m30s), con tres corridas de la misma rama en verde
-minutos antes y sin tocar `.github/`. Relanzado en verde y con ticket:
-`build-for-testing` ni siquiera necesita un device concreto.
+**Tres afirmaciones del ticket que la medición invierte.** Que el resumen `Test run with` «no cuadra
+con la realidad» — es al revés, es la cifra estable y el conteo a mano el que baila, y
+`.claude/rules/testing.md` ya mandaba leerla. Que «cuatro de los cinco» rojos eran source-scans —
+son los cinco. Y la hipótesis de orden/paralelismo, **refutada por medición**: las suites no se
+entrelazan en el log, Swift Testing ya corre serializado aquí.
 
-**Sesión anterior (PR #93):** el CI dejó de poder colgarse seis horas y el PR da señal en un cuarto
-de hora; la suite de UI pasó a una nocturna sobre `2.1`.
+**El método roto lo prescribía yo también**, en mi propia memoria, presentado como «cuenta a mano
+porque el resumen miente». Corregido junto con la regla.
+
+**Los cinco rojos del 6-sep no se reprodujeron** — 19 206 ejecuciones, 0 fallos — y no se declaran
+arreglados, sino *no reproducibles con el entorno sano*: aquella máquina estaba entre 20 y 5,9 GB
+(umbral 25), con 23 sesiones y el OOM killer activo. Nada que meter en la Lista Negra.
+
+**De camino salieron 554-556 violaciones `vnode unlinked while in use`** por corrida — tests que
+borran el directorio del store SQLite con la conexión abierta, en 12 familias. Hoy no rompe nada,
+pero es variable de confusión para cualquier rojo raro de esa familia. Ticket propio.
+
+**Sesión anterior (PR #94):** una tasa aproximada dejó de nacer sellada como definitiva; eran
+catorce escrituras y no diez, y el detector tenía el bug que perseguía.
+
 
 ## Te espera a ti
 
@@ -179,8 +179,8 @@ aparecer.**
   **Tres corridas completas de 134 casos cada una**, todas ejecutando los 134 (el 6-sep moría tras el
   primer caso de CADA suite). Es la segunda sesión seguida sin verlo. Sigue sin descartarse, pero ya
   no es «una sola observación».
-- **`unit-suite-nondeterministic-reds` (high): tampoco.** La suite unit completa pasó entera dos veces
-  hoy — **6272 tests en 637 suites**, 89 s. Tercera sesión sin reproducirlo.
+- ~~`unit-suite-nondeterministic-reds`~~ **cerrado el 7-sep (PR #95)**: la suite es determinista y el
+  no-determinismo estaba en el grep que la contaba. Ver «Esta sesión».
 
 **El entorno, con una medición nueva.** El disco bajó a **7,1 GB** (umbral 25) tras dos horas de
 corridas encadenadas; un `simctl erase` lo devolvió a 12 GB — y **no eliminó el flake de arriba**, que
@@ -206,6 +206,17 @@ abras la línea citada. **Y la premisa del ticket —y la del encargo— tambié
 sigue sin `ok_`. **Cero `ok_` inventado.**
 
 ## Board
+
+**159 tickets · backlog 85 · qa 48 · blocked 2 · done 18 · discarded 5 · in-progress 1.**
+Recontado sobre disco el 7-sep tras el no-determinismo de la suite: `unit-suite-nondeterministic-reds`
+pasa a `done` y entra **uno** que no es suyo, el hallazgo de camino
+`tests-borran-el-store-sqlite-abierto` (554-556 violaciones `vnode unlinked while in use` por corrida,
+en 12 familias de test: hoy inocuo, mañana variable de confusión). `backlog` no se mueve —sale uno,
+entra otro— y por eso el total sube solo por el `done`. Verificado por **conjuntos**: 159 = 159, cero
+huérfanos en ambas direcciones. Y la comprobación de rutas del índice trae un falso positivo que
+conviene no volver a perseguir: el **owner map** del final apunta a las carpetas de ORIGEN de la
+migración, no al estado de hoy, así que cinco de sus rutas «no existen» y es correcto — la tabla del
+índice, que es la que manda, está entera.
 
 **158 tickets · backlog 85 · qa 48 · blocked 2 · done 17 · discarded 5 · in-progress 1.**
 Recontado sobre disco el 7-sep tras las escrituras a mano de FX: `fx-manual-writes-seal-approximate-as-final`
