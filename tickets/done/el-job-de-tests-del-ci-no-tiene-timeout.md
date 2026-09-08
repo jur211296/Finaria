@@ -4,7 +4,7 @@ status: done
 priority: medium
 area: ci
 created: 2026-09-06
-updated: 2026-09-07
+updated: 2026-09-08
 source: medido esperando el CI del PR #78
 ---
 
@@ -167,6 +167,35 @@ otro extremo. Se distingue ahora con `UI_TOCABA`, que dice si a la UI le tocaba 
   y tiene ticket propio: `ci-workflow-cites-missing-testing-strategy`.
 - Los tres pasos siguen siendo `continue-on-error` a propósito. Este ticket iba del tiempo sin tope,
   no de si deben bloquear; eso es `ci-warns-but-does-not-block`.
+
+## Verificado en producción (2026-09-08)
+
+Los topes se eligieron con runs de **antes** del cambio, estimando cuánto duraría el job sin el paso
+de UI. Un día después ya hay corridas reales del job tal como quedó, y dicen esto — 21 runs del job
+`tests` en PR y push posteriores al merge, leídos de la API de Actions:
+
+| conjunto | mediana | p90 | p95 | max | tope | margen |
+|---|---|---|---|---|---|---|
+| Job en un PR (real, sin UI) | 21,7 | 29,2 | 29,9 | **34,0** | 45 | 1,32× |
+| Nocturna (`workflow_dispatch`, con UI) | — | — | — | **89,7** | 150 | 1,67× |
+
+**Cero cancelaciones y cero timeouts** en las 30 corridas del periodo: ningún tope ha cortado una
+corrida sana, que era el riesgo de ceñirlos. El único rojo es un build roto conocido (2,7 min).
+
+Dos matices que conviene dejar escritos, porque el número de arriba no es el que se predijo:
+
+- **El máximo real (34,0) supera en 4,1 min al máximo estimado (29,9)** sobre el que se eligió el 45.
+  El tope aguanta, pero el margen que se buscaba era 1,5× y hoy es **1,32×**. No hay que tocar nada;
+  sí conviene saber que el colchón es menor de lo que dice la tabla de arriba, y que si el build o la
+  suite unit crecen otro 30 % el tope empezará a cortar corridas sanas. Ahí se sube el tope, no se
+  quita.
+- **La predicción de «~22 min» era buena**: la mediana real es 21,7. Lo que se quedó corto fue la
+  cola, no el centro — que es lo normal al estimar un máximo a partir de cuatro decenas de runs.
+
+**Lo que esta verificación NO cubre:** que el `cron` despierte la nocturna solo. A día de hoy hay
+**cero runs con `event: schedule`** y la primera ventana (2026-09-08 08:17 UTC) pasó sin disparar.
+Que el *contenido* de la nocturna funciona está probado por el `workflow_dispatch` de arriba; que el
+*reloj* la lance, no. Tiene ticket propio: `la-nocturna-de-ui-no-ha-disparado-ni-una-vez`.
 
 ## Acceptance Criteria
 
