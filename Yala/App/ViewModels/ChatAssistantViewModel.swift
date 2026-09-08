@@ -502,13 +502,13 @@ final class ChatAssistantViewModel {
         // Convertir Decimal → Double para TransactionItem (el modelo usa Double)
         let amountDouble = NSDecimalNumber(decimal: amount).doubleValue
         let preferredCurrency = CurrencyDefaults.currentPreferred
-        let convertedDecimal = CurrencyConverter.shared.convertWithLatestRate(
+        let outcome = CurrencyConverter.shared.convertCheckedWithLatestRate(
             amount,
             from: draft.currencyCode,
             to: preferredCurrency,
             context: context
         )
-        let amountInPreferred = NSDecimalNumber(decimal: convertedDecimal).doubleValue
+        let amountInPreferred = NSDecimalNumber(decimal: outcome.amount).doubleValue
 
         let transaction = TransactionItem(
             date: draft.date,
@@ -521,7 +521,11 @@ final class ChatAssistantViewModel {
             tags: tags,
             exchangeRate: 1.0,
             amountInPreferredCurrency: amountInPreferred,
-            preferredCurrencyCode: preferredCurrency
+            preferredCurrencyCode: preferredCurrency,
+            // El `exchangeRate: 1.0` de arriba es un valor plantado, no la tasa que se usó — está
+            // así desde que existe la ruta. Marcar la calidad aquí lo cura de paso: el reparador
+            // recalcula monto Y tasa cuando pasa por una transacción provisional.
+            isExchangeRateProvisional: !outcome.quality.isExact
         )
 
         // Inyectar context defensivamente — TransactionService es singleton y otras
