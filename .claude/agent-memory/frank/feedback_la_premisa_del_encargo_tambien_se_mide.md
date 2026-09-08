@@ -77,3 +77,29 @@ agregada al nivel equivocado**. La pregunta no es «¿es cierto este número?» 
 que mi decisión va a acotar?». Cuando la decisión cambia la forma del trabajo —aquí, partirlo en dos
 corridas—, las mediciones del ticket describen un mundo que ya no existe, y sirven de línea base, no
 de respuesta. Y desconfía de un percentil con menos de ~20 puntos: dilo como «máximo observado».
+
+## 2026-09-08 — la premisa que dice DÓNDE NO MIRAR es la más cara de todas
+
+`goldens-de-staging-solo-pasan-a-trozos` afirmaba, en negrita y como el hecho central del
+diagnóstico: **«Los 10 fallos son timeouts. Cero aserciones fallidas — ni una en ninguna corrida.
+Eso importa: no hay ningún fallo de lógica.»**
+
+Había dos fallos de aserción, y **eran la respuesta entera**. El bump de canon a `c2` del 7-sep
+había dejado dos `expect(...).toBe("c1")` sin actualizar. El ticket incluso los tuvo delante: su
+corrida 3, con el manifest sincronizado, dio «14 · 11, ligeramente PEOR» — esos dos rojos nuevos
+eran los asserts, y se leyeron como ruido que empeoraba la hipótesis en curso.
+
+Y no era la única premisa falsa del mismo ticket: los conteos de grupos estaban **cruzados** entre
+los dos usuarios y con otros números (decía A=677/B=511; medido, A=530/B=678), lo que importaba
+porque la hipótesis apuntaba al usuario A y el test que más sufre pullea al B. El «factor 70x, ~69 s
+por test» era el promedio de repartir el total entre 25 tests que van de 0,0 s a 130 s.
+
+**Why:** una premisa que dice «no hay nada de esta clase» es una **poda del espacio de búsqueda**, y
+por eso cuesta más que una cifra mal copiada: no te manda a un sitio equivocado, te prohíbe uno
+correcto. Aquí bastó correr la suite una vez mirando el tipo de cada fallo — 5 minutos — para
+tumbarla.
+
+**How to apply:** cuando un ticket clasifique los fallos («todos son timeouts», «todos de la misma
+familia», «ninguno es de lógica»), esa clasificación es una **afirmación verificable y barata**, no
+un contexto. Re-córrelo y clasifica tú. Es la versión de «cuando un documento te diga no mires aquí,
+mira» aplicada a la taxonomía del propio fallo. Ver [[rojo-conocido-no-exime-de-bisecar]].
