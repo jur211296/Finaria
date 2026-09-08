@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (151)
+## Index (152)
 
 | id | status | path |
 |----|--------|------|
@@ -44,6 +44,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | budget-tied-to-income-or-expense | backlog | tickets/backlog/budget-tied-to-income-or-expense.md |
 | canarios-y-breadcrumbs-sin-emisor | backlog | tickets/backlog/canarios-y-breadcrumbs-sin-emisor.md |
 | cashflow-spend-prediction | backlog | tickets/backlog/cashflow-spend-prediction.md |
+| ci-checkout-v4-runs-on-deprecated-node | backlog | tickets/backlog/ci-checkout-v4-runs-on-deprecated-node.md |
 | ci-no-corre-la-suite-del-gateway | backlog | tickets/backlog/ci-no-corre-la-suite-del-gateway.md |
 | ci-suite-simulador-duplicada-y-allowlist-incompleta | done | tickets/done/ci-suite-simulador-duplicada-y-allowlist-incompleta.md |
 | ci-verde-con-la-suite-en-rojo | done | tickets/done/ci-verde-con-la-suite-en-rojo.md |
@@ -184,7 +185,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | yala-android | backlog | tickets/backlog/yala-android.md |
 | zone-decisions-still-per-row | backlog | tickets/backlog/zone-decisions-still-per-row.md |
 
-Counts by folder: backlog 79 · in-progress 1 · qa 47 · blocked 2 · done 17 · discarded 5 = 151. *(Recontados sobre disco el 2026-09-07 por la sesión del timeout del CI, que aporta dos de los cambios: `el-job-de-tests-del-ci-no-tiene-timeout` pasa a done y entra `ci-workflow-cites-missing-testing-strategy` (hallazgo de camino, no suyo). Los otros cinco se midieron contra git en vez de suponerlos —`git diff --diff-filter=A bb90564a HEAD -- tickets/`—: son las cuatro altas de la review de `fx-pnl-education-card` más el propio `fx-pnl-education-card` pasando a `qa/`. La cuenta cierra: 146 + 4 + 1 = 151. **Esta línea lleva tres sesiones siendo la única desviada mientras la tabla de arriba cuadra fila a fila** — se recalcula sola con un `find`, así que el problema no es medirla sino acordarse.)*
+Counts by folder: backlog 80 · in-progress 1 · qa 47 · blocked 2 · done 17 · discarded 5 = 152. *(Recontados sobre disco el 2026-09-07 por la sesión del timeout del CI, que aporta dos de los cambios: `el-job-de-tests-del-ci-no-tiene-timeout` pasa a done y entra `ci-workflow-cites-missing-testing-strategy` (hallazgo de camino, no suyo). Los otros cinco se midieron contra git en vez de suponerlos —`git diff --diff-filter=A bb90564a HEAD -- tickets/`—: son las cuatro altas de la review de `fx-pnl-education-card` más el propio `fx-pnl-education-card` pasando a `qa/`. La cuenta cierra: 146 + 4 + 1 = 151. **Esta línea lleva tres sesiones siendo la única desviada mientras la tabla de arriba cuadra fila a fila** — se recalcula sola con un `find`, así que el problema no es medirla sino acordarse.)*
 
 Frank 2026-09-07 (timeout del CI + UI a nocturna): la suite entera de UI sale del PR y pasa a una
 corrida nocturna sobre `2.1`; el PR se queda con build + unit y **ya tiene tope de tiempo**, que era el

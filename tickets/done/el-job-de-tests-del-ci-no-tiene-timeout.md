@@ -172,6 +172,7 @@ otro extremo. Se distingue ahora con `UI_TOCABA`, que dice si a la UI le tocaba 
 
 - [x] El job `tests` tiene `timeout-minutes` explícito, elegido a partir de duraciones medidas —
       45 min en un PR y 150 en la nocturna, más un tope por paso. Sobre 39 runs, no sobre 4.
-- [x] Queda escrito cuánto tarda hoy la suite en CI (~80 min, muestra de 4 runs) — hecho el
-      2026-09-06 al abrir este ticket.
+- [x] Queda escrito cuánto tarda hoy la suite en CI. Escrito el 2026-09-06 como «~80 min» sobre 4
+      runs y **re-medido el 2026-09-07 sobre 39**, por paso: mediana del job **89** min, de los que
+      **67 son el paso de UI**. La cifra vieja no era falsa, era del objeto equivocado — ver arriba.
 - [x] Decidido si la suite completa de UI corre en cada PR o pasa a nocturno → **nocturno** (2026-09-06).

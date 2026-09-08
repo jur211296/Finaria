@@ -5,42 +5,43 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-07 (Lima)
 
-**Rama** `2.1` · HEAD `bd48c87f` — la ganancia y la pérdida por tipo de cambio ya tienen número, con
-su detalle por moneda.
+**Rama** `2.1` · HEAD `0f92a91d` — el CI ya no puede colgarse seis horas, y el PR da señal en un
+cuarto de hora.
 TestFlight build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.** `yala-app.pe` sirve la web
 nueva.
 
 ## Esta sesión, en una línea
 
-**La ganancia y la pérdida por tipo de cambio ya se ven** (PR #92, mergeado). Quien tiene dinero en
-varias monedas veía un saldo que no cuadraba con lo que recordaba haber ingresado; la diferencia es
-el tipo de cambio y hasta hoy era invisible. Ahora el Panel enseña una tarjeta con ese número y una
-frase en su idioma —«Tus dólares valen hoy un 8,6 % más que cuando entraron a tu cuenta»—, y al
-tocarla se abre el detalle por moneda: cuánto tienes, a qué cambio entró, a cuánto está hoy, cuánto
-vale ahora. Aparece poco a propósito: sólo con dinero en moneda extranjera y si el movimiento supera
-el 0,5 % de esa exposición. **Gratis**, como decidiste el 6-sep.
+**Esperar el CI de un PR pasa de hora y media a un cuarto de hora, y el CI ya no puede colgarse seis
+horas sin que nadie se entere** (PR #93, mergeado). El job de tests no tenía ningún tope de tiempo
+—ni él ni el workflow—, así que GitHub le aplicaba su default de **360 minutos**. Lo caro no era el
+gasto: era que **un cuelgue real resultaba indistinguible de una corrida lenta**, y como los tres
+pasos de test son advisory a propósito, el job acababa en verde igual. El único síntoma visible era
+un PR «pendiente» durante horas — justo el estado en el que se acaba mergeando sin esperar el check,
+que es lo que pasó en #92 anteayer.
 
-**La premisa del ticket era falsa en un punto y la comprobación costó un grep:** no existe sección
-«Para ti» —los siete casos de `PanelSectionKind` no la incluyen—, así que la tarjeta va suelta en el
-Panel. Lo que sí se confirmó, y es lo único que hace que la resta signifique algo, es que
-`amountInPreferredCurrency` guarda el valor al cambio del **día** de la transacción.
+La suite entera de UI **sale del PR y pasa a una corrida nocturna sobre `2.1`**, a las 03:17 de Lima,
+que avisa solo si hay rojo. La cobertura no se pierde, se mueve: el gate local ya corría los XCUITest
+de las áreas *tocadas* antes de cada commit, y ahora la suite **completa** corre a diario — cosa que
+antes no pasaba nunca entera sobre `2.1` salvo por accidente.
 
-**El cálculo cambió entero a media sesión, y ese es el titular técnico.** El primer diseño promediaba
-todos los movimientos de cada moneda. Parece equivalente y no lo es: comprar 1.000 USD a 3,00 y
-revenderlos arrastra el coste de 100 dólares comprados a 4,00, y la tarjeta **anuncia ganancia a
-quien ha perdido**. Y un traspaso entre cuentas propias movía el número de +300 a +33 por mover
-dinero de bolsillo. Reescrito a **FIFO por lotes**, excluyendo traspasos.
+**La cifra del ticket estaba corta y por eso se volvió a medir.** Decía «~80 min de media» sobre una
+muestra de **4 runs**; con **39** y leyendo los tiempos **por paso**, la mediana real del job es **89**
+y el paso de UI se lleva **67** de ellos — el 76 % del reloj. Pero el hallazgo que importaba es otro:
+en cuanto la decisión saca la UI del PR, el número que gobierna el tope **ya no es el del job entero**
+sino el de build+unit, que nadie había medido (p95 **27,2**, máximo **29,9**). El «alrededor de 120»
+que sugería el ticket habría sido un tope cuatro veces mayor que el peor caso real, o sea ninguno.
+⇒ una cifra puede ser correcta y aun así medir el objeto equivocado, y eso no se ve sin re-medirla.
 
-**La review adversarial (3 lentes) cazó diez defectos y todos eran míos**, dos de ellos capaces de
-cambiar el signo del número. El que más enseña: **mi primer arreglo heredó la forma del bug que
-arreglaba** — al ver que el importe guardado podía venir sellado contra otra moneda preferida, añadí
-un guard que **descartaba** esas transacciones citando once precedentes del repo; los precedentes
-**reconvierten** en su `else`. Me quedé con el `if` y tiré el `else`. Y descartar no es neutro: sesga
-la muestra hacia las transacciones más antiguas, que es donde el tipo de cambio era distinto.
+**Verificado en el CI real, no sólo en local:** el check de este PR cerró en **16 minutos** con el
+paso de UI en `skipped`, y un `workflow_dispatch` sobre el mismo commit **sí** lo arrancó — las dos
+direcciones probadas con dos eventos distintos del mismo workflow.
 
-**Y la localización me pilló repitiendo un incidente escrito.** Dejé `pt` en portugués europeo
-cuando el contrato dice que es copia de `pt-BR`; lo cazó `LocalizationParityTests`, que existe porque
-esa misma divergencia ya duró tres meses en 272 claves.
+**Y lo que casi rompo sin que nadie lo pidiera:** `outcome` vale `skipped` para dos cosas opuestas
+—«saltado a propósito» y «no llegó a correr»—, así que saltar la UI en los PR habría hecho que el
+aviso gritara «la suite NO llegó a correr» en **cada PR**. Un canal que grita cuando no pasa nada
+acaba silenciado, que es el mismo final que el canal mudo que ese bloque vino a arreglar, por el otro
+extremo.
 
 ## Te espera a ti
 
@@ -117,6 +118,14 @@ esa misma divergencia ya duró tres meses en 272 claves.
    tarde» del invitado.
 
 ## Abiertos
+
+**Del CI, dos cosas menores y ninguna urgente.** (1) La **primera nocturna de verdad** salta esta
+madrugada a las 03:17; la de hoy se lanzó a mano para verificarla y quedó corriendo. Si algo va mal,
+avisa sola — y si no llega ningún aviso, es que fue verde. (2) `ci-checkout-v4-runs-on-deprecated-node`
+(low): cada run deja un warning de Node 20 deprecado que GitHub ya está forzando a Node 24; son dos
+líneas y no corre prisa, pero el ruido permanente entrena a no mirar las anotaciones, que es donde
+este repo pone los avisos que sí importan. (3) `ci-workflow-cites-missing-testing-strategy` (low): el
+workflow manda tres veces a un documento que no está en el repo.
 
 **`in-progress` vacío.** Lo vivo espera la tanda de QA, hardware (los 2 de `blocked`) o **una decisión
 tuya** (4, las de arriba).
