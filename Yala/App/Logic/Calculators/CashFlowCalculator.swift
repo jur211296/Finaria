@@ -41,13 +41,23 @@ struct CashFlowSummary: Equatable {
     /// por el converter**: cuando la divisa de destino es la preferida se lee el
     /// `amountInPreferredCurrency` ya guardado, y entonces quien sabe si aquella conversión fue
     /// aproximada es el flag de la propia transacción.
+    ///
+    /// **No es un OR desde el 2026-09-08**: pide que el importe aproximado PESE sobre su lado. El
+    /// criterio es `ApproximateMarkThreshold`, compartido con el hero del Panel.
     let incomeAmountsAreApproximate: Bool
 
     /// Lo mismo para los GASTOS.
     let expenseAmountsAreApproximate: Bool
 
     /// Para el número que agrega los dos lados (`netFlow`, el «Disponible» del Panel).
-    var amountsAreApproximate: Bool { incomeAmountsAreApproximate || expenseAmountsAreApproximate }
+    ///
+    /// **No es el OR de los dos lados, y esa era una regresión real** (cazada por la review
+    /// adversarial del 2026-09-08 antes de mergear). Con umbrales por lado, un ingreso de 1.000.000
+    /// con 49.000 aproximados no marca —4,9 %— y un gasto exacto de 999.000 tampoco; el neto que se
+    /// pinta es **1.000**, con una incertidumbre 49 veces mayor que el propio número, y salía sin
+    /// «≈». El neto necesita su propio cociente: la incertidumbre de los dos lados **sumada** contra
+    /// el número que de verdad se muestra.
+    let amountsAreApproximate: Bool
 }
 
 struct CashFlowCalculator {
@@ -66,8 +76,17 @@ struct CashFlowCalculator {
 
         var totalIncome: Double = 0
         var totalExpense: Double = 0
-        var incomeApproximate = false
-        var expenseApproximate = false
+        // Numerador y denominador del umbral, los dos en MAGNITUDES sumadas y NO en netos.
+        //
+        // `totalIncome`/`totalExpense` no sirven de denominador porque llevan signo: un reembolso
+        // los encoge, y con ellos el cociente se dispara o se anula según qué transacción llevara el
+        // flag. Y el numerador con signo es peor todavía: dos aproximaciones opuestas se cancelan y
+        // el número sale limpio justo cuando menos lo está. Es la conclusión a la que ya llegó
+        // `FXPnLLogic` con su `exposedBase`.
+        var incomeApproximateMagnitude: Double = 0
+        var incomeTotalMagnitude: Double = 0
+        var expenseApproximateMagnitude: Double = 0
+        var expenseTotalMagnitude: Double = 0
 
         // 1. Process Transactions and Accumulate
         for tx in transactions {
@@ -107,10 +126,13 @@ struct CashFlowCalculator {
             }
 
             let isIncome = category.isIncome
+            let magnitude = abs(val)
             if isIncome {
-                incomeApproximate = incomeApproximate || isApproximate
+                incomeTotalMagnitude += magnitude
+                if isApproximate { incomeApproximateMagnitude += magnitude }
             } else {
-                expenseApproximate = expenseApproximate || isApproximate
+                expenseTotalMagnitude += magnitude
+                if isApproximate { expenseApproximateMagnitude += magnitude }
             }
 
             // Date Grouping key
@@ -169,8 +191,17 @@ struct CashFlowCalculator {
             netFlow: netFlow,
             chartData: chartData,
             currencyCode: currencyCode,
-            incomeAmountsAreApproximate: incomeApproximate,
-            expenseAmountsAreApproximate: expenseApproximate
+            incomeAmountsAreApproximate: ApproximateMarkThreshold.marks(
+                approximate: incomeApproximateMagnitude, total: incomeTotalMagnitude
+            ),
+            expenseAmountsAreApproximate: ApproximateMarkThreshold.marks(
+                approximate: expenseApproximateMagnitude, total: expenseTotalMagnitude
+            ),
+            // El neto: incertidumbre de los DOS lados sumada, contra el número que se muestra.
+            amountsAreApproximate: ApproximateMarkThreshold.marks(
+                approximate: incomeApproximateMagnitude + expenseApproximateMagnitude,
+                total: netFlow
+            )
         )
     }
 }

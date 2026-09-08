@@ -135,8 +135,10 @@ struct ApproximateAmountMarkTests {
         )
 
         #expect(summary.expenseAmountsAreApproximate, """
-            El total suma las seis, así que un solo sumando aproximado lo vuelve aproximado. La marca
-            es una propiedad del número que se muestra, no de la mayoría de sus partes.
+            Una de seis con el mismo importe pesa un 16,7 %, muy por encima del 5 % que pide
+            `ApproximateMarkThreshold` desde el 2026-09-08. Este test sigue verde con el criterio
+            nuevo, y por eso NO sirve para demostrarlo: el que lo demuestra es
+            `oneTinyProvisionalAmongMany_doesNotMark`, más abajo.
             """)
     }
 
@@ -195,7 +197,15 @@ struct ApproximateAmountMarkTests {
             El total de ingresos no incluye ese gasto. Marcarlo sería decirle al usuario que un
             número exacto es dudoso, que erosiona la marca igual que no ponerla.
             """)
-        #expect(summary.amountsAreApproximate, "y el neto, que sí agrega los dos, va marcado")
+        // Antes del umbral esta línea decía `#expect(summary.amountsAreApproximate)`: con el OR,
+        // cualquier aproximación marcaba el neto. Con el criterio del 2026-09-08 el neto son 4.900 y
+        // la incertidumbre 100 —un 2 %—, así que NO se marca, que es exactamente lo que se decidió.
+        // El caso contrario (neto pequeño entre dos lados grandes) lo cubre
+        // `cashFlow_smallNet_betweenTwoLargeSides_marks`.
+        #expect(!summary.amountsAreApproximate, """
+            100 de incertidumbre sobre un neto de 4.900 es un 2 %: por debajo del umbral. Marcarlo
+            sería volver al «≈» que sale siempre.
+            """)
     }
 
     @Test("Un ingreso aproximado no marca el total de gastos")
@@ -407,4 +417,249 @@ struct ApproximateAmountMarkTests {
 
         #expect(!breakdown.amountsAreApproximate)
     }
+
+    // MARK: - El umbral: la marca hay que ganársela (decisión 2026-09-08)
+
+    /// **Este es el test que demuestra el cambio, y el único.** Con el OR anterior salía marcado;
+    /// con el umbral no. Los demás de este fichero pasan con los dos criterios porque usan importes
+    /// iguales, donde una de seis ya pesa un 16,7 %.
+    ///
+    /// El caso es el del ticket: un usuario multidivisa edita la nota de una transacción vieja de 5
+    /// —cuya fila de tasas es parcial— y el mes entero, de 1.000, se le queda con «≈».
+    @Test("Una aproximada que no pesa NO marca el total del período")
+    func cashFlow_oneTinyProvisionalAmongMany_doesNotMark() {
+        let account = makeAccount()
+        let category = makeCategory()
+        let interval = monthInterval(2026, 4)
+        // 5 de 1.005 = 0,5 % ⇒ por debajo del 5 %.
+        var txs = [makeStoredTx(
+            amount: -5, date: day(2026, 4, 1),
+            account: account, category: category, provisional: true
+        )]
+        txs += (2...6).map {
+            makeStoredTx(amount: -200, date: day(2026, 4, $0), account: account, category: category, provisional: false)
+        }
+
+        let summary = CashFlowCalculator.calculateCashFlow(
+            transactions: txs, interval: interval, grouping: .day,
+            currencyCode: "USD", converter: MockCurrencyConverter()
+        )
+
+        #expect(!summary.expenseAmountsAreApproximate, """
+            Marcar de más erosiona la marca igual que no ponerla: si el «≈» sale casi siempre, el
+            usuario aprende a ignorarlo. 0,5 % del mes no cambia lo que ese número le dice.
+            """)
+    }
+
+    @Test("La misma aproximada, cuando SÍ pesa, marca")
+    func cashFlow_provisionalOverThreshold_marks() {
+        let account = makeAccount()
+        let category = makeCategory()
+        let interval = monthInterval(2026, 4)
+        // 100 de 1.100 = 9,1 % ⇒ por encima del 5 %.
+        var txs = [makeStoredTx(
+            amount: -100, date: day(2026, 4, 1),
+            account: account, category: category, provisional: true
+        )]
+        txs += (2...6).map {
+            makeStoredTx(amount: -200, date: day(2026, 4, $0), account: account, category: category, provisional: false)
+        }
+
+        let summary = CashFlowCalculator.calculateCashFlow(
+            transactions: txs, interval: interval, grouping: .day,
+            currencyCode: "USD", converter: MockCurrencyConverter()
+        )
+
+        #expect(summary.expenseAmountsAreApproximate)
+    }
+
+    /// El gemelo para el hero del Panel, que es el número grande del ticket.
+    @Test("En el hero, una aproximada que no pesa NO marca el mes")
+    func heroBuckets_tinyProvisional_doesNotMark() {
+        let account = makeAccount()
+        let category = makeCategory()
+        let period = monthInterval(2026, 4)
+        var txs = [makeStoredTx(
+            amount: -5, date: day(2026, 4, 1),
+            account: account, category: category, provisional: true
+        )]
+        txs += (2...6).map {
+            makeStoredTx(amount: -200, date: day(2026, 4, $0), account: account, category: category, provisional: false)
+        }
+
+        let buckets = HeroBucketsCalculator.calculate(
+            transactions: txs,
+            monthInterval: period,
+            prevInterval: monthInterval(2026, 3),
+            periodInterval: period,
+            eligibleAccountIDs: [account.persistentModelID]
+        )
+
+        #expect(!buckets.periodExpenseApproximate)
+        #expect(!buckets.periodIncomeApproximate)
+    }
+
+    // MARK: - Los bordes del umbral, en la unidad donde se decide
+
+    @Test("Sin nada aproximado no se marca, ni siquiera con el total en cero")
+    func threshold_noApproximate_neverMarks() {
+        #expect(!ApproximateMarkThreshold.marks(approximate: 0, total: 1000))
+        // El caso que blinda al usuario monomoneda: total cero Y aproximado cero. Si el orden de las
+        // guardas se invirtiera, éste caería en «denominador inservible» y marcaría un número en el
+        // que no hubo ninguna conversión.
+        #expect(!ApproximateMarkThreshold.marks(approximate: 0, total: 0))
+    }
+
+    @Test("Con el denominador en cero se marca: no se puede medir la proporción, así que se avisa")
+    func threshold_zeroDenominator_marks() {
+        // Pasa de verdad: los totales se acumulan CON SIGNO, así que un reembolso que cancela su
+        // gasto deja el lado en ~0 con transacciones dentro.
+        #expect(ApproximateMarkThreshold.marks(approximate: 50, total: 0))
+        #expect(ApproximateMarkThreshold.marks(approximate: 50, total: 0.001))
+    }
+
+    @Test("El umbral es inclusivo y decide sobre magnitudes")
+    func threshold_boundaryAndSign() {
+        #expect(ApproximateMarkThreshold.marks(approximate: 50, total: 1000))    // 5,0 % → marca
+        #expect(!ApproximateMarkThreshold.marks(approximate: 49, total: 1000))   // 4,9 % → no
+        // El signo no decide nada **a propósito**: los dos argumentos son magnitudes sumadas, y el
+        // caller es responsable de acumularlas así. Un neto puede llegar negativo (mes en rojo) y no
+        // cambia la respuesta.
+        #expect(ApproximateMarkThreshold.marks(approximate: -50, total: -1000))
+        #expect(ApproximateMarkThreshold.marks(approximate: 50, total: -1000))
+    }
+
+    @Test("Un 5 % exacto marca aunque la división en coma flotante diga que no llega")
+    func threshold_inclusiveBoundary_survivesFloatingPoint() {
+        // `0.15 / 3.0` = 0.049999999999999996 en `Double`: con un cociente, este caso NO marcaría
+        // pese a ser exactamente el 5 %. Por eso la comparación es una multiplicación.
+        #expect(ApproximateMarkThreshold.marks(approximate: 0.15, total: 3.0))
+    }
+
+    @Test("El numerador también tiene suelo: un residuo de coma flotante no marca")
+    func threshold_numeratorNoiseFloor() {
+        // Sin suelo en el numerador, una cancelación que deja 1e-15 pasaría un `> 0`, caería en la
+        // guarda del denominador y marcaría; la misma cancelación exacta no. Dos respuestas para el
+        // mismo caso de usuario según cómo cayeran los decimales.
+        #expect(!ApproximateMarkThreshold.marks(approximate: 1e-15, total: 0))
+        #expect(!ApproximateMarkThreshold.marks(approximate: 0.001, total: 1000))
+    }
+
+    // MARK: - Lo que cazó la review adversarial antes de mergear (2026-09-08)
+
+    /// **La regresión más cara de este cambio, y no la vio ningún test hasta que se escribió éste.**
+    ///
+    /// Con umbrales por lado y el neto compuesto como `income || expense`, dos lados grandes cada uno
+    /// por debajo del 5 % dejaban el «Disponible» **sin marca**, aunque la incertidumbre fuera
+    /// muchísimo mayor que el propio número. Con el OR anterior sí salía marcado: era una regresión.
+    @Test("Dos lados bajo el umbral con un neto pequeño SÍ marcan el disponible")
+    func cashFlow_smallNet_betweenTwoLargeSides_marks() {
+        let account = makeAccount()
+        let income = makeCategory(isIncome: true)
+        let expense = makeCategory()
+        let interval = monthInterval(2026, 4)
+
+        // Ingreso 1.000.000 con 49.000 aproximados = 4,9 % ⇒ el lado no marca.
+        var txs = [makeStoredTx(amount: 49_000, date: day(2026, 4, 1),
+                                account: account, category: income, provisional: true)]
+        txs.append(makeStoredTx(amount: 951_000, date: day(2026, 4, 2),
+                                account: account, category: income, provisional: false))
+        // Gasto 999.000 exacto ⇒ el lado no marca. Neto = 1.000.
+        txs.append(makeStoredTx(amount: -999_000, date: day(2026, 4, 3),
+                                account: account, category: expense, provisional: false))
+
+        let summary = CashFlowCalculator.calculateCashFlow(
+            transactions: txs, interval: interval, grouping: .day,
+            currencyCode: "USD", converter: MockCurrencyConverter()
+        )
+
+        #expect(!summary.incomeAmountsAreApproximate, "4,9 % del ingreso no llega al umbral")
+        #expect(!summary.expenseAmountsAreApproximate, "el gasto es exacto")
+        #expect(summary.amountsAreApproximate, """
+            El «Disponible» son 1.000 y la incertidumbre 49.000: 49 veces el número que se muestra.
+            Es el caso donde la marca más falta, y el OR de los dos lados la apagaba.
+            """)
+    }
+
+    /// Dos aproximaciones opuestas **no se cancelan**: la incertidumbre se suma.
+    @Test("Un gasto aproximado y su reembolso aproximado marcan, aunque el neto quede en cero")
+    func cashFlow_approximateRefundCancelsTotal_stillMarks() {
+        let account = makeAccount()
+        let category = makeCategory()
+        let interval = monthInterval(2026, 4)
+        let txs = [
+            makeStoredTx(amount: -200, date: day(2026, 4, 1),
+                         account: account, category: category, provisional: true),
+            // El reembolso también salió de una tasa dudosa.
+            makeStoredTx(amount: 200, date: day(2026, 4, 2),
+                         account: account, category: category, provisional: true),
+        ]
+
+        let summary = CashFlowCalculator.calculateCashFlow(
+            transactions: txs, interval: interval, grouping: .day,
+            currencyCode: "USD", converter: MockCurrencyConverter()
+        )
+
+        #expect(summary.expenseAmountsAreApproximate, """
+            Con numerador y denominador acumulados CON SIGNO, éste salía sin marcar: 0/0. Y peor —
+            si el reembolso hubiera sido exacto SÍ marcaba, así que la respuesta dependía de a cuál
+            de las dos transacciones le tocó el flag. Indefendible de cara al usuario.
+            """)
+    }
+
+    @Test("La incertidumbre no se cancela: 1.000 aprox y 900 aprox pesan 1.900, no 100")
+    func cashFlow_oppositeApproximations_doNotNetOut() {
+        let account = makeAccount()
+        let category = makeCategory()
+        let interval = monthInterval(2026, 4)
+        var txs = [
+            makeStoredTx(amount: -1000, date: day(2026, 4, 1),
+                         account: account, category: category, provisional: true),
+            makeStoredTx(amount: 900, date: day(2026, 4, 2),
+                         account: account, category: category, provisional: true),
+        ]
+        // Y mucho gasto exacto alrededor, para que un numerador con signo (100) quedara por debajo
+        // del 5 % y uno honesto (1.900) lo supere.
+        txs += (3...6).map {
+            makeStoredTx(amount: -2000, date: day(2026, 4, $0), account: account, category: category, provisional: false)
+        }
+
+        let summary = CashFlowCalculator.calculateCashFlow(
+            transactions: txs, interval: interval, grouping: .day,
+            currencyCode: "USD", converter: MockCurrencyConverter()
+        )
+
+        #expect(summary.expenseAmountsAreApproximate, """
+            Es la misma conclusión de `FXPnLLogic` con su `exposedBase = Σ|costBasis|`: los errores
+            de dos conversiones distintas no se restan entre sí.
+            """)
+    }
+
+    @Test("El hero también marca el disponible cuando el neto es pequeño entre dos lados grandes")
+    func heroBuckets_smallNet_marksAvailable() {
+        let account = makeAccount()
+        let income = makeCategory(isIncome: true)
+        let expense = makeCategory()
+        let period = monthInterval(2026, 4)
+
+        var txs = [makeStoredTx(amount: 49_000, date: day(2026, 4, 1),
+                                account: account, category: income, provisional: true)]
+        txs.append(makeStoredTx(amount: 951_000, date: day(2026, 4, 2),
+                                account: account, category: income, provisional: false))
+        txs.append(makeStoredTx(amount: -999_000, date: day(2026, 4, 3),
+                                account: account, category: expense, provisional: false))
+
+        let buckets = HeroBucketsCalculator.calculate(
+            transactions: txs,
+            monthInterval: period,
+            prevInterval: monthInterval(2026, 3),
+            periodInterval: period,
+            eligibleAccountIDs: [account.persistentModelID]
+        )
+
+        #expect(!buckets.periodIncomeApproximate)
+        #expect(!buckets.periodExpenseApproximate)
+        #expect(buckets.periodNetApproximate, "«Disponible» = 1.000 con 49.000 de incertidumbre")
+    }
+
 }

@@ -53,7 +53,8 @@ extension CashFlowSummary {
             currencyCode: "USD",
             // Datos sintéticos de preview: monomoneda, sin conversión que juzgar.
             incomeAmountsAreApproximate: false,
-            expenseAmountsAreApproximate: false
+            expenseAmountsAreApproximate: false,
+            amountsAreApproximate: false
         )
     }
 }

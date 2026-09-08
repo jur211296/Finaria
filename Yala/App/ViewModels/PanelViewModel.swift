@@ -174,7 +174,12 @@ struct PanelHeroPeriodData: Equatable {
     var incomeApproximate: Bool = false
     var expenseApproximate: Bool = false
     /// Para `available`, que resta un lado del otro.
-    var amountsAreApproximate: Bool { incomeApproximate || expenseApproximate }
+    ///
+    /// **Ya no es `income || expense`** (2026-09-08): con umbrales por lado ese OR se apagaba
+    /// justo en el caso peligroso — dos lados grandes, cada uno por debajo del 5 %, y un
+    /// «Disponible» pequeño con una incertidumbre mayor que él mismo. Lo calcula
+    /// `HeroBucketsCalculator` contra el número que se pinta.
+    var amountsAreApproximate: Bool = false
 }
 
 @MainActor
@@ -2937,6 +2942,7 @@ final class PanelViewModel {
         newPeriod.periodPrevExpense = periodPrevInterval == nil ? nil : buckets.periodPrevExpense
         newPeriod.incomeApproximate = buckets.periodIncomeApproximate
         newPeriod.expenseApproximate = buckets.periodExpenseApproximate
+        newPeriod.amountsAreApproximate = buckets.periodNetApproximate
         if newPeriod != heroPeriodWidget { heroPeriodWidget = newPeriod }
 
         let totalMonthlyBudget = budgets

@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (174)
+## Index (176)
 
 | id | status | path |
 |----|--------|------|
@@ -38,9 +38,10 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | apple-watch | backlog | tickets/backlog/apple-watch.md |
 | applepay-shortcut-warm-launch-empty-data | qa | tickets/qa/applepay-shortcut-warm-launch-empty-data.md |
 | apppreferences-rewritten-on-launch | blocked | tickets/blocked/apppreferences-rewritten-on-launch.md |
-| approximate-mark-ors-over-whole-period | backlog | tickets/backlog/approximate-mark-ors-over-whole-period.md |
+| approximate-mark-ors-over-whole-period | qa | tickets/qa/approximate-mark-ors-over-whole-period.md |
 | appstorage-onboarding-desarma-el-aislamiento-de-tests | backlog | tickets/backlog/appstorage-onboarding-desarma-el-aislamiento-de-tests.md |
 | aviso-de-nuevo-miembro-no-llega-hasta-abrir-la-app | qa | tickets/qa/aviso-de-nuevo-miembro-no-llega-hasta-abrir-la-app.md |
+| bridge-de-grupos-pierde-la-marca-de-sus-patas | backlog | tickets/backlog/bridge-de-grupos-pierde-la-marca-de-sus-patas.md |
 | budget-days-left-counts-today | backlog | tickets/backlog/budget-days-left-counts-today.md |
 | budget-tied-to-income-or-expense | backlog | tickets/backlog/budget-tied-to-income-or-expense.md |
 | bulk-update-account-leaves-converted-amount-stale | backlog | tickets/backlog/bulk-update-account-leaves-converted-amount-stale.md |
@@ -72,6 +73,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | distribution-balance-kpi-skips-fx | qa | tickets/qa/distribution-balance-kpi-skips-fx.md |
 | dmarc-sube-la-politica-tras-observar | backlog | tickets/backlog/dmarc-sube-la-politica-tras-observar.md |
 | doble-conteo-dia1-previo-thismonth | done | tickets/done/doble-conteo-dia1-previo-thismonth.md |
+| dos-criterios-de-aproximado-en-la-misma-pantalla | backlog | tickets/backlog/dos-criterios-de-aproximado-en-la-misma-pantalla.md |
 | edgecases-extreme-minimum-flaky-under-load | backlog | tickets/backlog/edgecases-extreme-minimum-flaky-under-load.md |
 | el-job-de-tests-del-ci-no-tiene-timeout | done | tickets/done/el-job-de-tests-del-ci-no-tiene-timeout.md |
 | el-saldo-de-distribucion-no-se-entera-de-un-registro-nuevo | backlog | tickets/backlog/el-saldo-de-distribucion-no-se-entera-de-un-registro-nuevo.md |
@@ -115,13 +117,13 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | groups-join-intent-reconciler | blocked | tickets/blocked/groups-join-intent-reconciler.md |
 | groups-leave-rpc-error-10 | qa | tickets/qa/groups-leave-rpc-error-10.md |
 | groups-log-expense-via-chat-voice | backlog | tickets/backlog/groups-log-expense-via-chat-voice.md |
-| groups-owner-debt-no-heir-dead-end | backlog | tickets/backlog/groups-owner-debt-no-heir-dead-end.md |
+| groups-owner-debt-no-heir-dead-end | qa | tickets/qa/groups-owner-debt-no-heir-dead-end.md |
 | groups-owner-transfer-and-leave | qa | tickets/qa/groups-owner-transfer-and-leave.md |
 | groups-pending-member-can-open-group | qa | tickets/qa/groups-pending-member-can-open-group.md |
 | groups-pending-member-sees-detail-chrome | backlog | tickets/backlog/groups-pending-member-sees-detail-chrome.md |
 | groups-reconnect-prune-or-rewire | done | tickets/done/groups-reconnect-prune-or-rewire.md |
 | groups-settlement-reminder | qa | tickets/qa/groups-settlement-reminder.md |
-| groups-settlement-reminder-discoverability | backlog | tickets/backlog/groups-settlement-reminder-discoverability.md |
+| groups-settlement-reminder-discoverability | qa | tickets/qa/groups-settlement-reminder-discoverability.md |
 | groups-settlement-reminder-stale-clock | backlog | tickets/backlog/groups-settlement-reminder-stale-clock.md |
 | groups-shareable-summary | qa | tickets/qa/groups-shareable-summary.md |
 | groups-stats-no-deduplica-gastos | backlog | tickets/backlog/groups-stats-no-deduplica-gastos.md |

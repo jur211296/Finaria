@@ -111,6 +111,20 @@ struct NotificationPrimerSheet: View {
                     // el `local.set` por dentro, así que `BudgetAlertService` lee lo mismo que antes.
                     PreferenceSyncService.shared.set(
                         bool: true, forKey: AppPreferences.Keys.budgetAlertsEnabled)
+                    // Y el recordatorio de deudas de Grupos, por la MISMA vía y por el mismo motivo.
+                    //
+                    // Decisión de Jürgen (2026-09-08), ticket
+                    // `groups-settlement-reminder-discoverability`: nació con el default `false`
+                    // copiado de `budgetAlertsEnabled` —correcto: es el único aviso que habla del
+                    // dinero que le debes a otra persona, y encenderlo sin pedirlo convertiría una
+                    // actualización en un cobro sorpresa— pero **se copió el default sin copiar el
+                    // encendido**, y ese encendido es justo lo que hace inocuo al default. Resultado:
+                    // un feature construido, correcto y pinneado que no recibía prácticamente nadie.
+                    //
+                    // Aquí el usuario está diciendo «sí, avísame»; el consentimiento sigue siendo
+                    // real porque el toggle queda visible y apagable en Ajustes.
+                    PreferenceSyncService.shared.set(
+                        bool: true, forKey: AppPreferences.Keys.groupSettlementRemindersEnabled)
                 } catch {
                     #if DEBUG
                     print("NotificationPrimerSheet: Error activating notifications: \(error)")

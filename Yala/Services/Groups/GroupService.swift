@@ -989,7 +989,8 @@ final class GroupService {
             activeCoMemberCount: activeCoMembers.count,
             eligibleHeirCount: heirs.count,
             groupHasOutstandingDebt: groupHasOutstandingDebt,
-            serverRefusedTransfer: serverRefusedTransfer)
+            serverRefusedTransfer: serverRefusedTransfer,
+            isArchived: group.isArchived)
         return (GroupOwnerExitLogic.offer(facts), GroupOwnerExitLogic.designatedHeir(from: heirs))
     }
 

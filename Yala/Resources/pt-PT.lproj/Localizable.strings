@@ -4959,3 +4959,9 @@
 
 /* G14: confirmacion de quitar el presupuesto */
 "groups.budget.removeConfirm" = "Remover o orçamento do grupo? Deixa de aparecer para todos.";
+
+/* Shown instead of the settlement reminders hint when the Groups notification master is off, so the toggle cannot deliver anything. */
+"notifications.settlementReminders.hintGroupsOff" = "Para os receber, ative primeiro os avisos de Grupos";
+
+/* Delete-blocked hint for a group owner with debt and no heir: points at Archive, which already works with debt. */
+"groups.settings.deleteGroupDisabledHintArchive" = "Há saldos pendentes no grupo. Se quiser tirá-lo da lista, arquive-o: as dívidas são mantidas.";

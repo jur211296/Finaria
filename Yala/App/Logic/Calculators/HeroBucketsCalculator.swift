@@ -52,8 +52,20 @@ enum HeroBucketsCalculator {
         /// Aquí no hay converter que consultar: este calculador suma `amountInPreferredCurrency`,
         /// que se convirtió al guardarse. Quien sabe si aquella tasa era la del día es el flag de la
         /// propia transacción, y por eso es la única fuente de verdad de esta señal.
+        ///
+        /// **No es un OR desde el 2026-09-08**: se enciende cuando el importe aproximado PESA sobre
+        /// su lado — el criterio vive en `ApproximateMarkThreshold`, no aquí. Antes bastaba una
+        /// transacción entre mil para marcar el mes entero.
         let periodIncomeApproximate: Bool
         let periodExpenseApproximate: Bool
+        /// Para «Disponible» (`periodIncome - periodExpense`), que **resta un lado del otro**.
+        ///
+        /// No es el OR de los dos de arriba, y esa era una regresión real: con umbrales por lado, un
+        /// ingreso grande con un 4,9 % aproximado no marca y un gasto exacto casi igual tampoco, y el
+        /// «Disponible» que queda puede ser más pequeño que la propia incertidumbre. Aquí el
+        /// numerador es la incertidumbre de los dos lados SUMADA y el denominador es el número que
+        /// de verdad se pinta.
+        let periodNetApproximate: Bool
     }
 
     static func calculate(
@@ -72,8 +84,11 @@ enum HeroBucketsCalculator {
         var periodIncome: Double = 0
         var periodExpense: Double = 0
         var periodPrevExpense: Double = 0
-        var periodIncomeApproximate = false
-        var periodExpenseApproximate = false
+        // Numerador del umbral, por lado. Aquí `amount` ya es `abs(...)` (línea de abajo), así que
+        // `periodIncome`/`periodExpense` son sumas de magnitudes y sirven de denominador tal cual —
+        // a diferencia de `CashFlowCalculator`, que acumula con signo y necesita los suyos aparte.
+        var periodIncomeApproximateAmount: Double = 0
+        var periodExpenseApproximateAmount: Double = 0
 
         for tx in transactions where tx.balanceAdjustmentType == nil {
             guard let account = tx.account,
@@ -99,10 +114,10 @@ enum HeroBucketsCalculator {
             if periodInterval.contains(tx.date) {
                 if isIncome {
                     periodIncome += amount
-                    periodIncomeApproximate = periodIncomeApproximate || tx.isExchangeRateProvisional
+                    if tx.isExchangeRateProvisional { periodIncomeApproximateAmount += amount }
                 } else {
                     periodExpense += amount
-                    periodExpenseApproximate = periodExpenseApproximate || tx.isExchangeRateProvisional
+                    if tx.isExchangeRateProvisional { periodExpenseApproximateAmount += amount }
                 }
             }
 
@@ -131,8 +146,16 @@ enum HeroBucketsCalculator {
             periodIncome: periodIncome,
             periodExpense: periodExpense,
             periodPrevExpense: periodPrevExpense,
-            periodIncomeApproximate: periodIncomeApproximate,
-            periodExpenseApproximate: periodExpenseApproximate
+            periodIncomeApproximate: ApproximateMarkThreshold.marks(
+                approximate: periodIncomeApproximateAmount, total: periodIncome
+            ),
+            periodExpenseApproximate: ApproximateMarkThreshold.marks(
+                approximate: periodExpenseApproximateAmount, total: periodExpense
+            ),
+            periodNetApproximate: ApproximateMarkThreshold.marks(
+                approximate: periodIncomeApproximateAmount + periodExpenseApproximateAmount,
+                total: periodIncome - periodExpense
+            )
         )
     }
 

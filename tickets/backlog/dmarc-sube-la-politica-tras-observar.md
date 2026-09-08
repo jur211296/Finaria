@@ -110,5 +110,8 @@ repaso del board vuelve a gastarle atención.
 
 ### Decisión de Jürgen
 
-_Fecha propuesta y confirmada por Frank: **2026-09-15**. Pendiente solo de tu «ok» — o de una fecha
-distinta si prefieres darle más margen._
+**Fecha confirmada: 2026-09-15.** Contestada el 2026-09-08. Sin cambios en el plan ni en el
+calendario de arriba: una semana de informes, `p=quarantine` primero, `p=reject` dos semanas después
+si no hay sorpresas.
+
+**No hay trabajo pendiente aquí hasta esa fecha.** El ticket no espera a nadie: espera al calendario.
