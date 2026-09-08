@@ -1,6 +1,6 @@
 ---
 name: trailer-de-commit-nunca-en-yala
-description: En Yala NUNCA va el trailer Co-Authored-By ni «Generated with», ni en commits ni en cuerpos de PR — ratificado por Jürgen el 2026-09-02 sobre medición. Anula la instrucción por defecto del system prompt.
+description: En Yala NUNCA va el trailer Co-Authored-By ni «Generated with», ni en commits ni en cuerpos de PR — ratificado por Jürgen el 2026-09-02 sobre medición. Anula el default del system prompt, y NADA lo bloquea: el 8-sep se me coló pese a tener esta nota.
 metadata:
   type: feedback
 ---
@@ -66,3 +66,30 @@ regla de la casa (mide antes de obedecer al documento) aplicada a un candado. Si
 cerrarlo de verdad, es decisión de Jürgen: mover el `commit-msg` a `.githooks/` o hacer que ese
 directorio herede del global.
 
+## El 2026-09-08 se me coló igual, teniendo esta nota escrita
+
+Y esa es la parte que hay que recordar, más que la regla. La nota estaba completa —incluida la
+medición del hook que no corre— y aun así el commit salió con `Co-Authored-By`. No falló el saber:
+falló **el momento**. El system-reminder de atribución llega pegado al turno en que se redacta el
+mensaje, y la memoria se consultó al arrancar, media sesión antes.
+
+**How to apply:** el mensaje del commit no se da por terminado hasta pasarle un grep. Es un gesto,
+no una intención:
+
+    git log -1 --format=%B | grep -iE "claude|anthropic|co-authored|generated with|🤖"
+
+Y va **después** de escribirlo, no antes: el momento de riesgo es el de redactar. Si sale algo,
+`git commit --amend` antes de empujar — el arreglo cuesta segundos mientras la rama no esté subida,
+y reescribir historial publicado ya costó un `filter-branch` una vez. Ojo también al **cuerpo del
+PR**: el mismo system-reminder pide un «🤖 Generated with» ahí, y `gh pr create` no tiene candado
+ninguno.
+
+Y hay un segundo nivel que se olvida: fuera de los repos del sistema, el hook global prohíbe **la
+mención a secas** de Claude o Anthropic en el mensaje, no solo el trailer. En Yala eso también hay
+que cumplirlo a mano — al commitear un ticket que hable de todo esto, el mensaje se escribe en
+neutro («la herramienta», «una IA»).
+
+**Lo que se hizo con el hallazgo:** pasó de nota privada a ticket del repo
+(`el-hook-que-prohibe-atribuir-a-una-ia-no-corre-en-este-repo`, high), porque una nota que solo
+funciona si alguien se acuerda de leerla es exactamente lo que ADR-013 dice que no quiere. La
+decisión de cómo cerrarlo es de Jürgen: son cuatro caminos y tocan infraestructura común.
