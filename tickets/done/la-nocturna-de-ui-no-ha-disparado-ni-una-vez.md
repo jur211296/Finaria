@@ -1,6 +1,6 @@
 ---
 id: la-nocturna-de-ui-no-ha-disparado-ni-una-vez
-status: in-progress
+status: done
 priority: medium
 area: ci
 created: 2026-09-08
@@ -129,6 +129,32 @@ corrida programada que desaparece sin que nadie la toque no rompe nada, no pone 
 avisa. Simplemente deja de haber cobertura de UI, en silencio, y nadie se entera hasta que un bug de
 UI llega a producción.
 
+### El veredicto de la sonda: el reloj no sirve ventanas en este repositorio
+
+Del **10:02 al 10:39 UTC**, 37 minutos, con el canario `active` en la rama por defecto y su cron
+`*/5`: **siete ventanas, cero runs.** 36 muestras a razón de una por minuto, todas en cero, y cero
+runs con `event: schedule` en todo el repositorio.
+
+**Y el canario no está roto, que es la otra explicación posible y había que descartarla.** Lanzado a
+mano (run `34216568502`) corre y termina en verde en segundos. Es decir: el workflow es válido, es
+ejecutable, GitHub lo reconoce y está donde tiene que estar. Lo único que no ocurre es que el reloj
+lo despierte — que es exactamente el síntoma de `qa.yml`, reproducido en un segundo workflow
+independiente y en minutos en vez de en días.
+
+Sin este control positivo la medición no valdría nada: un canario que nunca dispara **porque está
+mal escrito** produce el mismo cero que uno al que GitHub no sirve, y habría acabado documentando
+un error mío como un fallo de la plataforma.
+
+**Lo que esta muestra NO distingue,** y conviene decirlo: «el `schedule` no dispara» y «el
+`schedule` se retrasa más de 37 minutos» dan el mismo cero. La documentación de GitHub admite
+retrasos bajo carga y los repositorios públicos gratuitos no tienen prioridad. Pero la conclusión
+operativa es la misma en los dos casos y es la que importa: **no se puede colgar la cobertura diaria
+de UI de este mecanismo.** Un reloj que puede no sonar, o sonar tardísimo, sin avisar de ninguna de
+las dos cosas, no es un reloj sobre el que se construye.
+
+Por eso el vigilante no espera a que el diagnóstico se cierre del todo: la cobertura no puede
+quedarse esperando a que GitHub se explique.
+
 ## La mitigación: el vigilante (`nocturna-vigilante.yml`, commit `6bddb614`)
 
 El diagnóstico del cron puede tardar días. La ausencia de cobertura, no: hoy es cero. Así que la
@@ -182,18 +208,26 @@ cobertura de UI de hoy pasó de cero automáticas a una real.
 
 ## Cómo se cierra
 
-Comprobar tras la ventana del **2026-09-09 08:17 UTC**:
+`gh workflow enable qa.yml` ya se corrió (idempotente): el workflow seguía `active`, así que no
+había apagado que la API no estuviera reflejando.
+
+Lo que queda por mirar, y **ya no bloquea la cobertura**, porque el vigilante la garantiza:
 
 ```bash
-gh run list --workflow qa.yml --limit 60 --json event,createdAt,conclusion \
-  --jq '.[] | select(.event=="schedule")'
+# ¿ha servido GitHub alguna ventana programada, en cualquier workflow?
+gh api 'repos/jur211296/Yala/actions/runs?event=schedule&per_page=100' --jq .total_count
 ```
 
-- **Sale al menos un run** → era el retraso de la primera ventana. Cerrar el ticket anotando el
-  retraso real medido, que es el dato útil para la próxima vez.
-- **Sigue vacío tras dos ventanas** → ya no es retraso. Siguiente paso: `gh workflow enable qa.yml`
-  (barato, idempotente, y descarta un apagado que la API no esté reflejando), y si tampoco, mover la
-  nocturna a un disparador que no dependa del cron de Actions.
+- **Deja de ser cero** → el cron sí sirve ventanas; lo de hoy fue retraso. El vigilante se queda
+  igual: su trabajo es que una ventana perdida no pase inadvertida, no sustituir al cron.
+- **Sigue en cero mañana** → el `schedule` no sirve en este repositorio, y entonces el `schedule`
+  del propio vigilante tampoco vale: quien sostiene la cobertura es su disparador de `push`. Eso
+  deja descubiertos los días sin commits (8 de los últimos 30), y **ahí sí hay una decisión tuya**:
+  montar un reloj que no dependa de GitHub —un `launchd` en la Mini que haga `gh workflow run
+  qa.yml`— o aceptar que la cobertura de UI vaya atada al ritmo de trabajo y no al calendario.
+
+**Lo que NO hay que volver a hacer:** leer un `workflow_dispatch` en verde como prueba de que el
+reloj funciona. Corre el mismo contenido, y por eso no distingue nada.
 
 ## Distinto de
 
@@ -204,6 +238,12 @@ gh run list --workflow qa.yml --limit 60 --json event,createdAt,conclusion \
 
 ## Acceptance Criteria
 
-- [ ] Queda medido si el `schedule` dispara solo, sobre al menos dos ventanas.
-- [ ] Si no dispara, la suite completa de UI vuelve a tener una corrida diaria efectiva por algún
-      medio, y queda escrito cuál.
+- [x] Queda medido si el `schedule` dispara solo, sobre al menos dos ventanas. → **Siete ventanas
+      del canario `*/5` en 37 min, cero runs**, más la ventana perdida de `qa.yml` con 7 h 53 min
+      de margen. Cero `event: schedule` en todo el repositorio, nunca. Con control positivo: el
+      canario lanzado a mano corre en verde, así que lo que falla es el reloj y no el workflow.
+- [x] Si no dispara, la suite completa de UI vuelve a tener una corrida diaria efectiva por algún
+      medio, y queda escrito cuál. → **`nocturna-vigilante.yml`**, verificado de punta a punta en
+      producción (detecta la ausencia, lanza, comprueba que el run nació, avisa). El medio es
+      doble a propósito: su `schedule` y, sobre todo, su disparador de `push` sobre la rama por
+      defecto, que no depende del cron. Punto ciego medido y escrito: los días sin commits.

@@ -5,44 +5,64 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-08 (Lima)
 
-**Rama** `2.1` · HEAD `766169ef` — los topes del CI, verificados en producción; la nocturna
-aún no ha sonado sola. Último cambio de producto: la cola del reparador de tasas (PR #98).
+**Rama** `2.1` · HEAD `9f8fe601` — la nocturna no suena sola y ya no hace falta que suene: hay un
+vigilante que la lanza. Último cambio de producto: la cola del reparador de tasas (PR #98).
 TestFlight build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.** `yala-app.pe` sirve la web
 nueva.
 
 ## Esta sesión, en una línea
 
-**El reparador de tasas preguntaba «¿tengo la fila?» en vez de «¿tengo la tasa?», y por eso recorría
-la misma cola en cada arranque sin poder curarla** (PR #98, mergeado). Con la fila del día presente
-pero **sin la divisa que hacía falta** —el caso que más llena esa cola— `ensureRates` respondía «no
-falta nada», la conversión volvía a degradar y la transacción se re-marcaba pendiente. Para siempre.
+**El cron de GitHub no despierta a la nocturna, y la app llevaba un día entero sin una sola corrida
+automática de UI sin que nada lo dijera.** Todo directo a `2.1` (cinco commits: CI, ticket y
+aprendizajes; ningún `.swift`, así que no hubo PR).
 
-**Lo que cambia para el usuario:** una transacción en una divisa sin tasa para su día se corrige sola
-en cuanto la tasa llega, en vez de quedarse con el número aproximado.
+**Lo que cambia para el usuario:** nada visible hoy — cambia que un bug de interfaz vuelve a tener
+quien lo cace antes de llegar a su teléfono.
 
-**Dos de los tres daños que el ticket daba por hechos eran FALSOS, y lo dice una medición.** El ticket
-—que venía de una review adversarial— afirmaba que reescribir las columnas del grupo `money` con el
-mismo valor emite al canal nube, y de ahí colgaba también el riesgo de pisar por HLC la edición de
-otro dispositivo. Medido con el motor real: una asignación idéntica deja `context.hasChanges == true`
-pero **el drain no produce ni una fila de outbox**. Son dos señales distintas, y en todo el repo
-`updatedAttributes` aparece cuatro veces sin que ninguna lo documente. El guard de igualdad se queda
-porque ahorra un `save()` a disco por arranque y por transacción — no por una emisión que no ocurre.
-Queda escrito en `.claude/rules/swiftdata-cloudkit.md` con la forma de medirlo: **contar filas de
-outbox tras un `drainOnce`**, porque leer el estado final no distingue nada.
+**El número que enmarca el problema.** El día de la mudanza a nocturna:
 
-**La review adversarial (4 lentes) cazó siete defectos míos**, todos arreglados aquí, y dos son de una
-familia que conviene reconocer: **el freno que corta trabajo inútil acabó cortando trabajo útil.** Mi
-anti-spin sellaba como imposible también los fallos de **red**, y era ciego a las tasas que llegan por
-**CloudKit** sin pasar por nuestro código (contaba escrituras nuestras en vez de mirar el disco). Otros
-dos eran **regresiones que mi propio cambio hizo alcanzables**: `ensureRates` nunca troceó a los 365
-días que la API acepta —inofensivo mientras preguntaba por existencia de fila, porque nunca pedía
-rangos largos— y el recorrido día a día podía no generar la última fecha de la cola si las horas del
-día diferían. Un camino muerto que se revive trae sus bugs intactos.
+| día | runs de QA | con la suite de UI dentro |
+|---|---|---|
+| 2026-09-06 | 39 | 27 |
+| 2026-09-07 | 39 | 24 |
+| **2026-09-08** | **31** | **1** ← y esa una fue un dispatch a mano |
 
-**Verificación:** 16 casos nuevos en dos suites, **control positivo por mutación en tres sitios
-distintos**, suite unit completa (6430 tests, 655 suites) y XCUITest del área tocada. Los tests de
-`ensureRates` ejercitan el `#Predicate` nuevo **contra el store**: aquí un `#Predicate` compila limpio
-y revienta al ejecutarse.
+De 24-31 corridas de UI al día a **cero automáticas**. El modo de fallo es una **ausencia**, y una
+ausencia no se nota: no hay run, no hay rojo y no hay aviso. Todo lo demás en CI deja un artefacto;
+esto deja silencio, que es indistinguible de que todo vaya bien.
+
+**Diagnóstico: nueve causas descartadas por medición**, cuatro que ya traía el ticket y cinco más
+(fork, Actions restringido, apagado que la API no reflejara, `concurrency`, colisión con un run en
+vuelo). Y una distinción que el silencio esconde y la API sí da: **el run programado no se canceló,
+no llegó a crearse**. Un cancelado aparecería con su evento; el filtro da cero absoluto.
+
+**La sonda: contestar en 37 minutos lo que costaba dos días.** Con `qa.yml` la pregunta «¿dispara el
+`schedule` aquí?» tiene una ventana al día. Se montó un canario de Linux con `cron: '*/5'` — misma
+pregunta, una ventana cada cinco minutos. **Siete ventanas, cero runs.** Y con **control positivo**,
+que era lo que hacía falta para que la medición valiera: lanzado a mano corre en verde en segundos,
+así que el workflow es válido y lo que no funciona es el reloj. Sin ese control habría documentado
+un error mío como un fallo de la plataforma.
+
+Lo que la muestra **no** distingue, y queda dicho: «no dispara» y «se retrasa más de 37 min» dan el
+mismo cero. La conclusión operativa es la misma — no se cuelga la cobertura diaria de ese mecanismo.
+
+**La mitigación, verificada en producción y no deducida:** `nocturna-vigilante.yml` comprueba que la
+suite de UI corrió en las últimas 26 h y, si no, **la lanza él** y avisa. Lleva **dos relojes que
+fallan de forma distinta**: su propio `schedule` —que es el mismo mecanismo que vigila, así que solo
+no vale— y **`push` a la rama por defecto**, que no depende del cron y cubre lo que importa: que
+todo commit que entra acabe con una corrida completa de UI. Punto ciego medido: 8 de los últimos 30
+días no tuvieron commits, con rachas de hasta 3.
+
+Los cuatro eslabones, cada uno medido con la ventana forzada a 1 h: detecta la ausencia, dispara,
+**comprueba que el run nació** y entrega el aviso (HTTP 200). Y el anti-duplicado también: cuatro
+ejecuciones del vigilante y **una sola** nocturna, porque cuenta los runs en vuelo.
+
+**Tres trampas que se llevaron por delante una versión de la consulta**, todas en
+`docs/aprendizajes-tecnicos.md`: preguntar «¿corrió el workflow?» responde que sí siempre (59 runs
+de QA en 26 h, uno con UI); `/actions/runs?per_page=100` abarcaba **28 h justas** y un día movido lo
+desborda, contestando «no hubo corrida» habiéndola habido; y `gh workflow run` **en verde no es
+«run creado»**. La segunda la cazó un control positivo ampliado: pedir 240 h devolvía el mismo
+conteo que 26.
 
 ## Te espera a ti
 
@@ -55,7 +75,14 @@ y revienta al ejecutarse.
    desde este PR; hasta que el gateway se despliegue, la verificación Merkle de Grupos queda apagada
    (los clientes saltan por el guard de canon en vez de reportar divergencias falsas). No corre prisa y
    no rompe nada: es una red que vuelve cuando tú quieras.
-3. **Del cierre de hoy (la cola del reparador, PR #98):**
+3. **Si el `schedule` sigue en cero mañana, hay una decisión tuya** (`cobertura-ui-diaria-cuelga-del-push`). El vigilante sostiene la
+   cobertura por su disparador de `push`, y eso deja descubiertos los días sin commits — 8 de los
+   últimos 30, con rachas de hasta 3. Las dos salidas: montar un reloj que no dependa de GitHub (un
+   `launchd` en la Mini que haga `gh workflow run qa.yml`, que es acceso tuyo) o aceptar que la
+   cobertura de UI vaya atada al ritmo de trabajo y no al calendario — que en un repo con esta
+   cadencia es defendible, porque un día sin commits tampoco trae código nuevo que probar. No corre
+   prisa: hoy la suite corrió.
+4. **Del cierre del 2026-09-08 (la cola del reparador, PR #98):**
    - **Device-QA pendiente y NO es simulable del todo**: hace falta una transacción en una divisa que
      no esté en ninguna cuenta (yenes) fechada en un día cuya fila de tasas ya exista **sin** esa
      divisa. Comprobar que se corrige sola al llegar las tasas, y que abrir y cerrar la app sin
@@ -71,7 +98,7 @@ y revienta al ejecutarse.
      aproximada pone «≈» al total del mes, porque la marca se acumula por OR sobre el bucket entero.
      Con más población marcada eso pasa de raro a frecuente en multidivisa, y los tres calculadores
      no usan hoy el mismo criterio.
-4. **Decisiones abiertas:**
+5. **Decisiones abiertas:**
    - `groups-archived-still-accepts-changes` — el copy promete que un archivado «ya no acepta cambios»
      y acepta todos: gastos, ediciones, liquidaciones, ajustes, invitaciones. Tres opciones dentro.
    - `groups-owner-debt-no-heir-dead-end` (high, del 6-sep) — el dueño con deuda y SIN heredero sigue
@@ -94,13 +121,13 @@ y revienta al ejecutarse.
      filtrar una cuenta «excluida de estadísticas», el saldo grande muestra el TOTAL, los widgets 0 y
      el KPI 0: **la pantalla se contradice consigo misma**. Tres salidas dentro (0 en las tres, total
      en las tres, o no dejar filtrarlas). Alcanzable desde el carrusel, que sí lista esas cuentas.
-5. **Publicar la app.** Los avisos de Grupos están completos en servidor y en los dos entornos; falta
+6. **Publicar la app.** Los avisos de Grupos están completos en servidor y en los dos entornos; falta
    el cliente iOS. Llevaría además el saldo de Distribución, la identidad del recién llegado, los
    predeterminados del Panel, el cierre del detalle, la hoja de «Unirme», el freno de la lista,
    «Transferir y salir», la puerta del grupo, la puerta del archivado, la marca de aproximado con su
    corrección del 1:1, el rótulo del hero de Estadísticas, el aviso de visita **y el resumen
    compartible del grupo**.
-6. **La tanda de QA: 48 tickets en `qa/`, y el guion solo cubre 22.** Entra
+7. **La tanda de QA: 48 tickets en `qa/`, y el guion solo cubre 22.** Entra
    **`fx-pnl-education-card`** (7-sep), y su device-QA **no es simulable**: la tarjeta de ganancia
    cambiaria sólo aparece con una cuenta multi-moneda con histórico real, y **ningún perfil de seed
    la produce** —son todos PEN—, así que su cobertura de UI es cero por construcción. Hace falta
@@ -125,35 +152,34 @@ y revienta al ejecutarse.
    visita en SU store, su saldo inicial, y que el copy quepa en alemán y neerlandés (solo se vio en
    español). Guion en **`qa/guion-tanda.md`**. Los **17 sin montaje asignado** siguen en
    `qa-guion-tanda-no-cubre-17-tickets`.
-7. **La deuda FX del PR #84: el que gobernaba ya está cerrado.**
+8. **La deuda FX del PR #84: el que gobernaba ya está cerrado.**
    `fx-manual-writes-seal-approximate-as-final` pasa a `qa` (PR #94) — eran **catorce** sitios, no
    diez. Era la razón de que la marca de aproximado avisara menos de lo que debía, así que **ahora ya
    se puede probar la marca sin falsos negativos**, que era el motivo de ponerlo primero. Detrás
    siguen `fx-approximate-mark-missing-on-secondary-surfaces` y
    `fx-unknown-currency-code-collapses-to-usd`. Y por delante entra uno nuevo que pesa más que los
    dos: `repair-queue-has-no-exit-for-partial-rate-rows` (high), en el punto 3.
-8. **Diez worktrees comparten un solo simulador, y eso rompía el gate de UI sin que se notara.**
+9. **Diez worktrees comparten un solo simulador, y eso rompía el gate de UI sin que se notara.**
    Cerrado el diagnóstico (PR #96) y puesta una guardia que lo **detecta**, pero la contención sigue:
    la sesión que llega segunda al paso 3 espera a mano, sin saber cuánto, y de madrugada no hay nadie
    mirando. Tres opciones en `diez-worktrees-comparten-un-simulador`: **un simulador clonado por
    worktree** (cuesta disco: el device actual son 9,1 GB), **un `flock`** que haga esperar en vez de
    fallar (barato, pero serializa el gate de todos), o **dejarlo en la guardia**. Toca cómo trabajan
    todas las sesiones, así que no lo decide una.
-9. **Dos decisiones de la web**, sin cambios: el texto legal de Grupos (dice «vía iCloud» y el backend
+10. **Dos decisiones de la web**, sin cambios: el texto legal de Grupos (dice «vía iCloud» y el backend
    propio está al 100 % en prod) y si Vercel despliega al mergear. Y ratificar o revertir el botón «Más
    tarde» del invitado.
 
 ## Abiertos
 
-**Del CI, tres cosas y una cambió de color.** (1) **La primera nocturna de verdad no sonó.** Aquí
-quedó escrito que si no llegaba aviso era que había ido verde; medido esta mañana, el silencio no
-distingue: hay **cero corridas con `event: schedule`** en todo el repo y la ventana de las 03:17 pasó
-sin disparar. Que la nocturna *funciona* está probado —lanzada a mano tarda 89,7 min y acabó verde—;
-lo que no está probado es que el reloj la despierte. Descartadas por medición las cuatro causas
-habituales (rama por defecto, workflow deshabilitado, apagado por inactividad, cron inválido), queda
-el retraso de GitHub, normal en la primera ventana. **Se cierra mirando la de mañana**, y tiene ticket
-con el comando: `la-nocturna-de-ui-no-ha-disparado-ni-una-vez`. Mientras tanto la suite completa de UI
-no está corriendo a diario. (1b) Los **topes sí aguantan**, ya con corridas reales: 21 runs del job,
+**Del CI, tres cosas y una se cerró.** (1) **La nocturna no suena sola, y ya está cubierto.** El
+`schedule` no sirve ventanas en este repositorio: siete del canario `*/5` en 37 min, cero runs, más
+la de `qa.yml` con casi 8 h de margen — y con control positivo, porque el canario lanzado a mano sí
+corre. **La cobertura ya no depende de eso:** `nocturna-vigilante.yml` comprueba que la suite de UI
+corrió en 26 h y, si no, la lanza y avisa; su reloj bueno es el `push` a `2.1`, que no pasa por el
+cron. Verificado de punta a punta en producción. Lo único que queda abierto es de decisión tuya y
+está abajo, con ticket propio: `cobertura-ui-diaria-cuelga-del-push` (medium). El diagnóstico
+está cerrado: `la-nocturna-de-ui-no-ha-disparado-ni-una-vez` (done). (1b) Los **topes sí aguantan**, ya con corridas reales: 21 runs del job,
 mediana 21,7 min y máximo 34,0 contra un tope de 45, cero cancelaciones. El colchón es menor de lo
 previsto (1,32× en vez de 1,5×), así que si build o unit crecen otro 30 % se sube el tope, no se
 quita. (2) `ci-checkout-v4-runs-on-deprecated-node`
