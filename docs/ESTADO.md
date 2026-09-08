@@ -5,12 +5,52 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-08 (Lima)
 
-**Rama** `2.1` · HEAD `8b182ac3` — el chat ya guarda el tipo de cambio que usó. Último cambio de
+**Rama** `2.1` · HEAD `958cb6f7` — el correo de `yala-app.pe` ya se autentica. Último cambio de
 producto: la tasa del borrador del chat (PR #99).
 TestFlight build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.** `yala-app.pe` sirve la web
-nueva.
+nueva **y desde hoy firma su correo** (SPF + DKIM + DMARC, los tres en `pass`).
 
 ## Esta sesión, en una línea
+
+**Cualquiera podía mandar un correo que dijera venir de `admin@yala-app.pe`, y nada lo desmentía.**
+Ya no: el dominio publica SPF, DKIM y DMARC, y un correo real llegó con los tres en `pass`. El
+ticket `high` está cerrado en `tickets/done/`.
+
+**Lo que cambia para el usuario:** un correo de soporte que diga ser de Yala ahora se puede
+comprobar, y el nuestro deja de competir en desventaja contra el filtro de spam. Suplantar el
+dominio deja de ser gratis.
+
+**El reparto: yo medí, Jürgen tecleó.** Los dos paneles —la consola de Workspace y punto.pe— piden
+contraseña, así que preparé el checklist con el nombre y el valor exactos de cada registro y el
+orden que importa (generar la firma → publicar los tres TXT → activar; el tercer paso es el que se
+olvida y sin él Google no firma). Jürgen pegó y verificamos.
+
+**Lo que hay que leer en la cabecera del correo no son los tres `pass`.** Es que firmó con
+**nuestro** selector — `d=yala-app.pe; s=google`, no la firma genérica de Google, que va aparte con
+`d=1e100.net` —, porque **eso es lo único que ningún `dig` puede contestar**: el registro puede
+estar perfecto y Google no firmar todavía. Y que el alineamiento es estricto: `header.from`, el
+`d=` de la firma y `smtp.mailfrom` son el mismo dominio, así que DMARC no pasa apoyado en uno solo
+de los dos.
+
+**Un DKIM no se valida mirando si existe.** El de 2048 bits no cabe en una cadena TXT (255
+caracteres), así que llega partido en dos, y ahí es donde un panel lo rompe en silencio. Lo que
+distingue «publicado» de «además sirve» es concatenar, reconstruir el PEM y que `openssl` lo parsee
+como RSA de 2048. **Escribí ese comando mal**, lo corrí, y decía `unable to load Public Key` sobre
+una clave perfecta: `tr -d '\n'` deja el base64 sin salto final y el `-----END-----` se pegaba. Por
+poco documento un falso rojo. Y su control negativo me corrigió otra vez: la primera versión daba
+«RSA 2048» **también con la clave corrompida**; medido, caza truncado, caracteres perdidos en medio
+y las dos cadenas invertidas, pero no basura al final.
+
+**Dos datos del ticket que ya no eran ciertos.** `ns2.rcp.net.pe` figuraba como caído —3/3 timeouts
+el 3-sep, «el dominio corre sobre un solo nameserver, hay que reportarlo a la RCP»—: hoy responde
+**6/6** autoritativas a 2 ms con el mismo serial que el primario, así que no hay punto único de
+fallo ni nada que reportar. Y su tabla de medición se re-midió entera antes de usarla.
+
+**De camino, dos trampas del avisador**, las dos en la memoria: `--dry-run` **no** previsualiza el
+`--texto` (compone un cuerpo sin él, así que enseña otra cosa) y el resumen se recorta a 600
+caracteres **sin avisar** — mandé 637 y la última frase llegó cortada.
+
+## Antes, hoy mismo — la tasa del chat (PR #99)
 
 **El chat guardaba «1,00» como tipo de cambio de un gasto en otra divisa**, aunque el importe
 convertido de al lado sí saliera de una conversión real. PR #99, mergeado.
@@ -52,23 +92,32 @@ control, donde `1.0` es el valor correcto, sigue verde. CI leído por dentro y n
 
 ## Te espera a ti
 
-1. **Staging arrastra ya TRES migraciones** — g13_04 (4-sep), g13_05 y **g14_01** (7-sep). Mismo
+1. **Subir la política DMARC, y no antes del 15-sep.** Hoy está en `p=none`: observa quién suplanta
+   el dominio pero **no lo impide** — un correo falsificado sigue llegando a la bandeja, solo que
+   ahora aparece en un informe. Los `rua` llegan a `admin@yala-app.pe` una vez al día, así que el
+   primero es de mañana y hacen falta varios. Cuando los haya: comprobar que nada legítimo sale con
+   `fail`, subir a `quarantine` (manda a spam, no descarta: un error se recupera) y más tarde a
+   `reject`. Ticket con el procedimiento: `dmarc-sube-la-politica-tras-observar`. **Un matiz que
+   importa:** medí que en el repo no hay otro remitente, pero eso no cubre un servicio contratado
+   desde el navegador —facturación, un formulario, un boletín—; si existe, el informe lo saca y hay
+   que añadirlo al SPF **antes** de endurecer.
+2. **Staging arrastra ya TRES migraciones** — g13_04 (4-sep), g13_05 y **g14_01** (7-sep). Mismo
    bloqueo las tres: **no hay credencial de DDL** (el conector MCP solo lista producción). Se cierran
    aplicando los tres `.sql` de `qa/cloud/` **en orden**. Es acceso tuyo, no una tarea que se destrabe
    sola. Con g14_01 el drift ya muerde: fijar un presupuesto contra staging deja un dead-letter
    permanente, y un dead-letter apaga el Merkle de ese grupo. Producción está al día.
-2. **Desplegar el Worker cuando quieras encender el Merkle nuevo.** El manifest de Grupos va en `c2`
+3. **Desplegar el Worker cuando quieras encender el Merkle nuevo.** El manifest de Grupos va en `c2`
    desde este PR; hasta que el gateway se despliegue, la verificación Merkle de Grupos queda apagada
    (los clientes saltan por el guard de canon en vez de reportar divergencias falsas). No corre prisa y
    no rompe nada: es una red que vuelve cuando tú quieras.
-3. **Si el `schedule` sigue en cero mañana, hay una decisión tuya** (`cobertura-ui-diaria-cuelga-del-push`). El vigilante sostiene la
+4. **Si el `schedule` sigue en cero mañana, hay una decisión tuya** (`cobertura-ui-diaria-cuelga-del-push`). El vigilante sostiene la
    cobertura por su disparador de `push`, y eso deja descubiertos los días sin commits — 8 de los
    últimos 30, con rachas de hasta 3. Las dos salidas: montar un reloj que no dependa de GitHub (un
    `launchd` en la Mini que haga `gh workflow run qa.yml`, que es acceso tuyo) o aceptar que la
    cobertura de UI vaya atada al ritmo de trabajo y no al calendario — que en un repo con esta
    cadencia es defendible, porque un día sin commits tampoco trae código nuevo que probar. No corre
    prisa: hoy la suite corrió.
-4. **Del cierre del 2026-09-08 (la tasa del chat, PR #99) — el primero urge más que el ticket que lo
+5. **Del cierre del 2026-09-08 (la tasa del chat, PR #99) — el primero urge más que el ticket que lo
    destapó:**
    - `chat-draft-drops-the-expense-sign` (**high**) — **un gasto dictado al chat SUMA al saldo en vez
      de restar.** `saveDraft` no usa `draft.isExpense` para firmar el monto y su guard solo acepta
@@ -90,7 +139,7 @@ control, donde `1.0` es el valor correcto, sigue verde. CI leído por dentro y n
      el escape del umbral y vuelve a sellar un 1:1. **No se toca en un solo sitio**: el reparador
      tiene el mismo umbral y romper la paridad haría que la fila cambiara de número al repararse.
 
-5. **Del cierre anterior (la cola del reparador, PR #98):**
+6. **Del cierre anterior (la cola del reparador, PR #98):**
    - **Device-QA pendiente y NO es simulable del todo**: hace falta una transacción en una divisa que
      no esté en ninguna cuenta (yenes) fechada en un día cuya fila de tasas ya exista **sin** esa
      divisa. Comprobar que se corrige sola al llegar las tasas, y que abrir y cerrar la app sin
@@ -106,7 +155,7 @@ control, donde `1.0` es el valor correcto, sigue verde. CI leído por dentro y n
      aproximada pone «≈» al total del mes, porque la marca se acumula por OR sobre el bucket entero.
      Con más población marcada eso pasa de raro a frecuente en multidivisa, y los tres calculadores
      no usan hoy el mismo criterio.
-6. **Decisiones abiertas:**
+7. **Decisiones abiertas:**
    - `groups-archived-still-accepts-changes` — el copy promete que un archivado «ya no acepta cambios»
      y acepta todos: gastos, ediciones, liquidaciones, ajustes, invitaciones. Tres opciones dentro.
    - `groups-owner-debt-no-heir-dead-end` (high, del 6-sep) — el dueño con deuda y SIN heredero sigue
@@ -129,13 +178,13 @@ control, donde `1.0` es el valor correcto, sigue verde. CI leído por dentro y n
      filtrar una cuenta «excluida de estadísticas», el saldo grande muestra el TOTAL, los widgets 0 y
      el KPI 0: **la pantalla se contradice consigo misma**. Tres salidas dentro (0 en las tres, total
      en las tres, o no dejar filtrarlas). Alcanzable desde el carrusel, que sí lista esas cuentas.
-7. **Publicar la app.** Los avisos de Grupos están completos en servidor y en los dos entornos; falta
+8. **Publicar la app.** Los avisos de Grupos están completos en servidor y en los dos entornos; falta
    el cliente iOS. Llevaría además el saldo de Distribución, la identidad del recién llegado, los
    predeterminados del Panel, el cierre del detalle, la hoja de «Unirme», el freno de la lista,
    «Transferir y salir», la puerta del grupo, la puerta del archivado, la marca de aproximado con su
    corrección del 1:1, el rótulo del hero de Estadísticas, el aviso de visita **y el resumen
    compartible del grupo**.
-8. **La tanda de QA: 48 tickets en `qa/`, y el guion solo cubre 22.** Entra
+9. **La tanda de QA: 50 tickets en `qa/`, y el guion solo cubre 22.** Entra
    **`fx-pnl-education-card`** (7-sep), y su device-QA **no es simulable**: la tarjeta de ganancia
    cambiaria sólo aparece con una cuenta multi-moneda con histórico real, y **ningún perfil de seed
    la produce** —son todos PEN—, así que su cobertura de UI es cero por construcción. Hace falta
@@ -160,21 +209,21 @@ control, donde `1.0` es el valor correcto, sigue verde. CI leído por dentro y n
    visita en SU store, su saldo inicial, y que el copy quepa en alemán y neerlandés (solo se vio en
    español). Guion en **`qa/guion-tanda.md`**. Los **17 sin montaje asignado** siguen en
    `qa-guion-tanda-no-cubre-17-tickets`.
-9. **La deuda FX del PR #84: el que gobernaba ya está cerrado.**
+10. **La deuda FX del PR #84: el que gobernaba ya está cerrado.**
    `fx-manual-writes-seal-approximate-as-final` pasa a `qa` (PR #94) — eran **catorce** sitios, no
    diez. Era la razón de que la marca de aproximado avisara menos de lo que debía, así que **ahora ya
    se puede probar la marca sin falsos negativos**, que era el motivo de ponerlo primero. Detrás
    siguen `fx-approximate-mark-missing-on-secondary-surfaces` y
    `fx-unknown-currency-code-collapses-to-usd`. Y por delante entra uno nuevo que pesa más que los
    dos: `repair-queue-has-no-exit-for-partial-rate-rows` (high), en el punto 3.
-10. **Diez worktrees comparten un solo simulador, y eso rompía el gate de UI sin que se notara.**
+11. **Diez worktrees comparten un solo simulador, y eso rompía el gate de UI sin que se notara.**
    Cerrado el diagnóstico (PR #96) y puesta una guardia que lo **detecta**, pero la contención sigue:
    la sesión que llega segunda al paso 3 espera a mano, sin saber cuánto, y de madrugada no hay nadie
    mirando. Tres opciones en `diez-worktrees-comparten-un-simulador`: **un simulador clonado por
    worktree** (cuesta disco: el device actual son 9,1 GB), **un `flock`** que haga esperar en vez de
    fallar (barato, pero serializa el gate de todos), o **dejarlo en la guardia**. Toca cómo trabajan
    todas las sesiones, así que no lo decide una.
-11. **Dos decisiones de la web**, sin cambios: el texto legal de Grupos (dice «vía iCloud» y el backend
+12. **Dos decisiones de la web**, sin cambios: el texto legal de Grupos (dice «vía iCloud» y el backend
    propio está al 100 % en prod) y si Vercel despliega al mergear. Y ratificar o revertir el botón «Más
    tarde» del invitado.
 
