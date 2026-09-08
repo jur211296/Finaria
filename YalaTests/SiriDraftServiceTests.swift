@@ -120,6 +120,70 @@ struct SiriDraftServiceTests {
         #expect(draft?.amount == -200.0)   // forzado a gasto (negativo)
     }
 
+    /// El modo «solo gastos» fuerza el signo, y por tanto tiene que decidir también contra qué
+    /// naturaleza se filtra la subcategoría. Hasta el 2026-09-08 `isExpense` se calculaba DESPUÉS de
+    /// resolverla: el hint se matcheaba contra subcategorías de INGRESO —porque el LLM había dicho
+    /// ingreso— y el monto se forzaba a negativo justo a continuación, así que el draft nacía gasto
+    /// con subcategoría de ingreso. Al aprobarlo, esa fila entra con el signo contrario a su
+    /// categoría y los totales la leen como un reembolso.
+    ///
+    /// El hermano `buildDraft_expensesOnlyMode_forcesExpenseSign` fija la otra mitad —el signo— y
+    /// pasa `visibleSubcategories: []`, de modo que no veía esto.
+    @Test func buildDraft_expensesOnlyMode_doesNotKeepAnIncomeSubcategory() throws {
+        let context = try makeTestContext()
+        let account = makeTestAccount(context: context, currencyCode: "PEN")
+        let incomeCategory = makeTestCategory(context: context, name: "Ingresos", isIncome: true)
+        let incomeSub = makeTestSubcategory(context: context, name: "Sueldo", category: incomeCategory)
+
+        let draft = SiriDraftService.buildDraft(
+            from: parsed(
+                amount: 200,
+                note: "Nómina",
+                isExpense: false,          // el LLM lo leyó como ingreso
+                currencyHint: "PEN",
+                subcategoryHint: "Sueldo"  // …y apunta a una subcategoría de ingreso
+            ),
+            rawText: "me pagaron 200",
+            fallbackDate: fallbackDate,
+            realAccounts: [account],
+            visibleSubcategories: [incomeSub],
+            expensesOnlyMode: true,        // el modo lo convierte en gasto
+            context: context
+        )
+
+        #expect(draft?.amount == -200.0)
+        #expect(draft?.subcategory == nil)
+        #expect(draft?.needsUserInput.contains("subcategory") == true)
+    }
+
+    /// Control positivo del anterior: el mismo hint, sin el modo activo, sí rellena la subcategoría
+    /// de ingreso. Sin esto, un fallo que dejara la subcategoría siempre vacía pasaría por arreglo.
+    @Test func buildDraft_incomeHint_withoutExpensesOnlyMode_keepsTheIncomeSubcategory() throws {
+        let context = try makeTestContext()
+        let account = makeTestAccount(context: context, currencyCode: "PEN")
+        let incomeCategory = makeTestCategory(context: context, name: "Ingresos", isIncome: true)
+        let incomeSub = makeTestSubcategory(context: context, name: "Sueldo", category: incomeCategory)
+
+        let draft = SiriDraftService.buildDraft(
+            from: parsed(
+                amount: 200,
+                note: "Nómina",
+                isExpense: false,
+                currencyHint: "PEN",
+                subcategoryHint: "Sueldo"
+            ),
+            rawText: "me pagaron 200",
+            fallbackDate: fallbackDate,
+            realAccounts: [account],
+            visibleSubcategories: [incomeSub],
+            expensesOnlyMode: false,
+            context: context
+        )
+
+        #expect(draft?.amount == 200.0)
+        #expect(draft?.subcategory === incomeSub)
+    }
+
     @Test func buildDraft_income_positiveAmount_whenNotExpensesOnly() throws {
         let context = try makeTestContext()
         let account = makeTestAccount(context: context, currencyCode: "PEN")

@@ -153,22 +153,35 @@ struct SiriDraftService {
             DraftBuilder.findAccount(byCurrency: $0, in: realAccounts)
         }
 
+        // Respeta expensesOnlyMode: si activo, fuerza gasto ignorando lo que infirió el LLM
+        // (consistente con el intent viejo + QuickExpense + ApplePay).
+        //
+        // Se resuelve ANTES de elegir subcategoría, y el orden importa: hasta el 2026-09-08 esta
+        // línea iba después, así que con el modo activo y un dictado que el LLM leyó como ingreso el
+        // hint se matcheaba contra subcategorías de INGRESO y el signo se forzaba a negativo justo a
+        // continuación. El draft nacía gasto con subcategoría de ingreso —y por esa vía ni siquiera
+        // hacía falta la memoria de comercios—. Es el tipo del draft el que manda sobre la
+        // subcategoría (ver `DraftBuilder.matchesNature`), de modo que las dos vías tienen que
+        // filtrar por el tipo EFECTIVO, no por el que infirió el modelo.
+        let isExpense = expensesOnlyMode ? true : parsed.isExpense
+
         // Subcategoría por hint del LLM; fallback a MerchantMemory (aprendizaje por merchant/nota).
         var matchedSubcategory: Subcategory?
         if let hint = parsed.subcategoryHint, !hint.isEmpty {
             matchedSubcategory = DraftBuilder.matchSubcategoryByHint(
                 hint: hint,
-                isExpense: parsed.isExpense,
+                isExpense: isExpense,
                 in: visibleSubcategories
             )
         }
         if matchedSubcategory == nil && !parsed.note.isEmpty {
-            matchedSubcategory = DraftBuilder.suggestSubcategory(merchant: parsed.note, context: context)
+            matchedSubcategory = DraftBuilder.suggestSubcategory(
+                merchant: parsed.note,
+                isExpense: isExpense,
+                context: context
+            )
         }
 
-        // Respeta expensesOnlyMode: si activo, fuerza gasto ignorando lo que infirió el LLM
-        // (consistente con el intent viejo + QuickExpense + ApplePay).
-        let isExpense = expensesOnlyMode ? true : parsed.isExpense
         let absValue = abs(NSDecimalNumber(decimal: amount).doubleValue)
         let signedAmount = isExpense ? -absValue : absValue
 
