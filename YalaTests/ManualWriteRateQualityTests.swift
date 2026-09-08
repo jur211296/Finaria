@@ -42,18 +42,54 @@ struct ManualWriteRateQualityTests {
         try String(contentsOf: repoRoot().appendingPathComponent(path), encoding: .utf8)
     }
 
-    /// Los ficheros de producción que escriben el monto convertido a mano.
+    /// Ficheros EXENTOS del barrido, cada uno con la razón por la que escribir el monto sin decidir
+    /// el flag es correcto ahí — y con un centinela que comprueba que esa razón sigue siendo cierta.
     ///
-    /// Se enumeran en vez de barrer `Yala/` entero a propósito: el barrido recursivo tendría que
-    /// excluir el init del modelo, el reconciler y los seeds, y esa lista de excepciones es
-    /// exactamente donde se cuela la próxima escritura sin flag.
-    private static let filesThatWriteConvertedAmounts = [
-        "Yala/App/ViewModels/NewTransactionViewModel.swift",
-        "Yala/App/ViewModels/ChatAssistantViewModel.swift",
-        "Yala/App/Views/Inbox/InboxDraftEditSheet.swift",
-        "Yala/Services/DraftService.swift",
-        "Yala/Services/CurrencyChangeService.swift"
+    /// **Se barre `Yala/` ENTERO y se exime nombrando, en vez de enumerar los ficheros vigilados.**
+    /// La primera versión de este archivo hacía lo contrario, y el modo de fallo salta a la vista en
+    /// cuanto se dice en voz alta: una lista de vigilados no puede detectar **el fichero que aún no
+    /// existe**, que es justo lo que este barrido promete cubrir. Con la lista invertida, cualquier
+    /// ruta nueva que persista un monto convertido entra vigilada por defecto.
+    ///
+    /// El centinela es lo que impide que una exención se pudra: no basta con afirmar «éste llama a
+    /// `recalculatePreferredCurrency` después», hay que comprobar que lo sigue llamando.
+    static let exemptions: [String: (reason: String, sentinel: String)] = [
+        "Yala/Services/InitialBalanceService.swift": (
+            reason: """
+                Pasa placeholders al init y llama `recalculatePreferredCurrency` justo después del \
+                `context.insert`, que es quien decide el flag con la calidad real.
+                """,
+            sentinel: "recalculatePreferredCurrency(context: context)"
+        ),
+        "Yala/Services/WidgetDataCache.swift": (
+            reason: """
+                No escribe una transacción: construye `WidgetTransaction`, una `struct Codable` para \
+                el widget que COPIA un monto ya calculado y persistido. No hay tasa que evaluar.
+                """,
+            sentinel: "struct WidgetTransaction: Codable"
+        ),
+        "Yala/Seed/DevSeedTransactions.swift": (
+            reason: """
+                Datos sintéticos de desarrollo, con montos inventados que nunca salen de una \
+                conversión real. Marcarlos provisionales mandaría el seed entero al reparador.
+                """,
+            sentinel: "DevSeed"
+        )
     ]
+
+    /// Todos los `.swift` bajo `Yala/` que escriben el monto convertido, sea por asignación o por
+    /// init. Se descubre recorriendo el árbol: nada que mantener a mano.
+    static func filesWritingConvertedAmounts() throws -> [String] {
+        let root = repoRoot().appendingPathComponent("Yala")
+        guard let walker = FileManager.default.enumerator(atPath: root.path) else { return [] }
+        var found: [String] = []
+        for case let rel as String in walker where rel.hasSuffix(".swift") {
+            let path = "Yala/" + rel
+            guard let src = try? source(path) else { continue }
+            if tally(src).writes > 0 { found.append(path) }
+        }
+        return found.sorted()
+    }
 
     /// Cuenta escrituras del monto convertido y decisiones del flag en un fuente.
     ///
@@ -142,12 +178,28 @@ struct ManualWriteRateQualityTests {
 
     @Test("Cada escritura del monto convertido decide la provisionalidad")
     func everyWriteDecidesTheFlag() throws {
-        for path in Self.filesThatWriteConvertedAmounts {
+        let files = try Self.filesWritingConvertedAmounts()
+        #expect(
+            files.count >= 8,
+            "el barrido encontró solo \(files.count) ficheros — o se movió el código, o el patrón dejó de medir"
+        )
+
+        for path in files {
+            if let exemption = Self.exemptions[path] {
+                // Una exención vale mientras su motivo siga siendo cierto, y eso se comprueba.
+                #expect(
+                    try Self.source(path).contains(exemption.sentinel),
+                    """
+                    \(path) está exento del barrido porque: \(exemption.reason)
+                    Pero su centinela `\(exemption.sentinel)` ya no aparece en el fichero, así que esa \
+                    razón dejó de ser verdad. Revisa si ahora necesita decidir el flag, o actualiza el \
+                    centinela si solo cambió de nombre.
+                    """
+                )
+                continue
+            }
+
             let tally = Self.tally(try Self.source(path))
-            #expect(
-                tally.writes > 0,
-                "\(path): el barrido no encuentra ninguna escritura — o se movió el código, o el patrón dejó de medir"
-            )
             #expect(
                 tally.decisions >= tally.writes,
                 """
@@ -162,6 +214,9 @@ struct ManualWriteRateQualityTests {
                 Al añadir una escritura nueva, resuelve la conversión con `convertChecked` (no \
                 `convert`, que tira la calidad) y escribe \
                 `isExchangeRateProvisional = !outcome.quality.isExact`.
+
+                Si este fichero NO persiste una transacción de verdad, añádelo a `exemptions` con su \
+                razón y un centinela que la haga comprobable.
                 """
             )
         }
@@ -169,7 +224,7 @@ struct ManualWriteRateQualityTests {
 
     @Test("Ningún sitio que persiste usa el `convert` que tira la calidad")
     func persistingSitesUseCheckedVariants() throws {
-        for path in Self.filesThatWriteConvertedAmounts {
+        for path in try Self.filesWritingConvertedAmounts() where Self.exemptions[path] == nil {
             let src = try Self.source(path)
             // `convert(` a secas, sin el `Checked`. Se buscan las dos formas con receptor explícito
             // que existen en el repo.
