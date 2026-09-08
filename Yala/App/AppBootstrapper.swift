@@ -149,6 +149,33 @@ final class AppBootstrapper {
             await migrateToLiveBalanceIfNeeded(context: context)
         }
 
+        // 2.6. Barrido one-shot del signo del chat. Devuelve a negativo los gastos que
+        //      `ChatAssistantViewModel.saveDraft` guardó con la magnitud sin firmar entre el
+        //      2026-04-27 y el arreglo (PR #102). Diferido por el mismo motivo que el de arriba
+        //      —recorre transacciones— y con su propio gate de quiescencia: escribe `TransactionItem`
+        //      del store personal, así que un `save()` durante el import del restore dispararía el
+        //      assert de SwiftData.
+        //
+        //      `!uiTestActive` como sus vecinos de los pasos 4, 4b y 4c. El seed de UI tests siembra
+        //      A PROPÓSITO la forma que este barrido busca —`insert(amount: 200, sub: restaurants)`,
+        //      comentado «DESYNC: categoría expense, monto POSITIVO» (`DevSeedTransactions.swift`),
+        //      con `createdAt = now`— para demostrar que la app clasifica por CATEGORÍA y no por
+        //      signo. Es, sembrado, el reembolso legítimo que el ticket dice que hay que respetar.
+        //
+        //      MEDIDO el 2026-09-08, y NO es lo que yo esperaba: quitando este gate,
+        //      `IncomeExpenseClassificationUITests` sigue pasando. El barrido no llega a pisar el
+        //      fixture, porque antes espera `awaitPersonalStoreReady()` y el test termina en ~15 s.
+        //      O sea que el gate no arregla un rojo: evita que ese verde dependa de GANAR UNA CARRERA
+        //      contra un gate de hasta 120 s. Si algún día el seed se adelantara, el resultado no
+        //      sería un rojo claro sino uno intermitente, que es el más caro de diagnosticar.
+        //      Una migración de datos históricos no tiene nada que hacer sobre un store sembrado
+        //      sintéticamente, y con el gate el resultado no depende del reloj.
+        if !uiTestActive {
+            Task { @MainActor in
+                await repairUnsignedChatExpensesIfNeeded(context: context)
+            }
+        }
+
         // 3. Load subscription status
         await loadSubscriptionStatus()
 
@@ -2279,6 +2306,29 @@ final class AppBootstrapper {
             #endif
             // NO setear flag → próxima apertura reintentará
         }
+    }
+
+    /// Barrido one-shot que le devuelve el signo a los gastos que el chat guardó sin firmar
+    /// (ticket `chat-rows-with-unsigned-amount-have-no-repair-path`). El criterio y la decisión de
+    /// migrar a ciegas viven en `ChatUnsignedExpenseRepairService`; aquí solo está el gate.
+    ///
+    /// El flag se consulta ANTES de esperar por el store: una vez que el barrido ha corrido, los
+    /// arranques siguientes no deben pagar el poll de quiescencia por nada.
+    private func repairUnsignedChatExpensesIfNeeded(context: ModelContext) async {
+        guard
+            !UserDefaults.standard.bool(forKey: ChatUnsignedExpenseRepairService.repairSweepKey)
+        else { return }
+
+        // Gate de quiescencia: el barrido escribe `TransactionItem` (store personal) y hace `save()`;
+        // durante el import del restore eso dispara el `_assertionFailure` interno de SwiftData. Si el
+        // import no asienta, NO se marca el flag → reintenta en el próximo arranque.
+        guard await awaitPersonalStoreReady() else {
+            SaveBreadcrumb.deferred(
+                "AppBootstrapper.repairUnsignedChatExpenses", "import not quiescent")
+            return
+        }
+
+        ChatUnsignedExpenseRepairService.repairUnsignedChatExpensesIfNeeded(context: context)
     }
 
     private func loadSubscriptionStatus() async {

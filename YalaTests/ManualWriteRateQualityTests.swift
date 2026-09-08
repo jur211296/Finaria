@@ -77,6 +77,23 @@ struct ManualWriteRateQualityTests {
                 """,
             sentinel: "recalculatePreferredCurrency(context: context)"
         ),
+        "Yala/App/Logic/ChatUnsignedExpenseRepairLogic.swift": (
+            reason: """
+                Lógica pura: no toca el store ni un `TransactionItem`. Lo que el barrido cuenta como                 escritura es la ETIQUETA de la tupla que devuelve, no una asignación. Quien persiste                 es `ChatUnsignedExpenseRepairService`, exento por su propio motivo.
+                """,
+            // El centinela es la firma de RETORNO: mientras la función devuelva dos números en vez de
+            // escribirlos, no hay nada que sellar. Si alguien la hiciera persistir, la firma cambiaría.
+            sentinel: "-> (amount: Double, amountInPreferredCurrency: Double)"
+        ),
+        "Yala/Services/ChatUnsignedExpenseRepairService.swift": (
+            reason: """
+                No convierte: el barrido del signo del chat solo le cambia el SIGNO a un monto que ya                 estaba convertido y persistido. La calidad de la tasa no cambia al voltear el signo —                 si era exacta sigue siéndolo, y si era provisional sigue en la cola del reparador.                 Decidir el flag aquí sería inventarse una calidad que nadie midió, y volver a sellar                 como definitiva una tasa aproximada es exactamente el bug que este barrido vigila.
+                """,
+            // El centinela es la función que FIRMA la magnitud, no el nombre del servicio: mientras el
+            // valor escrito salga de ahí, no ha pasado por ninguna conversión. Si alguien mete un
+            // converter en este fichero, dejará de usarla y la exención caerá, que es lo que se quiere.
+            sentinel: "ChatUnsignedExpenseRepairLogic.repairedAmounts("
+        ),
         "Yala/Services/WidgetDataCache.swift": (
             reason: """
                 No escribe una transacción: construye `WidgetTransaction`, una `struct Codable` para \

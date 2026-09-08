@@ -331,13 +331,24 @@ struct WidgetSessionSealWiringTests {
         #expect(widget.contains("let sessionSeal: String?"))
     }
 
-    /// LA PUERTA, y su CONTEO. `updateCache` es un choke-point con 48 call-sites de producción en 18
-    /// ficheros: el guard vive en la puerta justamente porque gatear 48 sitios es una lista que envejece.
+    /// LA PUERTA, y su CONTEO. `updateCache` es un choke-point con 49 call-sites de producción en 22
+    /// ficheros: el guard vive en la puerta justamente porque gatear 49 sitios es una lista que envejece.
     /// El conteo es el anti-drift que pide el ticket — si alguien añade un escritor, este test le obliga a
     /// leer por qué el gate está donde está en vez de copiar un guard local.
     ///
     /// Si el número cambia por una razón legítima, ajústalo a conciencia.
-    @Test func laPuerta_gateaLos48Escritores() throws {
+    ///
+    /// **2026-09-08: de 48 a 49.** El escritor nuevo es
+    /// `ChatUnsignedExpenseRepairService`, el barrido one-shot que le devuelve el signo a los gastos
+    /// que el chat guardó sin firmar (`chat-rows-with-unsigned-amount-have-no-repair-path`). Corrige
+    /// el saldo de filas ya guardadas, así que tiene que republicar el snapshot como cualquier otro
+    /// escritor — y más que ninguno, porque corre en un `Task` desprendido que puede terminar mucho
+    /// después del bootstrap, cuando el `incrementDataVersion()` del arranque ya pasó: sin refrescar,
+    /// el widget seguiría enseñando el saldo inflado hasta el siguiente movimiento del usuario. Pasa
+    /// por la puerta a propósito, que es el argumento de este test.
+    ///
+    /// De paso, el conteo de FICHEROS del docblock estaba desfasado: decía 18 y eran 21 antes de éste.
+    @Test func laPuerta_gateaLos49Escritores() throws {
         let cache = Self.codeOnly(try Self.source("Yala/Services/WidgetDataCache.swift"))
 
         #expect(cache.contains("guard !isWipeArmed else {"),
@@ -359,7 +370,7 @@ struct WidgetSessionSealWiringTests {
             callSites += src.components(separatedBy: "WidgetDataCache.updateCache(").count - 1
         }
 
-        #expect(callSites == 48, "los escritores del snapshot pasaron de 48 a \(callSites)")
+        #expect(callSites == 49, "los escritores del snapshot pasaron de 49 a \(callSites)")
     }
 
     /// El predicado de la puerta es el MISMO que el del gemelo de notificaciones, literalmente. Si uno de
