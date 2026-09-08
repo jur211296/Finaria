@@ -16,7 +16,7 @@
 - [El CI se verifica en LOCAL](feedback_el_ci_se_verifica_en_local.md) — el `run:` de un paso se extrae del YAML y se corre con matriz de escenarios; actionlint con control negativo; y el comentario con que justifiqué mi diseño era falso.
 - [El paso 3 del gate no detecta cero casos](feedback_gate_paso3_no_detecta_cero_casos.md) — XCUITest es XCTest: cuenta «Test Suite» y «Executed», no «Test run with».
 - [Mi fix hereda la forma del bug](feedback_mi_fix_hereda_la_forma_del_bug.md) — el arreglo repite el error del bug; enuncia el bug en una frase y aplícasela al arreglo.
-- [La review adversarial caza lo MÍO](feedback_review_adversarial_caza_lo_mio.md) — 4 defectos el 6-sep y 8 el 7-sep, todos míos; el peor no es un descuido sino un razonamiento explícito y equivocado.
+- [La review adversarial caza lo MÍO](feedback_review_adversarial_caza_lo_mio.md) — 4 el 6-sep, 8 el 7-sep y 5 más esa tarde; un escáner con lista de ficheros es ciego al fichero nuevo, y un centinela que no puede fallar no guarda nada.
 - [Las lentes se contradicen entre sí](feedback_lentes_adversariales_se_contradicen.md) — cuando dos discrepan sobre un hecho, no elijas: mídelo; la gravedad que declaran no es evidencia.
 - [El árbol base contesta «¿es mío?»](feedback_el_arbol_base_contesta_si_es_mio.md) — worktree desde HEAD zanja un rojo ajeno en 90 s; y devuelve el disco que se come.
 - [Un «rojo conocido» no exime de bisecar](feedback_rojo_conocido_no_exime_de_bisecar.md) — dos rojos idénticos en el log, causas opuestas: uno era mío y rompía guardar una transacción.
