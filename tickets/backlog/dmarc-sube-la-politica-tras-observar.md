@@ -61,3 +61,54 @@ rompe, es que algo legítimo no estaba autenticando y el informe lo decía).
   descartar: si nos equivocamos, el correo se recupera de la carpeta de spam en vez de perderse.
 - **Subir la política sin haber abierto un solo informe.** Es el error que este ticket existe para
   evitar; el ticket padre ya lo dejaba escrito como «después, no ahora».
+
+
+---
+
+## Para decidir — preparado el 2026-09-08
+
+**Esto NO es una decisión que haya que tomar hoy, y el ticket ya dice por qué.** Lo único que se
+pide es **ratificar la fecha** para que el board deje de parecer que espera algo.
+
+### Estado, medido hoy contra el nameserver
+
+```
+_dmarc.yala-app.pe  → "v=DMARC1; p=none; rua=mailto:admin@yala-app.pe"
+yala-app.pe         → "v=spf1 include:_spf.google.com ~all"
+google._domainkey   → "v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOC…"
+```
+
+Los tres publicados, la política sigue en `p=none`, tal como quedó. Nada que corregir.
+
+### La fecha
+
+El ticket pide **una semana de informes** antes de mirar nada, y los generadores mandan el `rua` una
+vez al día. Publicado el 2026-09-08 ⇒ la primera fecha con material suficiente es el **2026-09-15**,
+que es exactamente lo que ya dice. **Confirmada, sin cambio.**
+
+El calendario completo, para que no haya que reconstruirlo:
+
+| Fecha | Qué toca |
+|---|---|
+| **2026-09-15** | Abrir los `rua` acumulados en `admin@`. Comprobar que todo lo que pasa es nuestro y que nada legítimo falla. |
+| **≈ 2026-09-16** | Si no hay sorpresas, subir a **`p=quarantine`**. Si aparece un remitente legítimo que no es Workspace: primero al SPF, y solo después la política. |
+| **≈ 2026-09-30** | Con dos semanas limpias, subir a **`p=reject`**. |
+
+### Mi recomendación: dejarlo como está y sacarlo de la vista hasta el 15
+
+No hay decisión que tomar: hay una espera. Lo único que aporta valor hoy es que el ticket no
+aparezca como «pendiente de Jürgen» cuando lo que está es **pendiente del calendario** — si no, cada
+repaso del board vuelve a gastarle atención.
+
+### El AC, sin cambios respecto al cuerpo
+
+- [ ] **2026-09-15**: informes `rua` abiertos y leídos.
+- [ ] Todo remitente legítimo autentica antes de tocar la política.
+- [ ] `p=quarantine` primero; `p=reject` solo tras dos semanas limpias.
+- [ ] `dig +short TXT _dmarc.yala-app.pe @ns.rcp.net.pe` devuelve la política nueva y un correo de
+      comprobación sigue dando los tres `pass`.
+
+### Decisión de Jürgen
+
+_Fecha propuesta y confirmada por Frank: **2026-09-15**. Pendiente solo de tu «ok» — o de una fecha
+distinta si prefieres darle más margen._

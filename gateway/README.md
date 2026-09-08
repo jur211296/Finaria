@@ -170,8 +170,16 @@ la computación llega con el codec canon c1 en I8.
 
 ## ⚠️ Pendiente del owner (deploy)
 
-- **`wrangler deploy` no está autenticado en este entorno** → el deploy a staging del Worker es del owner
-  (`npm run deploy:staging`; el `predeploy` copia el manifest). Las migraciones Supabase YA están en staging.
+- **El deploy del Worker a staging es del owner — pero no por falta de credencial.** Esta línea decía
+  «`wrangler deploy` no está autenticado en este entorno»; **medido el 2026-09-08 con `wrangler whoami`,
+  es falso**: hay OAuth de `admin@yala-app.pe` con `workers (write)` y `workers_scripts (write)`. Lo que
+  hace que la decisión sea del owner es otra cosa: el último deploy de staging es del **2026-08-12** y
+  arrastra commits ajenos (`eb6593ce`, `6bf0f588`), así que desplegar hoy subiría trabajo de otros sin
+  revisar. (`npm run deploy:staging`; el `predeploy` copia el manifest.)
+- **«Las migraciones Supabase YA están en staging» era cierto cuando se escribió y hoy no lo es**:
+  staging arrastra **tres** sin aplicar — `g13_04`, `g13_05` y `g14_01`. El procedimiento, el orden y
+  la verificación están en `docs/RUNBOOK-staging-ddl.md`. Esas sí necesitan credencial de DDL, que no
+  está en este entorno.
 - **`SUPABASE_URL`/`SUPABASE_ANON_KEY` de PRODUCTION** en `wrangler.toml` son un placeholder (hoy apuntan a
   staging para no romper el typecheck); cambiarlos al crear el proyecto Supabase de producción.
 - **Migración a signing keys asimétricas: NO necesaria** — el proyecto YA firma con ES256 asimétrico (JWKS),

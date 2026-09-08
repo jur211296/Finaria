@@ -149,9 +149,11 @@ fallos permanentes al aviso nuevo pasaría en verde.
 **Aplicada solo en producción.** No hay credencial de DDL de staging: el conector MCP lista
 únicamente el proyecto de producción (re-medido hoy) y `~/Secrets/yala-supabase-test/` solo tiene
 JWTs de usuario. Es el **mismo bloqueo** con el que g13_04 quedó pendiente el 2026-09-04, así que
-staging arrastra ahora **dos** migraciones. Se cierran aplicando los dos `.sql` en orden cuando haya
-acceso; ninguna de las dos rompe nada mientras tanto (los goldens no miran `changed` ni este código
-de error). **Es un acceso de Jürgen, no una tarea pendiente mía.**
+staging arrastra ahora **tres** migraciones — actualizado el 2026-09-08: cuando esto se escribió eran
+dos, y `g14_01` (el presupuesto de grupo) se sumó después. Se cierran aplicando los `.sql` en orden
+cuando haya acceso; ninguna rompe nada mientras tanto (los goldens no miran `changed` ni este código
+de error). **Es un acceso de Jürgen, no una tarea pendiente mía**, y el procedimiento con su orden y
+verificación está en `docs/RUNBOOK-staging-ddl.md`.
 
 De paso: `supabase-groups-staging.ddl` **estaba desfasado** respecto a producción —le faltaban
 g13_03 y g13_04, aplicadas en la BD y nunca traídas al molde— y ahora vuelve a reflejar el `prosrc`

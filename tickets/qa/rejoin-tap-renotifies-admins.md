@@ -127,10 +127,15 @@ commit ajeno de `gateway/src`, así que este despliegue sólo añade este cambio
    sólo ve el proyecto de producción, y `~/Secrets/yala-supabase-test/` únicamente tiene JWTs de
    usuario. Queda **drift staging↔producción** en `join_group`. No rompe nada —los goldens no miran
    `changed` y se verificó que pasan sin él— pero hay que cerrarlo cuando haya acceso, aplicando el
-   mismo fichero.
+   mismo fichero. **Actualizado el 2026-09-08:** ya no es esta sola — staging arrastra **tres**
+   (`g13_04`, `g13_05`, `g14_01`) y se aplican en ese orden. Procedimiento, idempotencia y
+   verificación: `docs/RUNBOOK-staging-ddl.md`.
 2. **El Worker de staging tampoco se desplegó, y a propósito**: su último deploy es del 2026-08-12 y
    arrastra **dos commits que no son de esta sesión** (`eb6593ce`, `6bf0f588`). Desplegarlo habría
    subido trabajo ajeno; además, sin la migración en su BD no verificaría nada (fail-open).
+   **Matiz medido el 2026-09-08:** el motivo es ese y **no** la falta de credencial — `wrangler` sí
+   está autenticado aquí (`admin@yala-app.pe`, `workers:write`). `gateway/README.md` decía lo
+   contrario y quedó corregido.
 3. **El conteo real de push en device lo hace el owner.** `.claude/rules/gateway-attest.md` lo dice
    explícitamente: un build de Xcode no puede validar contra producción (el AAGUID de desarrollo da
    401 por diseño), así que **quien escribe el fix no puede ejercitarlo**. Son cinco minutos con dos

@@ -63,3 +63,94 @@ Deja de ser cero ⇒ el reloj de GitHub sirve, el vigilante lo usa y el hueco se
 
 - [ ] Decidido cuál de las tres, y escrito por qué.
 - [ ] Si es la 1, el `launchd` existe y se ha verificado que su corrida aparece en Actions.
+
+
+---
+
+## Para decidir — preparado el 2026-09-08
+
+> ⚠️ **La premisa de este ticket cambió de estado hoy, entre que se escribió y que se preparó la
+> decisión.** Léelo antes de elegir.
+
+### El `schedule` de GitHub **ya dispara** en este repositorio
+
+El propio ticket define su criterio de descarte: «`gh api …runs?event=schedule…` deja de ser cero ⇒
+el reloj de GitHub sirve». Lo corrí hoy y **ya no es cero: es 1**.
+
+```
+wf=QA · id=34228530861 · creado=2026-09-08T12:52:03Z · rama=2.1 · path=.github/workflows/qa.yml
+```
+
+Es la nocturna de `qa.yml`, sobre `2.1`, y estaba corriendo (`tests: in_progress`) mientras escribo
+esto. Controles positivos en la misma tanda: `event=push` → 1103 runs, `workflow_dispatch` → 4. Así
+que la consulta mide lo que dice medir.
+
+**Pero un disparo no es un reloj fiable, y el retraso es el dato que importa:**
+
+| | |
+|---|---|
+| cron declarado en `qa.yml:37` | `17 8 * * *` → **08:17 UTC** |
+| nacimiento real del run | **12:52 UTC** |
+| **retraso** | **4 h 35 min** |
+
+El hueco de `push`, re-medido hoy sobre los últimos 30 días: **8 días sin ningún commit en `2.1`**,
+racha máxima **3 seguidos** — idéntico a lo que decía el ticket.
+
+### Y de camino salió un fallo que no es de este ticket
+
+El vigilante comprueba a las **11:43 UTC** que la nocturna nació, con un margen declarado de 3 h 26
+min sobre la ventana de las 08:17 (`nocturna-vigilante.yml:33-41`). **Hoy el retraso real fue mayor
+que ese margen**: el vigilante habría mirado **1 h 09 min antes** de que la nocturna naciera, y
+habría cantado un rojo falso. No ha pasado porque el vigilante **nunca ha disparado por `schedule`**
+(medido: 0 runs); vive del `push`. El día que su cron despierte, empieza a mentir.
+
+⇒ Queda en ticket propio: `vigilante-margen-menor-que-el-retraso-real-del-cron`.
+
+### Las opciones, revisadas con lo de hoy
+
+**(1) `launchd` en la Mini** — un reloj que no depende de GitHub. Cadencia real y garantizada.
+Coste: una pieza de infraestructura local, y depende de que la Mini esté encendida. **Es acceso
+tuyo.** Con el cron despertando, es la opción que compra menos de lo que costaba ayer.
+
+**(2) Aceptar el hueco.** Coste cero. Lo que se pierde no es cobertura del código —un día sin
+commits no trae código nuevo que probar— sino vigilancia del entorno: el rojo que aparece porque
+cambió el runner, Xcode o el simulador. Ese llega tarde y mezclado con el commit de otro.
+
+**(3) Dejar que el `schedule` haga su trabajo.** Ya no es «reintentar más adelante»: es «ya está
+pasando». El vigilante está escrito y listo; no hay que tocar nada.
+
+### Mi recomendación: **(3), y volver a mirar el 2026-09-22**
+
+Porque el trabajo de la (1) se justificaba con un mecanismo muerto, y el mecanismo respiró hoy.
+Montar un `launchd` ahora es construir un reloj de repuesto sin saber todavía si el bueno anda.
+
+Lo que sí hace falta es **no dar por bueno un solo disparo**. Dos semanas dan una muestra que
+distingue «funciona con retraso» de «funcionó una vez»:
+
+```bash
+gh api 'repos/jur211296/Yala/actions/runs?event=schedule&per_page=100' \
+  --jq '[.workflow_runs[] | select(.path==".github/workflows/qa.yml")] | length'
+```
+
+- **≥ 10 de 14 días** ⇒ el reloj sirve. Este ticket se cierra como `discarded` y el hueco se cerró
+  solo.
+- **≤ 3 de 14** ⇒ fue un accidente. Entonces la (1) se gana su coste y se monta el `launchd`.
+- **En medio** ⇒ sirve a ratos; decides tú si un día de cada dos es suficiente.
+
+Y en cualquiera de los tres casos, el fallo del margen del vigilante hay que arreglarlo — porque
+justo si el cron empieza a servir, es cuando su falso rojo aparece.
+
+### Si eliges (1), el AC es
+
+- [ ] El `launchd` existe en la Mini y su corrida **aparece en Actions** (verificado, no supuesto).
+- [ ] Corre `gh workflow run qa.yml --ref 2.1` y no duplica la nocturna los días en que el
+      `schedule` sí dispara.
+
+### Si eliges (3), el AC es
+
+- [ ] Fecha de re-comprobación anotada: **2026-09-22**, con el comando de arriba.
+- [ ] El ticket del margen del vigilante queda enlazado y no se cierra con este.
+
+### Decisión de Jürgen
+
+_Pendiente. Preguntado el 2026-09-08._

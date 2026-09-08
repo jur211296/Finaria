@@ -14,8 +14,9 @@ con barra de progreso en sus registros y aviso al cruzar 50/75/90/100 %. Un solo
 1. **Device-QA de dos teléfonos.** No es mío: pide TestFlight y App Attest en `enforce`. Que el tope
    que fija un admin aparezca en el teléfono de otro miembro, que un no-admin no pueda cambiarlo, y que
    el aviso llegue como notificación.
-2. **Staging arrastra TRES migraciones** — g13_04, g13_05 y g14_01. Sigue sin haber credencial de DDL
-   allí. Con g14_01 el drift ya muerde: fijar un presupuesto contra staging deja un dead-letter
+2. **Staging arrastra TRES migraciones** — g13_04, g13_05 y g14_01. **El procedimiento ya está
+   escrito: `docs/RUNBOOK-staging-ddl.md`** (8-sep), con orden, idempotencia y trampas; ver
+   [[runbook-staging-ddl]]. Sigue sin haber credencial de DDL allí. Con g14_01 el drift ya muerde: fijar un presupuesto contra staging deja un dead-letter
    permanente, y un dead-letter **apaga el Merkle de ese grupo**.
 3. **El Worker sin desplegar deja el Merkle de Grupos apagado**, a propósito y sin daño: los clientes
    saltan por el guard de canon. Vuelve cuando Jürgen despliegue y el parque converja.
@@ -46,3 +47,15 @@ caen en el guard de canon y **saltan**. El arreglo estructural está en
 
 Relacionado: [[verificar-backend-yala]] · [[la-premisa-del-encargo-tambien-se-mide]] ·
 [[review-adversarial-caza-lo-mio]]
+
+
+## El ticket salió de `in-progress` el 2026-09-08
+
+Estuvo en `tickets/in-progress/` con `status: in-progress` **desde que el PR #91 se mergeó** (7-sep,
+21:53 UTC) hasta el día siguiente. Coherente consigo mismo —carpeta y frontmatter cuadraban— y
+mentiroso con la realidad: no quedaba trabajo, quedaba device-QA. Ahora está en `tickets/qa/`, y
+`in-progress` quedó **vacío**, que es lo que corresponde con la cola en pausa.
+
+⇒ **Mergear el PR no mueve el ticket.** El cierre de una sesión de encargo tiene que moverlo a mano,
+y el sitio es `qa/` mientras quede device-QA — nunca `done` por el hecho de que el código esté
+dentro.

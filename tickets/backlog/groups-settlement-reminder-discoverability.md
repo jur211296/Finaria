@@ -56,3 +56,79 @@ Tres preguntas, y solo la primera es de producto de verdad:
 Sale de la review adversarial del 2026-09-07 (lente de producto), no de un fallo funcional: el
 feature cumple sus AC y está pinneado. Es una decisión de producto que el ticket padre no
 planteó porque el default se copió sin mirar de dónde venía su encendido.
+
+
+---
+
+## Para decidir — preparado el 2026-09-08
+
+**La pregunta, en una línea:** ¿el recordatorio de deudas entra en el «sí, avísame» general, o pide
+un permiso aparte?
+
+### Lo que medí hoy
+
+Las tres premisas del ticket son **exactas**:
+
+1. `AppPreferences.swift:390` — `groupSettlementRemindersEnabled: Bool = false`, `synced: true`.
+2. `NotificationPrimerSheet.swift:91-121` — enciende exactamente dos cosas: `isActive = true` para
+   **todos** los `NotificationItem` (`:97-100`) y `budgetAlertsEnabled` (`:112-113`).
+   `groupSettlementRemindersEnabled` **no aparece**.
+3. El segundo interruptor existe: `GroupSettlementReminderService.swift:86` →
+   `isGroupsNotificationActive` (`:172-183`), que devuelve **false si el item no existe**. Default del
+   item: `NotificationItem.swift:473-474`, `isActive: false`.
+4. Y no hay aviso ninguno: `NotificationsSettingsView.swift:244-281` tiene hint (`:262`) y toggle
+   (`:270`), **sin `.disabled(...)` y sin mención a Grupos**.
+
+**Un matiz que el ticket no tenía y que reduce el problema:** como el primer pone **todos** los
+`NotificationItem` a `true`, quien pasa por el primer ya tiene el maestro de Grupos encendido. El
+silencio de la pregunta 2 golpea a quien **no** pasó por el primer, o lo apagó después — no a todo el
+mundo. Sigue siendo un estado mentiroso, pero es un borde, no el caso común.
+
+### Las tres preguntas, con coste
+
+**1 · ¿Entra en el primer?** — **1 fichero, 1 línea** (`NotificationPrimerSheet.swift:113`, la misma
+llamada a `PreferenceSyncService` que ya enciende `budgetAlertsEnabled`).
+
+**2 · ¿`.disabled` o nota en el hint?**
+- **(2a) `.disabled` + explicación** — 2 ficheros (leer el item `.groups` en la vista) + 1 clave × 16
+  `.lproj`.
+- **(2b) solo una nota en el hint** — 1 fichero + 1 clave × 16 `.lproj`.
+- Clave existente a reusar: `notifications.settlementReminders.hint` (`L10n.swift:6526-6527`) ⇒
+  `…hintGroupsOff`.
+
+**3 · ¿El banner in-app?** — feature nueva en las vistas de Grupos. Otro orden de magnitud.
+
+### Mi recomendación: **sí a la 1, (2a) en la 2, no a la 3**
+
+**A la 1, sí, y es la que resuelve el ticket.** El argumento en contra —«habla de deudas con
+personas, merece consentimiento aparte»— describe bien el **contenido**, pero el primer no es un
+permiso de contenido: es el momento en que alguien dice «avísame de lo que pase en la app». Su
+hermano `budgetAlertsEnabled` nació con el mismo default `false` **y se enciende ahí**; ese
+encendido es justo lo que hace inocuo el default. Copiamos el default sin copiar el encendido, y el
+resultado es un feature construido que no recibe nadie. Y el consentimiento sigue siendo real: el
+toggle queda visible y apagable en Ajustes.
+
+**A la 2, (2a), porque es literalmente tu segundo criterio de aceptación.** «Un toggle encendido que
+no puede entregar nada se lo dice al usuario, **o no se puede encender**.» Una nota al pie cumple la
+letra pero deja el estado mentiroso en pie: el usuario lo enciende, ve el verde y no recibe nada. El
+fichero extra compra que el estado imposible no exista.
+
+**A la 3, no.** El ticket padre ya la descartó para la V1 con criterio, y con la 1 resuelta deja de
+ser «la única vía»: pasa a ser una mejora de descubrimiento dentro del grupo, que es una conversación
+distinta y más cara. Si la 1 entra y aun así nadie usa el feature, entonces sí.
+
+### Si eliges esto, el AC es
+
+- [ ] `NotificationPrimerSheet.acceptNotifications()` enciende también
+      `groupSettlementRemindersEnabled`, por la misma vía que `budgetAlertsEnabled`.
+- [ ] Quien ya pasó por el primer **no** se ve afectado retroactivamente (el primer no se re-ejecuta;
+      confirmar que no hay migración que lo encienda a espaldas de nadie).
+- [ ] La tarjeta de «Recordatorios de deudas» se deshabilita cuando el maestro de Grupos está
+      apagado, con una línea que diga por qué.
+- [ ] Clave nueva en las **16** `.lproj` del target app, con el prefijo
+      `notifications.settlementReminders.`.
+- [ ] La decisión queda escrita aquí, no solo aplicada en el código.
+
+### Decisión de Jürgen
+
+_Pendiente. Preguntado el 2026-09-08._

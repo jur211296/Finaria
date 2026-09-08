@@ -61,3 +61,28 @@ las tres opciones y su coste, en el formato que funciona.
 que dice «revisa que X siga siendo verdad» es una tarea de medición real, no una fórmula** — éste
 destapó un desajuste que llevaba meses en 16 idiomas.
 
+
+
+## Tercera tanda, 2026-09-08 (PR #100) — cinco preparadas, dos avisos
+
+Sesión de desbloqueo entera: **no se implementó nada de producto**, solo se dejaron las cinco
+decisiones escritas con opciones, coste medido y recomendación. Los tickets:
+`groups-owner-debt-no-heir-dead-end`, `groups-settlement-reminder-discoverability`,
+`approximate-mark-ors-over-whole-period`, `cobertura-ui-diaria-cuelga-del-push`,
+`dmarc-sube-la-politica-tras-observar`.
+
+**Lo que cambió mi forma de prepararlas, y conviene repetir:**
+
+- **Medir el coste de cada opción antes de recomendar cambió dos recomendaciones de sitio.** No
+  «esta parece mejor», sino «(c) son 2 ficheros porque la funcionalidad ya existe y (b) son 5 más una
+  métrica nueva». Con el número delante, la recomendación se defiende sola y él decide en una línea.
+- **Tres premisas de los propios tickets eran falsas**, y las tres se cazaron con un grep:
+  un calculador dado por «no afectado» que acumulaba con el mismo OR; una opción cuya mecánica no
+  funcionaba (netos que suman cero, así que filtrar por activos sigue bloqueando); y un criterio de
+  descarte que **se había cumplido esa misma mañana**. ⇒ un ticket que lleva días escrito es un
+  documento, y aquí los documentos envejecen: **mide el ticket antes de preguntar sobre él**.
+- **Dos avisos de 600 caracteres, agrupados por naturaleza** (tres de producto / dos de infra), con
+  la letra de la opción recomendada en cada uno para que conteste «1c, 2 sí, 3b…» sin abrir nada.
+
+**Lo que queda por saber:** si contesta. Se cerró sin respuesta, con los cinco tickets en `backlog`
+y la decisión marcada como pendiente — board honesto, que es lo que pidió el encargo.

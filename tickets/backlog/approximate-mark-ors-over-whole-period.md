@@ -43,7 +43,14 @@ transacciones marcadas no se limpian nunca y la marca se vuelve permanente.
 - **Usuarios monomoneda**: `convertChecked` cortocircuita `fromCode == toCode` a `.exact`
   (`CurrencyConverter.swift:236-239`), y `contextFreeQuality` hace lo mismo antes de `setContext`. El
   problema es exclusivo de multidivisa.
-- **El panorama del Panel**: su marca sale del `LiveBalanceCalculator`, no de este flag.
+- **El panorama del Panel**: su marca sale del `LiveBalanceCalculator`, no de este flag —
+  pero **eso no lo deja al margen**, y esta línea decía lo contrario. Corregido el 2026-09-08:
+  `LiveBalanceCalculator.swift:138` acumula su propia marca con **el mismo OR**
+  (`amountsAreApproximate = amountsAreApproximate || !outcome.quality.isExact`) y la pinta en tres
+  sitios de `PanelPanoramaSection` (`:133`, `:149`, `:162`) vía
+  `PanelViewModel.panelTotalBalanceIsApproximate`. La diferencia real es otra, y **es la que importa
+  para decidir**: itera `nativeBalances`, que ya viene **agrupado por divisa**, así que no tiene un
+  importe aproximado por transacción sobre el que calcular una fracción.
 
 ## Criterio de hecho (AC)
 
@@ -53,3 +60,89 @@ transacciones marcadas no se limpian nunca y la marca se vuelve permanente.
       coinciden.
 - [ ] Test que fije el criterio elegido con un caso de una sola transacción aproximada entre muchas
       exactas.
+
+
+---
+
+## Para decidir — preparado el 2026-09-08
+
+**La pregunta, en una línea:** cuándo se gana el «≈» un total — ¿basta una transacción aproximada,
+o hace falta que pese?
+
+### Lo que medí hoy, y que mueve la decisión
+
+Las tres coordenadas del ticket son **exactas en este árbol** (`HeroBucketsCalculator:102,105`,
+`CashFlowCalculator:95`, `FXPnLLogic:301`). Pero el barrido completo encontró **cuatro**
+acumuladores, no tres, y el cuarto es el que el ticket daba por no afectado
+(`LiveBalanceCalculator:138`, corregido arriba). Los cuatro usan OR; en lo que difieren es en la
+**fuente**, no en el operador:
+
+| Dónde | Fuente de la marca | Granularidad |
+|---|---|---|
+| `HeroBucketsCalculator:102,105` | solo el flag guardado en la transacción | por transacción |
+| `CashFlowCalculator:95,103` | flag **o** `!outcome.quality.isExact` | por transacción |
+| `LiveBalanceCalculator:138` | solo el converter | **por divisa** |
+| `FXPnLLogic:195` → `:112` | ambas | **por fila de divisa** |
+
+Y el coste real está donde no se ve: **`ApproximateAmountMarkTests.swift` tiene 14 tests que fijan
+el comportamiento actual**, y su comentario de `:115-118` documenta *a propósito* que una sola
+transacción provisional debe bastar — o sea, el OR de hoy no es un descuido, es una decisión escrita
+que este ticket propone revisar.
+
+### Las opciones, con su coste medido
+
+**(a) Dejarlo como está.** Coste cero. El «≈» sigue saliendo casi siempre para el usuario
+multidivisa, y se erosiona hasta significar nada — que es lo que el propio código advierte en
+`FXPnLLogic.swift:72-74`.
+
+**(b) Umbral por importe**: marcar solo si la parte aproximada pesa lo suficiente sobre el total.
+- **Coste: 4 ficheros de lógica y reescribir ~5 tests. Las vistas no se tocan.** `Buckets` y
+  `CashFlowSummary` pueden acumular un importe aproximado paralelo y **derivar dentro del struct** el
+  mismo `Bool` que ya exponen: la firma pública no cambia, así que `PanelViewModel`, `HeroMonthView`
+  y los tests de wiring (que hacen *grep literal* sobre el fuente de las vistas) sobreviven intactos.
+- **Su parte incómoda, y es de producto:** `LiveBalanceCalculator` no tiene importe aproximado por
+  transacción, solo saldos por divisa, así que ahí el umbral se mide sobre otra cosa. Y para el
+  «disponible» hay que elegir denominador.
+
+**(c) Por divisa, como `FXPnLLogic`.** **Es el más caro y el que menos resuelve.** `HeroBuckets` no
+agrupa por divisa en absoluto: suma `amountInPreferredCurrency` en escalares (`:70-76`), así que
+introducir filas por divisa cambia su tipo de retorno y arrastra `PeriodSummary`, `HeroMonthView` y
+los tests de wiring. Y sobre todo: **en el hero no hay dónde enseñar el desglose.** `FXPnLLogic`
+puede marcar por divisa porque su desglose ya *es* el producto y hay un sheet que lo pinta
+(`FXPnLDetailSheet:131`); el hero es **un número solo** en moneda preferida, y marcar «≈ por divisa»
+un número agregado no le dice nada a nadie.
+
+### Mi recomendación: **(b)**, y con estos dos valores ya elegidos
+
+Porque es la única que ataca el síntoma real —que la marca se dispara por ruido— sin pedir UI nueva,
+y porque el coste cae entero en lógica y tests, no en producto.
+
+Dos parámetros que la vuelven concreta, propuestos para que solo haya que decir sí o no:
+
+1. **Umbral: 5 % del importe del bucket.** Por debajo, el error posible es menor que el redondeo que
+   el usuario ya ve; por encima, la marca informa de algo. Es un número redondo y explicable.
+2. **Denominador: la magnitud del propio lado que se marca** (gasto sobre gasto, ingreso sobre
+   ingreso), no el neto. El neto puede acercarse a cero y disparar el umbral con céntimos.
+3. **`LiveBalanceCalculator` se queda con su OR por divisa** — su unidad ya es la divisa, y una
+   divisa entera sin tasa sí es una ausencia que merece la marca.
+
+### Si eliges (b), el AC es
+
+- [ ] `HeroBucketsCalculator` y `CashFlowCalculator` acumulan importe aproximado y derivan el `Bool`
+      por umbral; la firma pública de `Buckets` y `CashFlowSummary` no cambia.
+- [ ] El umbral vive en **un solo sitio** con nombre, no repetido en cada calculador.
+- [ ] Test con **una** transacción aproximada pequeña entre muchas exactas ⇒ **no** marca; y el
+      gemelo con una aproximada que pesa ⇒ **sí** marca.
+- [ ] Los ~5 tests de `ApproximateAmountMarkTests` que fijan «una basta» se reescriben al criterio
+      nuevo, y su comentario `:115-118` se actualiza: hoy documenta lo contrario.
+- [ ] `ApproximateMarkWiringTests` sigue verde sin tocarlo (si se rompe, es que cambió una firma que
+      no debía cambiar).
+
+### Si eliges (a), el AC es
+
+- [ ] Se anota en el ticket que la marca amplia es deliberada, y se cierra como `discarded` — para
+      que la próxima review no lo vuelva a levantar.
+
+### Decisión de Jürgen
+
+_Pendiente. Preguntado el 2026-09-08._
