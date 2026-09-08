@@ -33,6 +33,7 @@
 - [Capturas del simulador para la web](feedback_capturas_simulador_para_la_web.md) — receta y trampas: Secrets.xcconfig, nombre efímero, categorías sembradas, `sips -Z` escala el lado largo.
 
 ## Estado del trabajo
+- [Las escrituras a mano ya no sellan una tasa aproximada](project_fx_escrituras_a_mano.md) — PR #94; eran 14 y no 10, el device-QA NO es simulable, y el AC nº2 pedía algo que no procede.
 - [La ganancia cambiaria ya tiene número](project_fx_pnl_card.md) — PR #92; falta device-QA y NO es simulable (ningún seed es multi-divisa); el FIFO no se simplifica.
 - [El tope de gasto del grupo ya avisa](project_presupuesto_de_grupo.md) — PR #91 y g14_01 en prod; faltan device-QA, TRES migraciones de staging y el deploy del Worker que reenciende el Merkle.
 - [El recordatorio de deuda ya avisa al deudor](project_recordatorio_liquidacion.md) — PR #89; falta device-QA y una decisión; NO se respeta `simplifyDebts` a propósito.

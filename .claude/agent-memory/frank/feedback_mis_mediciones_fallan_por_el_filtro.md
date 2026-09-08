@@ -475,3 +475,27 @@ gesto es el script de conjuntos, que además nombra qué sobra y qué falta. Si 
 Y un corolario que sí es nuevo: **cuando el conteo cuadra, dilo con el cruce, no con el número.**
 «151 = 151» no prueba nada por sí solo —dos errores pueden compensarse—; «cero huérfanos en ambas
 direcciones y todos los `status` casan con su carpeta» sí.
+
+---
+
+**2026-09-07, `fx-manual-writes`: los dos clásicos de este fichero, otra vez, en los primeros cinco
+minutos — y esta vez la lección es que hace falta el PATRÓN, no la advertencia.**
+
+`grep -E "error:"` sobre un log de `xcodebuild` volvió a decir **720 errores** donde había cero:
+eran el eco de cada `#expect(... classify(error: ...))`. Es la tercera vez que lo anoto. Y el
+primer `grep -rn ... --include=*.swift` volvió a morir por el glob de zsh sin comillas, devolviendo
+un **`wc -l` de 0** que, de haberlo creído, cerraba la sesión en falso a los dos minutos.
+
+Lo que faltaba aquí no era otro ejemplo. Era esto, para copiar y pegar:
+
+- **Errores de compilación reales:** `grep -cE "^/.*\.swift:[0-9]+:[0-9]+: error:"`. El ancla `^/`
+  y el `línea:columna:` son lo que separa un diagnóstico del compilador del texto de un test.
+- **Veredicto de build:** `grep -E "^\*\* BUILD (SUCCEEDED|FAILED)"`, con el `^\*\*`.
+- **Casos de Swift Testing:** la línea `Test run with N tests in M suites`, y **M se compara con el
+  número de `-only-testing` que pedí**. Los `Executed N tests` son de XCTest (XCUITest) y en una
+  corrida de Swift Testing salen como `Executed 0 tests`, que no significa nada malo.
+- En zsh, **todo patrón de `grep`/`find` va entre comillas**, siempre.
+
+⇒ **Un cero es un resultado sospechoso por defecto.** Cero coincidencias, cero errores, cero tests:
+antes de creerlo, correr el mismo comando con un patrón que SÍ deba casar. Cuesta un segundo y es la
+diferencia entre medir y no medir. Aquí el falso cero llegó antes que cualquier hallazgo real.
