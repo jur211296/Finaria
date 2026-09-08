@@ -1,6 +1,6 @@
 ---
 name: mi-docblock-tambien-es-una-premisa
-description: Lo que YO escribo en un docblock mientras implemento es una afirmación sin medir, y dos veces el 8-sep describía la intención en vez del comportamiento
+description: Lo que YO escribo en un docblock mientras implemento es una afirmación sin medir; cuatro falsas el 8-sep. La variante nueva: inventar una JUSTIFICACIÓN técnica para una línea que está ahí por otra razón.
 metadata:
   type: feedback
 ---
@@ -33,3 +33,21 @@ mecanismo: si su porqué es falso, el mecanismo puede estar de más y nadie lo v
 
 Relacionado: [[mi-fix-hereda-la-forma-del-bug]] — misma familia, otra superficie. Y
 [[la-premisa-del-encargo-tambien-se-mide]], que cubre las premisas ajenas; ésta cubre las mías.
+
+**Cuarta y quinta, el mismo día, en `chat-assistant-plants-exchange-rate-one` — y la cuarta estrena
+una FORMA distinta: la justificación inventada.** Escribí que el guard `abs(monto) > 0.0001` estaba
+ahí porque «divide, y un monto que redondee a cero daría infinito o NaN». Falso y medible en diez
+segundos: la guard de entrada ya exige `isFinite` y `> 0`, y `0.000372 / 0.00005` son 7,44. La razón
+REAL de esa línea es la paridad con `recalculatePreferredCurrency` — si rompes el umbral en un solo
+sitio, la fila cambia de número al repararse. Escribí una razón plausible en vez de la verdadera, y
+eso es peor que no comentar: el comentario aseguraba que la rama protegía de algo de lo que no
+protege, y **tapaba que la rama es alcanzable y ahí escribe un número falso** (la banda
+`0 < monto <= 0.0001`, que acabó siendo ticket propio). La quinta, en la cabecera del test: afirmé
+que el fichero «no comparte estado» con la suite hermana — cierto para el store de SwiftData y falso
+para `SessionState` y los defaults compartidos.
+
+**How to apply:** cuando escribas *por qué* existe una línea defensiva, la prueba es intentar
+refutarla con un ejemplo numérico concreto. Si no consigues construir el caso del que dices que
+protege, la razón que has escrito no es la razón — y la verdadera suele ser «paridad con X», que es
+además la que el yo-futuro necesita para no romperla. Y cuando escribas «esto está aislado», di
+aislado *de qué*: casi siempre lo está de una cosa y no de las otras tres.
