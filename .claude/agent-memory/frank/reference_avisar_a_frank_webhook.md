@@ -1,6 +1,6 @@
 ---
 name: avisar-a-frank-webhook
-description: Cómo se avisa al Grok dueño — normalmente NO hay que hacer nada: el hook avisa solo. A mano, `<motivo>` a secas no envía (sale 0 en silencio) y el POST propio da 401
+description: Cómo se avisa al Grok dueño — normalmente NO hay que hacer nada: el hook avisa solo. A mano, `<motivo>` a secas no envía, el POST propio da 401, `--dry-run` NO previsualiza el `--texto` y el resumen se recorta a 600
 metadata:
   type: reference
 ---
@@ -83,3 +83,37 @@ usa «registro», «evidencia», «comprobación», «tests». Y **lee siempre l
 regla práctica: **de los artefactos se encarga el hook; el cierre lo mandas tú con `--avisar`.**
 Y en los dos casos, lo que se comprueba es el log, no la intención.
 
+
+
+## Y `--dry-run` NO sirve para previsualizar un aviso con `--texto` (2026-09-08)
+
+**El dry-run compone un cuerpo DISTINTO del que se envía.** Leído en el fuente, no inferido:
+`modo_manual` (el de `--dry-run`) llama `componer(destino, motivo, d, prueba=prueba)` — **sin
+`resumen=`**; `modo_avisar` llama `componer(..., resumen=texto_libre, fallos="")`. Así que el
+`--texto` que le pases al dry-run **no aparece por ningún lado** y el cuerpo que te enseña no es el
+que va a salir.
+
+**Why:** el 2026-09-08 pasé dos rondas de dry-run creyendo que mi resumen no entraba por el motivo
+equivocado —probé `espera-permiso`, luego `cierre-resumen`— cuando el problema era el modo. Y el
+tell estaba delante: metí un marcador con la palabra **PRUEBA** dentro del texto y la puerta dijo
+**«pasa»**. Si el texto hubiera estado en el cuerpo, `RX_PRUEBA` lo habría descartado. Un filtro que
+no reacciona a lo que debería descartar está mirando otra cosa — es la familia del control positivo
+de `.claude/rules/testing.md`.
+
+**How to apply:** para saber si tu texto sale y cómo, **lee `modo_avisar`**, o mándalo y comprueba el
+log. El dry-run solo vale para el encabezado, el destino y la URL. Y no te fíes de un «pasa» de la
+puerta sobre un cuerpo que no contiene tu texto.
+
+## `TOPE_RESUMEN = 600`, y recorta a mitad de palabra sin avisar
+
+`sanear(texto, TOPE_RESUMEN, repo)` corta a `tope-1` y pega `…`. **No hay aviso**: el script imprime
+`ENVIADO … HTTP 200` igual, y tú te quedas creyendo que llegó entero. El 2026-09-08 mandé 637
+caracteres y a Frank le llegó «El ti…» donde decía que el ticket quedaba en `blocked`.
+
+**How to apply:** cuenta los caracteres **antes** de la llamada que envía, no en la misma línea —
+ahí ya es tarde y duplicar el aviso cuesta más que la frase perdida (ver el duplicado del 5-sep
+arriba). Y pon lo accionable al principio: **lo que se pierde es siempre el final**.
+
+Dos cosas más que `sanear` hace y conviene saber: en un repo de `REPOS_SIN_TEXTO_LIBRE` devuelve
+vacío y el aviso se niega entero; y su regex de rutas es **sensible a mayúsculas**
+(`Users|Claude|Projects|Documents`), así que una URL con `claude.ai` en minúscula pasa intacta.
