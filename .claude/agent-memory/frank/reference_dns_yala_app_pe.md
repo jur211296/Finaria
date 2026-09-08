@@ -1,6 +1,6 @@
 ---
 name: dns-yala-app-pe
-description: Dónde se administra el DNS de yala-app.pe, quién puede entrar, y el estado del correo: SPF/DKIM/DMARC publicados el 2026-09-08 y verificados; falta el correo que confirma que Google firma
+description: Dónde se administra el DNS de yala-app.pe, quién puede entrar, y el estado del correo: autentica desde el 2026-09-08 (los tres en pass); queda subir la política DMARC, con ticket propio
 metadata:
   type: reference
 ---
@@ -32,10 +32,24 @@ Buzón elegido para los informes DMARC: `admin@yala-app.pe`.
 zona no se toca desde entonces). Si tras pegar en el panel el serial no ha cambiado, el panel no
 guardó — y eso se confunde con «aún no ha propagado», que es una espera inútil de dos horas.
 
-**Jürgen pegó los tres el 2026-09-08 y entran bien** (serial `2026071400` → `2026090802`): un solo
-`v=spf1 include:_spf.google.com ~all`, las dos verificaciones de la raíz intactas, `p=none` con `rua`
-al buzón propio, y ningún nombre duplicado. El ticket está en `tickets/qa/` — **falta el correo que
-dice si Google FIRMA**, que es lo único que ningún `dig` contesta.
+**El correo de `yala-app.pe` autentica desde el 2026-09-08.** Jürgen pegó los tres (serial
+`2026071400` → `2026090802`) y el correo de comprobación dio `dkim=pass spf=pass dmarc=pass`. Ticket
+cerrado en `tickets/done/`; el seguimiento —subir `p=none` a `quarantine` y luego `reject`— vive en
+`tickets/backlog/dmarc-sube-la-politica-tras-observar.md`, **no antes del 15-sep**, porque los `rua`
+llegan una vez al día y hacen falta varios.
+
+**Lo que hay que leer en esa cabecera no son los tres `pass`.** Son otras tres cosas, y ninguna se
+ve de un vistazo:
+
+1. **Con qué selector firmó.** `DKIM-Signature: d=yala-app.pe; s=google` es *nuestra* clave; la firma
+   de Google va aparte con `d=1e100.net`. Solo eso demuestra que «Iniciar autenticación» surtió
+   efecto — el registro puede estar perfecto y Google no firmar todavía, y **ningún `dig` distingue
+   esos dos mundos**.
+2. **Si el alineamiento es estricto.** `header.from`, el `d=` de la firma y `smtp.mailfrom` han de ser
+   el mismo dominio. DMARC pasa con SPF **o** DKIM alineado, así que un `dmarc=pass` puede estar
+   sostenido por uno solo; si los dos alinean, no depende de ninguno.
+3. **Por qué mecanismo pasó el SPF.** La IP remitente tiene que caer en un rango de
+   `_spf.google.com`, no en un `all` laxo.
 
 **Lo que hay que verificar en un DKIM, y no es que exista.** Vino **partido en dos cadenas** porque
 2048 bits pasan de los 255 caracteres por cadena, y ahí es donde un panel lo rompe sin avisar. La
