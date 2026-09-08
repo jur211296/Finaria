@@ -26,8 +26,25 @@ source: medición con dig a petición del owner (2026-09-03)
 | MX y A | intactos: 5 registros de Google, `216.198.79.1` |
 
 El DKIM llegó **partido en dos cadenas** —el valor de 2048 bits pasa de 255 caracteres— y el panel
-las partió bien: eso es lo que prueba `openssl`, y es la diferencia entre un registro publicado y un
-registro que además sirve.
+las partió bien. Eso es la diferencia entre un registro publicado y uno que además sirve, y se
+comprueba reconstruyendo la clave:
+
+```bash
+dig +short TXT google._domainkey.yala-app.pe @ns.rcp.net.pe \
+  | tr -d '" ' | tr -d '\n' | sed 's/.*p=//' | fold -w 64 \
+  | (echo "-----BEGIN PUBLIC KEY-----"; cat; echo; echo "-----END PUBLIC KEY-----") \
+  | openssl pkey -pubin -noout -text | head -1     # -> RSA Public-Key: (2048 bit)
+```
+
+**El `echo` suelto del tercer renglón no es adorno**: `tr -d '\n'` deja el base64 sin salto final, así
+que sin él `-----END-----` se pega a la clave y `openssl` dice `unable to load Public Key` sobre una
+clave que está perfecta. Costó un falso rojo al escribir esto.
+
+**Qué caza y qué no** (medido con controles negativos, 2026-09-08): caza el valor truncado, los
+caracteres perdidos en medio y **las dos cadenas en orden invertido** —los tres modos en que un panel
+rompe un DKIM largo—. **No** caza basura pegada al final, porque el DER lleva su propia longitud y
+los bytes de más se ignoran. Un `openssl` contento no es prueba de que el registro sea idéntico al
+que dio Google; es prueba de que la clave se reconstruye.
 
 ### Lo que falta para cerrar
 
