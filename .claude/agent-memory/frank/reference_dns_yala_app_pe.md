@@ -43,8 +43,19 @@ comprobación que distingue «publicado» de «además sirve» es reconstruir la
 
     dig +short TXT google._domainkey.yala-app.pe @ns.rcp.net.pe | tr -d '" ' | tr -d '\n' \
       | sed 's/.*p=//' | fold -w 64 \
-      | (echo "-----BEGIN PUBLIC KEY-----"; cat; echo "-----END PUBLIC KEY-----") \
+      | (echo "-----BEGIN PUBLIC KEY-----"; cat; echo; echo "-----END PUBLIC KEY-----") \
       | openssl pkey -pubin -noout -text | head -1     # -> RSA Public-Key: (2048 bit)
+
+**Ese `echo` suelto es el comando entero.** `tr -d '\n'` deja el base64 sin salto final, así que sin
+él `-----END-----` se pega a la clave y `openssl` responde `unable to load Public Key` sobre un DKIM
+**correcto**. Lo escribí sin el `echo`, lo corrí, y por poco documento un falso rojo — la única razón
+por la que no salió es que no entrego un comando sin ejecutarlo.
+
+**Y su control negativo dice qué comprueba de verdad:** caza el truncado, los caracteres perdidos en
+medio y **las dos cadenas en orden invertido** (los tres modos en que un panel rompe una clave
+larga), pero **no** caza basura pegada al final — el DER lleva su longitud y los bytes de más se
+ignoran. Un `openssl` contento prueba que la clave se reconstruye, no que el registro sea idéntico
+al que dio Google.
 
 Y dos comprobaciones más que el `dig` a secas no da: que haya **un solo** `v=spf1` (dos son
 `PermError` y tumban el SPF entero) y que los `verification` que ya estaban **sigan ahí**.
