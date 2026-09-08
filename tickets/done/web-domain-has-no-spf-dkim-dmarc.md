@@ -1,6 +1,6 @@
 ---
 id: web-domain-has-no-spf-dkim-dmarc
-status: qa
+status: done
 priority: high
 area: web, dns
 created: 2026-09-05
@@ -10,7 +10,7 @@ source: medición con dig a petición del owner (2026-09-03)
 
 # El dominio no autentica su correo: cualquiera puede escribir como @yala-app.pe
 
-## Publicado el 2026-09-08 · queda una comprobación
+## Cerrado el 2026-09-08 · los tres autentican
 
 **Jürgen pegó los tres registros y entran correctamente.** Verificado contra el autoritativo
 (`dig @ns.rcp.net.pe`) en el árbol de la sesión, no leído de una pantalla:
@@ -46,15 +46,28 @@ rompe un DKIM largo—. **No** caza basura pegada al final, porque el DER lleva 
 los bytes de más se ignoran. Un `openssl` contento no es prueba de que el registro sea idéntico al
 que dio Google; es prueba de que la clave se reconstruye.
 
-### Lo que falta para cerrar
+### El correo confirma que Google firma (2026-09-08, 07:23 Lima)
 
-1. **El correo de comprobación (paso 5).** Es lo único que dice si Google está **firmando**, y por
-   tanto si el paso 3 («Iniciar autenticación») surtió efecto. Ningún `dig` puede contestarlo: el
-   registro DKIM puede estar perfecto y Google no firmar todavía. Desde `admin@yala-app.pe` a una
-   cuenta externa → **⋮ › Mostrar original** → `spf=pass dkim=pass dmarc=pass`, los tres.
-   Google puede tardar de unos minutos a ~48 h en activar la firma.
-2. **No se cierra con los tres en `pass`.** Queda el período de observación de abajo: `p=none` no
-   protege. Eso es seguimiento, no trabajo.
+Correo real de `admin@yala-app.pe` a una cuenta externa. `Authentication-Results` de
+`mx.google.com`:
+
+    dkim=pass  header.i=@yala-app.pe  header.s=google
+    spf=pass   smtp.mailfrom=admin@yala-app.pe
+    dmarc=pass (p=NONE sp=NONE dis=NONE)  header.from=yala-app.pe
+
+Tres cosas de esa cabecera que importan más que los tres `pass`:
+
+1. **Firmó con NUESTRO selector.** `DKIM-Signature: d=yala-app.pe; s=google` — es la clave que
+   publicamos, no una firma genérica de Google (esa va aparte, con `d=1e100.net`). Esto es lo que
+   demuestra que el paso 3 surtió efecto; era la única pregunta que ningún `dig` podía contestar.
+2. **El alineamiento es estricto.** `header.from`, el `d=` de la firma y `smtp.mailfrom` son el mismo
+   dominio. DMARC pasa si SPF **o** DKIM pasan *alineados*; aquí pasan los dos, así que el resultado
+   no depende de ninguno en solitario.
+3. **La IP remitente cae dentro del SPF por la vía correcta.** `209.85.220.41` ∈ `209.85.128.0/17`,
+   que viene de `_spf.google.com` — no es un `pass` por un mecanismo laxo.
+
+**Queda un seguimiento, y tiene ticket propio**: `dmarc-sube-la-politica-tras-observar`. `p=none`
+observa pero no protege, y subirlo sin haber leído los informes es como se tira correo legítimo.
 
 ## Qué pasa
 
