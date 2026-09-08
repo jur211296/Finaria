@@ -519,6 +519,34 @@ final class ChatAssistantViewModel {
         )
         let amountInPreferred = NSDecimalNumber(decimal: outcome.amount).doubleValue
 
+        // La tasa se DERIVA del resultado que ya está aquí al lado; no se planta. Hasta el
+        // 2026-09-08 esta ruta pasaba `exchangeRate: 1.0` literal mientras el monto convertido de al
+        // lado sí salía de una conversión real, así que el detalle de un gasto en otra divisa decía
+        // «1,00». Mismo cociente y mismo umbral que las otras rutas de creación y que el reparador
+        // (`TransactionItem.recalculatePreferredCurrency`): eso es lo que hace que el número guardado
+        // sea reproducible por el proceso que existe para repararlo.
+        //
+        // El umbral está aquí por PARIDAD con el reparador y con las otras rutas, no por necesidad
+        // aritmética — y la diferencia importa. Medido el 2026-09-08: la guard de arriba ya garantiza
+        // `dbl.isFinite` y `dbl > 0`, así que la división no puede dar infinito ni NaN, y `0.000372 /
+        // 0.00005` son 7,44, un número perfectamente sano. Lo que el umbral hace es reproducir el
+        // mismo escalón que `TransactionItem.recalculatePreferredCurrency`, para que el reparador no
+        // reescriba un número distinto al pasar por la fila.
+        //
+        // Y tiene un residuo CONOCIDO, no un descuido: la banda `0 < monto <= 0.0001` pasa la guard de
+        // arriba (que pide `> 0`, no `> 0.0001`) y cae aquí, de modo que una conversión real acaba
+        // escribiendo 1.0 otra vez — la forma exacta del bug que este bloque cierra, sobreviviendo en
+        // una franja estrecha. Se deja así a propósito porque el reparador tiene el mismo umbral y
+        // escribiría lo mismo: romper la paridad aquí haría que el número cambiara al repararse. El
+        // umbral compartido es lo que hay que mover, y eso es
+        // `fx-rate-derivation-threshold-reseals-one-to-one`, no este fichero.
+        let effectiveRate: Double
+        if abs(amountDouble) > 0.0001 {
+            effectiveRate = amountInPreferred / amountDouble
+        } else {
+            effectiveRate = 1.0
+        }
+
         let transaction = TransactionItem(
             date: draft.date,
             amount: amountDouble,
@@ -528,14 +556,9 @@ final class ChatAssistantViewModel {
             subcategory: subcategory,
             account: account,
             tags: tags,
-            exchangeRate: 1.0,
+            exchangeRate: abs(effectiveRate),
             amountInPreferredCurrency: amountInPreferred,
             preferredCurrencyCode: preferredCurrency,
-            // El `exchangeRate: 1.0` de arriba es un valor plantado, no la tasa que se usó — está
-            // así desde que existe la ruta, y **este flag NO lo arregla en el caso normal**: cuando
-            // la tasa es exacta el flag queda `false`, la transacción sale de la cola del reparador
-            // (`#Predicate` = `== true`) y el 1.0 mentiroso se sella. Sigue en
-            // `chat-assistant-plants-exchange-rate-one`; aquí solo se decide la provisionalidad.
             isExchangeRateProvisional: !outcome.quality.isExact
         )
 
