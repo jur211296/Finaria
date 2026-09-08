@@ -68,6 +68,45 @@ manifest `c2` que ya conoce la columna nueva — no es un Worker desalineado.
 ~70x que no depende del manifest, ni del solapamiento, ni de los datos de la base. Ese es el hecho
 que hay que explicar, y ninguna de las cuatro hipótesis lo hace.
 
+## Lo medido al final, y por dónde seguir (2026-09-08, última hora)
+
+**La latencia por petición NO es el problema y NO degrada.** 20 peticiones seguidas al REST de
+staging desde esta Mac, cronometradas:
+
+```
+436 276 130 170 185 137 132 124 174 139 164 176 120 129 132 128 165 167 120 123   (ms)
+```
+
+Estable en **~130 ms** tras el arranque en frío, sin crecer. Eso mata el rate-limiting acumulativo
+como explicación.
+
+**Y la aritmética que queda apunta a un sitio concreto.** Si una petición son 130 ms y hay tests que
+tardan 20-55 s **pasando** (no solo los que dan timeout), esos tests hacen **150-400 peticiones**. La
+pregunta ya no es «por qué va lento» sino **«por qué hace tantos viajes»**.
+
+**El sospechoso número uno es el corpus del usuario de prueba.** `G2 · 7. paginación` hace:
+
+```ts
+const baseline = (await pull(jwtA, {}, 1000)).cursors;   // pull COMPLETO del usuario
+...
+for (; iterations < 15; iterations++) { const p = await pull(jwtA, cursors, 1); }  // limit=1
+```
+
+Y `jwtA` tiene **677 grupos** acumulados de meses de corridas (`jwtB`, 511). Un pull que recorra el
+corpus a razón de una petición por página es O(corpus), y el corpus solo crece: **cada corrida de los
+goldens añade ~15 grupos más y nadie los limpia**. Eso explicaría por qué el 7-sep daba 25/25 y hoy
+no, sin que nadie tocara el código.
+
+**La siguiente medición, concreta:** instrumentar `pull()` en el test para contar peticiones y
+cronometrarlas, y correr **un** test que falla. Si el número de viajes escala con los 677 grupos,
+está encontrado — y entonces hay dos arreglos distintos: limpiar el corpus de test (destructivo,
+decisión del owner) o que el baseline deje de traerse el corpus entero.
+
+**Aviso para quien lo retome:** los tests se lanzan con `npx vitest`, que **no dispara `pretest`** y
+por tanto **no sincroniza el manifest**. Si vas a comparar corridas, corre `npm run sync:manifest`
+antes o usa `npm test`, o estarás midiendo con un manifest viejo sin saberlo (a mí me costó una
+hipótesis entera).
+
 ## Lo que queda por medir
 
 Si la base responde en menos de un milisegundo y el test tarda 60 s, el coste está en el **número de
