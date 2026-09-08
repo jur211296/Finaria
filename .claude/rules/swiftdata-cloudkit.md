@@ -40,46 +40,47 @@ paths:
 
 <!-- INDICE:inicio — generado por scripts/indexar_doc.py, no editar a mano -->
 
-## Índice de reglas (31)
+## Índice de reglas (32)
 
-> Este fichero son **44 KB en 31 reglas largas**. No lo leas entero: localiza la regla
+> Este fichero son **45 KB en 32 reglas largas**. No lo leas entero: localiza la regla
 > aquí y lee **solo su tramo** con `sed -n '<linea>,<linea+N>p'`.
 > Los números de línea se desplazan al editar — regenera con
 > `python3 scripts/indexar_doc.py <fichero> --apply`.
 
 | Línea | Regla | Peso |
 |---|---|---|
-| `L90` | CloudKit compat | 119 B |
-| `L92` | Schema del container de GRUPOS — campo nuevo = deploy a Production en el MISMO PR | 1.1 KB |
-| `L94` | `#Predicate` GENÉRICO-PROTOCOLO crashea (`DataUtilities.swift:85`) — usa concreto por tipo | 1.8 KB |
-| `L96` | Acciones post-accept de un CKShare = intent PERSISTENTE reconciliable, nunca one-shot (bug Pia 2026-07-11) | 1.3 KB |
-| `L98` | Lazy M2M con CloudKit — CSV mirror | 1020 B |
-| `L100` | CSV mirror — stale ≠ nil al regenerar un UUID de identidad (commit `899c1c25`) | 1.4 KB |
-| `L102` | Sync de Grupos (CKSyncEngine) NO debe arrancar/`save()` sobre el `mainContext` compartido antes de que el primer import  | 403 B |
-| `L104` | Lo que el gate de quiescencia DIFIERE solo se recupera solo si es un evento de CloudKit. Si es una INTENCIÓN, el diferid | 425 B |
-| `L106` | El guard G6-3 es TAMBIÉN lo que impide avisos DUPLICADOS mientras los dos canales conviven (Fase 2, 2026-07-29). No lo d | 1.9 KB |
-| `L108` | [STALE, medido 2026-08-03 — el código que describe ya NO EXISTE: `applyRemoteRecordIfAbsent` y `GroupPullRescueGate` dan | 555 B |
-| `L110` | `DefaultHistoryToken` es POR-STORE, y un drain que ancla su high-water en el store equivocado queda ciego al suyo PARA S | 444 B |
-| `L112` | Un borrado tiene DOS mitades y el camino remoto solo copió una: la fila del grupo se borra, el PUENTE personal se queda  | 398 B |
-| `L114` | Un gate por ZONA calculado sobre filas VIVAS es la herramienta equivocada para un tombstone por FILA — y con un duplicad | 510 B |
-| `L118` | El par que apaga el mirror NO se puede hacer atómico ni invertir: se enforcea en el CONSUMIDOR (C-1, commit `246a6939`). | 1.9 KB |
-| `L120` | Un terminal de fallo DENTRO del cutover tiene que devolver el modo a `.icloud` como PRIMER efecto, o es peor que el limb | 1.1 KB |
-| `L122` | `isMarkerExported()` es necesaria-no-suficiente y su espera necesita TOPE: no hay API de cuota de iCloud. | 1.2 KB |
-| `L126` | El dominio Grupos pertenece al Apple ID, no al humano: toda frontera de «otro usuario en este device» tiene que SELLARLO | 429 B |
-| `L128` | Al ELIMINAR una función, lista lo que hacía ADEMÁS de lo que la sustituye — un guard no viaja solo con el camino que pro | 2.2 KB |
-| `L130` | El dominio de preferencias POR SESIÓN existe desde el 2026-08-13, y su parte difícil no fue el escritor sino el INVENTAR | 2.8 KB |
-| `L137` | Una caché compartida se protege con un SELLO COLGADO DEL DESCRIPTOR, no del propio dato — y ésa es la única diferencia e | 404 B |
-| `L139` | EXCEPCIÓN al punto anterior, y las tres trampas que trae (C-3, 2026-07-27, `612b21ee`) | 2.9 KB |
-| `L141` | `isCurrentUser` es un flag del canal CloudKit y en el BACKEND nace APAGADO para casi todo el mundo — toda resolución de  | 2.4 KB |
-| `L143` | Duplicar un canal duplica sus ESCRITURAS; sus OBSERVACIONES se quedan atrás, y eso no lo caza ningún test de un canal so | 2.5 KB |
-| `L145` | Una señal puede viajar en NEGATIVO — y entonces el `return` que no deja rastro es un bug de LECTURA, no de escritura (S4 | 372 B |
-| `L147` | Un gate de feature NO puede decidir SI se PARSEA la entrada: solo QUÉ hacer con ella. Y «byte-idéntico al camino viejo»  | 435 B |
-| `L149` | En una frontera de USUARIO el outbox de Grupos y su cursor tienen signos OPUESTOS: uno hay que matarlo y el otro hay que | 2.0 KB |
-| `L151` | El cursor del pull de Grupos (`GroupSyncCursor.groupCursorsJSON`) NO se resetea para «forzar una re-entrega» — es dañino | 1.4 KB |
-| `L153` | Un CONSENT no es una preferencia, y por eso el de Grupos SALIÓ del canal de prefs (C1, 2026-08-11). | 2.3 KB |
-| `L155` | `PreferenceSyncService.remove/set` propaga a la CUENTA, no al device — NUNCA limpiar un consent desde un camino con `.cl | 1.8 KB |
-| `L157` | CARGAR una preferencia no puede ESCRIBIRLA — y el eco de eso convertía al receptor en autor LWW de algo que no escribió  | 373 B |
-| `L159` | El resolvedor canónico de identidad NO es un reemplazo mecánico del flag: contesta otra pregunta en DOS ejes (2026-09-05 | 3.7 KB |
+| `L91` | CloudKit compat | 119 B |
+| `L93` | Schema del container de GRUPOS — campo nuevo = deploy a Production en el MISMO PR | 1.1 KB |
+| `L95` | `#Predicate` GENÉRICO-PROTOCOLO crashea (`DataUtilities.swift:85`) — usa concreto por tipo | 1.8 KB |
+| `L97` | Acciones post-accept de un CKShare = intent PERSISTENTE reconciliable, nunca one-shot (bug Pia 2026-07-11) | 1.3 KB |
+| `L99` | `context.hasChanges` y lo que llega al canal de sync NO son la misma señal, y confundirlas justifica guards por razones  | 1.7 KB |
+| `L101` | Lazy M2M con CloudKit — CSV mirror | 1020 B |
+| `L103` | CSV mirror — stale ≠ nil al regenerar un UUID de identidad (commit `899c1c25`) | 1.4 KB |
+| `L105` | Sync de Grupos (CKSyncEngine) NO debe arrancar/`save()` sobre el `mainContext` compartido antes de que el primer import  | 403 B |
+| `L107` | Lo que el gate de quiescencia DIFIERE solo se recupera solo si es un evento de CloudKit. Si es una INTENCIÓN, el diferid | 425 B |
+| `L109` | El guard G6-3 es TAMBIÉN lo que impide avisos DUPLICADOS mientras los dos canales conviven (Fase 2, 2026-07-29). No lo d | 1.9 KB |
+| `L111` | [STALE, medido 2026-08-03 — el código que describe ya NO EXISTE: `applyRemoteRecordIfAbsent` y `GroupPullRescueGate` dan | 555 B |
+| `L113` | `DefaultHistoryToken` es POR-STORE, y un drain que ancla su high-water en el store equivocado queda ciego al suyo PARA S | 444 B |
+| `L115` | Un borrado tiene DOS mitades y el camino remoto solo copió una: la fila del grupo se borra, el PUENTE personal se queda  | 398 B |
+| `L117` | Un gate por ZONA calculado sobre filas VIVAS es la herramienta equivocada para un tombstone por FILA — y con un duplicad | 510 B |
+| `L121` | El par que apaga el mirror NO se puede hacer atómico ni invertir: se enforcea en el CONSUMIDOR (C-1, commit `246a6939`). | 1.9 KB |
+| `L123` | Un terminal de fallo DENTRO del cutover tiene que devolver el modo a `.icloud` como PRIMER efecto, o es peor que el limb | 1.1 KB |
+| `L125` | `isMarkerExported()` es necesaria-no-suficiente y su espera necesita TOPE: no hay API de cuota de iCloud. | 1.2 KB |
+| `L129` | El dominio Grupos pertenece al Apple ID, no al humano: toda frontera de «otro usuario en este device» tiene que SELLARLO | 429 B |
+| `L131` | Al ELIMINAR una función, lista lo que hacía ADEMÁS de lo que la sustituye — un guard no viaja solo con el camino que pro | 2.2 KB |
+| `L133` | El dominio de preferencias POR SESIÓN existe desde el 2026-08-13, y su parte difícil no fue el escritor sino el INVENTAR | 2.8 KB |
+| `L140` | Una caché compartida se protege con un SELLO COLGADO DEL DESCRIPTOR, no del propio dato — y ésa es la única diferencia e | 404 B |
+| `L142` | EXCEPCIÓN al punto anterior, y las tres trampas que trae (C-3, 2026-07-27, `612b21ee`) | 2.9 KB |
+| `L144` | `isCurrentUser` es un flag del canal CloudKit y en el BACKEND nace APAGADO para casi todo el mundo — toda resolución de  | 2.4 KB |
+| `L146` | Duplicar un canal duplica sus ESCRITURAS; sus OBSERVACIONES se quedan atrás, y eso no lo caza ningún test de un canal so | 2.5 KB |
+| `L148` | Una señal puede viajar en NEGATIVO — y entonces el `return` que no deja rastro es un bug de LECTURA, no de escritura (S4 | 372 B |
+| `L150` | Un gate de feature NO puede decidir SI se PARSEA la entrada: solo QUÉ hacer con ella. Y «byte-idéntico al camino viejo»  | 435 B |
+| `L152` | En una frontera de USUARIO el outbox de Grupos y su cursor tienen signos OPUESTOS: uno hay que matarlo y el otro hay que | 2.0 KB |
+| `L154` | El cursor del pull de Grupos (`GroupSyncCursor.groupCursorsJSON`) NO se resetea para «forzar una re-entrega» — es dañino | 1.4 KB |
+| `L156` | Un CONSENT no es una preferencia, y por eso el de Grupos SALIÓ del canal de prefs (C1, 2026-08-11). | 2.3 KB |
+| `L158` | `PreferenceSyncService.remove/set` propaga a la CUENTA, no al device — NUNCA limpiar un consent desde un camino con `.cl | 1.8 KB |
+| `L160` | CARGAR una preferencia no puede ESCRIBIRLA — y el eco de eso convertía al receptor en autor LWW de algo que no escribió  | 373 B |
+| `L162` | El resolvedor canónico de identidad NO es un reemplazo mecánico del flag: contesta otra pregunta en DOS ejes (2026-09-05 | 3.7 KB |
 
 <!-- INDICE:fin -->
 
@@ -94,6 +95,8 @@ paths:
 - **`#Predicate` GENÉRICO-PROTOCOLO crashea (`DataUtilities.swift:85`) — usa concreto por tipo:** NUNCA un fetch genérico `func f<T: SomeProto>(…) { FetchDescriptor<T>(predicate: #Predicate { $0.id == id }) }` donde `id` es un **requisito del protocolo** — `$0.id` resuelve al keypath del **witness del protocolo**, que SwiftData NO puede casar con el keypath concreto `\ConcreteType.id` del schema → `Fatal error: Couldn't find \X.<computed …> on X` al EJECUTAR el fetch (SIGTRAP, no atrapable). Síntoma: dos keypaths distintos para `id` en el mensaje. SIEMPRE `#Predicate<ConcreteType> { $0.id == id }` **concreto por tipo** (los concretos resuelven en CUALQUIER `ModelContext`; si necesitas DRY, un genérico que solo EJECUTE un `FetchDescriptor<T>` ya construido concretamente es seguro). Costó el crash de "generar enlace / forzar sync" en Grupos (`fetchByID<T: HasUUID>`/`deleteModel` → 5 helpers concretos `splitGroup/Expense/…(byID:in:)`, protocolo `HasUUID` ELIMINADO como footgun; commit `c74349fc`). El `ModelContext(container)` dedicado NO era la causa (los `#Predicate` concretos del mismo archivo nunca crashearon ahí). **Variante 2 (device, 2026-07-09, spike S6): `localizedStandardContains` sobre una propiedad OPCIONAL coalescada (`(x.note ?? "").localizedStandardContains(y)`) genera `TERNARY(...) CONTAINS[cdl]` que el SQL de SwiftData NO implementa → `NSInvalidArgumentException` en SQL generation, excepción ObjC que el `do/catch` de Swift NO atrapa (crash).** Compila limpio; solo revienta al EJECUTAR contra el store. Patrón seguro probado en device: igualdad exacta (`$0.note == x`, disjunción de variantes conocidas si hace falta). Si necesitas substring de verdad sobre opcional, testéalo en device ANTES de confiar en él (commit `4a270b4a`).
 
 - **Acciones post-accept de un CKShare = intent PERSISTENTE reconciliable, nunca one-shot (bug Pia 2026-07-11):** toda acción tras `container.accept` que dependa de estado local sincronizado (p.ej. crear el `SplitMember` del invitado, que exige el `SplitGroup` de la zona) NUNCA debe ser un one-shot gateado por `if let` sobre estado que puede no haber llegado — la zona compartida tarda ≥60s en bajar (ventana export-only) y el skip silencioso deja al usuario "unido" sin member: el owner jamás recibe la solicitud y NADIE lo reintenta. Patrón vigente: `PendingJoinStore` (intent persistente, TTL 7d) + `GroupJoinReconciler` (3 triggers: acceptShare/boot/foreground, decisión pura en `GroupJoinReconcileLogic`) + `GroupJoinIntentTracker` (@Observable — la UI muestra la fase REAL; el "¡Todo listo!" del onboarding SOLO con member confirmado, jamás como fallback defensivo). Corolario de notifs: en el PRIMER import de una zona recién unida los members preexistentes clasifican como "nuevos" → `MemberChangeNotificationLogic` exige baseline (`SplitGroup.initialMemberImportStartedAt`, set en applyGroupMeta rama NUEVO, clear en `didFetchRecordZoneChanges`, ventana 15 min auto-sana) + autoexclusión por identidad (`memberID` del record vs `cachedRecordName`) — sin eso, el invitado recibía "Jür se unió al grupo" por el member del owner.
+
+- **`context.hasChanges` y lo que llega al canal de sync NO son la misma señal, y confundirlas justifica guards por razones falsas (medido el 2026-09-08).** Asignar a un `@Model` un valor **idéntico** al que ya tenía deja `context.hasChanges == true`, pero el `drainOnce` del motor **no produce ni una fila de `SyncOutbox`**: el change-set que el History entrega al drain (`CloudSyncEngine.translateChange` → `typed.updatedAttributes`) no es el estado sucio del contexto. Medido con el motor real y su control positivo en `YalaTests/FXRepairQueueTests.swift` (`FXRepairQueueOutboxTests`): tras el insert 1 fila, tras la reescritura idéntica **1**, tras un cambio real **2**. ⇒ **una reescritura idéntica NO emite, NO expande el grupo de coherencia y NO sella un HLC nuevo**, así que no puede pisar por LWW la edición de otro dispositivo. El ticket `repair-queue-has-no-exit-for-partial-rate-rows` daba por hecho lo contrario y colgaba de ahí dos de sus tres daños; los dos eran falsos. **Lo que sí ahorra un guard de igualdad es el `save()`** —contexto sucio = escritura a disco— y que `hasChanges` deje de mentirle a quien lo consulte después, que no es poco pero es otra cosa. **Al escribir un guard de igualdad «para no emitir», mídelo antes**: `updatedAttributes` aparece cuatro veces en todo el repo y ninguna documenta este comportamiento, así que la intuición no tiene dónde apoyarse. Y la forma de medirlo NO es leer el estado final —re-escribir el mismo valor deja el store idéntico y el mutante no cae— sino **contar filas de outbox tras un `drainOnce`**, con el andamio de `CloudSyncEngineTests` (containers on-disk con los tres stores: el History es por-CONTAINER).
 
 - **Lazy M2M con CloudKit — CSV mirror:** cuando una `@Relationship` M2M `[Type]?` es crítica para correctness (cálculos, filtros, displays) y la app corre en cold start con sync activo, **duplica el filtro como CSV de UUIDs** en el mismo record. Patrón replicado en `Budget.subcategoryIDs/accountIDs/tagIDs` y `TransactionItem.tagIDs`. Helpers: `setFilters(...)`/`setTags(from:)` para dual-write; `resolvedXIDs(scheduleBackfill:)` para read CSV-first con M2M fallback y auto-cura async. La relación M2M queda solo para cascade `.nullify` automático. Razón: SwiftData/CloudKit puede entregar el record con relaciones lazy `nil` mientras espera que lleguen los Tag/Subcategory/Account records — el código pre-fix interpretaba `nil` como "sin filtros" → comportamiento catastrófico. Naming asimétrico aceptado: `Tag.id`, `Subcategory.shortcutID`, `Account.shortcutID`, `Budget.id`. Backfill eager en bootstrap **solo para Budget** (pocos records); TX usa lazy on hot path (miles de TX, eager sería caro).
 
