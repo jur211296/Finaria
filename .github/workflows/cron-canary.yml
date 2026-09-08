@@ -1,0 +1,64 @@
+name: Canario del cron
+
+# SONDA DE DIAGNÓSTICO — TEMPORAL. Se retira en cuanto conteste (ver más abajo).
+#
+# Por qué existe: la nocturna de UI (`qa.yml`, cron '17 8 * * *') entró en la rama por
+# defecto el 2026-09-08 a las 00:24 UTC y NO disparó en su primera ventana, la de las
+# 08:17 UTC de ese mismo día — con el workflow ya 7 h 53 min en `2.1`. Medido:
+#
+#   gh api 'repos/jur211296/Yala/actions/runs?event=schedule&per_page=100' --jq .total_count
+#   → 0    (cero runs programados en TODO el repo, en cualquier workflow, nunca)
+#
+# Las cuatro causas de configuración están descartadas y medidas en el ticket
+# `la-nocturna-de-ui-no-ha-disparado-ni-una-vez`: el workflow está en la rama por defecto,
+# su estado es `active`, el repo tiene actividad de hoy (así que no es el apagado por 60
+# días de inactividad de los repos públicos) y el cron es válido. No es un fork, no hay
+# `concurrency` que lo cancele y a las 08:17 UTC no había ningún run en vuelo. El run
+# programado no se canceló: no llegó a crearse.
+#
+# Lo que queda por distinguir son dos cosas MUY distintas que el silencio no separa:
+#
+#   (a) GitHub retrasó u omitió la PRIMERA ventana tras añadir el `schedule` — conocido y
+#       documentado ("the schedule event can be delayed during periods of high load"), y
+#       entonces no hay nada que arreglar; o
+#   (b) el `schedule` no funciona en este repositorio, y entonces la suite de UI se quedó
+#       sin corrida diaria el día que se mudó a la nocturna, en silencio.
+#
+# Distinguirlas con `qa.yml` cuesta DOS DÍAS: su ventana es una al día. Esta sonda las
+# distingue en minutos, porque su ventana es una cada cinco. Es la misma pregunta —¿el
+# cron de Actions dispara en este repo?— hecha a un workflow que no cuesta 90 minutos de
+# runner de simulador: corre en Linux y dura segundos.
+#
+# CÓMO SE LEE EL RESULTADO — y la trampa está aquí: el veredicto NO es que este workflow
+# aparezca en la lista de runs, es que aparezca **con `event: schedule`**. Un run suyo
+# disparado a mano (`workflow_dispatch`) no prueba nada, que es justo el error que ya se
+# cometió una vez con `qa.yml`: el dispatch manual funcionaba y se leyó como que la
+# nocturna estaba viva.
+#
+#   gh run list --workflow cron-canary.yml --limit 30 --json event,createdAt \
+#     --jq '[.[] | select(.event=="schedule")] | length'
+#
+# CUÁNDO SE RETIRA: en cuanto conteste. Si contesta que sí, este fichero sale y lo que
+# queda es vigilar el silencio de la nocturna, no el mecanismo. Si contesta que no, sale
+# igual y la nocturna se muda a un disparador que no dependa del cron de Actions. En los
+# dos casos este fichero se borra: un `*/5` permanente son ~105.000 runs al año para
+# responder una pregunta que ya está respondida.
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  latido:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Latido
+        run: |
+          echo "evento:    ${{ github.event_name }}"
+          echo "programado: ${{ github.event.schedule || '(no es schedule)' }}"
+          echo "ahora:     $(date -u '+%F %T UTC')"
+          echo "rama:      ${{ github.ref }}"
