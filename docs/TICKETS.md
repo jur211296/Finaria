@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (179)
+## Index (186)
 
 | id | status | path |
 |----|--------|------|
@@ -65,6 +65,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | cloud-fx-rates-blob-two-faces | qa | tickets/qa/cloud-fx-rates-blob-two-faces.md |
 | cloud-tx-epoch-orphan-relations | backlog | tickets/backlog/cloud-tx-epoch-orphan-relations.md |
 | cobertura-ui-diaria-cuelga-del-push | backlog | tickets/backlog/cobertura-ui-diaria-cuelga-del-push.md |
+| corpus-de-test-de-staging-crece-sin-limite | backlog | tickets/backlog/corpus-de-test-de-staging-crece-sin-limite.md |
 | creategroup-throw-after-commit-loses-owner | backlog | tickets/backlog/creategroup-throw-after-commit-loses-owner.md |
 | csv-import-rows-fall-in-the-chat-sign-sweep | qa | tickets/qa/csv-import-rows-fall-in-the-chat-sign-sweep.md |
 | currency-change-asks-rates-for-the-old-currency | backlog | tickets/backlog/currency-change-asks-rates-for-the-old-currency.md |
@@ -98,7 +99,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | gate-doc-says-swift-testing-only | backlog | tickets/backlog/gate-doc-says-swift-testing-only.md |
 | gateway-has-no-telemetry | backlog | tickets/backlog/gateway-has-no-telemetry.md |
 | gateway-typecheck-roto-y-fuera-del-ci | backlog | tickets/backlog/gateway-typecheck-roto-y-fuera-del-ci.md |
-| goldens-de-staging-solo-pasan-a-trozos | backlog | tickets/backlog/goldens-de-staging-solo-pasan-a-trozos.md |
+| goldens-de-staging-solo-pasan-a-trozos | done | tickets/done/goldens-de-staging-solo-pasan-a-trozos.md |
 | group-balance-service-shares-not-deduped | backlog | tickets/backlog/group-balance-service-shares-not-deduped.md |
 | group-joiner-flag-consumers-still-narrow | qa | tickets/qa/group-joiner-flag-consumers-still-narrow.md |
 | group-notif-credits-payer-not-editor | done | tickets/done/group-notif-credits-payer-not-editor.md |
@@ -127,6 +128,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | groups-owner-transfer-and-leave | qa | tickets/qa/groups-owner-transfer-and-leave.md |
 | groups-pending-member-can-open-group | qa | tickets/qa/groups-pending-member-can-open-group.md |
 | groups-pending-member-sees-detail-chrome | backlog | tickets/backlog/groups-pending-member-sees-detail-chrome.md |
+| groups-pull-cuesta-cinco-viajes-por-grupo | backlog | tickets/backlog/groups-pull-cuesta-cinco-viajes-por-grupo.md |
 | groups-reconnect-prune-or-rewire | done | tickets/done/groups-reconnect-prune-or-rewire.md |
 | groups-settlement-reminder | qa | tickets/qa/groups-settlement-reminder.md |
 | groups-settlement-reminder-discoverability | qa | tickets/qa/groups-settlement-reminder-discoverability.md |

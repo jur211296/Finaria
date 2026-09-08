@@ -57,6 +57,25 @@ tests y no miraba el resultado; aquí directamente no los ejecuta.
 - ⇒ La desproporción es el argumento: **253 tests por 2 segundos de Ubuntu** frente a ~100 minutos
   de macOS que hoy se gastan por editar un JSON de índice.
 
+## El primer coste real, cobrado el 2026-09-07 (añadido el 2026-09-08)
+
+Ya no es un riesgo hipotético: **el hueco dejó pasar un rojo y costó un día de investigación.**
+
+`bb90564a` (el tope de gasto del grupo) subió el `canon_version` del manifest de Grupos de `c1` a
+`c2` —correctamente, y el commit lo razona— y actualizó el cliente Swift, pero **no** los dos
+`expect(...canon_version).toBe("c1")` de `gateway/test/groups.goldens.test.ts`. Nadie se enteró
+durante 24 h por dos motivos que se suman:
+
+1. **El CI no corre esa suite** (este ticket).
+2. La copia `gateway/group_capability_manifest.json` está en `.gitignore` y sólo se refresca en
+   `pretest`; quien lanzaba los goldens con `npx vitest` seguía midiendo con la copia vieja en `c1`,
+   **y el assert pasaba**. Cerrado aparte con `gateway/test/manifest.sync.test.ts`, que es offline y
+   entraría en el job propuesto abajo.
+
+El rojo apareció al investigar `goldens-de-staging-solo-pasan-a-trozos`, donde se había registrado
+como «cero aserciones fallidas» — es decir, el diagnóstico del ticket que lo perseguía también salió
+mal por esto.
+
 ## Por dónde seguir
 
 1. **Un job `gateway` en `qa.yml`**: `ubuntu-latest`, `npm ci` + `npm test` en `gateway/`, disparado
