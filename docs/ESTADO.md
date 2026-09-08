@@ -5,50 +5,57 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-08 (Lima)
 
-**Rama** `2.1` · HEAD `958cb6f7` — el correo de `yala-app.pe` ya se autentica. Último cambio de
-producto: la tasa del borrador del chat (PR #99).
+**Rama** `2.1` · HEAD `7c3ef266` — sesión de desbloqueo (PR #100). Último cambio de **producto**: la
+tasa del borrador del chat (PR #99); hoy no se tocó producto a propósito.
 TestFlight build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.** `yala-app.pe` sirve la web
-nueva **y desde hoy firma su correo** (SPF + DKIM + DMARC, los tres en `pass`).
+nueva y firma su correo (SPF + DKIM + DMARC, los tres en `pass`).
 
 ## Esta sesión, en una línea
 
-**Cualquiera podía mandar un correo que dijera venir de `admin@yala-app.pe`, y nada lo desmentía.**
-Ya no: el dominio publica SPF, DKIM y DMARC, y un correo real llegó con los tres en `pass`. El
-ticket `high` está cerrado en `tickets/done/`.
+**Cinco decisiones llevaban semanas esperando y no estaban en condiciones de contestarse: ahora sí.**
+Cada una tiene su página con el problema en lenguaje de usuario, las opciones **con coste medido en
+ficheros**, una recomendación con motivo y el criterio de hecho por opción. Van avisadas en dos
+mensajes, agrupadas para que se contesten con una letra.
 
-**Lo que cambia para el usuario:** un correo de soporte que diga ser de Yala ahora se puede
-comprobar, y el nuestro deja de competir en desventaja contra el filtro de spam. Suplantar el
-dominio deja de ser gratis.
+**Lo que cambia para el usuario: nada todavía, y es deliberado.** No se implementó producto. Lo que
+cambia es que las cinco cosas que lo bloqueaban dejaron de estar en el limbo.
 
-**El reparto: yo medí, Jürgen tecleó.** Los dos paneles —la consola de Workspace y punto.pe— piden
-contraseña, así que preparé el checklist con el nombre y el valor exactos de cada registro y el
-orden que importa (generar la firma → publicar los tres TXT → activar; el tercer paso es el que se
-olvida y sin él Google no firma). Jürgen pegó y verificamos.
+**Tres premisas de los propios tickets eran falsas, y medirlas movió dos recomendaciones.**
 
-**Lo que hay que leer en la cabecera del correo no son los tres `pass`.** Es que firmó con
-**nuestro** selector — `d=yala-app.pe; s=google`, no la firma genérica de Google, que va aparte con
-`d=1e100.net` —, porque **eso es lo único que ningún `dig` puede contestar**: el registro puede
-estar perfecto y Google no firmar todavía. Y que el alineamiento es estricto: `header.from`, el
-`d=` de la firma y `smtp.mailfrom` son el mismo dominio, así que DMARC no pasa apoyado en uno solo
-de los dos.
+- **El «≈»**: el ticket daba `LiveBalanceCalculator` por «no afectado». Acumula con **el mismo OR**
+  (`:138`) y lo pinta en tres sitios del Panorama. Y la opción que el ticket proponía como modelo
+  —marcar por divisa— resultó **la más cara y la que menos resuelve**: el hero es un número solo, y
+  no hay dónde enseñar un desglose.
+- **El dueño de grupo atrapado**: la salida (b) **no funciona tal como estaba escrita**. Los netos
+  suman cero por moneda, así que si el que se fue debe 50, el dueño activo tiene +50 y filtrar por
+  «miembros activos» sigue bloqueando. En cambio la (c) es casi gratis: **Archivar ya existe**, ya
+  funciona con deuda y vive en esa misma pantalla; lo único que falta es que el aviso la nombre.
+- **La cobertura de UI**: el criterio de descarte que el propio ticket define **se cumplió hoy**.
 
-**Un DKIM no se valida mirando si existe.** El de 2048 bits no cabe en una cadena TXT (255
-caracteres), así que llega partido en dos, y ahí es donde un panel lo rompe en silencio. Lo que
-distingue «publicado» de «además sirve» es concatenar, reconstruir el PEM y que `openssl` lo parsee
-como RSA de 2048. **Escribí ese comando mal**, lo corrí, y decía `unable to load Public Key` sobre
-una clave perfecta: `tr -d '\n'` deja el base64 sin salto final y el `-----END-----` se pegaba. Por
-poco documento un falso rojo. Y su control negativo me corrigió otra vez: la primera versión daba
-«RSA 2048» **también con la clave corrompida**; medido, caza truncado, caracteres perdidos en medio
-y las dos cadenas invertidas, pero no basura al final.
+**Y eso último es la noticia del día: el `schedule` de GitHub Actions revivió.** Llevaba sin disparar
+nunca; hoy la nocturna de `qa.yml` nació a las **12:52 UTC**, con **4 h 35 min** de retraso sobre su
+ventana de las 08:17 (controles positivos en la misma tanda: `push`→1103, `workflow_dispatch`→4).
+**Ese retraso destapó un fallo armado:** el vigilante comprueba a las 11:43 con 3 h 26 min de margen,
+así que habría mirado **1 h 09 min antes de que la nocturna naciera** y habría cantado un rojo falso
+en el único canal que vigila la cobertura de UI. No ha explotado porque el vigilante nunca ha
+disparado por `schedule` — vive del `push`. Ticket propio.
 
-**Dos datos del ticket que ya no eran ciertos.** `ns2.rcp.net.pe` figuraba como caído —3/3 timeouts
-el 3-sep, «el dominio corre sobre un solo nameserver, hay que reportarlo a la RCP»—: hoy responde
-**6/6** autoritativas a 2 ms con el mismo serial que el primario, así que no hay punto único de
-fallo ni nada que reportar. Y su tabla de medición se re-midió entera antes de usarla.
+**El runbook de staging existe y está en un solo sitio**: `docs/RUNBOOK-staging-ddl.md`, las tres
+migraciones en orden con idempotencia, verificación y trampas. De camino, `gateway/README.md` decía
+dos cosas falsas: que `wrangler` no está autenticado (medido: **sí lo está**) y que las migraciones ya
+estaban en staging (**faltan tres**). Las dos corregidas. ⇒ **el deploy del Worker no lo bloquea una
+credencial**, lo bloquea que su último deploy es del 12-ago y arrastra commits ajenos.
 
-**De camino, dos trampas del avisador**, las dos en la memoria: `--dry-run` **no** previsualiza el
-`--texto` (compone un cuerpo sin él, así que enseña otra cosa) y el resumen se recorta a 600
-caracteres **sin avisar** — mandé 637 y la última frase llegó cortada.
+**El board ya no miente.** `groups-budget` llevaba desde el merge del PR #91 en `in-progress` con lo
+que le queda siendo device-QA, no trabajo: está en `qa/`, y `in-progress` quedó **vacío** — lo
+coherente con la cola en pausa. El índice tenía además una fila fuera de la tabla.
+
+## Antes, hoy mismo — el correo de `yala-app.pe` (PR #97)
+
+Cerrado. El dominio publica SPF, DKIM y DMARC y un correo real llegó con los tres en `pass`; el
+ticket `high` está en `tickets/done/`. Lo que hay que leer en la cabecera **no son los tres `pass`**
+sino que firmó con **nuestro** selector (`d=yala-app.pe; s=google`), porque eso es lo único que ningún
+`dig` contesta. Detalle completo en el ticket y en la memoria.
 
 ## Antes, hoy mismo — la tasa del chat (PR #99)
 
@@ -92,7 +99,18 @@ control, donde `1.0` es el valor correcto, sigue verde. CI leído por dentro y n
 
 ## Te espera a ti
 
-1. **Subir la política DMARC, y no antes del 15-sep.** Hoy está en `p=none`: observa quién suplanta
+0. **CINCO DECISIONES, contestables con una letra** — es lo que desbloquea todo lo demás. Van
+   avisadas en dos mensajes; cada ticket trae opciones, coste medido y mi recomendación:
+
+   | Ticket | Qué se pregunta | Recomiendo |
+   |---|---|---|
+   | `groups-owner-debt-no-heir-dead-end` | dueño con deuda y sin heredero, sin salida | **(c)** ofrecer Archivar, que ya existe |
+   | `groups-settlement-reminder-discoverability` | ¿el recordatorio entra en el «sí, avísame»? | **sí**, + apagar el toggle si Grupos está off; sin banner |
+   | `approximate-mark-ors-over-whole-period` | cuándo se gana el «≈» un total | **(b)** umbral 5 % sobre su propio lado |
+   | `cobertura-ui-diaria-cuelga-del-push` | ¿reloj propio o dejar el cron? | **(3)** dejarlo; re-mirar el 22-sep |
+   | `dmarc-sube-la-politica-tras-observar` | solo confirmar fecha | **15-sep**, sin cambio |
+
+1. **Subir la política DMARC, y no antes del 15-sep** (fecha ratificada al preparar la decisión). Hoy está en `p=none`: observa quién suplanta
    el dominio pero **no lo impide** — un correo falsificado sigue llegando a la bandeja, solo que
    ahora aparece en un informe. Los `rua` llegan a `admin@yala-app.pe` una vez al día, así que el
    primero es de mañana y hacen falta varios. Cuando los haya: comprobar que nada legítimo sale con
@@ -102,15 +120,28 @@ control, donde `1.0` es el valor correcto, sigue verde. CI leído por dentro y n
    desde el navegador —facturación, un formulario, un boletín—; si existe, el informe lo saca y hay
    que añadirlo al SPF **antes** de endurecer.
 2. **Staging arrastra ya TRES migraciones** — g13_04 (4-sep), g13_05 y **g14_01** (7-sep). Mismo
-   bloqueo las tres: **no hay credencial de DDL** (el conector MCP solo lista producción). Se cierran
+   bloqueo las tres: **no hay credencial de DDL** (el conector MCP solo lista producción).
+   **El procedimiento ya no hay que reconstruirlo: `docs/RUNBOOK-staging-ddl.md`** — las tres en
+   orden, con las dos vías de aplicación, por qué `psql -1` no es opcional en las dos primeras, dónde
+   está el bloque de verificación de cada una y las dos trampas de g14_01. Se cierran
    aplicando los tres `.sql` de `qa/cloud/` **en orden**. Es acceso tuyo, no una tarea que se destrabe
    sola. Con g14_01 el drift ya muerde: fijar un presupuesto contra staging deja un dead-letter
    permanente, y un dead-letter apaga el Merkle de ese grupo. Producción está al día.
-3. **Desplegar el Worker cuando quieras encender el Merkle nuevo.** El manifest de Grupos va en `c2`
-   desde este PR; hasta que el gateway se despliegue, la verificación Merkle de Grupos queda apagada
-   (los clientes saltan por el guard de canon en vez de reportar divergencias falsas). No corre prisa y
-   no rompe nada: es una red que vuelve cuando tú quieras.
-4. **Si el `schedule` sigue en cero mañana, hay una decisión tuya** (`cobertura-ui-diaria-cuelga-del-push`). El vigilante sostiene la
+3. **Desplegar el Worker cuando quieras encender el Merkle nuevo.** El manifest de Grupos va en `c2`;
+   hasta que el gateway se despliegue, la verificación Merkle de Grupos queda apagada (los clientes
+   saltan por el guard de canon en vez de reportar divergencias falsas). No corre prisa y no rompe
+   nada: es una red que vuelve cuando tú quieras. **Corregido el 8-sep: no lo bloquea una credencial.**
+   `gateway/README.md` decía que `wrangler` no está autenticado aquí y es falso —medido con
+   `wrangler whoami`: OAuth de `admin@yala-app.pe` con `workers:write`—. Lo que lo hace decisión tuya
+   es que su último deploy de staging es del **12-ago** y arrastra commits ajenos (`eb6593ce`,
+   `6bf0f588`), así que desplegar hoy subiría trabajo de otros sin revisar.
+4. **El `schedule` DEJÓ de estar en cero — disparó el 8-sep a las 12:52 UTC**, con 4 h 35 min de
+   retraso sobre su ventana. Sigue habiendo decisión tuya (`cobertura-ui-diaria-cuelga-del-push`),
+   pero cambia de sentido: ya no es «montar un reloj porque el de GitHub está muerto», es «¿basta con
+   el que acaba de despertar?». Mi recomendación es esperar y re-mirar el **22-sep** con muestra de
+   dos semanas. **Y un fallo nuevo que sale de ahí:** el margen del vigilante (3 h 26 min) es menor
+   que ese retraso, así que el día que su cron despierte cantará un rojo falso —
+   `vigilante-margen-menor-que-el-retraso-real-del-cron`. El vigilante sostiene la
    cobertura por su disparador de `push`, y eso deja descubiertos los días sin commits — 8 de los
    últimos 30, con rachas de hasta 3. Las dos salidas: montar un reloj que no dependa de GitHub (un
    `launchd` en la Mini que haga `gh workflow run qa.yml`, que es acceso tuyo) o aceptar que la
@@ -306,6 +337,26 @@ sigue sin `ok_`. **Cero `ok_` inventado.**
 
 ## Board
 
+**174 tickets · backlog 95 · qa 51 · blocked 2 · done 21 · discarded 5 · in-progress 0.**
+Recontado sobre disco el 8-sep en `2.1` tras mergear el PR #100, con
+`find tickets/<estado> -maxdepth 1 -name '*.md'`. **`in-progress` queda VACÍO**, que es lo coherente
+con la cola autónoma en pausa: `groups-budget` llevaba ahí desde el merge del PR #91 diciendo que
+había trabajo cuando lo que queda es device-QA, y pasó a `qa/`. Entran dos hallazgos de esta sesión
+—`vigilante-margen-menor-que-el-retraso-real-del-cron` y
+`qa-cloud-readme-sin-entradas-g13-04-y-g13-05`— y el resto de la diferencia son tickets de otras
+ramas mergeadas entretanto. `docs/TICKETS.md` cuadra fila a fila y con su cabecera:
+**174 = 174 = 174**, cero huérfanos en ambas direcciones, orden alfabético comprobado.
+
+**El índice tenía además un defecto de forma que ningún conteo detecta:** la fila de
+`dmarc-sube-la-politica-tras-observar` estaba **antes** de la cabecera de la tabla, así que Markdown
+la renderizaba como párrafo suelto y quedaba fuera del índice sin faltar de él. Reinsertada en su
+sitio alfabético.
+
+**Y el conteo anterior venía desviado en tres** (declaraba `blocked 3`, `done 20`, `backlog 92`
+cuando en disco había 2, 21 y 93 antes de esta sesión). Se confirma lo que ya avisaba la línea de
+abajo: **recuéntalo, no lo heredes.**
+
+Histórico del recuento anterior:
 **171 tickets · backlog 92 · qa 50 · blocked 3 · done 20 · discarded 5 · in-progress 1.**
 Recontado sobre disco el 8-sep en `2.1` tras mergear el PR #99: sale
 `chat-assistant-plants-exchange-rate-one` a `qa` y entran **cuatro** hallazgos, tres de su review
@@ -319,101 +370,28 @@ cabecera: **171 = 171 = 171**, cero huérfanos en ambas direcciones.
 en disco): entre aquel recuento y éste entraron dos tickets de otras ramas. La línea se vuelve a
 desviar en cuanto otra sesión mergea, así que **recuéntala, no la heredes.**
 
-Histórico del recuento anterior:
-**165 tickets · backlog 88 · qa 49 · blocked 3 · done 19 · discarded 5 · in-progress 1.**
-Recontado sobre disco el 8-sep tras cerrar la cola del reparador: sale
-`repair-queue-has-no-exit-for-partial-rate-rows` a `qa` y entran **tres** hallazgos de su review que
-**no son suyos** — `wire-decoder-accepts-non-finite-money` (medium, el que más importa: un importe
-`NaN` puede entrar por el canal nube, no puede volver a salir, y degenera cualquier guard de
-igualdad), `currency-change-asks-rates-for-the-old-currency` y
-`ensure-rates-for-existing-transactions-has-no-callers`. Con el ticket `blocked` de la web que entró
-en paralelo, `docs/TICKETS.md` cuadra fila a fila: **165 = 165**, cero huérfanos en ambas direcciones,
-y su línea de counts —que llevaba tres sesiones desviada, avisándolo ella misma— recalculada.
+## Trampas al recontar el board (vivas — rescatadas de los históricos podados el 8-sep)
 
-**Aviso para el próximo recuento: `ls tickets/<estado> | wc -l` NO da el número de tickets.** Cuenta
-los `.gitkeep`, las capturas `.jpg`/`.png` que algunas sesiones dejaron dentro y el directorio de
-evidencia de `welcome-privacy-secondary`: por ahí salen `qa 51` y `done 22`, que suman 170 y no
-cuadran con nada. El conteo bueno es `find tickets/<estado> -maxdepth 1 -name '*.md' | wc -l`.
+Las cuatro han mordido ya, y **las dos primeras volvieron a morder el 2026-09-08**, estando escritas
+aquí. Léelas antes de recontar, no después:
 
-Histórico del recuento anterior:
-**162 tickets · backlog 87 · qa 48 · blocked 2 · done 19 · discarded 5 · in-progress 1.**
-Recontado sobre disco el 7-sep tras cerrar el runner: sale `rojo-xcuitest-runner-…` a `done` y entran
-**tres** hallazgos de camino — `diez-worktrees-comparten-un-simulador` (la contención que la guardia
-detecta pero no resuelve: **decisión tuya**), `rules-testing-habla-de-ios-27-que-no-existe` (las
-reglas mandan comprobar un runtime que esta máquina no tiene desde hace ~6 semanas) y
-`ci-allowlist-no-cubre-encargos-ni-qa-scripts` (un `.md` del encargo dispara 1,5 h de `macos-26`).
-`docs/TICKETS.md` reconstruido contra el disco: **162 = 162** — venía declarando 159, con 158 filas y
-un ticket de otra sesión sin indexar.
+- **`ls tickets/<estado> | wc -l` NO da el número de tickets.** Cuenta los `.gitkeep`, las capturas
+  `.jpg`/`.png` que algunas sesiones dejaron dentro y el directorio de evidencia de
+  `welcome-privacy-secondary`. Medido el 8-sep: `ls` da `qa 53` y `done 24` donde hay 51 y 21. El
+  conteo bueno es `find tickets/<estado> -maxdepth 1 -name '*.md' | wc -l`.
+- **El índice tiene DOS tablas.** La de arriba es el índice (3 columnas); la de abajo es el mapa de
+  origen de YalaWiki (2 columnas, y su segunda también dice `tickets/`). Un filtro laxo cuenta las
+  dos: el 8-sep un `startswith("| ")` dio **234** donde había 174. Ancla el número de columnas
+  (`NF>=5 && $4 ~ /tickets\//`), no el contenido.
+- **Una regex de id que no acepta MAYÚSCULAS inventa huérfanos.**
+  `rojo-heroBuckets-thisWeek-trailing-window` se escapa de `[a-z0-9-]+` y aparenta faltar del índice.
+  Ya provocó un duplicado el 7-sep, cuando una sesión «lo encontró» y añadió su fila. Ante una
+  discrepancia, **sospecha primero del filtro** y córrelo con un patrón laxo antes de tocar nada.
+- **El owner map del final apunta a las carpetas de ORIGEN de la migración**, no al estado de hoy, así
+  que algunas de sus rutas «no existen» y es correcto. No es un puntero roto.
 
-Histórico del recuento anterior:
-Recontado sobre disco el 7-sep tras el no-determinismo de la suite: `unit-suite-nondeterministic-reds`
-pasa a `done` y entra **uno** que no es suyo, el hallazgo de camino
-`tests-borran-el-store-sqlite-abierto` (554-556 violaciones `vnode unlinked while in use` por corrida,
-en 12 familias de test: hoy inocuo, mañana variable de confusión). `backlog` no se mueve —sale uno,
-entra otro— y por eso el total sube solo por el `done`. Verificado por **conjuntos**: 159 = 159, cero
-huérfanos en ambas direcciones. Y la comprobación de rutas del índice trae un falso positivo que
-conviene no volver a perseguir: el **owner map** del final apunta a las carpetas de ORIGEN de la
-migración, no al estado de hoy, así que cinco de sus rutas «no existen» y es correcto — la tabla del
-índice, que es la que manda, está entera.
+**Y antes de abrir ticket por un rojo, greppea el board por el aserto, no por el nombre del test** —
+la víctima cambia entre corridas y el nombre no encuentra nada. Costó un ticket duplicado el 7-sep.
 
-**158 tickets · backlog 85 · qa 48 · blocked 2 · done 17 · discarded 5 · in-progress 1.**
-Recontado sobre disco el 7-sep tras las escrituras a mano de FX: `fx-manual-writes-seal-approximate-as-final`
-pasa a `qa` y entran **seis** tickets que **no son suyos** — dos hallazgos de camino
-(`currency-change-service-tests-mirror-the-logic`, cuyos siete casos **reimplementan la lógica dentro
-del test** y siguieron verdes con el bug dentro; y `chat-assistant-plants-exchange-rate-one`, que sube
-de `low` a `medium` porque su `exchangeRate: 1.0` plantado **no se cura en el caso normal**), tres de
-la review adversarial (`repair-queue-has-no-exit-for-partial-rate-rows` **high**,
-`approximate-mark-ors-over-whole-period`, `bulk-update-account-leaves-converted-amount-stale`) y uno
-del rojo del CI (`ci-destination-assumes-a-simulator-that-may-not-exist`). Verificado por **conjuntos**:
-158 = 158, cero huérfanos en ambas direcciones. Y otra vez la trampa de siempre: `grep -c` dio 153
-frente a 154 ficheros por un id con un carácter fuera de la clase — **el cruce de conjuntos es la
-medición, el conteo no**.
-
-**150 tickets · backlog 79 · qa 47 · blocked 2 · done 16 · discarded 5 · in-progress 1.**
-Recontado sobre disco el 7-sep tras la ganancia cambiaria: `fx-pnl-education-card` pasa a `qa` y entran **cuatro** hallazgos de su review adversarial que **no son suyos** — `panel-no-recalcula-al-llegar-tasas-nuevas` (llegan las tasas del día y el Panel sigue con las de ayer, con la marca de aproximado encendida), `reparacion-de-tasas-no-avisa-al-panel` (el reparador de importes provisionales corrige el disco en el arranque y no bumpea `dataVersion`), `hoja-del-saldo-vivo-ignora-los-filtros-de-sesion` (la hoja «Tu saldo hoy» y el saldo del panorama suman cuentas distintas, así que la misma pantalla da dos cifras del mismo dinero) y `widget-de-tc-no-localiza-separadores`. **El índice traía DOS filas sin registrar** —`groups-budget` y `rojo-heroBuckets-thisWeek-trailing-window`, las dos con commits ya en `2.1`—: se indexan con el estado que tienen en disco, sin reclasificar. Verificado por conjuntos: **150 = 150**, cero huérfanos en ambas direcciones y ningún estado discrepante. Dos trampas al medirlo, las dos mías: `in-progress` lleva guion (no casa `\w+`) y hay ids con mayúsculas (`rojo-heroBuckets-…`), así que un regex estrecho da un «todo cuadra» falso.
-
-Recontado sobre disco el 7-sep tras el presupuesto de grupo: `groups-budget` pasa a `in-progress` y entran **tres** hallazgos de su review adversarial que **no son suyos** — `groups-canal-sin-capability-set` (el canal de Grupos no manda capability-set, así que cada columna nueva apaga el Merkle del parque viejo), `groups-stats-no-deduplica-gastos` (Estadísticas no dedupe y ahora se contradice con la barra de presupuesto, a un tap de distancia) y `gateway-typecheck-roto-y-fuera-del-ci` (tres errores de tipos que nadie ve porque el CI no corre `typecheck` y `@types/node` no está declarado).
-`qa` significa «esperando la tanda», no «cerrado». Índice = disco, verificado comparando **conjuntos**
-(143 = 143, cero huérfanos en ambas direcciones, y ningún estado discrepante entre fila y carpeta).
-**El índice traía dos defectos que nadie había visto**, los dos arreglados: una fila de datos **por
-encima de la cabecera de la tabla**, y dos punteros del mapa de origen apuntando a `in-progress/`,
-que está vacío desde hace días. **Todo cierre incluye `docs/TICKETS.md`**, y lo que
-salga de camino lleva ticket propio — esta sesión sacó **tres**:
-`panel-lee-el-filtro-de-cuentas-en-singular-fuera-del-saldo` (el subtítulo «en N cuentas» cuenta todas
-mientras el saldo filtra; y el prefill del formulario propone una cuenta arbitraria, en modo excluir
-la excluida), `saldo-con-seleccion-no-contable-diverge-entre-panel-y-estadisticas` y
-`filtro-de-cuentas-se-colapsa-al-navegar-a-registros`. La del kill-switch sacó **dos** más, los dos
-de la review adversarial: **`restore-beacon-outlives-account-deletion`** —el faro que decide el
-mensaje sobrevive al borrado de cuenta (su `clear` es best-effort y el `set` tuvo toda la vida de la
-cuenta para propagarse), y de paso deja escrito que **el usuario MIGRADO —el único que existe hoy en
-producción— ve su copia de iCloud congelada pre-migración sin que nada le avise de que es vieja**— y
-**`adopt-terminal-claims-ready-without-checking-engine`**, que la pantalla de «listo» se deriva del
-journal y nunca pregunta si el motor arrancó de verdad. La del recordatorio de liquidación sacó
-**dos**: **`groups-settlement-reminder-stale-clock`** —el reloj del nudge no ve las ediciones de un
-gasto viejo ni los pagos retro-fechados, porque `SplitSettlement` no tiene `createdAt` ni
-`SplitExpense` tiene `updatedAt`; cerrarlo pide campo nuevo y migración— y
-**`groups-settlement-reminder-discoverability`**, que es decisión tuya y está arriba. La del
-resumen compartible sacó **dos**, los dos sobre código que ese cambio **no tocó a propósito**:
-**`debt-simplification-nondeterministic-ties`** —ante un empate exacto de saldos,
-`DebtSimplificationService` elige acreedor y deudor con `max`/`min` sobre un `Dictionary`, cuyo orden
-de iteración cambia entre procesos, así que el conjunto de transferencias puede salir distinto (todas
-correctas, mismo total); hasta ahora eso quedaba en pantalla, donde se vuelve a mirar, y desde el
-resumen **se congela en una imagen** y circulan dos versiones por el mismo chat— y
-**`group-balance-service-shares-not-deduped`**, el mismo hueco de repartos duplicados que se cerró en
-la lógica del resumen y sigue abierto en el servicio que alimenta Balances, la banda del header y el
-recordatorio de deudas.
-
-**Y una lección de higiene del board:** abrí un cuarto ticket para el rojo de
-`EdgeCases.test_extremeMinimumAmountSaves` **sin comprobar que ya existía uno**
-(`transaction-save-helper-flake-one-per-suite`, de esta misma mañana). Se retiró y su medición nueva
-se fusionó en el que ya estaba. ⇒ **antes de abrir ticket por un rojo, greppea el board por el aserto,
-no por el nombre del test** — la víctima cambia entre corridas y el nombre no encuentra nada.
-
-**Dos trampas al recontar, las dos han mordido ya:** cuenta solo `*.md` —hay un `.gitkeep` por carpeta
-y PNG de evidencia en `done/` y `qa/`, que inflan un `ls`— y si filtras las filas con una regex,
-acepta MAYÚSCULAS en el id: `rojo-heroBuckets-thisWeek-trailing-window` se escapa de `[a-z0-9-]+` y
-aparenta ser un huérfano que no existe. **Estaba escrito y volvió a morder el 7-sep**: la sesión del
-resumen compartible «encontró» ese mismo huérfano, añadió su fila al índice y creó un duplicado, que
-tuvo que deshacer. ⇒ ante una discrepancia del board, sospecha **primero del filtro** y córrelo con un
-patrón laxo (`\S+`) antes de tocar el fichero. **Y el índice tiene DOS tablas**: acota al bloque que sigue al
-separador `|----|`, o cuentas filas de la de abajo. Se comprueba con **conjuntos**, no con el contador.
+**El histórico anterior de recuentos se podó el 8-sep**: cinco niveles acumulados que ya solo eran
+rastro. `git log -- docs/ESTADO.md` los tiene enteros.
