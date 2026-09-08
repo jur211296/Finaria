@@ -5,43 +5,50 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-07 (Lima)
 
-**Rama** `2.1` · HEAD `0f92a91d` — el CI ya no puede colgarse seis horas, y el PR da señal en un
-cuarto de hora.
+**Rama** `2.1` · HEAD `1c137edf` — una tasa aproximada ya no nace sellada como definitiva.
 TestFlight build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.** `yala-app.pe` sirve la web
 nueva.
 
 ## Esta sesión, en una línea
 
-**Esperar el CI de un PR pasa de hora y media a un cuarto de hora, y el CI ya no puede colgarse seis
-horas sin que nadie se entere** (PR #93, mergeado). El job de tests no tenía ningún tope de tiempo
-—ni él ni el workflow—, así que GitHub le aplicaba su default de **360 minutos**. Lo caro no era el
-gasto: era que **un cuelgue real resultaba indistinguible de una corrida lenta**, y como los tres
-pasos de test son advisory a propósito, el job acababa en verde igual. El único síntoma visible era
-un PR «pendiente» durante horas — justo el estado en el que se acaba mergeando sin esperar el check,
-que es lo que pasó en #92 anteayer.
+**Crear un gasto en una divisa cuya tasa del día aún no ha llegado ya no guarda el número aproximado
+como si fuera definitivo** (PR #94, mergeado). El importe convertido se marca como pendiente y **se
+corrige solo** en cuanto llegan las tasas reales. Afecta al flujo principal —crear y editar—, a las
+transferencias, a aprobar borradores del Inbox, a crear desde el chat y, el caso más caro, a
+**cambiar la moneda preferida**, que reescribe el histórico entero de un gesto. Si la tasa del día sí
+estaba, nada cambia: sigue guardándose como definitiva, y hay una pareja de control por test que lo
+fija.
 
-La suite entera de UI **sale del PR y pasa a una corrida nocturna sobre `2.1`**, a las 03:17 de Lima,
-que avisa solo si hay rojo. La cobertura no se pierde, se mueve: el gate local ya corría los XCUITest
-de las áreas *tocadas* antes de cada commit, y ahora la suite **completa** corre a diario — cosa que
-antes no pasaba nunca entera sobre `2.1` salvo por accidente.
+**No eran diez escrituras: son catorce.** El grep del ticket buscaba la asignación
+(`.amountInPreferredCurrency =`) y no podía ver las cuatro que pasan el monto por **init** — entre
+ellas **las tres ramas de creación** de `NewTransactionViewModel`, o sea que el «flujo principal» que
+el ticket declaraba cubierto lo estaba a medias, y `ChatAssistantViewModel`, que no salía en ninguna
+lista.
 
-**La cifra del ticket estaba corta y por eso se volvió a medir.** Decía «~80 min de media» sobre una
-muestra de **4 runs**; con **39** y leyendo los tiempos **por paso**, la mediana real del job es **89**
-y el paso de UI se lleva **67** de ellos — el 76 % del reloj. Pero el hallazgo que importaba es otro:
-en cuanto la decisión saca la UI del PR, el número que gobierna el tope **ya no es el del job entero**
-sino el de build+unit, que nadie había medido (p95 **27,2**, máximo **29,9**). El «alrededor de 120»
-que sugería el ticket habría sido un tope cuatro veces mayor que el peor caso real, o sea ninguno.
-⇒ una cifra puede ser correcta y aun así medir el objeto equivocado, y eso no se ve sin re-medirla.
+**El AC nº 2 pedía un comportamiento que no procede, y no se hizo.** Decía que
+`CurrencyChangeService` no bajara el flag de una transacción ya marcada; ese bucle **no tocaba el
+flag en absoluto** y el daño real era el contrario. La decisión quedó incondicional, como en
+`recalculatePreferredCurrency`: el flag describe la calidad del número que hay AHORA, no un
+historial. La lectura literal dejaría transacciones ya exactas marcadas para siempre.
 
-**Verificado en el CI real, no sólo en local:** el check de este PR cerró en **16 minutos** con el
-paso de UI en `skipped`, y un `workflow_dispatch` sobre el mismo commit **sí** lo arrancó — las dos
-direcciones probadas con dos eventos distintos del mismo workflow.
+**La review adversarial (3 lentes) cazó un defecto de producto y cuatro puntos ciegos míos.** El de
+producto: el chat convertía con la tasa de **hoy** y estampaba `draft.date` —«un café ayer» se
+guardaba a la tasa de hoy—, y lo decisivo es que **el reparador convierte `on: date`**, así que el
+número guardado no era reproducible por el proceso que existe para repararlo. Los cuatro míos, todos
+en la red que yo mismo acababa de escribir: el barrido contaba por fichero y dejaba pasar un cruce
+entre las patas de una transferencia; el detector de `convert` enumeraba receptores y era ciego a
+`converter.convert(`; el barrido no entraba en `YalaWidgets/` ni `YalaShare/`; y el centinela que
+eximía a los seeds era la cadena `"DevSeed"` — que está en el nombre del propio tipo, o sea
+infalsificable. ⇒ **un detector de este bug puede tener este bug**, y su control positivo no lo ve si
+solo cubre una de las formas.
 
-**Y lo que casi rompo sin que nadie lo pidiera:** `outcome` vale `skipped` para dos cosas opuestas
-—«saltado a propósito» y «no llegó a correr»—, así que saltar la UI en los PR habría hecho que el
-aviso gritara «la suite NO llegó a correr» en **cada PR**. Un canal que grita cuando no pasa nada
-acaba silenciado, que es el mismo final que el canal mudo que ese bloque vino a arreglar, por el otro
-extremo.
+**El rojo del CI no era del código.** El runner que tocó no traía el iPhone 17 Pro
+(`Unable to find a device…`, exit 70 a los 2m30s), con tres corridas de la misma rama en verde
+minutos antes y sin tocar `.github/`. Relanzado en verde y con ticket:
+`build-for-testing` ni siquiera necesita un device concreto.
+
+**Sesión anterior (PR #93):** el CI dejó de poder colgarse seis horas y el PR da señal en un cuarto
+de hora; la suite de UI pasó a una nocturna sobre `2.1`.
 
 ## Te espera a ti
 
@@ -54,7 +61,20 @@ extremo.
    desde este PR; hasta que el gateway se despliegue, la verificación Merkle de Grupos queda apagada
    (los clientes saltan por el guard de canon en vez de reportar divergencias falsas). No corre prisa y
    no rompe nada: es una red que vuelve cuando tú quieras.
-3. **Decisiones abiertas:**
+3. **Del cierre de hoy (`fx-manual-writes`), y la primera pesa:**
+   - `repair-queue-has-no-exit-for-partial-rate-rows` (**high**) — `ensureRates` pregunta si **existe
+     la fila** de tasas, no si trae la divisa, así que declara «no falta nada» justo en el caso que
+     más llena la cola del reparador, y ésta se recorre en cada arranque para siempre reemitiendo el
+     grupo `money`. Los tres mecanismos son **preexistentes** (de `85ba0077`); lo que hace el PR de
+     hoy es aumentar la población que los recorre — que es lo correcto, porque antes esas
+     transacciones tenían el número aproximado **sellado y sin ruta de cura**. El intercambio pasó de
+     «dato falso, coste cero» a «dato correcto y marcado, coste de arranque», y ese ticket paga la
+     segunda mitad. Si prefieres el reparto contrario, se revierte.
+   - `approximate-mark-ors-over-whole-period` — **decisión de producto tuya**: una sola transacción
+     aproximada pone «≈» al total del mes, porque la marca se acumula por OR sobre el bucket entero.
+     Con más población marcada eso pasa de raro a frecuente en multidivisa, y los tres calculadores
+     no usan hoy el mismo criterio.
+4. **Decisiones abiertas:**
    - `groups-archived-still-accepts-changes` — el copy promete que un archivado «ya no acepta cambios»
      y acepta todos: gastos, ediciones, liquidaciones, ajustes, invitaciones. Tres opciones dentro.
    - `groups-owner-debt-no-heir-dead-end` (high, del 6-sep) — el dueño con deuda y SIN heredero sigue
@@ -77,13 +97,13 @@ extremo.
      filtrar una cuenta «excluida de estadísticas», el saldo grande muestra el TOTAL, los widgets 0 y
      el KPI 0: **la pantalla se contradice consigo misma**. Tres salidas dentro (0 en las tres, total
      en las tres, o no dejar filtrarlas). Alcanzable desde el carrusel, que sí lista esas cuentas.
-3. **Publicar la app.** Los avisos de Grupos están completos en servidor y en los dos entornos; falta
+5. **Publicar la app.** Los avisos de Grupos están completos en servidor y en los dos entornos; falta
    el cliente iOS. Llevaría además el saldo de Distribución, la identidad del recién llegado, los
    predeterminados del Panel, el cierre del detalle, la hoja de «Unirme», el freno de la lista,
    «Transferir y salir», la puerta del grupo, la puerta del archivado, la marca de aproximado con su
    corrección del 1:1, el rótulo del hero de Estadísticas, el aviso de visita **y el resumen
    compartible del grupo**.
-4. **La tanda de QA: 47 tickets en `qa/`, y el guion solo cubre 22.** Entra
+6. **La tanda de QA: 48 tickets en `qa/`, y el guion solo cubre 22.** Entra
    **`fx-pnl-education-card`** (7-sep), y su device-QA **no es simulable**: la tarjeta de ganancia
    cambiaria sólo aparece con una cuenta multi-moneda con histórico real, y **ningún perfil de seed
    la produce** —son todos PEN—, así que su cobertura de UI es cero por construcción. Hace falta
@@ -108,12 +128,14 @@ extremo.
    visita en SU store, su saldo inicial, y que el copy quepa en alemán y neerlandés (solo se vio en
    español). Guion en **`qa/guion-tanda.md`**. Los **17 sin montaje asignado** siguen en
    `qa-guion-tanda-no-cubre-17-tickets`.
-5. **La deuda FX del PR #84, y el orden importa.** **`fx-manual-writes-seal-approximate-as-final`
-   (high)** gobierna a los otros: diez sitios que GUARDAN un importe convertido lo sellan como
-   definitivo aunque la tasa fuera aproximada. **Es la razón de que la marca nueva avise menos de lo
-   que debería**, así que probar la marca antes de cerrarlo da falsos negativos. Detrás:
-   `fx-approximate-mark-missing-on-secondary-surfaces` y `fx-unknown-currency-code-collapses-to-usd`.
-6. **Dos decisiones de la web**, sin cambios: el texto legal de Grupos (dice «vía iCloud» y el backend
+7. **La deuda FX del PR #84: el que gobernaba ya está cerrado.**
+   `fx-manual-writes-seal-approximate-as-final` pasa a `qa` (PR #94) — eran **catorce** sitios, no
+   diez. Era la razón de que la marca de aproximado avisara menos de lo que debía, así que **ahora ya
+   se puede probar la marca sin falsos negativos**, que era el motivo de ponerlo primero. Detrás
+   siguen `fx-approximate-mark-missing-on-secondary-surfaces` y
+   `fx-unknown-currency-code-collapses-to-usd`. Y por delante entra uno nuevo que pesa más que los
+   dos: `repair-queue-has-no-exit-for-partial-rate-rows` (high), en el punto 3.
+8. **Dos decisiones de la web**, sin cambios: el texto legal de Grupos (dice «vía iCloud» y el backend
    propio está al 100 % en prod) y si Vercel despliega al mergear. Y ratificar o revertir el botón «Más
    tarde» del invitado.
 
@@ -184,6 +206,19 @@ abras la línea citada. **Y la premisa del ticket —y la del encargo— tambié
 sigue sin `ok_`. **Cero `ok_` inventado.**
 
 ## Board
+
+**158 tickets · backlog 85 · qa 48 · blocked 2 · done 17 · discarded 5 · in-progress 1.**
+Recontado sobre disco el 7-sep tras las escrituras a mano de FX: `fx-manual-writes-seal-approximate-as-final`
+pasa a `qa` y entran **seis** tickets que **no son suyos** — dos hallazgos de camino
+(`currency-change-service-tests-mirror-the-logic`, cuyos siete casos **reimplementan la lógica dentro
+del test** y siguieron verdes con el bug dentro; y `chat-assistant-plants-exchange-rate-one`, que sube
+de `low` a `medium` porque su `exchangeRate: 1.0` plantado **no se cura en el caso normal**), tres de
+la review adversarial (`repair-queue-has-no-exit-for-partial-rate-rows` **high**,
+`approximate-mark-ors-over-whole-period`, `bulk-update-account-leaves-converted-amount-stale`) y uno
+del rojo del CI (`ci-destination-assumes-a-simulator-that-may-not-exist`). Verificado por **conjuntos**:
+158 = 158, cero huérfanos en ambas direcciones. Y otra vez la trampa de siempre: `grep -c` dio 153
+frente a 154 ficheros por un id con un carácter fuera de la clase — **el cruce de conjuntos es la
+medición, el conteo no**.
 
 **150 tickets · backlog 79 · qa 47 · blocked 2 · done 16 · discarded 5 · in-progress 1.**
 Recontado sobre disco el 7-sep tras la ganancia cambiaria: `fx-pnl-education-card` pasa a `qa` y entran **cuatro** hallazgos de su review adversarial que **no son suyos** — `panel-no-recalcula-al-llegar-tasas-nuevas` (llegan las tasas del día y el Panel sigue con las de ayer, con la marca de aproximado encendida), `reparacion-de-tasas-no-avisa-al-panel` (el reparador de importes provisionales corrige el disco en el arranque y no bumpea `dataVersion`), `hoja-del-saldo-vivo-ignora-los-filtros-de-sesion` (la hoja «Tu saldo hoy» y el saldo del panorama suman cuentas distintas, así que la misma pantalla da dos cifras del mismo dinero) y `widget-de-tc-no-localiza-separadores`. **El índice traía DOS filas sin registrar** —`groups-budget` y `rojo-heroBuckets-thisWeek-trailing-window`, las dos con commits ya en `2.1`—: se indexan con el estado que tienen en disco, sin reclasificar. Verificado por conjuntos: **150 = 150**, cero huérfanos en ambas direcciones y ningún estado discrepante. Dos trampas al medirlo, las dos mías: `in-progress` lleva guion (no casa `\w+`) y hay ids con mayúsculas (`rojo-heroBuckets-…`), así que un regex estrecho da un «todo cuadra» falso.
