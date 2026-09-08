@@ -37,7 +37,7 @@
 - [Capturas del simulador para la web](feedback_capturas_simulador_para_la_web.md) — receta y trampas: Secrets.xcconfig, nombre efímero, categorías sembradas, `sips -Z` escala el lado largo.
 
 ## Estado del trabajo
-- [El corpus viejo del chat ya se cura solo](project_barrido_signo_chat.md) — PR #103; **no mergear**: el daño alcanza al CSV y eso Jürgen no lo aceptó.
+- [El corpus viejo del chat ya se cura solo](project_barrido_signo_chat.md) — PR #103, acotado para no tocar lo importado por CSV; falta device-QA.
 - [El chat ya guarda la tasa que usó](project_chat_tasa_del_borrador.md) — PR #99; falta device-QA y NO es simulable; deja 4 tickets, uno **high**: el chat pierde el signo y el gasto SUMA al saldo.
 - [La cola del reparador de tasas ya tiene salida](project_cola_reparador_tasas.md) — PR #98; dos de los tres daños del ticket eran FALSOS (medido); falta device-QA y deja 3 tickets.
 - [Las escrituras a mano ya no sellan una tasa aproximada](project_fx_escrituras_a_mano.md) — PR #94; eran 14 y no 10, el device-QA NO es simulable, y el AC nº2 pedía algo que no procede.
