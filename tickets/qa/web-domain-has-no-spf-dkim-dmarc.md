@@ -1,6 +1,6 @@
 ---
 id: web-domain-has-no-spf-dkim-dmarc
-status: blocked
+status: qa
 priority: high
 area: web, dns
 created: 2026-09-05
@@ -10,21 +10,34 @@ source: medición con dig a petición del owner (2026-09-03)
 
 # El dominio no autentica su correo: cualquiera puede escribir como @yala-app.pe
 
-## Qué lo desbloquea
+## Publicado el 2026-09-08 · queda una comprobación
 
-**Jürgen, sentado delante de dos paneles, pegando cuatro valores.** Nada más, y nada menos: la
-consola de Workspace y el panel DNS de punto.pe **exigen autenticarse**, y ninguna sesión de Claude
-entra ahí. El trabajo de preparación está hecho —abajo está el checklist con el host y el valor
-exactos de cada registro, en el orden en que hay que teclearlos— pero **el DKIM no existe hasta que
-alguien pulse "Generar" en Workspace**, y ese alguien tiene que ser el dueño de la cuenta.
+**Jürgen pegó los tres registros y entran correctamente.** Verificado contra el autoritativo
+(`dig @ns.rcp.net.pe`) en el árbol de la sesión, no leído de una pantalla:
 
-Son ~20 minutos. Después de pegarlos hay una verificación (paso 4) que sí puede correr cualquiera.
+| Comprobación | Resultado |
+|---|---|
+| Serial de la zona | `2026071400` → **`2026090802`** — el panel guardó de verdad |
+| SPF | **1** registro `v=spf1 include:_spf.google.com ~all` (más de uno sería `PermError`) |
+| Los dos `verification` | **2 de 2** siguen en la raíz — la trampa 1 no mordió |
+| DMARC | `v=DMARC1; p=none; rua=mailto:admin@yala-app.pe` |
+| DKIM | 2 cadenas que **concatenan a una clave RSA de 2048 bits válida** (`openssl pkey` la parsea) |
+| Nombre duplicado | vacío en `google._domainkey.…yala-app.pe.yala-app.pe` **y** en `_dmarc.…` |
+| MX y A | intactos: 5 registros de Google, `216.198.79.1` |
 
-**Para el momento de teclear hay una versión operativa** del checklist de abajo, con los valores en
-botones de copiar, las trampas junto al paso donde muerden y una caja que mide el valor del DKIM
-antes de pegarlo (avisa si pasa de 255 caracteres y lo trocea):
-<https://claude.ai/code/artifact/fad38081-1fb1-4cd2-a139-6e38dd163f6b>. Es una comodidad, no la
-fuente: **lo que manda es este ticket**.
+El DKIM llegó **partido en dos cadenas** —el valor de 2048 bits pasa de 255 caracteres— y el panel
+las partió bien: eso es lo que prueba `openssl`, y es la diferencia entre un registro publicado y un
+registro que además sirve.
+
+### Lo que falta para cerrar
+
+1. **El correo de comprobación (paso 5).** Es lo único que dice si Google está **firmando**, y por
+   tanto si el paso 3 («Iniciar autenticación») surtió efecto. Ningún `dig` puede contestarlo: el
+   registro DKIM puede estar perfecto y Google no firmar todavía. Desde `admin@yala-app.pe` a una
+   cuenta externa → **⋮ › Mostrar original** → `spf=pass dkim=pass dmarc=pass`, los tres.
+   Google puede tardar de unos minutos a ~48 h en activar la firma.
+2. **No se cierra con los tres en `pass`.** Queda el período de observación de abajo: `p=none` no
+   protege. Eso es seguimiento, no trabajo.
 
 ## Qué pasa
 
@@ -40,7 +53,7 @@ prioridad a `high` en una app de finanzas:
 No hay ningún flujo de producto roto —Yala no manda correo transaccional— así que no es `high` por
 urgencia operativa, sino por exposición: el arreglo son ~20 minutos y el riesgo es suplantación.
 
-## Lo MEDIDO — re-medido el 2026-09-08 (`dig` contra el autoritativo `ns.rcp.net.pe`, flag `aa`)
+## Lo MEDIDO ANTES de publicar — 2026-09-08 por la mañana (`dig` contra `ns.rcp.net.pe`, flag `aa`)
 
 Sin cambios respecto al 2026-09-03 en lo que toca a este ticket: **los tres registros siguen
 ausentes**. La zona no se ha tocado (serial del SOA `2026071400`, del 14 de julio).
@@ -86,7 +99,10 @@ include + 3 `_netblocks`). Margen de 6 para lo que venga.
 
 ---
 
-# CHECKLIST PARA PEGAR
+# CHECKLIST PARA PEGAR — HECHO el 2026-09-08
+
+> Se conserva porque documenta el orden y las trampas: si hay que rehacerlo (rotar la clave,
+> mover el dominio de registrador, subir la política), el procedimiento es este mismo.
 
 > El orden importa: **generar el DKIM antes de publicarlo, y activarlo después de publicarlo.**
 > Si se pulsa "Iniciar autenticación" antes de que el TXT esté en el DNS, Google falla la
