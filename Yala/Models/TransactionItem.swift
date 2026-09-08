@@ -139,13 +139,36 @@ final class TransactionItem {
         } else {
             effectiveRate = 1.0
         }
-        exchangeRate = abs(effectiveRate)
-        amountInPreferredCurrency = (amountInPreferred as NSDecimalNumber).doubleValue
-        preferredCurrencyCode = preferredCode
         // Solo una tasa EXACTA puede sellarse como definitiva. Una arrastrada de otro día o salida de
         // la tabla estática da un número del orden correcto, pero sigue esperando la tasa real: dejar
         // el flag en `false` es lo que hacía que un monto aproximado se quedara para siempre.
-        isExchangeRateProvisional = !outcome.quality.isExact
+        let newProvisional = !outcome.quality.isExact
+        let newRate = abs(effectiveRate)
+        let newAmountInPreferred = (amountInPreferred as NSDecimalNumber).doubleValue
+
+        // **Asignar solo lo que cambia, y lo que ahorra NO es lo que el ticket decía.**
+        //
+        // El ticket daba por hecho que una reescritura idéntica emite al canal nube: las cuatro
+        // columnas están en el grupo de coherencia `money`, y `DeltaEmitter` expande cualquiera de
+        // ellas al grupo entero con un HLC fresco. **Medido el 2026-09-08 y es falso**
+        // (`FXRepairQueueOutboxTests`): asignar el mismo valor deja `context.hasChanges == true`, pero
+        // el drain NO produce fila de outbox — el change-set que el History entrega al motor y el
+        // estado sucio del contexto son señales distintas. Así que no había ni emisión repetida ni
+        // riesgo de pisar por HLC la edición de otro dispositivo por esta vía.
+        //
+        // Lo que sí evita el guard, y basta para justificarlo: que el contexto quede sucio y con él un
+        // `save()` a disco en cada arranque por cada transacción de la cola, más el `hasChanges` que
+        // miente a todo el que lo consulte después.
+        //
+        // Con dos devices, el clobber sigue siendo posible cuando los valores SÍ difieren (cada uno
+        // convierte con su propia escalera de tasas); eso lo acota la salida del reparador
+        // (`FXRepairQueueLogic`), no este guard.
+        if exchangeRate != newRate { exchangeRate = newRate }
+        if amountInPreferredCurrency != newAmountInPreferred {
+            amountInPreferredCurrency = newAmountInPreferred
+        }
+        if preferredCurrencyCode != preferredCode { preferredCurrencyCode = preferredCode }
+        if isExchangeRateProvisional != newProvisional { isExchangeRateProvisional = newProvisional }
     }
 
     init(

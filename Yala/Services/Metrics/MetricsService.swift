@@ -167,6 +167,19 @@ enum MetricsCanary: String {
     case routingWelcomeChainSuperseded
     case inviteReEmittedFromStore
     case invitePendingExpired
+
+    // Reparador de tasas provisionales (arranque)
+    /// El barrido de arranque recorrió la cola de transacciones con tasa provisional y **no curó
+    /// ninguna**. `value` = tamaño de la cola; `detail` separa el intento estéril (`futile`) del
+    /// arranque que ya ni lo intenta porque nada cambió desde el anterior (`skipped`).
+    ///
+    /// **Es la superficie de observación que faltaba.** El log de este barrido vivía dentro de
+    /// `if updatedCount > 0`, así que una cola atascada —el estado que este canario nombra— era el
+    /// único que no imprimía nada: cuanto peor iba, más callaba. Un pico aislado es normal (el barrido
+    /// corre antes de que lleguen las tasas del día). SOSTENIDO arranque tras arranque con la misma
+    /// cola = hay una población que ninguna tasa disponible puede convertir, y el proveedor no cubre
+    /// esa divisa en esas fechas: la cola no se va a vaciar sola y necesita mirarse.
+    case fxRepairQueueStuck
 }
 
 // MARK: - Servicio

@@ -638,6 +638,11 @@ final class DataWipeService {
         // --- Estado del servicio de tipos de cambio ---
         defaults.removeObject(forKey: "exchangeRate_lastHistoricalLoad")
         defaults.removeObject(forKey: "exchangeRate_lastTodayUpdate")
+        // La huella del último barrido estéril del reparador. Describe una cola que este wipe acaba de
+        // vaciar, así que conservarla podría silenciar el barrido del usuario siguiente por
+        // coincidencia de cifras. El propio barrido la borra al encontrar la cola vacía; esto cubre el
+        // camino en el que ni siquiera llega a correr.
+        defaults.removeObject(forKey: "fxRepairQueue.futileSweepFingerprint.v1")
 
         // --- Preferencias de presupuestos ---
         defaults.removeObject(forKey: "budgets.hideInactive")   // Default: false
