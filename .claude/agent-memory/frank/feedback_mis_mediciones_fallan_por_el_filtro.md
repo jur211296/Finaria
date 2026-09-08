@@ -1,6 +1,6 @@
 ---
 name: mis-mediciones-fallan-por-el-filtro
-description: Mis errores de medición se repiten con la misma forma — el filtro descarta justo lo que busco y la ausencia se lee como resultado. Trece casos entre el 2026-09-02 y el 2026-09-07, incluida la variante inversa: el filtro INVENTA un defecto y casi "reparo" un documento sano.
+description: Mis errores de medición se repiten con la misma forma — el filtro descarta justo lo que busco y la ausencia se lee como resultado. Catorce casos entre el 2026-09-02 y el 2026-09-07, incluidas las dos variantes inversas: el filtro INVENTA un defecto (y casi "reparo" un documento sano), y el filtro FABRICA el no-determinismo que se investigaba.
 metadata:
   type: feedback
 ---
@@ -499,3 +499,28 @@ Lo que faltaba aquí no era otro ejemplo. Era esto, para copiar y pegar:
 ⇒ **Un cero es un resultado sospechoso por defecto.** Cero coincidencias, cero errores, cero tests:
 antes de creerlo, correr el mismo comando con un patrón que SÍ deba casar. Cuesta un segundo y es la
 diferencia entre medir y no medir. Aquí el falso cero llegó antes que cualquier hallazgo real.
+
+---
+
+**Caso 14 (2026-09-07), y es el que más caro salió: el instrumento FABRICÓ el fenómeno que se
+investigaba.** Un ticket `high` decía que `YalaTests` daba «rojos DISTINTOS en cada corrida». La
+suite es determinista: tres corridas del mismo árbol dan 6414/653 y `failedTests: 0`. Lo que variaba
+era el **conteo**, porque los `print` de la app y el reporter de Swift Testing comparten stdout sin
+lock: un log a media línea la parte en dos y **ninguna mitad casa con `^✔ Test .* passed`**. El grep
+anclado perdía 43-50 líneas de 6403 **y otras distintas en cada corrida**.
+
+Tres cosas que retener, más allá del ancla:
+
+1. **Lo prescribía yo.** El método roto estaba en el ticket *y* en mi propia memoria
+   (`el_arbol_base_contesta_si_es_mio`), presentado como «cuenta a mano porque el resumen miente».
+   Era al revés: `Test run with` daba 6414 las tres veces. **Acusé al instrumento fiable para
+   defender el mío.**
+2. **La línea de arriba ya avisaba** — «los casos de Swift Testing se leen de `Test run with`» — y
+   aun así usé el grep. Tener la regla escrita no basta si la aplico solo cuando me acuerdo.
+3. **Cuando el fenómeno es «no determinista», sospecha del medidor ANTES que del sistema.** Un
+   sistema no determinista y un medidor no determinista producen la misma tabla. Lo que los separa
+   es una fuente estructurada: `-resultBundlePath` + `xcrun xcresulttool get test-results summary`,
+   inmune al entrelazado. Debió ser mi primera medición, no la tercera.
+
+⇒ **Si mido texto que dos procesos escriben a la vez, no tengo una medición: tengo una carrera.**
+Antes de anclar en `^`, preguntarme quién más escribe en ese descriptor.

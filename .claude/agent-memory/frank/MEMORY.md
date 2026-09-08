@@ -24,7 +24,7 @@
 - [El generador regenera lo que edito](feedback_el_generador_regenera_lo_que_edito.md) — re-corre el script DESPUÉS de editar a mano; dos locales se quedaron con el texto viejo.
 - [El mutante compilado zanja hipótesis](feedback_mutante_compilado_zanja_hipotesis.md) — si un ticket dice que no hay dato para elegir, recompila el código anterior y reproduce: ese es el dato.
 - [El orden del enum se ve fuera](feedback_el_orden_del_enum_se_ve_fuera.md) — un case nuevo en medio cambia el número del alert que se usa para diagnosticar; va al final.
-- [Mis mediciones fallan por el filtro](feedback_mis_mediciones_fallan_por_el_filtro.md) — control positivo siempre; 15 casos. `-only-testing` va por TIPO y se come suites en silencio: me pasó dos veces el 7-sep.
+- [Mis mediciones fallan por el filtro](feedback_mis_mediciones_fallan_por_el_filtro.md) — control positivo siempre; 14 casos. `-only-testing` va por TIPO y se come suites en silencio: me pasó dos veces el 7-sep.
 - [zsh no divide variables](feedback_zsh_no_divide_variables.md) — `xcodebuild $args` manda todo como UN filtro: «TEST SUCCEEDED» con cero tests. Cuenta los casos, no leas el veredicto.
 - [Revertir sin commit destruye](feedback_revertir_sin_commit_destruye.md) — en árbol sucio `git checkout -- <f>` borra el trabajo; los mutantes se revierten con `cp`.
 - [Nunca el trailer Co-Authored-By](feedback_trailer_commit_medido.md) — regla del owner ratificada el 2026-09-02 sobre medición; anula el default del system prompt.
