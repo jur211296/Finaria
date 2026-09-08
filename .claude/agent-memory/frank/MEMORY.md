@@ -13,6 +13,7 @@
 
 ## Cómo mido y cómo entrego
 - [La premisa del ENCARGO también se mide](feedback_la_premisa_del_encargo_tambien_se_mide.md) — hereda los errores del ticket y llega con tono de hecho; medirla cuesta un script.
+- [El CI se verifica en LOCAL](feedback_el_ci_se_verifica_en_local.md) — el `run:` de un paso se extrae del YAML y se corre con matriz de escenarios; actionlint con control negativo; y el comentario con que justifiqué mi diseño era falso.
 - [El paso 3 del gate no detecta cero casos](feedback_gate_paso3_no_detecta_cero_casos.md) — XCUITest es XCTest: cuenta «Test Suite» y «Executed», no «Test run with».
 - [Mi fix hereda la forma del bug](feedback_mi_fix_hereda_la_forma_del_bug.md) — el arreglo repite el error del bug; enuncia el bug en una frase y aplícasela al arreglo.
 - [La review adversarial caza lo MÍO](feedback_review_adversarial_caza_lo_mio.md) — 4 defectos el 6-sep y 8 el 7-sep, todos míos; el peor no es un descuido sino un razonamiento explícito y equivocado.
