@@ -1,50 +1,47 @@
 ---
-updated: 2026-09-07
+updated: 2026-09-08
 tags: [now, punto-de-retomada]
 ---
 
-# NOW — 2026-09-07 (Lima)
+# NOW — 2026-09-08 (Lima)
 
-**Rama** `2.1` · HEAD `2e8f083c` — el runner de XCUITest no moría de memoria: lo pisaba otra sesión.
+**Rama** `2.1` · HEAD `b939fcc1` — la cola del reparador de tasas ya tiene salida (PR #98).
 TestFlight build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.** `yala-app.pe` sirve la web
 nueva.
 
 ## Esta sesión, en una línea
 
-**El runner de XCUITest no se caía por memoria ni por disco: se caían dos corridas a la vez sobre el
-único simulador** (PR #96, mergeado). El ticket `high` llevaba días diciendo que el runner muere tras
-el primer caso de cada suite y señalaba la memoria como hipótesis principal, con el disco ya
-descartado a 14 GB. **Las dos eran falsas.**
+**El reparador de tasas preguntaba «¿tengo la fila?» en vez de «¿tengo la tasa?», y por eso recorría
+la misma cola en cada arranque sin poder curarla** (PR #98, mergeado). Con la fila del día presente
+pero **sin la divisa que hacía falta** —el caso que más llena esa cola— `ensureRates` respondía «no
+falta nada», la conversión volvía a degradar y la transacción se re-marcaba pendiente. Para siempre.
 
-**La causa, reproducida 2 de 2.** Dos `xcodebuild test` de XCUITest sobre el mismo simulador comparten
-bundle id, así que la segunda **mata al runner de la primera** al lanzar el suyo. En el log se ve el
-relevo: un PID nuevo de `YalaUITests-Runner` diciendo «Running tests…» justo donde el anterior se
-corta a mitad de un `Synthesize event`. Lanzadas con 25 s de diferencia dan `4 reinicios / 7 pasados /
-0 fallos` y `3 reinicios / 1 pasado / 0 fallos` — idéntico las dos veces, y es la firma exacta del
-ticket: exit 65 y casos en «Failing tests» que **nunca imprimieron una línea de fallo**.
+**Lo que cambia para el usuario:** una transacción en una divisa sin tasa para su día se corrige sola
+en cuanto la tasa llega, en vez de quedarse con el número aproximado.
 
-**Las dos hipótesis, medidas y descartadas.** La memoria: el swap estuvo **lleno** (6,0-6,1 de 6,1 GB)
-durante las 12 corridas de control, y aun así **124 casos sin un solo fallo**; no hay **ni un
-`JetsamEvent` el 6-sep**, y en los 8 que existen desde el 1-sep ni `xcodebuild`, ni el runner, ni la
-app salen nunca con `reason` (los `jettisoned` que sí hay matan daemons de iOS *dentro* del
-simulador). El disco: bajado a **12 GB** a propósito con un fichero de relleno, 3 corridas, **11/11
-verde cada una**. Y el control en la dirección contraria — la corrida solitaria lanzada *justo
-después* de las concurrentes vuelve a 11/11 y exit 0 ⇒ es la concurrencia, no el desgaste del
-simulador.
+**Dos de los tres daños que el ticket daba por hechos eran FALSOS, y lo dice una medición.** El ticket
+—que venía de una review adversarial— afirmaba que reescribir las columnas del grupo `money` con el
+mismo valor emite al canal nube, y de ahí colgaba también el riesgo de pisar por HLC la edición de
+otro dispositivo. Medido con el motor real: una asignación idéntica deja `context.hasChanges == true`
+pero **el drain no produce ni una fila de outbox**. Son dos señales distintas, y en todo el repo
+`updatedAttributes` aparece cuatro veces sin que ninguna lo documente. El guard de igualdad se queda
+porque ahorra un `save()` a disco por arranque y por transacción — no por una emisión que no ocurre.
+Queda escrito en `.claude/rules/swiftdata-cloudkit.md` con la forma de medirlo: **contar filas de
+outbox tras un `drainOnce`**, porque leer el estado final no distingue nada.
 
-**Explica por fin lo que cuatro tickets no cuadraban: por qué fallaba en TANDA y pasaba AISLADO.** Una
-tanda son ~3 min de ventana para que otra sesión entre; un test suelto, 30 s. En esta máquina hay
-**un solo simulador** y conviven **10 worktrees**, todos con el mismo `-destination name=iPhone 17 Pro`.
+**La review adversarial (4 lentes) cazó siete defectos míos**, todos arreglados aquí, y dos son de una
+familia que conviene reconocer: **el freno que corta trabajo inútil acabó cortando trabajo útil.** Mi
+anti-spin sellaba como imposible también los fallos de **red**, y era ciego a las tasas que llegan por
+**CloudKit** sin pasar por nuestro código (contaba escrituras nuestras en vez de mirar el disco). Otros
+dos eran **regresiones que mi propio cambio hizo alcanzables**: `ensureRates` nunca troceó a los 365
+días que la API acepta —inofensivo mientras preguntaba por existencia de fila, porque nunca pedía
+rangos largos— y el recorrido día a día podía no generar la última fecha de la cola si las horas del
+día diferían. Un camino muerto que se revive trae sus bugs intactos.
 
-**El fix y el criterio que ahorra el diagnóstico entero.** `qa/scripts/sim-libre.sh` (nuevo, con
-control positivo y negativo) dice si hay otra corrida en curso, y el paso 3 del `/gate` lo consulta
-antes de correr nada ⇒ **el paso 3 vuelve a dar veredicto**. Y en `.claude/rules/testing.md`, un
-`grep -c`: `Failing tests` **sin** línea `Test Case … failed` es el runner muerto, no hay veredicto;
-**con** su mensaje de aserto sí es un rojo de test.
-
-**De camino, dos contradicciones entre documentos.** `transaction-save-helper` decía que ninguna de
-sus 21 muestras se tomó con el disco sobre 25 GB; `edgecases` documentaba un fallo **con 26 GB**. No
-se elige entre dos documentos que se contradicen: se mide a los dos lados, y el umbral no cambia nada.
+**Verificación:** 16 casos nuevos en dos suites, **control positivo por mutación en tres sitios
+distintos**, suite unit completa (6430 tests, 655 suites) y XCUITest del área tocada. Los tests de
+`ensureRates` ejercitan el `#Predicate` nuevo **contra el store**: aquí un `#Predicate` compila limpio
+y revienta al ejecutarse.
 
 ## Te espera a ti
 
@@ -57,15 +54,18 @@ se elige entre dos documentos que se contradicen: se mide a los dos lados, y el 
    desde este PR; hasta que el gateway se despliegue, la verificación Merkle de Grupos queda apagada
    (los clientes saltan por el guard de canon en vez de reportar divergencias falsas). No corre prisa y
    no rompe nada: es una red que vuelve cuando tú quieras.
-3. **Del cierre de hoy (`fx-manual-writes`), y la primera pesa:**
-   - `repair-queue-has-no-exit-for-partial-rate-rows` (**high**) — `ensureRates` pregunta si **existe
-     la fila** de tasas, no si trae la divisa, así que declara «no falta nada» justo en el caso que
-     más llena la cola del reparador, y ésta se recorre en cada arranque para siempre reemitiendo el
-     grupo `money`. Los tres mecanismos son **preexistentes** (de `85ba0077`); lo que hace el PR de
-     hoy es aumentar la población que los recorre — que es lo correcto, porque antes esas
-     transacciones tenían el número aproximado **sellado y sin ruta de cura**. El intercambio pasó de
-     «dato falso, coste cero» a «dato correcto y marcado, coste de arranque», y ese ticket paga la
-     segunda mitad. Si prefieres el reparto contrario, se revierte.
+3. **Del cierre de hoy (la cola del reparador, PR #98):**
+   - **Device-QA pendiente y NO es simulable del todo**: hace falta una transacción en una divisa que
+     no esté en ninguna cuenta (yenes) fechada en un día cuya fila de tasas ya exista **sin** esa
+     divisa. Comprobar que se corrige sola al llegar las tasas, y que abrir y cerrar la app sin
+     conexión **no** la reescribe. El canario `fxRepairQueueStuck` con `detail=skipped` debe salir una
+     vez por arranque, nunca un barrido entero.
+   - `wire-decoder-accepts-non-finite-money` (**medium**, hallazgo de su review) — un importe `NaN`
+     puede entrar por el canal nube (`WireValueDecoder.double` no valida finitud) y **no puede volver a
+     salir**: el codec lo rechaza al emitir. Mientras esté dentro degenera cualquier guard de igualdad,
+     porque `NaN != NaN`, así que esa fila sí se reescribiría en cada arranque. No es una regresión del
+     PR: el agujero es anterior y lo único que cambia es que ahora esa fila se comporta distinto al
+     resto. Antes de arreglarlo conviene saber **si hay filas así en producción**.
    - `approximate-mark-ors-over-whole-period` — **decisión de producto tuya**: una sola transacción
      aproximada pone «≈» al total del mes, porque la marca se acumula por OR sobre el bucket entero.
      Con más población marcada eso pasa de raro a frecuente en multidivisa, y los tres calculadores
@@ -213,6 +213,22 @@ sigue sin `ok_`. **Cero `ok_` inventado.**
 
 ## Board
 
+**165 tickets · backlog 88 · qa 49 · blocked 3 · done 19 · discarded 5 · in-progress 1.**
+Recontado sobre disco el 8-sep tras cerrar la cola del reparador: sale
+`repair-queue-has-no-exit-for-partial-rate-rows` a `qa` y entran **tres** hallazgos de su review que
+**no son suyos** — `wire-decoder-accepts-non-finite-money` (medium, el que más importa: un importe
+`NaN` puede entrar por el canal nube, no puede volver a salir, y degenera cualquier guard de
+igualdad), `currency-change-asks-rates-for-the-old-currency` y
+`ensure-rates-for-existing-transactions-has-no-callers`. Con el ticket `blocked` de la web que entró
+en paralelo, `docs/TICKETS.md` cuadra fila a fila: **165 = 165**, cero huérfanos en ambas direcciones,
+y su línea de counts —que llevaba tres sesiones desviada, avisándolo ella misma— recalculada.
+
+**Aviso para el próximo recuento: `ls tickets/<estado> | wc -l` NO da el número de tickets.** Cuenta
+los `.gitkeep`, las capturas `.jpg`/`.png` que algunas sesiones dejaron dentro y el directorio de
+evidencia de `welcome-privacy-secondary`: por ahí salen `qa 51` y `done 22`, que suman 170 y no
+cuadran con nada. El conteo bueno es `find tickets/<estado> -maxdepth 1 -name '*.md' | wc -l`.
+
+Histórico del recuento anterior:
 **162 tickets · backlog 87 · qa 48 · blocked 2 · done 19 · discarded 5 · in-progress 1.**
 Recontado sobre disco el 7-sep tras cerrar el runner: sale `rojo-xcuitest-runner-…` a `done` y entran
 **tres** hallazgos de camino — `diez-worktrees-comparten-un-simulador` (la contención que la guardia
