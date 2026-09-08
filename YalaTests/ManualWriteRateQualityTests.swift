@@ -42,6 +42,22 @@ struct ManualWriteRateQualityTests {
         try String(contentsOf: repoRoot().appendingPathComponent(path), encoding: .utf8)
     }
 
+    /// El fuente sin sus comentarios de línea.
+    ///
+    /// Hace falta porque buscar el NOMBRE del método (`.convert(`) en vez del receptor arregla una
+    /// ceguera y estrena un falso positivo: `TransactionCSVImportService.swift:563` **menciona**
+    /// `CurrencyConverter.convert()` en un comentario y el detector lo acusaba de llamarlo. La
+    /// respuesta correcta no es volver a enumerar receptores —eso era la ceguera— sino mirar solo
+    /// código. Basta con los comentarios de línea: no hay bloques `/* */` en los ficheros vigilados.
+    static func strippingComments(_ src: String) -> String {
+        src.split(separator: "\n", omittingEmptySubsequences: false)
+            .map { line -> Substring in
+                guard let r = line.range(of: "//") else { return line }
+                return line[line.startIndex..<r.lowerBound]
+            }
+            .joined(separator: "\n")
+    }
+
     /// Ficheros EXENTOS del barrido, cada uno con la razón por la que escribir el monto sin decidir
     /// el flag es correcto ahí — y con un centinela que comprueba que esa razón sigue siendo cierta.
     ///
@@ -68,25 +84,44 @@ struct ManualWriteRateQualityTests {
                 """,
             sentinel: "struct WidgetTransaction: Codable"
         ),
+        "YalaWidgets/Widgets/LatestRecordsWidget.swift": (
+            reason: """
+                Previews del widget: construyen `WidgetTransaction`, la misma `struct Codable` que \
+                arma `WidgetDataCache`, con montos de muestra. No hay transacción ni tasa.
+                """,
+            sentinel: "WidgetTransaction("
+        ),
         "Yala/Seed/DevSeedTransactions.swift": (
             reason: """
                 Datos sintéticos de desarrollo, con montos inventados que nunca salen de una \
                 conversión real. Marcarlos provisionales mandaría el seed entero al reparador.
                 """,
-            sentinel: "DevSeed"
+            // El centinela es `#if DEBUG`, no el nombre del tipo: `"DevSeed"` aparece en el propio
+            // nombre y en su doc-comment, así que era imposible de falsear — certificaba que el
+            // fichero se llama como se llama. Lo que hay que comprobar es que sigue sin compilarse en
+            // release, que es la razón real de la exención.
+            sentinel: "#if DEBUG"
         )
     ]
 
     /// Todos los `.swift` bajo `Yala/` que escriben el monto convertido, sea por asignación o por
     /// init. Se descubre recorriendo el árbol: nada que mantener a mano.
+    /// Los árboles de código de producción. `YalaWidgets` y `YalaShare` NO son decorativos aquí:
+    /// `FileManager.enumerator` sobre `Yala` no entra en sus hermanos, así que la promesa de arriba
+    /// —«cualquier ruta nueva entra vigilada»— era falsa justo para las extensiones, que sí pueden
+    /// tocar SwiftData (hay App Intents en `YalaWidgets`).
+    static let productionTrees = ["Yala", "YalaWidgets", "YalaShare"]
+
     static func filesWritingConvertedAmounts() throws -> [String] {
-        let root = repoRoot().appendingPathComponent("Yala")
-        guard let walker = FileManager.default.enumerator(atPath: root.path) else { return [] }
         var found: [String] = []
-        for case let rel as String in walker where rel.hasSuffix(".swift") {
-            let path = "Yala/" + rel
-            guard let src = try? source(path) else { continue }
-            if tally(src).writes > 0 { found.append(path) }
+        for tree in productionTrees {
+            let root = repoRoot().appendingPathComponent(tree)
+            guard let walker = FileManager.default.enumerator(atPath: root.path) else { continue }
+            for case let rel as String in walker where rel.hasSuffix(".swift") {
+                let path = tree + "/" + rel
+                guard let src = try? source(path) else { continue }
+                if tally(src).writes > 0 { found.append(path) }
+            }
         }
         return found.sorted()
     }
@@ -179,9 +214,15 @@ struct ManualWriteRateQualityTests {
     @Test("Cada escritura del monto convertido decide la provisionalidad")
     func everyWriteDecidesTheFlag() throws {
         let files = try Self.filesWritingConvertedAmounts()
+        // El suelo va pegado a lo medido (11 el 2026-09-07). Estaba en 8 y toleraba perder tres
+        // ficheros vigilados sin decir nada — un suelo holgado es un detector apagado a medias.
         #expect(
-            files.count >= 8,
-            "el barrido encontró solo \(files.count) ficheros — o se movió el código, o el patrón dejó de medir"
+            files.count >= 11,
+            """
+            el barrido encontró \(files.count) ficheros y esperaba al menos 11 — o se movió el \
+            código, o el patrón dejó de medir. Si de verdad hay menos escritores, baja el suelo a \
+            conciencia: \(files.sorted().joined(separator: ", "))
+            """
         )
 
         for path in files {
@@ -222,18 +263,66 @@ struct ManualWriteRateQualityTests {
         }
     }
 
+    /// **El barrido cuenta por FICHERO, y eso deja pasar un cruce.** En `saveTransfer` hay dos
+    /// conversiones y cuatro escrituras; escribir `inTransaction.isExchangeRateProvisional =
+    /// !outOutcome.quality.isExact` deja el conteo en 6/6 y el barrido en verde, con la pata de
+    /// entrada declarando la calidad de la de salida. Como no hay test de comportamiento de
+    /// `saveTransfer` —montar el VM arrastra `WidgetDataCache`, `RouterEntryGate` y un `Task` sin
+    /// await—, esta comprobación de fuente es lo que cubre esa clase de bug.
+    @Test("Cada pata de la transferencia declara SU propia calidad, no la de la otra")
+    func transferLegsDoNotCrossTheirOutcomes() throws {
+        let src = try Self.source("Yala/App/ViewModels/NewTransactionViewModel.swift")
+
+        for (leg, outcome, wrong) in [("out", "outOutcome", "inOutcome"), ("in", "inOutcome", "outOutcome")] {
+            let correcto = "\(leg)Transaction.isExchangeRateProvisional = !\(outcome).quality.isExact"
+            #expect(
+                src.contains(correcto),
+                """
+                No aparece `\(correcto)`. La pata «\(leg)» debe decidir con SU conversión.
+                """
+            )
+            let cruzado = "\(leg)Transaction.isExchangeRateProvisional = !\(wrong).quality.isExact"
+            #expect(
+                src.contains(cruzado) == false,
+                """
+                La pata «\(leg)» está usando `\(wrong)`: declara la calidad de la OTRA pata.
+
+                Una transferencia entre divisas convierte dos veces, con dos filas de tasas que \
+                pueden degradar por separado. Cruzarlas sella como exacta una pata cuya tasa no lo \
+                era —o marca como aproximada una que sí lo era—, y el conteo del barrido sigue \
+                cuadrando porque cuenta por fichero.
+                """
+            )
+        }
+
+        // Y que el init de creación de cada pata lleve el suyo.
+        for (outcome, amount) in [("outOutcome", "outAmountInPreferred"), ("inOutcome", "inAmountInPreferred")] {
+            let rango = try #require(
+                src.range(of: "amountInPreferredCurrency: (\(amount) as NSDecimalNumber).doubleValue")
+            )
+            let alcance = String(src[rango.lowerBound...].prefix(260))
+            #expect(
+                alcance.contains("isExchangeRateProvisional: !\(outcome).quality.isExact"),
+                "el init que escribe \(amount) debe declarar la calidad de \(outcome)"
+            )
+        }
+    }
+
     @Test("Ningún sitio que persiste usa el `convert` que tira la calidad")
     func persistingSitesUseCheckedVariants() throws {
         for path in try Self.filesWritingConvertedAmounts() where Self.exemptions[path] == nil {
             let src = try Self.source(path)
             // `convert(` a secas, sin el `Checked`. Se buscan las dos formas con receptor explícito
             // que existen en el repo.
-            let offenders = [
-                "CurrencyConverter.shared.convert(",
-                "CurrencyConverter.shared.convertWithLatestRate(",
-                "currencyConverter.convert(",
-                "currencyConverter.convertWithLatestRate("
-            ].filter { src.contains($0) }
+            // Se busca el NOMBRE del método con su punto y su paréntesis, no el receptor. La lista
+            // anterior enumeraba receptores (`CurrencyConverter.shared.convert(`,
+            // `currencyConverter.convert(`) y era ciega a `converter.convert(` —la grafía de al menos
+            // diez ficheros del repo, medida en `BalanceHelper.swift:53`— porque el literal largo no
+            // es substring del corto. La misma ceguera por enumeración que este archivo ya corrigió
+            // dos veces. El paréntesis basta para no confundirlos con las variantes `…Checked`:
+            // `.convert(` no aparece dentro de `.convertChecked(`.
+            let code = Self.strippingComments(src)
+            let offenders = [".convert(", ".convertWithLatestRate("].filter { code.contains($0) }
 
             #expect(
                 offenders.isEmpty,
