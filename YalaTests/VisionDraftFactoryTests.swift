@@ -14,6 +14,10 @@ import Testing
 
 @testable import Yala
 
+/// `.serialized` porque los casos de naturaleza usan `makeTestContext()`, que REUSA el container por
+/// `#fileID`: dos tests del mismo fichero en paralelo se pisan el store. Lo exige
+/// `qa/check-test-isolation.sh` y lo comprueba el CI.
+@Suite(.serialized)
 struct VisionDraftFactoryTests {
 
     // MARK: - mapImageTypeToSource
