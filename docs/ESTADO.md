@@ -5,7 +5,8 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-08 (Lima)
 
-**Rama** `2.1` · HEAD `b939fcc1` — la cola del reparador de tasas ya tiene salida (PR #98).
+**Rama** `2.1` · HEAD `766169ef` — los topes del CI, verificados en producción; la nocturna
+aún no ha sonado sola. Último cambio de producto: la cola del reparador de tasas (PR #98).
 TestFlight build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.** `yala-app.pe` sirve la web
 nueva.
 
@@ -144,9 +145,18 @@ y revienta al ejecutarse.
 
 ## Abiertos
 
-**Del CI, dos cosas menores y ninguna urgente.** (1) La **primera nocturna de verdad** salta esta
-madrugada a las 03:17; la de hoy se lanzó a mano para verificarla y quedó corriendo. Si algo va mal,
-avisa sola — y si no llega ningún aviso, es que fue verde. (2) `ci-checkout-v4-runs-on-deprecated-node`
+**Del CI, tres cosas y una cambió de color.** (1) **La primera nocturna de verdad no sonó.** Aquí
+quedó escrito que si no llegaba aviso era que había ido verde; medido esta mañana, el silencio no
+distingue: hay **cero corridas con `event: schedule`** en todo el repo y la ventana de las 03:17 pasó
+sin disparar. Que la nocturna *funciona* está probado —lanzada a mano tarda 89,7 min y acabó verde—;
+lo que no está probado es que el reloj la despierte. Descartadas por medición las cuatro causas
+habituales (rama por defecto, workflow deshabilitado, apagado por inactividad, cron inválido), queda
+el retraso de GitHub, normal en la primera ventana. **Se cierra mirando la de mañana**, y tiene ticket
+con el comando: `la-nocturna-de-ui-no-ha-disparado-ni-una-vez`. Mientras tanto la suite completa de UI
+no está corriendo a diario. (1b) Los **topes sí aguantan**, ya con corridas reales: 21 runs del job,
+mediana 21,7 min y máximo 34,0 contra un tope de 45, cero cancelaciones. El colchón es menor de lo
+previsto (1,32× en vez de 1,5×), así que si build o unit crecen otro 30 % se sube el tope, no se
+quita. (2) `ci-checkout-v4-runs-on-deprecated-node`
 (low): cada run deja un warning de Node 20 deprecado que GitHub ya está forzando a Node 24; son dos
 líneas y no corre prisa, pero el ruido permanente entrena a no mirar las anotaciones, que es donde
 este repo pone los avisos que sí importan. (3) `ci-workflow-cites-missing-testing-strategy` (low): el
