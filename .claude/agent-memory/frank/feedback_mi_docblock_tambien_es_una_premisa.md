@@ -1,6 +1,6 @@
 ---
 name: mi-docblock-tambien-es-una-premisa
-description: Lo que YO escribo en un docblock mientras implemento es una afirmación sin medir; cuatro falsas el 8-sep. La variante nueva: inventar una JUSTIFICACIÓN técnica para una línea que está ahí por otra razón.
+description: Lo que YO escribo en un docblock mientras implemento es una afirmación sin medir; seis falsas el 8-sep. Dos variantes: inventar una JUSTIFICACIÓN técnica, y ENSANCHAR una premisa prestada hasta volverla falsa.
 metadata:
   type: feedback
 ---
@@ -51,3 +51,22 @@ refutarla con un ejemplo numérico concreto. Si no consigues construir el caso d
 protege, la razón que has escrito no es la razón — y la verdadera suele ser «paridad con X», que es
 además la que el yo-futuro necesita para no romperla. Y cuando escribas «esto está aislado», di
 aislado *de qué*: casi siempre lo está de una cosa y no de las otras tres.
+
+**Sexta, el mismo día, en `chat-draft-drops-the-expense-sign` — y estrena la segunda forma: la premisa
+prestada que se ENSANCHA al copiarla.** El ticket decía, con razón, que Registros y Estadísticas
+«muestran la transacción bien». Yo lo reescribí como «las listas cuadran y el saldo no… el saldo era el
+único que no preguntaba por la categoría». La frase original era cierta del **render** de la fila; la
+mía afirmaba además los **totales**, y eso es falso: eligen el bucket por categoría pero acumulan CON
+SIGNO (`expense -= amount`), así que un gasto guardado en positivo restaba del total de gastos y el KPI
+se desviaba el doble. Copié una verdad estrecha y la devolví ancha.
+
+Lo grave no es el error de hecho: es que esa frase **es exactamente la creencia que produjo el bug**
+—«solo el saldo lee el signo»— y yo la estaba re-imprimiendo en el comentario que el siguiente iba a
+leer, en la cabecera del test y en el propio ticket. La cazaron dos lentes independientes citando la
+misma línea.
+
+**How to apply:** cuando reescribas con tus palabras una premisa del ticket, marca de qué era cierta la
+original. Si el ticket dice «se muestra bien», pregúntate *¿mostrarse o sumarse?* — y si tu versión
+cubre más superficie que la que medió quien la escribió, la has ensanchado y hay que medir la
+diferencia. El riesgo es peor de lo normal cuando la premisa explica **por qué nadie vio el bug**: esa
+frase es la teoría del caso, y si es falsa, el siguiente hereda el punto ciego entero.
