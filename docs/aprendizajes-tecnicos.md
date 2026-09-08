@@ -16,9 +16,9 @@
 
 <!-- INDICE:inicio — generado por scripts/indexar_doc.py, no editar a mano -->
 
-## Índice (23 entradas)
+## Índice (24 entradas)
 
-> **No hace falta leer este fichero entero** — son 193 KB. Localiza la entrada
+> **No hace falta leer este fichero entero** — son 197 KB. Localiza la entrada
 > aquí y salta a ella.
 
 - `—` [Sync de Grupos (CKSyncEngine) NO debe arrancar/`save()` sobre el `mainContext` compartido antes](#sync-de-grupos-cksyncengine-no-debe-arrancarsave-sobre-el-maincontext-compartido-antes)
@@ -38,6 +38,7 @@
 - `—` [`accessibilityIdentifier` NO se propaga dentro de un `.alert` de SwiftUI: el botón existe en pantall](#accessibilityidentifier-no-se-propaga-dentro-de-un-alert-de-swiftui-el-botn-existe-en-pantalla-y-el-id-llega-vaco-al-rbol)
 - `—` [`xcodebuild test` REINSTALA la app del simulador: el QA que corres después del gate no mira tu](#xcodebuild-test-reinstala-la-app-del-simulador-el-qa-que-corres-despus-del-gate-no-mira-tu)
 - `—` [El árbol de accesibilidad del simulador se degrada tras muchos ciclos launch/stop y solo lo cura](#el-rbol-de-accesibilidad-del-simulador-se-degrada-tras-muchos-ciclos-launchstop-y-solo-lo-cura)
+- `2026-09-08` [Una corrida programada que no ocurre no deja rastro, y las dos formas obvias de buscarla mienten (20](#una-corrida-programada-que-no-ocurre-no-deja-rastro-y-las-dos-formas-obvias-de-buscarla-mienten-2026-09-08)
 - `2026-09-02` [Un helper de aislamiento puede vaciar 22 de 31 modelos y llamarse a sí mismo «borra todas las instan](#un-helper-de-aislamiento-puede-vaciar-22-de-31-modelos-y-llamarse-a-s-mismo-borra-todas-las-instancias-2026-09-02)
 - `2026-09-02` [Un control del instrumento puede apoyarse en el DEFECTO que vigila, y quedarse ciego justo al arregl](#un-control-del-instrumento-puede-apoyarse-en-el-defecto-que-vigila-y-quedarse-ciego-justo-al-arreglarlo-2026-09-02)
 - `2026-09-02` [Nombrar un metodo de Swift Testing en -only-testing no filtra: no corre NADA y devuelve TEST SUCCEED](#nombrar-un-metodo-de-swift-testing-en--only-testing-no-filtra-no-corre-nada-y-devuelve-test-succeeded-2026-09-02)
@@ -427,3 +428,61 @@ bien escrito y la sesión secundaria nombrada, y sigue adelante.
   usuario** paso a paso y preguntando en cada salto «¿esto qué escribe, y en qué dominio?». Aquí lo
   encontró una lente adversarial a la que se le pidió justo eso, sobre un cambio que solo añadía una
   pantalla informativa. El defecto no estaba en el diff.
+
+### Una corrida programada que no ocurre no deja rastro, y las dos formas obvias de buscarla mienten (2026-09-08)
+
+La suite de UI se mudó a una nocturna (`cron: '17 8 * * *'`) el 2026-09-07. Su primera ventana, la
+del día 8 a las 08:17 UTC, **no disparó** — con el workflow ya 7 h 53 min en la rama por defecto.
+No falló: no existió. Cero runs con `event: schedule` en todo el repositorio, en cualquier
+workflow, desde siempre.
+
+- **El modo de fallo es una ausencia, y una ausencia no se nota.** Cuando un `schedule` no dispara
+  no hay run, no hay rojo y no hay aviso: no hay nada que mirar. Todos los demás fallos de CI
+  producen un artefacto; éste produce silencio, que es indistinguible de «todo bien». Medido en
+  números el día siguiente a la mudanza: de **24-31 corridas de UI al día a una sola**, y esa una
+  fue un dispatch a mano. Nadie se habría enterado.
+  - **Corolario para cualquier cosa que se mueva a un disparador programado:** la mudanza no está
+    terminada cuando el `cron` está escrito y validado. Está terminada cuando algo comprueba que la
+    corrida ocurrió. Si no, has cambiado una cobertura que se ve por una que hay que ir a mirar —
+    y nadie va a mirar.
+
+- **Trampa 1: preguntar «¿corrió el workflow?» responde que sí todos los días.** El mismo fichero
+  tiene runs de `push` y `pull_request` constantemente. Medido: **59 runs de QA en 26 h, y solo 1
+  ejecutó la UI.** Hay que filtrar por evento. Y ojo con qué evento, porque son **dos preguntas
+  distintas** que el silencio confunde:
+  - **«¿corrió la UI?»** — la contestan `schedule` **y** `workflow_dispatch`. Para *cobertura*, un
+    dispatch manual cuenta igual.
+  - **«¿funciona el reloj?»** — la contesta **solo** `schedule`. Aquí un dispatch manual no prueba
+    nada, y leerlo como prueba ya pasó una vez en este repo: la nocturna se dio por verificada
+    porque un `workflow_dispatch` de 89,7 min corrió entera. Corría el contenido, no el reloj.
+
+- **Trampa 2: `gh api '/actions/runs?per_page=100'` abarca menos de lo que parece, y se degrada
+  con la actividad.** Medido el 2026-09-08: esos 100 runs mezclados cubrían **28 h justas**. Una
+  consulta de «últimas 26 h» construida así funciona hoy y se rompe el día que haya trabajo (el
+  2026-09-05 hubo 74 commits), respondiendo «no hubo corrida» habiéndola habido — sin error, sin
+  aviso, con el mismo aspecto que una respuesta buena. Lo correcto es el endpoint **por workflow**
+  con el filtro de evento **en el servidor**, cuyo `total_count` no depende de la ventana:
+  ```
+  gh api "repos/$R/actions/workflows/qa.yml/runs?event=schedule&branch=2.1&per_page=100"
+  ```
+  Lo cazó un control positivo ampliado: al pedir 240 h en vez de 26 devolvió el **mismo** conteo.
+  Un filtro que no cambia cuando ensanchas diez veces la ventana no está midiendo la ventana.
+
+- **Cómo se contesta en minutos lo que parece costar días.** «¿Dispara el `schedule` en este repo?»
+  sobre un workflow diario cuesta dos días — una ventana por día. La misma pregunta sobre una sonda
+  de Linux con `cron: '*/5 * * * *'` cuesta media hora, y es la misma pregunta: no se está probando
+  el workflow caro, se está probando el mecanismo. Cuando el ciclo de una medición es largo, mira
+  si la magnitud que te interesa se puede observar en un sistema barato con el mismo mecanismo.
+
+- **El `GITHUB_TOKEN` sí puede disparar un `workflow_dispatch`, y conviene saberlo.** GitHub no crea
+  runs a partir de eventos disparados con ese token —es la regla anti-cascada, para que un workflow
+  no se dispare a sí mismo en bucle— pero `workflow_dispatch` y `repository_dispatch` son la
+  excepción documentada. Comprobado en producción el 2026-09-08: un workflow lanzó `qa.yml` con
+  `gh workflow run` y solo `permissions: actions: write`. Es lo que permite que un vigilante no se
+  limite a avisar, sino que arregle.
+  - Y aun así, `gh workflow run` **saliendo en verde no es «run creado»**: el dispatch es asíncrono.
+    Un vigilante que no comprueba después que el run nació informa cada día de que ha lanzado la
+    nocturna sin haberla lanzado nunca.
+
+- Pin: `.github/workflows/nocturna-vigilante.yml` (dos relojes que fallan distinto — `schedule`, que
+  es el mismo mecanismo que vigila, y `push` a la rama por defecto, que no depende de él).
