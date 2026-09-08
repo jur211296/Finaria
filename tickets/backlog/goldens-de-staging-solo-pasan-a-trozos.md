@@ -44,10 +44,29 @@ Se probaron tres hipótesis y **las tres cayeron**. Se dejan escritas para que n
 3. **No es el volumen acumulado en la base.** Los usuarios de prueba arrastran **677 y 511 grupos**
    de meses de corridas, así que parecía la explicación. Pero `explain analyze` sobre el barrido por
    usuario da **0,559 ms** con índice (664 filas). La base no es el cuello.
+4. **No es el manifest desincronizado**, y ésta parecía la buena. `gateway/group_capability_manifest.json`
+   está en `.gitignore` (es copia generada por `sync:manifest`) y llevaba **desde el 3-sep en `c1`**,
+   porque el sync solo corre desde `npm test` / `npm run deploy:*` y las corridas se lanzaron con
+   `npx vitest`, que no dispara `pretest`. O sea: el gateway probaba con 11 columnas contra una base
+   que desde hoy devuelve 12 — la divergencia falsa de Merkle que el bump a `c2` existe para evitar,
+   y encajaba con que fallara justo pull/merkle/paginación. Se sincronizó a `c2` y se volvió a correr:
+   **14 passed · 11 failed**, ligeramente PEOR y con la misma duración. No era eso.
 
 También descartado: sin locks (`pg_locks` sin esperas), sin transacciones colgadas
 (`idle in transaction = 0`), y el gateway corre **en proceso** desde el repo (`app.fetch`), con el
 manifest `c2` que ya conoce la columna nueva — no es un Worker desalineado.
+
+## El único hecho robusto, medido tres veces
+
+| Corrida | Manifest | Resultado | Duración |
+|---|---|---|---|
+| 1 (con otras corridas solapadas) | c1 | 15 · 10 fallos | 1715 s |
+| 2 (limpia, nada en paralelo) | c1 | 15 · 10 fallos | 1706 s |
+| 3 (limpia, manifest sincronizado) | **c2** | 14 · 11 fallos | 1736 s |
+
+**~69 segundos por test de media en tanda; 1-8 segundos por test al correrlos solos.** Un factor
+~70x que no depende del manifest, ni del solapamiento, ni de los datos de la base. Ese es el hecho
+que hay que explicar, y ninguna de las cuatro hipótesis lo hace.
 
 ## Lo que queda por medir
 
