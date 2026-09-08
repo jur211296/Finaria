@@ -499,8 +499,30 @@ final class ChatAssistantViewModel {
 
         let tags: [Tag] = draft.tagIDs.compactMap { context.model(for: $0) as? Tag }
 
-        // Convertir Decimal → Double para TransactionItem (el modelo usa Double)
-        let amountDouble = NSDecimalNumber(decimal: amount).doubleValue
+        // Convertir Decimal → Double para TransactionItem (el modelo usa Double), ya FIRMADO.
+        //
+        // El signo sale de `draft.isExpense` —el mismo campo que ya decide el tipo al abrir el
+        // formulario (`editDraft`) y filtra las subcategorías por naturaleza— y no de una heurística
+        // nueva. Es lo que hacen las demás rutas de creación: `NewTransactionViewModel` guarda
+        // `transactionType.isNegative ? -amount : amount`, y el bridge del Inbox deduce al revés
+        // (`isExpense: amount < 0`), así que la magnitud sin firmar era la excepción.
+        //
+        // Hasta el 2026-09-08 esta ruta persistía la magnitud en crudo, y el daño NO era solo del
+        // saldo. `LiveBalanceCalculator` acumula `Decimal(tx.amount)` sin mirar la categoría, así que
+        // el saldo subía con cada gasto; pero los totales de Registros y Estadísticas eligen el
+        // bucket por categoría y **acumulan con signo** (`expense -= amount` en `RecordsViewModel`,
+        // `.reduce { $0 - … }` en `StatisticsViewModel`), de modo que ese mismo gasto RESTABA del
+        // total de gastos — entraba como el reembolso que describe `TransactionClassificationLogic`:
+        // «un monto de signo contrario a su categoría … REDUCE el bucket». Lo único que sí salía bien
+        // era el RENDER de la fila y del detalle, donde el tipo se decide solo por categoría. De ahí
+        // que el bug pareciera cosa del saldo llevando ocho superficies por delante.
+        //
+        // `dbl` es la magnitud que la guard de arriba ya validó (`isFinite`, `> 0`); se reusa en vez
+        // de recalcularla para que esa garantía viaje en el código y no en la prosa. Y la guard es lo
+        // ÚNICO que impide un doble signo: del parseo SÍ puede llegar un monto negativo —`DraftBuilder`
+        // copia `parsed.amount` en crudo, a diferencia de `SiriDraftService`, que normaliza con
+        // `abs()`— solo que aquí se rechaza a `.failed` en vez de llegar hasta esta línea.
+        let amountDouble = draft.isExpense ? -dbl : dbl
         let preferredCurrency = CurrencyDefaults.currentPreferred
         // `on: draft.date` y no la tasa de HOY. La transacción se estampa con `draft.date`, que el
         // parseo resuelve como `parsed.date ?? Date.now`: el usuario puede dictar «un café ayer» y
@@ -517,7 +539,15 @@ final class ChatAssistantViewModel {
             on: draft.date,
             context: context
         )
-        let amountInPreferred = NSDecimalNumber(decimal: outcome.amount).doubleValue
+        // Se firma IGUAL que el nativo, y por eso se convierte la MAGNITUD y se firma después: así el
+        // número que devuelve el converter se preserva exactamente y las dos columnas quedan
+        // coherentes. Las cuatro viajan juntas en el grupo de coherencia `money`.
+        //
+        // Ojo con cómo se detecta que alguien firme solo una de las dos: NO por la tasa. Se deriva de
+        // su cociente, pero se guarda con `abs()` unas líneas más abajo, así que saldría positiva y
+        // plausible. El único centinela es el test que exige esta columna NEGATIVA para un gasto.
+        let magnitudeInPreferred = NSDecimalNumber(decimal: outcome.amount).doubleValue
+        let amountInPreferred = draft.isExpense ? -magnitudeInPreferred : magnitudeInPreferred
 
         // La tasa se DERIVA del resultado que ya está aquí al lado; no se planta. Hasta el
         // 2026-09-08 esta ruta pasaba `exchangeRate: 1.0` literal mientras el monto convertido de al

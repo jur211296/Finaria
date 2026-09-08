@@ -48,8 +48,12 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | canarios-y-breadcrumbs-sin-emisor | backlog | tickets/backlog/canarios-y-breadcrumbs-sin-emisor.md |
 | cashflow-spend-prediction | backlog | tickets/backlog/cashflow-spend-prediction.md |
 | chat-assistant-plants-exchange-rate-one | qa | tickets/qa/chat-assistant-plants-exchange-rate-one.md |
-| chat-draft-drops-the-expense-sign | backlog | tickets/backlog/chat-draft-drops-the-expense-sign.md |
+| chat-draft-drops-the-expense-sign | qa | tickets/qa/chat-draft-drops-the-expense-sign.md |
+| chat-draft-sign-can-contradict-its-subcategory | backlog | tickets/backlog/chat-draft-sign-can-contradict-its-subcategory.md |
+| chat-draft-stamps-its-own-currency-not-the-account | backlog | tickets/backlog/chat-draft-stamps-its-own-currency-not-the-account.md |
+| chat-ignores-expenses-only-mode | backlog | tickets/backlog/chat-ignores-expenses-only-mode.md |
 | chat-rows-sealed-before-the-fix-have-no-repair-path | backlog | tickets/backlog/chat-rows-sealed-before-the-fix-have-no-repair-path.md |
+| chat-rows-with-unsigned-amount-have-no-repair-path | backlog | tickets/backlog/chat-rows-with-unsigned-amount-have-no-repair-path.md |
 | ci-allowlist-no-cubre-encargos-ni-qa-scripts | backlog | tickets/backlog/ci-allowlist-no-cubre-encargos-ni-qa-scripts.md |
 | ci-checkout-v4-runs-on-deprecated-node | backlog | tickets/backlog/ci-checkout-v4-runs-on-deprecated-node.md |
 | ci-destination-assumes-a-simulator-that-may-not-exist | backlog | tickets/backlog/ci-destination-assumes-a-simulator-that-may-not-exist.md |
@@ -197,6 +201,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | update-banner-appstore-criteria | qa | tickets/qa/update-banner-appstore-criteria.md |
 | verify-dual-channel-zone-in-supabase | backlog | tickets/backlog/verify-dual-channel-zone-in-supabase.md |
 | vigilante-margen-menor-que-el-retraso-real-del-cron | backlog | tickets/backlog/vigilante-margen-menor-que-el-retraso-real-del-cron.md |
+| vision-amount-sign-contract-is-only-a-prompt-example | backlog | tickets/backlog/vision-amount-sign-contract-is-only-a-prompt-example.md |
 | web-domain-has-no-spf-dkim-dmarc | done | tickets/done/web-domain-has-no-spf-dkim-dmarc.md |
 | welcome-beacon-reads-owner-icloud-in-secondary | backlog | tickets/backlog/welcome-beacon-reads-owner-icloud-in-secondary.md |
 | welcome-copy-blames-owner | qa | tickets/qa/welcome-copy-blames-owner.md |

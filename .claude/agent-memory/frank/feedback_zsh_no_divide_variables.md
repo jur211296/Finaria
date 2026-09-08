@@ -31,5 +31,17 @@ corrieron 70 casos; la que usaba `$args` corrió cero. Idénticas a la vista.
   in M suites` para Swift Testing. Un número que no cuadra con lo que pediste es el fallo, aunque
   ponga SUCCEEDED.
 
+**Segundo disfraz del veredicto, medido el 2026-09-08: el exit code que reporta el wrapper de
+background es el del comando COMPUESTO, no el de `xcodebuild`.** Lancé el control positivo por mutación
+como `xcodebuild test … > log 2>&1; echo "EXIT=$?"` en segundo plano, y la notificación dijo
+**«completed (exit code 0)»**. El `0` era del `echo`, que siempre sale bien. En el log, `xcodebuild`
+había escrito `** TEST FAILED **` — que era justo lo que yo quería ver, porque estaba probando que los
+tests cazan el bug. Si el mutante hubiera sido el árbol bueno, ese `0` me habría hecho dar por verde una
+corrida roja.
+
+⇒ **Nunca cierres un `xcodebuild` en background con otro comando detrás**, y en cualquier caso el
+veredicto se lee del log (`** TEST (SUCCEEDED|FAILED) **` + el conteo), nunca de la línea de estado que
+devuelve el wrapper.
+
 Relacionado: [[mis-mediciones-fallan-por-el-filtro]] — misma familia: el «cero» no era del código, era
 del filtro. Y [[gate-paso3-no-detecta-cero-casos]], que es este mismo hueco en el propio gate.
