@@ -64,3 +64,85 @@ heredero y deja esta celda fuera. Inventar aquí una cuarta salida sería decidi
 
 - [[groups-owner-transfer-and-leave]] — el ticket que lo destapó y cubre la celda CON heredero.
 - [[groups-leave-rpc-error-10]] — el abuelo: el callejón original del dueño.
+
+
+---
+
+## Para decidir — preparado el 2026-09-08
+
+**La pregunta, en una línea:** al dueño con deuda y sin heredero, ¿le damos una salida, y cuál?
+
+### Lo que medí hoy, y que cambia una de las opciones
+
+La tabla de verdad del ticket es **exacta**: `GroupOwnerExitLogic.swift:89-113`. Para el dueño,
+`showsLeave` es siempre `false`, `showsTransferAndLeave` exige `eligibleHeirCount >= 1` (`:99-102`) y
+`deleteEnabled = !groupHasOutstandingDebt` (`:109`). Con deuda y sin heredero, las tres cerradas.
+Confirmado también el camino 1: `GroupSettingsView.swift:1011-1013` fetcha los `SplitMember` **solo
+por `groupZoneID`, sin filtrar por `isActive`**.
+
+**Pero la opción (b), tal como está enunciada arriba, no funciona.** Y esto es lo que hay que saber
+antes de elegirla:
+
+> **Los netos suman cero por moneda.** El bloqueo se calcula en `GroupSettingsView.swift:1020` como
+> `balances.contains { abs($0.netBalance) > 0.01 }`. Si el que se fue debe 50, el **dueño activo
+> tiene +50** — así que «quedarse solo con los balances de miembros activos» **sigue bloqueando**,
+> porque el activo es justamente el otro extremo de esa deuda.
+
+Para expresar «deuda solo con gente que ya no está» hay que **cambiar de métrica**: pasar de netos a
+**pares** (`GroupBalanceService.calculateBalances:102` construye las claves desde
+`Set(paid.keys).union(owes.keys)`; lo que haría falta es `calculateDebts:126` y el tipo `Debt`) y
+exigir que ninguna pareja tenga los dos extremos activos. Eso no es un filtro: es un criterio nuevo.
+
+**Y la opción (c) es mucho más barata de lo que el ticket sugiere, porque ya está construida.**
+«Archivar» **ya vive en esta misma pantalla** (`GroupSettingsView.swift:157-159`, sección
+`:773-792`), **ya funciona con deuda** — solo añade el confirm `archiveWithDebtWarning` (`:239`) — y
+está pintada **antes** que transferir y eliminar (`:161-171`). Lo único que falta es que el hint del
+callejón la mencione: hoy dice «hay saldos pendientes» y se calla la salida que sí tiene delante.
+
+### Las opciones, con su coste medido
+
+| | Qué le das al dueño | Coste medido |
+|---|---|---|
+| **(a)** nada, hint honesto | sigue atrapado | 0 |
+| **(b)** eliminar si la deuda es solo con inactivos | sale de verdad | **4-5 ficheros + métrica nueva** (netos → pares) + 2 claves × 16 `.lproj` |
+| **(c)** ofrecer archivar | se lo quita de la lista, no sale | **2 ficheros + 1-2 claves × 16 `.lproj`** — la funcionalidad ya existe |
+| **(d)** atajo a liquidar | no desbloquea si la deuda es entre terceros | 1 fichero + 1 clave × 16 |
+
+### Mi recomendación: **(c) ahora**, y (b) solo si aparece demanda real
+
+Tres motivos, en orden de peso:
+
+1. **Hoy el hint miente por omisión.** Le dice al dueño que no puede hacer nada, teniendo «Archivar»
+   dos secciones más arriba, funcionando y con su propio aviso de deuda. Eso no es una feature nueva:
+   es dejar de esconder la que hay.
+2. **(b) cuesta una métrica nueva sobre el cálculo de saldos de Grupos**, que es justo el terreno
+   donde un error sale caro — y el ticket lo pedía creyendo que era un filtro. Gastar eso en un caso
+   del que no tenemos ni un reporte real no se sostiene.
+3. **(c) no cierra la puerta a (b).** Archivar no borra deuda de nadie, así que no toca el principio
+   que protegiste el 6-sep. Si mañana aparece un dueño atrapado de verdad, (b) sigue disponible y con
+   el diagnóstico ya escrito.
+
+Lo que **(c) no hace**, y conviene tenerlo delante al elegir: no le saca del grupo. Sigue siendo
+dueño, sigue contando para los saldos, y si alguien le escribe seguirá recibiendo lo del grupo. Es
+«quítamelo de la vista», no «sácame de aquí».
+
+### Si eliges (c), el AC es
+
+- [ ] El hint de bloqueo nombra «Archivar» como salida disponible cuando lo esté.
+- [ ] La sección de Archivar queda visible/alcanzable en el mismo camino donde hoy se lee el bloqueo
+      (hoy ya se pinta antes; comprobar que no queda por debajo del fold tras el cambio de copy).
+- [ ] Copy nuevo en las **16** `.lproj` del target app (`Yala/Resources/*.lproj`; las otras 17 son de
+      YalaShare y YalaWidgets y no llevan este texto).
+- [ ] `GroupOwnerExitLogic` gana el caso en su tabla y su test.
+
+### Si eliges (b), el AC es
+
+- [ ] El criterio se expresa sobre **pares de deuda**, no sobre netos, y su test incluye el caso que
+      hoy engaña: activo con `+50` frente a inactivo con `-50` ⇒ debe permitir eliminar.
+- [ ] `recomputeOutstandingDebt` filtra por `isActive` **en memoria** (es computed sobre `status`,
+      `SplitMember.swift:59`, y no es predicable en SwiftData).
+- [ ] Sigue siendo imposible eliminar con deuda viva entre dos miembros **activos**.
+
+### Decisión de Jürgen
+
+_Pendiente. Preguntado el 2026-09-08._

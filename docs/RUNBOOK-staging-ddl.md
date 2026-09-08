@@ -1,0 +1,192 @@
+---
+updated: 2026-09-08
+tags: [runbook, staging, ddl, owner]
+---
+
+# Runbook — las tres migraciones que staging arrastra
+
+**Para quién:** Jürgen. **Por qué él:** no hay credencial de DDL de staging en el entorno del agente —
+el conector MCP de Supabase solo lista producción (`kefvaiymtgytemwbltlz`), no staging
+(`fostjbbwstyuunmmefuk`). Todo lo demás de este documento está medido y verificado; lo único que
+falta es la contraseña que solo tienes tú.
+
+**Cuánto lleva:** 10-15 minutos las tres, si las pegas seguidas.
+
+**Qué pasa si no se hace:** producción está al día y verificada, así que la app no se rompe. Lo que
+se rompe es *staging*: con `g14_01` sin aplicar, fijar un presupuesto de grupo contra staging deja
+un **dead-letter permanente**, y un dead-letter **apaga el Merkle de ese grupo**. Hasta que alguien
+fije un presupuesto ahí, no pasa nada — la bomba está armada, no detonada.
+
+---
+
+## Antes de empezar
+
+**El orden importa y no es alfabético por casualidad.** `g13_05` es superset de `g13_04` (lleva sus
+cuatro claves `changed` dentro), así que aplicarlas al revés deja el estado bueno igualmente — pero
+entonces el bloque de verificación de `g13_04` mide un cuerpo que ya no es el suyo y te dará un
+falso rojo. Aplícalas en este orden:
+
+1. `qa/cloud/g13_04_join_group_reports_transition.sql`
+2. `qa/cloud/g13_05_join_group_rejects_archived.sql`
+3. `qa/cloud/g14_01_group_budget_limit.sql`
+
+**Dos vías, elige una:**
+
+- **(A) SQL Editor del dashboard de staging** — proyecto `fostjbbwstyuunmmefuk`. Pega el fichero
+  entero. Es la vía canónica del repo y la que envuelve sola en transacción.
+- **(B) `psql`** con la URI del pooler:
+  ```bash
+  psql -1 -f qa/cloud/<fichero>.sql "$SUPABASE_DB_URL"
+  ```
+  La URI se saca en *Dashboard → Project Settings → Database → Connection string → URI (session
+  pooler, puerto 5432)*. La contraseña **no está en el repo ni en `~/Secrets/`**: es tuya.
+
+> **El `-1` de `psql` no es opcional para las dos primeras.** Medido: `g13_04` y `g13_05` **no
+> traen `begin;`/`commit;` propios** (0 ocurrencias de cada uno) — dependen de que quien las aplica
+> las envuelva. `g14_01` **sí los trae** (`:99` y `:180`), así que ahí el `-1` es redundante pero
+> inofensivo.
+
+---
+
+## 1 · `g13_04_join_group_reports_transition.sql`
+
+**Qué arregla, en una frase:** volver a tocar un enlace de invitación al que ya perteneces deja de
+avisar a los admins como si acabaras de entrar.
+
+**Cómo:** añade el campo `changed` a las cuatro ramas de retorno de `public.join_group` — `false`
+solo en la rama no-op. El gateway ya lo respeta (`gateway/src/groups/rpc.ts:262`:
+`if (body.changed === false) return;`), así que **no hace falta desplegar el Worker para esto**.
+
+**Idempotente:** sí. Es un `create or replace` con el cuerpo completo (`:44`); re-ejecutarla
+converge al mismo estado. Sin rollback explícito porque no lo necesita.
+
+**Verificar después:** el propio fichero trae el bloque en **`:150-176`** — cuatro comprobaciones
+(3 ramas con `changed=true` + 1 con `false`; una aparición de `yala_group_deleted` y una de
+`yala_invalid_invite`; grants intactos; y una llamada real contra la BD). Córrelo y mira que las
+cuatro pasen.
+
+> El comentario de `:171` remite a «la entrada g13_04 de este README» dentro de
+> `qa/cloud/README.md`. **Esa entrada no existe** — medido: el README menciona `g13_04` una sola
+> vez y no como sección. Este runbook es lo que había que leer ahí; queda ticket propio
+> (`qa-cloud-readme-sin-entradas-g13-04-y-g13-05`).
+
+---
+
+## 2 · `g13_05_join_group_rejects_archived.sql`
+
+**Qué arregla, en una frase:** un grupo archivado deja de aceptar a alguien que entra por un enlace
+viejo.
+
+**Cómo:** `join_group` lanza `yala_group_archived` (P0001) cuando el grupo tiene `is_archived=true`,
+en dos puntos — la re-entrada desde estado terminal y el alta nueva. El rebind legacy y el re-tap de
+un miembro activo siguen pasando, a propósito.
+
+**Idempotente:** sí, mismo motivo (`create or replace` con cuerpo completo, `:65`).
+
+**No hace falta desplegar el Worker:** el gateway propaga cualquier código `/^yala_[a-z_]+$/` como
+400 sin allowlist, así que el error nuevo viaja solo.
+
+**Verificar después:** bloque en **`:187`** en adelante — seis comprobaciones. La quinta es la que
+vale la pena mirar dos veces: compara el **md5 del cuerpo** (`4982b50de23df93ed8f9c8bc369e9e17`,
+5365 caracteres) para que staging quede **byte a byte** igual que producción. Si ese md5 no cuadra,
+no sigas a la tercera: quiere decir que staging tenía drift previo.
+
+---
+
+## 3 · `g14_01_group_budget_limit.sql`
+
+**Qué añade, en una frase:** la columna donde vive el tope de gasto de un grupo — la que hoy falta
+en staging y arma la bomba del dead-letter.
+
+**Cómo:** añade `split_groups.budget_limit_amount` como columna **cifrada** (`bytea`, patrón G7),
+con grant de `update` por columna a `authenticated`; la mete en la lista de columnas cifradas de
+`apply_group_delta` y la sirve descifrada en `groups_pull_rows_split_groups`.
+
+**NO es idempotente, y eso es deliberado** (`:80-83`). No pasa nada: trae su propia transacción
+(`begin;` en `:99`, `commit;` en `:180`) y **dos guardas de md5 que abortan** (`:110-111`):
+
+- `c_before = d2e748320da4f2eca82b19a0048e84ab` — el cuerpo vivo que espera encontrar. Si no cuadra,
+  aborta antes de tocar nada (`:119`).
+- `c_after = ae78bce687ab00da0ae463e6525cc09c` — el resultado. Si no cuadra, aborta y revierte
+  (`:135`).
+
+⇒ **Es seguro intentarla**: o entra entera o no entra. Y si la ejecutas dos veces, la segunda aborta
+diciendo el md5 de llegada — eso significa «ya estaba aplicada», no un error.
+
+### Dos trampas que este fichero se sabe y tú no
+
+- **El orden interno**: la función va **antes** que la columna (`:64-73`). Está así en el fichero;
+  no lo reordenes. Al revés, un push de `budget_limit_amount` se guarda **en claro** dentro de una
+  columna cifrada y el presupuesto desaparece para todo el grupo. En producción se aplicó al revés y
+  salió bien por suerte; el fichero del repo ya está corregido.
+- **Nunca re-apliques `qa/cloud/g7_02_encrypt_groups_cutover.sql` después de esta.** Sigue en el
+  repo y recrea `apply_group_delta` con `array['name']`, lo que **reabre el agujero** que g14_01
+  acaba de cerrar (lo avisa el propio `g14_01:72-73`).
+
+**Verificar después:** las guardas ya lo hacen solas al aplicar. Si quieres el contraste externo:
+
+```sql
+select md5(pg_get_functiondef('public.apply_group_delta'::regproc));
+-- esperado: 61c38595cdd8b7b0ab043437f49a7f2c
+select md5(pg_get_functiondef('public.groups_pull_rows_split_groups'::regproc));
+-- esperado: 2cac864c6b67ab6da941601e8e53cf2c
+```
+
+> Ojo: ese baremo es sobre `functiondef`, que **no** es el mismo texto que el `prosrc` de las
+> guardas internas. Dos md5 distintos del mismo objeto, los dos correctos.
+
+El `.ddl` de referencia del repo (`supabase-groups-staging.ddl`) **ya refleja el estado
+post-`g14_01`**, así que no hay que regenerarlo: sirve tal cual como texto esperado.
+
+---
+
+## Verificación end-to-end de las tres (esto es lo que zanja)
+
+Desde `gateway/`, contra staging real:
+
+```bash
+set -a; . ~/Secrets/yala-supabase-test/test-users.env; set +a
+export GROUPS_ENC_KEY=$(cat ~/Secrets/yala-groups-enc/staging.key)
+npx vitest run test/groups.goldens.test.ts    # esperado: 25/25
+```
+
+**Qué significa hoy y qué significará después.** Hoy pasa 25/25 *porque nadie fija un presupuesto
+contra staging*: la suite mide que un manifest con una columna que el server no tiene no rompe nada
+mientras nadie la use. Tras aplicar `g14_01`, sigue en 25/25 pero ya sin la bomba debajo.
+
+---
+
+## Lo que NO es parte de esto: el Worker
+
+**Estado, medido hoy:** `group_capability_manifest.json:3` ya dice `"canon_version": "c2"` en el
+repo, pero el Worker no se ha desplegado. Mientras tanto los clientes caen en el guard de canon y
+**saltan la verificación Merkle de Grupos** — a propósito y sin daño. Vuelve encendido cuando
+despliegues y el parque converja.
+
+**El bloqueo NO es de credencial, y hasta hoy la documentación decía lo contrario.**
+`gateway/README.md` afirmaba «`wrangler deploy` no está autenticado en este entorno». Medido con
+`wrangler whoami`: **sí lo está** — OAuth de `admin@yala-app.pe`, con `workers (write)` y
+`workers_scripts (write)`. Corregido en ese README en este mismo cambio.
+
+**Entonces por qué no lo despliego yo:** porque el último deploy de staging es del **2026-08-12** y
+arrastra commits ajenos (`eb6593ce`, `6bf0f588`). Desplegar hoy subiría trabajo de otros que nadie
+ha revisado. Eso es decisión tuya, no falta de acceso.
+
+```bash
+cd gateway && npm run deploy:staging      # el predeploy copia los manifests
+cd gateway && npm run deploy:production
+```
+
+**Orden recomendado: SQL primero, Worker después** (lo dice `g13_04:29-31`). Ningún orden pierde un
+aviso legítimo; solo ese hace que el arreglo entre en vigor de una vez.
+
+---
+
+## Referencias
+
+- Detalle por migración y su historia: `qa/cloud/README.md` (la entrada de `g14_01` está en
+  `:1558-1594`; las de `g13_04` y `g13_05` **no existen** — ver el ticket citado arriba).
+- Tabla de accesos por entorno: `.claude/agent-memory/frank/reference_verificar_backend_yala.md`.
+- Los tickets que dejaron esto pendiente: `tickets/qa/rejoin-tap-renotifies-admins.md` (g13_04),
+  `tickets/qa/groups-archived-group-rejects-join.md` (g13_05), `tickets/qa/groups-budget.md`
+  (g14_01).

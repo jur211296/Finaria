@@ -1,10 +1,10 @@
 ---
 id: groups-budget
-status: in-progress
+status: qa
 priority: medium
 area: groups
 created: 2026-07-01
-updated: 2026-09-07
+updated: 2026-09-08
 source: YalaWiki/Backlog/groups-presupuesto-de-grupo.md
 ---
 
