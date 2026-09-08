@@ -59,4 +59,4 @@
 - [Verificar el backend: MCP ve solo prod](reference_verificar_backend_yala.md) — no hay DDL de staging, pero los goldens SÍ corren contra él (hay contraseñas, no solo JWT); sandbox transaccional para lo demás.
 - [El hook de secretos está desactivado](hook_secretos_disparador_substring.md) — retirado del push el 2026-09-01 (ADR-009); nada escanea hoy. Su trampa del substring, si vuelve.
 - [El hook de /cerrar salta con «cerramos»](hook_cerrar_disparador_substring.md) — verifica la premisa contra su mensaje: cerrar un ticket no es cerrar la sesión, y el bloque de disco es irreversible.
-- [DNS de yala-app.pe](reference_dns_yala_app_pe.md) — SPF/DKIM/DMARC preparados y esperando que Jürgen pegue; los dos NS SÍ responden (el «uno solo» caducó); caché negativa de 2 h.
+- [DNS de yala-app.pe](reference_dns_yala_app_pe.md) — SPF/DKIM/DMARC publicados el 8-sep; un DKIM se valida con openssl, no mirando si existe; los dos NS SÍ responden.

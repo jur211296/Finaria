@@ -1,6 +1,6 @@
 ---
 name: dns-yala-app-pe
-description: Dónde se administra el DNS de yala-app.pe, quién puede entrar, y el estado de autenticación de correo re-medido el 2026-09-08 (el ticket quedó en blocked, con checklist pegable)
+description: Dónde se administra el DNS de yala-app.pe, quién puede entrar, y el estado del correo: SPF/DKIM/DMARC publicados el 2026-09-08 y verificados; falta el correo que confirma que Google firma
 metadata:
   type: reference
 ---
@@ -20,7 +20,7 @@ Los dos paneles (consola de Workspace y panel DNS del registrador) exigen autent
 introduzco credenciales ni entro en cuentas. **Los cambios de DNS y de Workspace los teclea
 Jürgen**; lo mío es medir con `dig`, dar los valores exactos y verificar después.
 
-## Estado re-medido el 2026-09-08 (CADUCA — re-medir con dig antes de citarlo)
+## Estado el 2026-09-08 DESPUÉS de publicar (CADUCA — re-medir con dig antes de citarlo)
 
 Sin SPF, sin DMARC (`_dmarc` daba NXDOMAIN), sin DKIM en ninguno de 20 selectores probados.
 El único remitente de `@yala-app.pe` es Google Workspace — confirmado por Jürgen y coherente con
@@ -32,9 +32,22 @@ Buzón elegido para los informes DMARC: `admin@yala-app.pe`.
 zona no se toca desde entonces). Si tras pegar en el panel el serial no ha cambiado, el panel no
 guardó — y eso se confunde con «aún no ha propagado», que es una espera inútil de dos horas.
 
-**El trabajo de preparación está hecho y el ticket está en `tickets/blocked/`**: lleva el checklist
-con el host y el valor exactos, el orden (generar la firma → publicar los tres TXT → activar) y las
-trampas. Lo que falta es que Jürgen se autentique y pegue; nada más se puede adelantar.
+**Jürgen pegó los tres el 2026-09-08 y entran bien** (serial `2026071400` → `2026090802`): un solo
+`v=spf1 include:_spf.google.com ~all`, las dos verificaciones de la raíz intactas, `p=none` con `rua`
+al buzón propio, y ningún nombre duplicado. El ticket está en `tickets/qa/` — **falta el correo que
+dice si Google FIRMA**, que es lo único que ningún `dig` contesta.
+
+**Lo que hay que verificar en un DKIM, y no es que exista.** Vino **partido en dos cadenas** porque
+2048 bits pasan de los 255 caracteres por cadena, y ahí es donde un panel lo rompe sin avisar. La
+comprobación que distingue «publicado» de «además sirve» es reconstruir la clave y parsearla:
+
+    dig +short TXT google._domainkey.yala-app.pe @ns.rcp.net.pe | tr -d '" ' | tr -d '\n' \
+      | sed 's/.*p=//' | fold -w 64 \
+      | (echo "-----BEGIN PUBLIC KEY-----"; cat; echo "-----END PUBLIC KEY-----") \
+      | openssl pkey -pubin -noout -text | head -1     # -> RSA Public-Key: (2048 bit)
+
+Y dos comprobaciones más que el `dig` a secas no da: que haya **un solo** `v=spf1` (dos son
+`PermError` y tumban el SPF entero) y que los `verification` que ya estaban **sigan ahí**.
 
 ## Dos trampas de esta zona en concreto
 
