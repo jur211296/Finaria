@@ -1,6 +1,6 @@
 ---
 id: chat-draft-drops-the-expense-sign
-status: in-progress
+status: qa
 priority: high
 area: "chat, accounts"
 created: 2026-09-08
