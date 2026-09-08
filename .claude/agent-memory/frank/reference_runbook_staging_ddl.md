@@ -21,7 +21,8 @@ uno solo, no.
 - **`psql -1` no es opcional en `g13_04` y `g13_05`**: medido, no traen `begin;`/`commit;` propios
   (0 ocurrencias). `g14_01` sí los trae y además guardas de md5 que abortan la transacción entera,
   así que **intentarla es seguro**: o entra completa o no entra.
-- Verificación end-to-end de las tres: `groups.goldens.test.ts` contra staging, 25/25.
+- Verificación end-to-end de las tres: `groups.goldens.test.ts` contra staging, 25/25 (~5 min).
+  **Antes, `npm run sync:manifest`** — `npx vitest` no lo dispara y medirías con el manifest viejo.
 
 ## El dato que dos documentos negaban: `wrangler` SÍ está autenticado
 

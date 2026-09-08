@@ -18,12 +18,24 @@ metadata:
 **CORREGIDO el 2026-09-07: los goldens del gateway contra staging SÍ se pueden correr.** Esta ficha decía
 «sólo JWT de usuario» y por eso ni lo intenté durante tres sesiones. `test-users.env` trae las CONTRASEÑAS
 (`USER_A_PASS`, `USER_B_PASS`) y la llave de cifrado está en `~/Secrets/yala-groups-enc/staging.key`; con
-las dos exportadas, `npx vitest run test/groups.goldens.test.ts` da **25/25 contra staging real** en ~4,5
+las dos exportadas, `npx vitest run test/groups.goldens.test.ts` da **25/25 contra staging real** en ~5
 min. Sin `GROUPS_ENC_KEY` el fichero entero falla en su `beforeAll` con los 25 casos en `skipped`, que
-**parece** «no hay credenciales» y es solo una variable de entorno.
+**parece** «no hay credenciales» y es solo una variable de entorno. Para la suite ENTERA hace falta una
+tercera, o `push.fanout.test.ts` sale rojo por entorno y no por código:
 
     set -a; . ~/Secrets/yala-supabase-test/test-users.env; set +a
     export GROUPS_ENC_KEY="$(cat ~/Secrets/yala-groups-enc/staging.key)"
+    export PUSH_ROLE_JWT="$(cat ~/Secrets/yala-groups-enc/staging-push-role.jwt)"
+
+**Y `npx vitest` NO dispara `pretest`, así que NO sincroniza el manifest** (la copia del gateway está
+gitignoreada). Corre `npm run sync:manifest` antes o medirás con el contrato de columnas viejo: eso dejó
+dos goldens en rojo un día entero el 2026-09-07. Desde el 8-sep lo canta `test/manifest.sync.test.ts`.
+
+**El número 25/25 es cierto pero FRÁGIL, y conviene saberlo antes de creerte un rojo:** un pull cuesta 5
+peticiones por cada grupo del usuario —haya cambios o no— y el corpus de A/B sólo crece (530 y 678 el
+8-sep, +20/+15 por corrida). El golden más ajustado consume el **55 %** de su timeout. Un rojo por
+TIMEOUT sin línea de aserción probablemente no es código roto: es un test que va justo de tiempo. Ver
+`corpus-de-test-de-staging-crece-sin-limite`.
 
 Lo que sigue sin haber es **DDL de staging**, que es otra cosa: se pueden EJERCITAR los RPCs que ya están
 allí, no APLICAR una migración nueva.

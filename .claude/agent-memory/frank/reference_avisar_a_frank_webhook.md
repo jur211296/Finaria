@@ -28,14 +28,21 @@ sabe todo eso, elige el destino por el cwd y escribe el registro.
   que espera el JSON del evento por stdin, revienta al no encontrarlo y **sale 0 sin decir nada**.
   Esta línea decía «→ envía», que es el peor error posible aquí: crees que avisaste y no avisaste.
   Es la familia del «cero casos con exit 0» de `.claude/rules/testing.md`.
-- Motivos: `espera-input`, `espera-permiso`, `espera-pregunta`, `fallo-build`, `fallo-tests`,
+- **Solo TRES motivos despiertan a nadie (ADR-021, medido el 2026-09-08): `cierre-resumen`,
+  `espera-permiso`, `espera-pregunta`.** Los demás —`artefacto-pr` incluido— los rechaza en la cara:
+  «no despierta a nadie: se anota y viaja dentro del próximo aviso». ⇒ cuando un encargo pida «avisa
+  al abrir el PR», eso YA está cubierto: se cuenta dentro del cierre. No lo intentes por separado.
+- Motivos que el script acepta pero no envían solos: `espera-input`, `fallo-build`, `fallo-tests`,
   `artefacto-captura`, `artefacto-pr`, `artefacto-preview`, `artefacto-publicado`.
 - Comprueba `~/.claude/cache/avisos-grok/envios.log`: la línea dice `HTTP 200` o no lo dice.
 
 **El hook avisa solo, y de más cosas de las que parecía: normalmente no hay nada que hacer.** Además
 del `fallo-tests` de aquella noche, el 2026-09-05 mandó el **`artefacto-pr` él solo, 48 segundos
-después de `gh pr create`**, sin que yo tocara nada. ⇒ cuando un encargo pida «avisa al webhook al
-dejar el PR listo», la tarea real es **comprobar el log**, no enviar:
+después de `gh pr create`**, sin que yo tocara nada. **Ojo con esos 48 s: el hook corre al TERMINAR
+el turno**, así que en una sesión autónoma larga puede no haber disparado todavía y el log estar
+mudo sin que nada vaya mal (2026-09-08). Y desde ADR-021 ese aviso ya no despierta igualmente. ⇒
+cuando un encargo pida «avisa al webhook al dejar el PR listo», la tarea real es **comprobar el
+log**, no enviar:
 
     tail -5 ~/.claude/cache/avisos-grok/envios.log
 
