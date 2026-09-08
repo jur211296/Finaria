@@ -745,15 +745,23 @@ struct UITestSeamPersistenceIsolationTests {
         // `simbolo` es cómo se NOMBRA la key en el call-site, no su valor: el escáner lee código
         // fuente, así que comparar contra el literal de `Keys` no serviría de nada si el call-site
         // usa la constante (que es lo que debe usar).
-        let casos: [(fichero: String, simbolo: String, consecuencia: String)] = [
+        //
+        // `simbolos` es una LISTA desde el 2026-09-08: el primer sheet publica dos preferencias
+        // —`budgetAlertsEnabled` y `groupSettlementRemindersEnabled`— desde que el recordatorio de
+        // deudas entró en el «sí, avísame» (ticket `groups-settlement-reminder-discoverability`).
+        // Antes esto era un `String` y el conteo se comparaba contra un `1` literal, así que **añadir
+        // una publicación legítima ponía el test en rojo**: medía el número, no el invariante. Lo que
+        // hay que proteger es que cada preferencia esperada se publique, no que sean exactamente N.
+        let casos: [(fichero: String, simbolos: [String], consecuencia: String)] = [
             (
                 "Yala/App/Views/Notifications/NotificationPrimerSheet.swift",
-                "AppPreferences.Keys.budgetAlertsEnabled",
-                "activar las notificaciones desde el primer sheet deja de propagar las alertas de presupuesto a los otros devices"
+                ["AppPreferences.Keys.budgetAlertsEnabled",
+                 "AppPreferences.Keys.groupSettlementRemindersEnabled"],
+                "activar las notificaciones desde el primer sheet deja de propagar a los otros devices las alertas de presupuesto o el recordatorio de deudas"
             ),
             (
                 "Yala/App/Views/Settings/PersonalizationSettingsView.swift",
-                "AppPreferences.Keys.expensesOnlyMode",
+                ["AppPreferences.Keys.expensesOnlyMode"],
                 "el toggle de «solo gastos» de Ajustes deja de propagar, mientras el de onboarding sigue haciéndolo ⇒ sincroniza a veces sí y a veces no, que es el peor síntoma posible"
             ),
         ]
@@ -762,17 +770,19 @@ struct UITestSeamPersistenceIsolationTests {
             let source = try code(at: caso.fichero)
             let pushes = source.components(separatedBy: "PreferenceSyncService.shared.set(").count - 1
             #expect(
-                pushes == 1,
+                pushes >= caso.simbolos.count,
                 """
-                \(caso.fichero) tiene \(pushes) llamadas a `PreferenceSyncService.shared.set(` y debe tener 1: \
-                sin ella \(caso.consecuencia). El mirror ya no publica por nadie — ver el docblock de \
-                `AppPreferences.loadFromDefaults`.
+                \(caso.fichero) tiene \(pushes) llamadas a `PreferenceSyncService.shared.set(` y espera al \
+                menos \(caso.simbolos.count): sin ellas \(caso.consecuencia). El mirror ya no publica por \
+                nadie — ver el docblock de `AppPreferences.loadFromDefaults`.
                 """
             )
-            #expect(
-                source.contains(caso.simbolo),
-                "\(caso.fichero) ya no nombra `\(caso.simbolo)`: publica, pero quizá otra preferencia."
-            )
+            for simbolo in caso.simbolos {
+                #expect(
+                    source.contains(simbolo),
+                    "\(caso.fichero) ya no nombra `\(simbolo)`: publica, pero quizá otra preferencia."
+                )
+            }
         }
     }
 

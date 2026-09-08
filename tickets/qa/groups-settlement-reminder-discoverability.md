@@ -1,10 +1,10 @@
 ---
 id: groups-settlement-reminder-discoverability
-status: backlog
+status: qa
 priority: medium
 area: groups
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-08
 ---
 
 # El recordatorio de deuda no tiene ningún camino de descubrimiento
@@ -131,4 +131,23 @@ distinta y más cara. Si la 1 entra y aun así nadie usa el feature, entonces s�
 
 ### Decisión de Jürgen
 
-_Pendiente. Preguntado el 2026-09-08._
+**Sí a la 1, (2a) en la 2, no a la 3.** Contestada el 2026-09-08 e implementada en el mismo PR.
+
+1. **`groupSettlementRemindersEnabled` entra en el primer de notificaciones**, por la misma vía que
+   `budgetAlertsEnabled` (`PreferenceSyncService`, no `UserDefaults` en crudo — la key es
+   `synced: true` y esto es un punto de intención del usuario). Una línea.
+2. **La tarjeta se deshabilita cuando el maestro de Grupos está apagado**, con una línea que dice por
+   qué (`notifications.settlementReminders.hintGroupsOff`, en las 16 `.lproj`). El criterio de
+   `isGroupsMasterActive` replica el gate del servicio, fail-cerrado incluido: si el servicio no va a
+   avisar, la tarjeta no deja encender nada.
+3. **El banner in-app no se construye.** Con la 1 resuelta deja de ser «la única vía»; si aun así
+   nadie usa el feature, se reabre.
+
+**Un matiz medido que reduce el problema descrito arriba:** el primer pone **todos** los
+`NotificationItem` a `true`, así que quien pasa por él ya tenía el maestro de Grupos encendido. El
+silencio de la pregunta 2 golpeaba a quien no pasó por el primer o lo apagó después — un borde, no el
+caso común. Sigue mereciendo el arreglo: un toggle en verde que no entrega nada es peor que uno
+apagado.
+
+**Sin efecto retroactivo:** el primer no se re-ejecuta, así que a quien ya lo pasó no se le enciende
+nada a sus espaldas.

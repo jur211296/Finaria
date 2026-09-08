@@ -1,12 +1,11 @@
 ---
 id: groups-owner-debt-no-heir-dead-end
-status: backlog
+status: qa
 priority: high
 area: groups
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-09-08
 source: review adversarial de groups-owner-transfer-and-leave (2026-09-06)
-needs: decisión de producto de Jürgen
 ---
 
 # El dueño con deuda y SIN heredero sigue sin salida
@@ -145,4 +144,20 @@ dueño, sigue contando para los saldos, y si alguien le escribe seguirá recibie
 
 ### Decisión de Jürgen
 
-_Pendiente. Preguntado el 2026-09-08._
+**(c) Ofrecer Archivar.** Contestada el 2026-09-08.
+
+**Implementada en el mismo PR.** `GroupOwnerExitLogic` gana el caso `.debtArchiveInstead` —el último
+del enum, para no renumerar los que ya existían— y `Facts` gana `isArchived`, porque a un grupo ya
+archivado no se le puede proponer archivarlo: ese camino conserva el hint honesto de antes, y es el
+único que queda para `.debtNoTransferAvailable`.
+
+**Prioridad del hint, de más a menos salida real:** transferir (le saca del grupo) → archivar (se lo
+quita de la vista) → constatar el hecho.
+
+**Lo que NO cambia, y era el punto:** «Eliminar» sigue bloqueado con deuda. Archivar no borra la
+deuda de nadie, así que el principio que protegiste el 6-sep queda intacto — hay un test que lo fija
+(`archiveHint_doesNotUnlockDelete`).
+
+**(b) queda descartada, y con el motivo medido**, por si alguien la vuelve a proponer: los netos
+suman cero por moneda, así que «eliminar si la deuda es solo con inactivos» exige cambiar de métrica
+(netos → pares), no un filtro. Si el caso aparece de verdad, el diagnóstico ya está escrito arriba.

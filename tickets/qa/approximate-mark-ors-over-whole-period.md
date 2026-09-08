@@ -1,6 +1,6 @@
 ---
 id: approximate-mark-ors-over-whole-period
-status: backlog
+status: qa
 priority: medium
 area: "currency, fx, ui"
 created: 2026-09-07
@@ -145,4 +145,79 @@ Dos parámetros que la vuelven concreta, propuestos para que solo haya que decir
 
 ### Decisión de Jürgen
 
-_Pendiente. Preguntado el 2026-09-08._
+**(b) Umbral del 5 % sobre el propio lado.** Contestada el 2026-09-08 e implementada en el mismo PR.
+
+- El criterio vive en **un solo sitio con nombre**: `ApproximateMarkThreshold` (`fraction = 0.05`).
+  Un `0.05` suelto en un calculador sería un bug de duplicación.
+- **Denominador: la magnitud del propio lado** (gasto sobre gasto, ingreso sobre ingreso), no el
+  neto, que puede acercarse a cero y disparar el umbral con céntimos.
+- `HeroBucketsCalculator` y `CashFlowCalculator` acumulan el importe aproximado **exactamente igual
+  que su total** —con `abs()` el primero, con signo el segundo— y derivan el `Bool` en el `return`.
+  La firma pública de `Buckets` y `CashFlowSummary` no cambia, así que las vistas y los tests de
+  wiring no se tocan.
+- **`LiveBalanceCalculator` conserva su OR**, y no es un olvido: su unidad ya es la divisa, no la
+  transacción, y una divisa entera sin tasa sí es una ausencia que merece la marca.
+
+**Lo que descubrió el control positivo, y conviene no perder:** con el criterio nuevo **ningún test
+existente cambió de color** — los 14 usan importes iguales, donde una de seis pesa un 16,7 % y sigue
+marcando. O sea que la batería que había **no distinguía** el criterio viejo del nuevo. El test que
+sí lo demuestra es `cashFlow_oneTinyProvisionalAmongMany_doesNotMark` (5 de 1.005 = 0,5 %),
+verificado con el mutante: recompilado el código anterior, ese test se pone **rojo**.
+
+**(c) queda descartada con el motivo medido:** marcar por divisa es lo más caro y lo que menos
+resuelve. `FXPnLLogic` puede hacerlo porque su desglose por divisa **es** el producto y hay un sheet
+que lo pinta; el hero es un número solo en moneda preferida y no hay dónde enseñar el desglose.
+
+
+---
+
+## Lo que la review adversarial cambió, antes de mergear (2026-09-08)
+
+**La primera implementación tenía una regresión y tres fallos de diseño.** Ninguno lo habría cazado
+el gate: la suite entera estaba verde cuando se lanzó la review.
+
+### 1 · El «Disponible» perdía la marca justo cuando más falta (regresión, ALTA)
+
+Con umbrales por lado y el neto compuesto como `income || expense`, un ingreso de 1.000.000 con
+49.000 aproximados (4,9 %, no marca) frente a un gasto exacto de 999.000 dejaba un «Disponible» de
+**1.000 sin «≈», con una incertidumbre 49 veces mayor que el número**. Con el OR anterior sí salía
+marcado: era una regresión introducida por este mismo cambio.
+
+**Arreglo:** el neto tiene su propio cociente — incertidumbre de los dos lados **sumada** contra el
+número que se pinta. Afecta a `CashFlowSummary.amountsAreApproximate`, `Buckets.periodNetApproximate`
+(nuevo), `PanelHeroPeriodData.amountsAreApproximate` y `InsightsCalculator.PeriodSummary`, que tenía
+el mismo OR alimentando el balance de Tendencias.
+
+### 2 y 3 · El numerador con signo se cancelaba (ALTA)
+
+Un gasto de 200 aproximado y su reembolso de 200 **también aproximado** dejaban numerador 0 ⇒ no
+marcaba. Y si el reembolso hubiera sido exacto, sí: **la respuesta dependía de a cuál de las dos le
+tocó el flag**. Peor de fondo: los errores de dos conversiones distintas **no se cancelan** — 1.000
+aprox y 900 aprox no dejan 100 de incertidumbre, dejan 1.900.
+
+**Arreglo:** numerador y denominador pasan a `Σ|contribución|`, magnitudes sumadas y nunca netos. Es
+literalmente lo que `FXPnLLogic` ya había decidido con su `exposedBase = Σ|costBasis|` — y el
+fichero nuevo lo citaba como motivación mientras hacía lo contrario.
+
+### 4 y 5 · Los dos bordes
+
+- **Sin suelo en el numerador**, una cancelación que dejaba `1e-15` marcaba y la misma cancelación
+  exacta no: dos respuestas para el mismo caso según los decimales. Ahora el suelo es simétrico y
+  vale **0,01**, alineado con `FXPnLLogic.nearZero` en vez de inventar un segundo suelo.
+- **El borde inclusivo no lo era.** `0.15 / 3.0` da 0,049999999999999996 y `0.05 * 3.0` da
+  0,15000000000000002: un 5 % exacto se caía por un ulp **por los dos caminos**. Se resolvió con
+  tolerancia relativa.
+
+### Lo que esto enseña sobre la batería que había
+
+Los 14 tests originales usaban importes iguales, donde una de seis pesa un 16,7 %. **Ninguno cambió
+de color** al pasar del OR al umbral ⇒ no distinguían un criterio del otro. Y ninguno cubría
+reembolsos, ni el neto, ni `adjustment`. Los seis nuevos salen de ahí, y los dos que demuestran el
+cambio están verificados con mutante: recompilado el código anterior, se ponen rojos.
+
+### Dos hallazgos que NO se arreglan aquí, con ticket propio
+
+- [[dos-criterios-de-aproximado-en-la-misma-pantalla]] — el panorama del Panel conserva su OR por
+  divisa (es la decisión), así que el glifo «≈» significa dos cosas en la misma pantalla.
+- [[bridge-de-grupos-pierde-la-marca-de-sus-patas]] — preexistente, pero ahora que el importe entra
+  en un cociente, una atribución mal hecha **desplaza el umbral** en vez de solo perderse.

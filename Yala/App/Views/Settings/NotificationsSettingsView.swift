@@ -20,6 +20,19 @@ struct NotificationsSettingsView: View {
 
     /// En solo-grupos solo la notificación de grupos (event-driven); el resto son
     /// recordatorios/reportes/pagos personales. Regla en `GroupInviteVisibilityPolicy`.
+    /// El maestro de avisos de Grupos (`NotificationItem` de tipo `.groups`).
+    ///
+    /// **Mismo criterio que el gate del servicio** (`GroupSettlementReminderService`
+    /// `isGroupsNotificationActive`), incluido el fail-CERRADO cuando el item no existe: si el
+    /// servicio no va a avisar, la tarjeta no debe dejar encender nada. Si los dos criterios se
+    /// separan, vuelve el estado mentiroso que este cambio vino a cerrar.
+    ///
+    /// Se lee de `viewModel.notifications` —los mismos items que la pantalla ya tiene cargados— y no
+    /// con un fetch propio, para que la tarjeta reaccione al toggle de Grupos en la misma pantalla.
+    private var isGroupsMasterActive: Bool {
+        viewModel.notifications.first { $0.notificationType == .groups }?.isActive ?? false
+    }
+
     private var visibleNotifications: [NotificationItem] {
         let visibleTypes = Set(GroupInviteVisibilityPolicy.visibleNotificationTypes(
             NotificationType.allCases, isGroupInvite: isGroupInviteMode))
@@ -259,7 +272,13 @@ struct NotificationsSettingsView: View {
                     .font(DS.Typography.headline)
                     .foregroundStyle(.primary)
 
-                Text(L10n.Notifications.settlementRemindersHint)
+                // Con el maestro de Grupos apagado el servicio no entrega NADA, y hasta el
+                // 2026-09-08 eso pasaba en silencio: se podía encender el toggle, verlo en verde y no
+                // recibir nunca un aviso. Decisión de Jürgen: que no se pueda encender, y que diga
+                // por qué — un toggle encendido que no entrega nada es peor que uno apagado.
+                Text(isGroupsMasterActive
+                     ? L10n.Notifications.settlementRemindersHint
+                     : L10n.Notifications.settlementRemindersGroupsOff)
                     .font(DS.Typography.subheadline)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
@@ -269,8 +288,10 @@ struct NotificationsSettingsView: View {
 
             Toggle(L10n.Notifications.settlementRemindersTitle, isOn: $prefs.groupSettlementRemindersEnabled)
                 .labelsHidden()
+                .disabled(!isGroupsMasterActive)
 
         }
+        .opacity(isGroupsMasterActive ? 1 : 0.6)
         .padding(DS.Spacing.lg)
         .background(.thCard)
         .clipShape(RoundedRectangle(cornerRadius: DS.Radius.xl))

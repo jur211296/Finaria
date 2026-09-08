@@ -580,3 +580,25 @@ con dos tablas es exactamente el caso que un `startswith("| ")` no distingue.
 **How to apply:** cuando cuentes filas de una tabla en un `.md`, **cuenta las columnas** (`NF`) y
 ancla la que identifica la tabla, no solo su contenido. Y cuando un conteo cambie de golpe respecto
 a otro que hiciste hace un rato, **el sospechoso es el filtro nuevo**, no el fichero.
+
+
+## Caso 16 (2026-09-08): un cambio de comportamiento que no mueve NI UN test
+
+Cambié el criterio del «≈» de un OR a un umbral del 5 % y corrí las 4 suites del área: **59 verdes,
+cero rojos, cero cambios de color**. Eso no era una buena noticia: significaba que **la batería no
+distinguía el criterio viejo del nuevo**. Los 14 tests usaban importes iguales, donde una de seis
+pesa un 16,7 % y sigue marcando con los dos criterios.
+
+**Why:** un verde que no se movió al cambiar el comportamiento **no es una verificación, es un
+silencio**. Si hubiera commiteado ahí, el gate habría sellado un cambio del que nadie podía decir si
+hacía algo.
+
+**How to apply:** después de cambiar un comportamiento, **antes de mirar si los tests pasan, mira si
+alguno CAMBIÓ**. Si ninguno se movió, escribe el que distingue los dos criterios y **verifícalo con
+el mutante** (recompila el código anterior y comprueba que se pone rojo). Es el control positivo de
+[[mutante-compilado-zanja-hipotesis]] aplicado a mi propio cambio, no a una hipótesis ajena.
+
+Corolario del mismo día: un test que mide **un número** en vez de **el invariante** se pone rojo ante
+un cambio legítimo. `UITestSeamPersistenceIsolationTests` exigía `pushes == 1` en el primer de
+notificaciones; añadir una segunda preferencia —justo lo que el ticket pedía— lo puso rojo sin que
+nada estuviera mal. Ahora compara contra la lista de símbolos esperados.

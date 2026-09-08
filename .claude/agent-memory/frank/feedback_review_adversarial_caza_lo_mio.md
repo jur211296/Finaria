@@ -235,3 +235,24 @@ bugs intactos**, así que al ampliar lo que una función alcanza hay que auditar
 **Reparto que funcionó:** dos lentes convergieron en el fallo de red (señal de que es estructural,
 como en la nota de arriba) y las otras dos aportaron cada una un hallazgo único que nadie más vio.
 Cuatro lentes sobre un cambio de seis ficheros no fue exceso.
+
+
+## 2026-09-08 (PR del desbloqueo): 11 hallazgos, y uno era una REGRESIÓN con la suite en verde
+
+Lo más importante de esta tanda no es el número: es **cuándo** la cacé. Los 6448 tests estaban en
+verde, el build limpio y el coverage-index al día cuando lancé la lente. El hallazgo alta era una
+**regresión que mi propio cambio introdujo**: el «Disponible» del Panel perdía el «≈» justo en el
+caso peligroso —dos lados grandes cada uno bajo el umbral, y un neto pequeño con una incertidumbre
+49 veces mayor que él—. Con el código anterior sí marcaba. **Ningún test lo cubría porque ningún test
+existía para el neto.**
+
+**Y el patrón que la lente nombró mejor que yo:** mi fichero nuevo **citaba a `FXPnLLogic` como
+motivación y hacía lo contrario que él**. `FXPnLLogic` ya había rechazado el numerador con signo
+(«posiciones que se cancelan… cualquier céntimo pasa el filtro») y adoptado `Σ|costBasis|`. Yo
+acumulé con signo, así que un gasto aproximado y su reembolso aproximado se anulaban y el número
+salía limpio precisamente cuando menos lo estaba. Es [[mi-fix-hereda-la-forma-del-bug]] en su forma
+más cara: **citar el precedente no es haberlo leído**.
+
+**How to apply:** cuando un cambio toque un cálculo que ya tiene un primo resuelto en el repo, la
+lente que más paga es la que compara los dos **línea a línea**, no la que revisa el mío solo. Y si mi
+docblock nombra a otro fichero como modelo, ese fichero entra en la review.

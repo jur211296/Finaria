@@ -5701,3 +5701,9 @@
 
 /* G14: confirmacion de quitar el presupuesto */
 "groups.budget.removeConfirm" = "グループの予算を削除しますか？全員に表示されなくなります。";
+
+/* Shown instead of the settlement reminders hint when the Groups notification master is off, so the toggle cannot deliver anything. */
+"notifications.settlementReminders.hintGroupsOff" = "受け取るには、まずグループの通知をオンにしてください";
+
+/* Delete-blocked hint for a group owner with debt and no heir: points at Archive, which already works with debt. */
+"groups.settings.deleteGroupDisabledHintArchive" = "グループに未精算の残高があります。一覧から外すにはアーカイブしてください。負債はそのまま保持されます。";

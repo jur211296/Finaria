@@ -10,6 +10,12 @@
 //  del owner (2026-09-06, ticket `groups-owner-transfer-and-leave`): ofrecerle **«Transferir y
 //  salir»**. «Eliminar» sigue bloqueado con deuda — no se borra el grupo con saldos vivos.
 //
+//  SEGUNDA DECISIÓN (2026-09-08, ticket `groups-owner-debt-no-heir-dead-end`). Lo anterior cubre al
+//  dueño CON heredero y deja fuera al que no lo tiene: con deuda y sin nadie a quien ceder el grupo,
+//  las tres salidas quedaban cerradas. Ahora el hint le nombra **«Archivar grupo»**, que ya existía
+//  en esta misma pantalla y ya funciona con deuda. No es una salida nueva: es dejar de esconderla.
+//  «Eliminar» sigue bloqueado, y sigue sin borrarse ninguna deuda de nadie.
+//
 //  POR QUÉ NO SE REUSA `GroupBatchLeaveLogic.classify`. Su primera línea es
 //  `if facts.hasOutstandingDebt { return .skipHasDebt }`, correcta para el batch «salir de todos mis
 //  grupos» (que solo se OFRECE con cero deudas globales) y exactamente lo contrario de lo que se
@@ -52,6 +58,9 @@ nonisolated enum GroupOwnerExitLogic {
         /// «Eliminar» en gris. El servidor sabe más que el cache; se le hace caso hasta que llegue
         /// dato nuevo (la vista lo baja con el siguiente `dataVersion`).
         let serverRefusedTransfer: Bool
+        /// `SplitGroup.isArchived`. Decide si tiene sentido ofrecerle «Archivar» como salida: a un
+        /// grupo que YA está archivado no se le puede proponer archivarlo.
+        let isArchived: Bool
     }
 
     /// Qué se pinta en la zona de acciones de Ajustes.
@@ -82,6 +91,22 @@ nonisolated enum GroupOwnerExitLogic {
         /// El nombre dice «sin transferencia» y no «sin heredero» por precisión: en el caso CloudKit
         /// hay herederos de sobra y lo que falta es el canal.
         case debtNoTransferAvailable
+        /// Hay saldos, la transferencia NO está disponible y el grupo **no está archivado todavía**
+        /// ⇒ el hint apunta a «Archivar grupo».
+        ///
+        /// Decisión de Jürgen (2026-09-08), ticket `groups-owner-debt-no-heir-dead-end`. El dueño sin
+        /// heredero tenía las tres salidas cerradas y el hint se lo decía con honestidad, pero
+        /// **callándose la que sí tenía delante**: «Archivar» ya existe, ya funciona con deuda —solo
+        /// pide su confirmación— y vive dos secciones más arriba en esta misma pantalla. Esto no
+        /// añade una salida: deja de esconderla.
+        ///
+        /// No le saca del grupo —sigue siendo dueño y contando para los saldos—, así que **no toca el
+        /// principio que la decisión del 6-sep protegió**: nadie pierde una deuda viva. Es «quítamelo
+        /// de la vista», no «sácame de aquí».
+        ///
+        /// **Va el ÚLTIMO del enum a propósito.** Un case nuevo en medio renumera los demás, y esos
+        /// números se usan para diagnosticar desde fuera.
+        case debtArchiveInstead
     }
 
     // MARK: - Qué se ofrece
@@ -100,9 +125,18 @@ nonisolated enum GroupOwnerExitLogic {
             && facts.isBackendChannel
             && facts.activeCoMemberCount >= 1
             && facts.eligibleHeirCount >= 1
-        let hint: DeleteHint? = facts.groupHasOutstandingDebt
-            ? (canTransfer ? .debtTransferInstead : .debtNoTransferAvailable)
-            : nil
+        // Prioridad: transferir (sale de verdad) > archivar (se lo quita de la vista) > constatar el
+        // hecho. Archivar solo se ofrece si queda algo que archivar.
+        let hint: DeleteHint?
+        if !facts.groupHasOutstandingDebt {
+            hint = nil
+        } else if canTransfer {
+            hint = .debtTransferInstead
+        } else if !facts.isArchived {
+            hint = .debtArchiveInstead
+        } else {
+            hint = .debtNoTransferAvailable
+        }
         return Offer(showsLeave: false,
                      showsTransferAndLeave: canTransfer,
                      showsDelete: true,

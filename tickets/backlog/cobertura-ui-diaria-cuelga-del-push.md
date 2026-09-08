@@ -153,4 +153,23 @@ justo si el cron empieza a servir, es cuando su falso rojo aparece.
 
 ### Decisión de Jürgen
 
-_Pendiente. Preguntado el 2026-09-08._
+**(3) Dejar que el `schedule` trabaje, y re-mirar el 2026-09-22.** Contestada el 2026-09-08.
+
+No se monta el `launchd`: el trabajo se justificaba con un mecanismo muerto, y el mecanismo respiró
+el mismo día en que se preparó esta decisión. Montar un reloj de repuesto sin saber si el bueno anda
+es gastar el trabajo antes de tener el dato.
+
+**Qué se mide el 22-sep**, con dos semanas de muestra:
+
+```bash
+gh api 'repos/jur211296/Yala/actions/runs?event=schedule&per_page=100' \
+  --jq '[.workflow_runs[] | select(.path==".github/workflows/qa.yml")] | length'
+```
+
+- **≥10 de 14** ⇒ el reloj sirve; este ticket se cierra como `discarded` y el hueco se cerró solo.
+- **≤3 de 14** ⇒ fue un accidente; la opción (1) se gana su coste y se monta el `launchd`.
+- En medio ⇒ sirve a ratos, y decide él si un día de cada dos basta.
+
+**Este ticket NO cierra el del vigilante.** `vigilante-margen-menor-que-el-retraso-real-del-cron` se
+arregla pase lo que pase: si el cron sirve, su falso rojo aparece; si no sirve, el vigilante sigue
+colgando del push.

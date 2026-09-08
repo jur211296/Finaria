@@ -55,8 +55,12 @@ struct PeriodSummary {
     let incomeAmountsAreApproximate: Bool
     let expenseAmountsAreApproximate: Bool
 
-    /// Para `netBalance`, que agrega los dos lados.
-    var amountsAreApproximate: Bool { incomeAmountsAreApproximate || expenseAmountsAreApproximate }
+    /// Para `netBalance`, que **resta** un lado del otro.
+    ///
+    /// Se recibe del `CashFlowSummary`, que lo calcula contra el número que se muestra. **No es el
+    /// OR de los dos de arriba** desde el 2026-09-08: con umbrales por lado, ese OR se apaga justo
+    /// cuando el balance es pequeño y la incertidumbre de los dos lados grande.
+    let amountsAreApproximate: Bool
 }
 
 struct QuickStats {
@@ -318,7 +322,8 @@ struct InsightsCalculator {
             dailyAverageVariation: dailyAverageVariation,
             previousPeriodLabel: previousPeriodLabel,
             incomeAmountsAreApproximate: cashFlow.incomeAmountsAreApproximate,
-            expenseAmountsAreApproximate: cashFlow.expenseAmountsAreApproximate
+            expenseAmountsAreApproximate: cashFlow.expenseAmountsAreApproximate,
+            amountsAreApproximate: cashFlow.amountsAreApproximate
         )
 
         // Weekday Spending (computed before Quick Stats for highestAvgWeekday)

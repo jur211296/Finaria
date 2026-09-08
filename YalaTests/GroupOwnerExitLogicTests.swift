@@ -22,11 +22,12 @@ struct GroupOwnerExitLogicTests {
         coMembers: Int = 2,
         heirs: Int = 2,
         debt: Bool = false,
-        refused: Bool = false
+        refused: Bool = false,
+        archived: Bool = false
     ) -> L.Facts {
         L.Facts(isOwner: isOwner, isBackendChannel: backend, activeCoMemberCount: coMembers,
                 eligibleHeirCount: heirs, groupHasOutstandingDebt: debt,
-                serverRefusedTransfer: refused)
+                serverRefusedTransfer: refused, isArchived: archived)
     }
 
     // MARK: - No soy el dueño
@@ -62,7 +63,9 @@ struct GroupOwnerExitLogicTests {
         let o = L.offer(facts(coMembers: 1, heirs: 0, debt: true))
         #expect(!o.showsTransferAndLeave)
         #expect(!o.deleteEnabled)
-        #expect(o.deleteHint == .debtNoTransferAvailable)
+        // Desde el 2026-09-08 apunta a «Archivar», que sí existe y sí funciona con deuda. Hasta
+        // entonces era `.debtNoTransferAvailable`: honesto, y callándose la salida que tenía delante.
+        #expect(o.deleteHint == .debtArchiveInstead)
     }
 
     // MARK: - AC: único miembro activo → eliminar, nunca transferir
@@ -81,7 +84,9 @@ struct GroupOwnerExitLogicTests {
         // CKShare no sabe ceder ownership; ofrecerlo sería un botón que no puede funcionar.
         let o = L.offer(facts(backend: false, coMembers: 3, heirs: 3, debt: true))
         #expect(!o.showsTransferAndLeave)
-        #expect(o.deleteHint == .debtNoTransferAvailable)
+        // En CloudKit hay herederos de sobra y lo que falta es el canal, pero la salida ofrecida es la
+        // misma: archivar no depende del canal.
+        #expect(o.deleteHint == .debtArchiveInstead)
     }
 
     // MARK: - Co-members sin cuenta (placeholders `user_id NULL`)
@@ -122,8 +127,8 @@ struct GroupOwnerExitLogicTests {
         // mismo heredero fantasma y a fallar igual, en bucle y con «Eliminar» en gris.
         let o = L.offer(facts(coMembers: 3, heirs: 3, debt: true, refused: true))
         #expect(!o.showsTransferAndLeave)
-        // Y el hint deja de mandar a un botón que ya no está.
-        #expect(o.deleteHint == .debtNoTransferAvailable)
+        // Y el hint deja de mandar a un botón que ya no está: pasa a la salida que sí queda.
+        #expect(o.deleteHint == .debtArchiveInstead)
     }
 
     @Test func serverRefusal_doesNotHideTheOtherExits() {
@@ -209,4 +214,45 @@ struct GroupOwnerExitLogicTests {
     @Test func designatedHeir_singleCandidate_isThatCandidate() {
         #expect(L.designatedHeir(from: [heir("solo", joined: 42)])?.memberKey == "solo")
     }
+
+    // MARK: - Archivar como salida (decisión 2026-09-08)
+
+    @Test("Con el grupo YA archivado no se ofrece archivar: no queda nada que ofrecer")
+    func owner_withDebtNoHeir_alreadyArchived_getsPlainHint() {
+        let o = L.offer(facts(coMembers: 1, heirs: 0, debt: true, archived: true))
+        #expect(!o.showsTransferAndLeave)
+        #expect(!o.deleteEnabled)
+        // Éste es el único camino que queda para `.debtNoTransferAvailable`, y por eso el caso sigue
+        // existiendo: mandar a archivar un grupo archivado sería mandarlo a un botón que ya pulsó.
+        #expect(o.deleteHint == .debtNoTransferAvailable)
+    }
+
+    @Test("Con heredero manda la transferencia, archivado o no: es la salida que de verdad le saca")
+    func owner_withHeir_prefersTransfer_overArchive() {
+        for archived in [false, true] {
+            let o = L.offer(facts(debt: true, archived: archived))
+            #expect(o.showsTransferAndLeave)
+            #expect(o.deleteHint == .debtTransferInstead)
+        }
+    }
+
+    @Test("Sin deuda no hay hint, esté archivado o no")
+    func owner_withoutDebt_hasNoHint_regardlessOfArchive() {
+        for archived in [false, true] {
+            let o = L.offer(facts(coMembers: 1, heirs: 0, archived: archived))
+            #expect(o.deleteEnabled)
+            #expect(o.deleteHint == nil)
+        }
+    }
+
+    @Test("Archivar NO desbloquea «Eliminar»: la deuda sigue protegida")
+    func archiveHint_doesNotUnlockDelete() {
+        let o = L.offer(facts(coMembers: 1, heirs: 0, debt: true))
+        #expect(o.deleteHint == .debtArchiveInstead)
+        // El principio que la decisión del 6-sep protegió: no se borra un grupo con saldos vivos.
+        // Ofrecer archivar es una salida para el dueño, no una puerta trasera al borrado.
+        #expect(!o.deleteEnabled)
+        #expect(o.showsDelete)
+    }
+
 }

@@ -96,6 +96,24 @@ struct GroupSettingsView: View {
             deleteHint: hasOutstandingDebt ? .debtNoTransferAvailable : nil)
     }
 
+    /// Copy del bloqueo de «Eliminar», según qué salida le quede al dueño.
+    ///
+    /// Pedirle «liquida las deudas» a un dueño al que lo que le frena es un saldo ENTRE TERCEROS le
+    /// manda a hacer algo que no puede hacer. Con heredero se le apunta a «Transferir y salir»; sin
+    /// heredero y con el grupo aún sin archivar, a «Archivar grupo» —que está justo encima en esta
+    /// misma pantalla y ya funciona con deuda (2026-09-08)—; y si ya está archivado no queda nada que
+    /// ofrecerle, así que se constata el hecho y no se le pide nada.
+    ///
+    /// El `switch` es exhaustivo a propósito: un caso nuevo en `DeleteHint` tiene que romper aquí,
+    /// que es donde se decide qué lee el usuario.
+    private func deleteHintText(_ hint: GroupOwnerExitLogic.DeleteHint) -> String {
+        switch hint {
+        case .debtTransferInstead:     return L10n.Groups.Settings.deleteGroupDisabledHintTransfer
+        case .debtArchiveInstead:      return L10n.Groups.Settings.deleteGroupDisabledHintArchive
+        case .debtNoTransferAvailable: return L10n.Groups.Settings.deleteGroupDisabledHint
+        }
+    }
+
     /// Mensaje de la confirmación de «Transferir y salir»: quién hereda, y —si el usuario tiene saldo
     /// propio— el aviso de que sale con él.
     ///
@@ -920,12 +938,7 @@ struct GroupSettingsView: View {
             .disabled(!currentOffer.deleteEnabled || isDeleting || isTransferring)
 
             if let hint = currentOffer.deleteHint {
-                // El copy del bloqueo depende de si hay salida: pedirle «liquida las deudas» a un
-                // dueño al que lo que le frena es un saldo ENTRE TERCEROS le manda a hacer algo que
-                // no puede hacer. Con heredero, se le apunta a «Transferir y salir».
-                Text(hint == .debtTransferInstead
-                     ? L10n.Groups.Settings.deleteGroupDisabledHintTransfer
-                     : L10n.Groups.Settings.deleteGroupDisabledHint)
+                Text(deleteHintText(hint))
                     .font(DS.Typography.caption)
                     .foregroundStyle(DS.Semantic.errorForeground)
                     .padding(.horizontal, DS.FormRow.paddingH)

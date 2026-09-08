@@ -2065,6 +2065,8 @@ enum L10n {
             /// («liquida las deudas antes de eliminar») manda al dueño a una acción imposible cuando el
             /// saldo que le bloquea es entre TERCEROS. Ver `GroupOwnerExitLogic.DeleteHint`.
             static var deleteGroupDisabledHintTransfer: String { ls("groups.settings.deleteGroupDisabledHintTransfer", comment: "") }
+            /// Dueño con deuda, sin heredero y con el grupo aún sin archivar: se le nombra «Archivar».
+            static var deleteGroupDisabledHintArchive: String { ls("groups.settings.deleteGroupDisabledHintArchive", comment: "") }
             // Transferir y salir — la salida del dueño (ticket `groups-owner-transfer-and-leave`).
             static var transferAndLeave: String { ls("groups.settings.transferAndLeave", comment: "") }
             static var transferAndLeaveHint: String { ls("groups.settings.transferAndLeaveHint", comment: "") }
@@ -6525,6 +6527,9 @@ enum L10n {
         // Recordatorios de liquidación de grupo
         static var settlementRemindersTitle: String { ls("notifications.settlementReminders.title", comment: "") }
         static var settlementRemindersHint: String { ls("notifications.settlementReminders.hint", comment: "") }
+        /// Se muestra en lugar del hint cuando el maestro de avisos de Grupos está apagado y el
+        /// toggle no puede entregar nada.
+        static var settlementRemindersGroupsOff: String { ls("notifications.settlementReminders.hintGroupsOff", comment: "") }
 
         // MARK: - Scheduled Payment Notifications (personalized)
 

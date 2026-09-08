@@ -764,6 +764,7 @@
 "panel.fxPnL.rowValueTodayFormat" = "= %@";
 "panel.fxPnL.averageNote" = "O câmbio de entrada é uma média de todas as suas movimentações nessa moeda, não o de cada compra separadamente.";
 "panel.fxPnL.estimatedRateNote" = "Alguma conversão usou um câmbio que não era o de hoje, então estes valores são aproximados.";
+
 "widget.today" = "Hoje";
 
 // Widget Preferences
@@ -5688,3 +5689,9 @@
 
 /* G14: confirmacion de quitar el presupuesto */
 "groups.budget.removeConfirm" = "Remover o orçamento do grupo? Ele deixa de aparecer para todos.";
+
+/* Shown instead of the settlement reminders hint when the Groups notification master is off, so the toggle cannot deliver anything. */
+"notifications.settlementReminders.hintGroupsOff" = "Para recebê-los, ative antes os avisos de Grupos";
+
+/* Delete-blocked hint for a group owner with debt and no heir: points at Archive, which already works with debt. */
+"groups.settings.deleteGroupDisabledHintArchive" = "Há saldos pendentes no grupo. Se quiser tirá-lo da lista, arquive-o: as dívidas são mantidas.";
