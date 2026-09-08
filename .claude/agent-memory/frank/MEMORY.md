@@ -15,8 +15,9 @@
 - [La premisa del ENCARGO también se mide](feedback_la_premisa_del_encargo_tambien_se_mide.md) — hereda los errores del ticket y llega con tono de hecho; medirla cuesta un script.
 - [El CI se verifica en LOCAL](feedback_el_ci_se_verifica_en_local.md) — el `run:` de un paso se extrae del YAML y se corre con matriz de escenarios; actionlint con control negativo; y el comentario con que justifiqué mi diseño era falso.
 - [El paso 3 del gate no detecta cero casos](feedback_gate_paso3_no_detecta_cero_casos.md) — XCUITest es XCTest: cuenta «Test Suite» y «Executed», no «Test run with».
+- [Mi docblock también es una premisa](feedback_mi_docblock_tambien_es_una_premisa.md) — describo la intención como si fuera el comportamiento; dos falsas el 8-sep, cazadas por lentes.
 - [Mi fix hereda la forma del bug](feedback_mi_fix_hereda_la_forma_del_bug.md) — el arreglo repite el error del bug; enuncia el bug en una frase y aplícasela al arreglo.
-- [La review adversarial caza lo MÍO](feedback_review_adversarial_caza_lo_mio.md) — 4 el 6-sep, 8 el 7-sep y 5 más esa tarde; un escáner con lista de ficheros es ciego al fichero nuevo, y un centinela que no puede fallar no guarda nada.
+- [La review adversarial caza lo MÍO](feedback_review_adversarial_caza_lo_mio.md) — 8 el 7-sep, 7 el 8-sep; puede refutar la PREMISA del ticket, y un camino muerto que revives trae sus bugs intactos.
 - [Las lentes se contradicen entre sí](feedback_lentes_adversariales_se_contradicen.md) — cuando dos discrepan sobre un hecho, no elijas: mídelo; la gravedad que declaran no es evidencia.
 - [El árbol base contesta «¿es mío?»](feedback_el_arbol_base_contesta_si_es_mio.md) — worktree desde HEAD zanja un rojo ajeno en 90 s; y devuelve el disco que se come.
 - [Un «rojo conocido» no exime de bisecar](feedback_rojo_conocido_no_exime_de_bisecar.md) — dos rojos idénticos en el log, causas opuestas: uno era mío y rompía guardar una transacción.
@@ -34,6 +35,7 @@
 - [Capturas del simulador para la web](feedback_capturas_simulador_para_la_web.md) — receta y trampas: Secrets.xcconfig, nombre efímero, categorías sembradas, `sips -Z` escala el lado largo.
 
 ## Estado del trabajo
+- [La cola del reparador de tasas ya tiene salida](project_cola_reparador_tasas.md) — PR #98; dos de los tres daños del ticket eran FALSOS (medido); falta device-QA y deja 3 tickets.
 - [Las escrituras a mano ya no sellan una tasa aproximada](project_fx_escrituras_a_mano.md) — PR #94; eran 14 y no 10, el device-QA NO es simulable, y el AC nº2 pedía algo que no procede.
 - [La ganancia cambiaria ya tiene número](project_fx_pnl_card.md) — PR #92; falta device-QA y NO es simulable (ningún seed es multi-divisa); el FIFO no se simplifica.
 - [El tope de gasto del grupo ya avisa](project_presupuesto_de_grupo.md) — PR #91 y g14_01 en prod; faltan device-QA, TRES migraciones de staging y el deploy del Worker que reenciende el Merkle.

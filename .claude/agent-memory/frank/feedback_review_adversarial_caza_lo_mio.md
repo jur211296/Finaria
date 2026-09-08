@@ -195,3 +195,43 @@ Y una del lado bueno, que conviene recordar para no sobrecorregir: la lente que 
 censo de catorce escrituras —siete patrones, con controles positivos, incluyendo widgets, share
 extension e intents— **no encontró un decimoquinto sitio**. Cuando una lente adversarial busca en
 serio y no encuentra nada, ese silencio sí es información.
+
+---
+
+## 2026-09-08 — cuatro lentes, siete defectos míos, y la que más valió fue la que refutó el TICKET
+
+`repair-queue-has-no-exit-for-partial-rate-rows`. Cuatro lentes (sync/HLC, «¿cierra el bucle?»,
+«¿el anti-spin bloquea curas?», regresiones en call-sites). Gate en verde y 16 tests propios cuando
+las lancé.
+
+**Lo nuevo, y cambia cómo enfoco la review: una lente puede refutar la PREMISA del ticket, no solo mi
+código.** El ticket afirmaba que reescribir las columnas del grupo `money` con el mismo valor emite
+al canal nube, y de ahí colgaba dos de sus tres daños. Una lente midió que en todo el repo
+`updatedAttributes` aparece cuatro veces y **ninguna lo afirma ni lo niega** — o sea, la premisa no
+estaba apoyada en nada— y señaló que mi test medía `context.hasChanges`, que es **otra señal**. Lo
+medí con el motor real: `hasChanges` sí se ensucia, el outbox **no crece**. El daño nº 2 no existía.
+⇒ **cuando una lente diga «esto no está medido en ningún sitio», eso ya es el hallazgo**: no hace
+falta que además tenga razón sobre el comportamiento.
+
+**Y una contradicción entre dos mediciones MÍAS que resultó no serlo.** El mutante decía que la
+asignación idéntica ensucia; el test de outbox decía que no emite. Parecían incompatibles y no lo
+eran: son dos señales distintas del mismo `save()`. ⇒ antes de elegir entre dos mediciones que se
+contradicen, comprobar que están midiendo lo mismo — a menudo la contradicción **es** el hallazgo.
+
+**Los otros seis, todos míos y ninguno visible para la suite**, con un patrón que se repite: **el
+mecanismo nuevo que corta trabajo inútil acaba cortando trabajo útil.** Mi anti-spin sellaba como
+«imposible» también los fallos de RED; era ciego a las tasas que llegan por CloudKit (contaba
+escrituras nuestras en vez de mirar el disco); y con el contador de «curadas» como único criterio, un
+barrido que mejoraba montos sin poder sellarlos no se guardaba **y encima se marcaba estéril**. ⇒ al
+diseñar un freno, la pregunta no es «¿corta el bucle?» sino **«¿qué trabajo legítimo cae con él, y
+cómo distingo el fallo permanente del transitorio?»**.
+
+**Dos hallazgos eran regresiones que mi propio cambio hizo alcanzables**, y ésa es la clase que no
+busco por mi cuenta: `ensureRates` nunca troceó a los 365 días que la API acepta —inofensivo mientras
+preguntaba por existencia de fila, porque nunca pedía rangos largos— y el recorrido día a día podía
+no generar la última fecha si las horas diferían. **Un camino muerto que tu cambio revive trae sus
+bugs intactos**, así que al ampliar lo que una función alcanza hay que auditar lo que ya había dentro.
+
+**Reparto que funcionó:** dos lentes convergieron en el fallo de red (señal de que es estructural,
+como en la nota de arriba) y las otras dos aportaron cada una un hallazgo único que nadie más vio.
+Cuatro lentes sobre un cambio de seis ficheros no fue exceso.
