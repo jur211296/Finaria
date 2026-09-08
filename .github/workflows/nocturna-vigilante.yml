@@ -1,0 +1,224 @@
+name: Vigilante de la nocturna
+
+# QUÉ VIGILA: que la suite completa de UI corra al menos una vez al día sobre `2.1`.
+#
+# POR QUÉ EXISTE: la nocturna (`qa.yml`, cron '17 8 * * *') falla en silencio. Si su
+# ventana se pierde, no hay rojo, no hay aviso y no hay run: no hay NADA. La única señal
+# es una ausencia, y una ausencia no se nota. Medido el 2026-09-08, el día siguiente a
+# mudar la UI a la nocturna:
+#
+#   runs de QA por día, y cuántos llevaban la suite de UI dentro
+#     2026-09-06   39 runs   27 con UI
+#     2026-09-07   39 runs   24 con UI
+#     2026-09-08   31 runs    1 con UI   ← y esa una fue un dispatch a mano
+#
+# De 24-31 corridas de UI al día a cero automáticas, sin que nada lo dijera. Este
+# workflow es lo que lo dice — y, ya puestos, lo arregla: si le toca correr y no corrió,
+# la lanza él.
+#
+# DOS RELOJES QUE FALLAN DE FORMA DISTINTA, y ahí está el diseño:
+#
+#   · `schedule` — el reloj natural, pero es EL MISMO mecanismo que vigila. Si el cron de
+#     Actions deja de disparar, este workflow se queda mudo con él. Por sí solo no vale.
+#   · `push` a `2.1` — no depende del cron para nada. Cubre justo el caso que importa:
+#     que todo commit que entra en la rama por defecto acabe teniendo una corrida
+#     completa de UI. Es más ruidoso (corre en cada push) pero cuesta segundos de Linux.
+#
+# Su punto ciego, medido y aceptado: en los últimos 30 días hubo 8 sin ningún commit en
+# `2.1`, con rachas de hasta 3 seguidos. En esos días el reloj de push no suena — pero
+# tampoco hay código nuevo que probar, así que el hueco es de vigilancia del entorno, no
+# de cobertura del código.
+
+on:
+  schedule:
+    # 11:43 UTC = 3 h 26 min después de la ventana de la nocturna (08:17 UTC). Margen de
+    # sobra para el retraso con el que GitHub sirve los `schedule` bajo carga: la
+    # comprobación de abajo cuenta los runs por su hora de creación, así que basta con que
+    # la nocturna haya NACIDO, no con que haya terminado sus 90 minutos.
+    - cron: '43 11 * * *'
+  push:
+    branches: ["2.1"]
+  workflow_dispatch:
+    inputs:
+      horas:
+        description: 'Ventana en horas. Bajala a 1 para forzar el camino del disparo y verificar que el mecanismo entero funciona.'
+        required: false
+        default: '26'
+
+# Serializa. Sin esto, dos pushes casi simultáneos abren dos vigilantes que leen «no hay
+# corrida» a la vez y lanzan DOS nocturnas de 90 minutos. `cancel-in-progress: false`
+# porque cada ejecución dura segundos y encolarlas sale más barato que razonar sobre qué
+# pasa si se cancela una a medio disparar.
+concurrency:
+  group: nocturna-vigilante
+  cancel-in-progress: false
+
+permissions:
+  # Lo único que necesita: leer los runs y poder disparar `qa.yml`. Sin checkout, así que
+  # `contents` no hace falta.
+  actions: write
+
+jobs:
+  comprobar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      RAMA: 2.1
+      # 26 y no 24: dos horas de holgura para que el retraso normal del `schedule` no
+      # cuente como ausencia y dispare una nocturna de más cada mañana.
+      #
+      # Es parametrizable SOLO para poder verificarlo: con la ventana por defecto, el
+      # camino que lanza la nocturna únicamente se recorre el día que algo va mal, y un
+      # mecanismo de emergencia que solo se ejercita durante la emergencia no está
+      # probado. Con `horas: 1` se fuerza y se comprueba entero.
+      HORAS: ${{ github.event.inputs.horas || 26 }}
+    steps:
+      - name: ¿Corrió la suite de UI en las últimas 26 h?
+        id: comprobar
+        run: |
+          set -euo pipefail
+
+          # QUÉ SE PREGUNTA, y por qué así. Dos cosas que el silencio confunde:
+          #
+          #   «¿corrió la UI?»      la contestan `schedule` Y `workflow_dispatch` — los dos
+          #                         ponen UI_TOCABA=true y ejecutan la suite entera.
+          #   «¿funciona el reloj?» la contesta SOLO `schedule`.
+          #
+          # Aquí se pregunta la PRIMERA: lo que se vigila es la cobertura, y para eso una
+          # corrida lanzada a mano cuenta igual. (Leer un dispatch manual como prueba de
+          # que el reloj vive es otro error, y ya se cometió una vez en este repo.)
+          #
+          # NO se filtra por `conclusion`: un run EN VUELO cuenta. Uno lanzado hace diez
+          # minutos lleva ochenta por delante, y si no contara, el siguiente push lanzaría
+          # una segunda nocturna encima de la primera.
+          #
+          # Y se usa el endpoint POR WORKFLOW con el filtro de evento EN EL SERVIDOR, no
+          # `/actions/runs?per_page=100` filtrado aquí: medido el 2026-09-08, esos 100 runs
+          # mezclados abarcaban 28 h justas. Un día movido (el 2026-09-05 hubo 74 commits)
+          # los desborda, y entonces la respuesta sería «no hubo corrida de UI» habiéndola
+          # habido. `total_count` del endpoint filtrado no depende de la ventana.
+          CORTE=$(date -u -d "$HORAS hours ago" '+%Y-%m-%dT%H:%M:%SZ')
+          echo "Ventana: desde $CORTE (hace $HORAS h) hasta ahora."
+
+          recientes=0
+          for EV in schedule workflow_dispatch; do
+            n=$(gh api "repos/$REPO/actions/workflows/qa.yml/runs?event=$EV&branch=$RAMA&per_page=100" \
+                  --jq "[.workflow_runs[] | select(.created_at > \"$CORTE\")] | length")
+            echo "  event=$EV → $n run(s) dentro de la ventana"
+            recientes=$(( recientes + n ))
+          done
+
+          echo "corridas_ui=$recientes" >> "$GITHUB_OUTPUT"
+          if [ "$recientes" -gt 0 ]; then
+            echo "::notice title=La UI tiene cobertura::$recientes corrida(s) de la suite completa en las últimas $HORAS h."
+          else
+            echo "::warning title=La UI lleva mas de $HORAS h sin correr::La nocturna no ha corrido. Se lanza desde aqui."
+          fi
+
+      - name: Lanzar la nocturna si falta
+        id: lanzar
+        if: ${{ steps.comprobar.outputs.corridas_ui == '0' }}
+        run: |
+          set -euo pipefail
+          # Un `workflow_dispatch` corre EXACTAMENTE lo mismo que la nocturna, UI incluida:
+          # `UI_TOCABA` en qa.yml es `schedule || workflow_dispatch`.
+          #
+          # Que esto funcione con el GITHUB_TOKEN no es evidente: GitHub NO crea runs a
+          # partir de eventos disparados con ese token, precisamente para cortar cascadas
+          # infinitas. `workflow_dispatch` y `repository_dispatch` son la excepción
+          # documentada a esa regla, y es la que se usa aquí. Si algún día deja de valer,
+          # el síntoma será este paso en verde y ninguna nocturna naciendo detrás — por eso
+          # el paso siguiente COMPRUEBA que nació en vez de darlo por hecho.
+          # El instante ANTES de disparar es el ancla: sin el, el paso siguiente
+          # confundiria un dispatch ajeno reciente con el suyo y cantaria victoria sin
+          # haber creado nada.
+          echo "antes=$(date -u '+%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
+          gh workflow run qa.yml --repo "$REPO" --ref "$RAMA"
+          echo "Dispatch enviado."
+
+      - name: Comprobar que la nocturna nació de verdad
+        id: verificar
+        if: ${{ steps.lanzar.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+          # «Comando en verde» no es «run creado». El dispatch es asíncrono: se le da un
+          # margen y se mira si apareció. Sin esto, el modo de fallo sería un vigilante que
+          # informa de que ha lanzado la nocturna todos los días sin lanzarla ninguno.
+          ANTES='${{ steps.lanzar.outputs.antes }}'
+          echo "Buscando un run de qa.yml creado despues de $ANTES."
+          for _ in $(seq 1 12); do
+            sleep 5
+            n=$(gh api "repos/$REPO/actions/workflows/qa.yml/runs?event=workflow_dispatch&branch=$RAMA&per_page=10" \
+                  --jq "[.workflow_runs[] | select(.created_at >= \"$ANTES\")] | length")
+            if [ "$n" -gt 0 ]; then
+              echo "nacio=si" >> "$GITHUB_OUTPUT"
+              echo "::notice title=Nocturna lanzada::El run existe. La suite de UI corre ahora."
+              exit 0
+            fi
+          done
+          echo "nacio=no" >> "$GITHUB_OUTPUT"
+          echo "::error title=El dispatch no creo ningun run::gh salio en verde pero no hay run nuevo tras 60 s."
+
+      - name: Avisar a Grok
+        if: ${{ always() && steps.comprobar.outputs.corridas_ui == '0' }}
+        env:
+          WEBHOOK_URL: ${{ secrets.GROK_WEBHOOK_URL }}
+          SENDER_KEY: ${{ secrets.GROK_WEBHOOK_SENDER_KEY }}
+          NACIO: ${{ steps.verificar.outputs.nacio }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          if [ "${NACIO:-no}" = "si" ]; then
+            asunto="la nocturna no habia corrido y se ha lanzado sola"
+            detalle=$(printf '%s\n' \
+              "CI de $REPO ($RAMA): la suite completa de UI llevaba mas de $HORAS h sin correr." \
+              "" \
+              "El vigilante la ha lanzado y el run existe, asi que la cobertura de hoy esta cubierta." \
+              "Lo que NO esta resuelto es por que no corrio sola: si esto se repite varios dias," \
+              "el cron de Actions no esta sirviendo la ventana y hay que dejar de depender de el.")
+          else
+            asunto="la nocturna no ha corrido y NO se ha podido lanzar"
+            detalle=$(printf '%s\n' \
+              "CI de $REPO ($RAMA): la suite completa de UI lleva mas de $HORAS h sin correr y el" \
+              "intento de lanzarla desde el vigilante no ha creado ningun run." \
+              "" \
+              "Es decir: hoy NO hay cobertura de UI, y el mecanismo de respaldo tampoco funciona." \
+              "Mira el log — lo mas probable es que el GITHUB_TOKEN haya dejado de poder disparar" \
+              "workflow_dispatch, y entonces esto necesita un token propio.")
+          fi
+
+          # Mismo criterio que el aviso de qa.yml: sin secrets no se puede avisar, y morir
+          # en silencio aqui seria repetir el fallo que este workflow vino a arreglar.
+          if [ -z "${WEBHOOK_URL:-}" ] || [ -z "${SENDER_KEY:-}" ]; then
+            echo "::error title=No se pudo avisar de que $asunto::Faltan GROK_WEBHOOK_URL o GROK_WEBHOOK_SENDER_KEY."
+            exit 1
+          fi
+
+          texto=$(printf '%s\n' "$detalle" "" "Log completo: $RUN_URL")
+          jq -n --arg context "$texto" '{context: $context}' > "$RUNNER_TEMP/payload.json"
+          printf '%s\n' "$texto" | sed 's/^/  /'
+
+          set +e
+          codigo=$(curl -sS -X POST "$WEBHOOK_URL" \
+            -H "Authorization: Bearer $SENDER_KEY" \
+            -H "Content-Type: application/json" \
+            --data-binary "@$RUNNER_TEMP/payload.json" \
+            --retry 3 --retry-delay 5 --retry-connrefused \
+            --max-time 30 \
+            -o "$RUNNER_TEMP/respuesta.txt" -w '%{http_code}')
+          rc=$?
+          set -e
+
+          if [ "$rc" -ne 0 ]; then
+            echo "::error title=El webhook no respondio::curl salio con $rc tras los reintentos. Sin avisar: $asunto."
+            exit 1
+          fi
+          case "$codigo" in
+            2??) echo "::warning title=Aviso entregado::Grok recibio el aviso (HTTP $codigo): $asunto." ;;
+            *)   echo "::error title=El webhook fallo (HTTP $codigo)::Nadie se ha enterado de que $asunto."
+                 head -c 500 "$RUNNER_TEMP/respuesta.txt" || true
+                 exit 1 ;;
+          esac
