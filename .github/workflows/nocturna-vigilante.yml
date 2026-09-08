@@ -65,7 +65,6 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       REPO: ${{ github.repository }}
-      RAMA: 2.1
       # 26 y no 24: dos horas de holgura para que el retraso normal del `schedule` no
       # cuente como ausencia y dispare una nocturna de más cada mañana.
       #
@@ -75,7 +74,7 @@ jobs:
       # probado. Con `horas: 1` se fuerza y se comprueba entero.
       HORAS: ${{ github.event.inputs.horas || 26 }}
     steps:
-      - name: ¿Corrió la suite de UI en las últimas 26 h?
+      - name: ¿Corrió la suite de UI dentro de la ventana?
         id: comprobar
         run: |
           set -euo pipefail
@@ -100,7 +99,19 @@ jobs:
           # los desborda, y entonces la respuesta sería «no hubo corrida de UI» habiéndola
           # habido. `total_count` del endpoint filtrado no depende de la ventana.
           CORTE=$(date -u -d "$HORAS hours ago" '+%Y-%m-%dT%H:%M:%SZ')
-          echo "Ventana: desde $CORTE (hace $HORAS h) hasta ahora."
+
+          # La rama se PREGUNTA, no se supone. Un `schedule` corre siempre sobre la rama
+          # por defecto del repositorio y no se puede elegir otra, así que fijar «2.1» aquí
+          # crearía justo el fallo que `qa.yml` ya avisa de que existe: el día que cambie la
+          # rama por defecto, la nocturna se muda con ella y el vigilante se quedaría
+          # mirando una rama en la que ya no corre nada — y diría que no hay cobertura
+          # todos los días, o peor, que la hay cuando no la hay.
+          #
+          # (El filtro `push: branches` de arriba sí está fijado, porque ahí no se admiten
+          # expresiones. Si cambia la rama por defecto, hay que tocarlo a mano.)
+          RAMA=$(gh api "repos/$REPO" --jq '.default_branch')
+          echo "Ventana: desde $CORTE (hace $HORAS h) hasta ahora, sobre la rama por defecto ($RAMA)."
+          echo "rama=$RAMA" >> "$GITHUB_OUTPUT"
 
           recientes=0
           for EV in schedule workflow_dispatch; do
@@ -135,7 +146,7 @@ jobs:
           # confundiria un dispatch ajeno reciente con el suyo y cantaria victoria sin
           # haber creado nada.
           echo "antes=$(date -u '+%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
-          gh workflow run qa.yml --repo "$REPO" --ref "$RAMA"
+          gh workflow run qa.yml --repo "$REPO" --ref "${{ steps.comprobar.outputs.rama }}"
           echo "Dispatch enviado."
 
       - name: Comprobar que la nocturna nació de verdad
@@ -150,7 +161,7 @@ jobs:
           echo "Buscando un run de qa.yml creado despues de $ANTES."
           for _ in $(seq 1 12); do
             sleep 5
-            n=$(gh api "repos/$REPO/actions/workflows/qa.yml/runs?event=workflow_dispatch&branch=$RAMA&per_page=10" \
+            n=$(gh api "repos/$REPO/actions/workflows/qa.yml/runs?event=workflow_dispatch&branch=${{ steps.comprobar.outputs.rama }}&per_page=10" \
                   --jq "[.workflow_runs[] | select(.created_at >= \"$ANTES\")] | length")
             if [ "$n" -gt 0 ]; then
               echo "nacio=si" >> "$GITHUB_OUTPUT"
@@ -174,7 +185,7 @@ jobs:
           if [ "${NACIO:-no}" = "si" ]; then
             asunto="la nocturna no habia corrido y se ha lanzado sola"
             detalle=$(printf '%s\n' \
-              "CI de $REPO ($RAMA): la suite completa de UI llevaba mas de $HORAS h sin correr." \
+              "CI de $REPO (${{ steps.comprobar.outputs.rama }}): la suite completa de UI llevaba mas de $HORAS h sin correr." \
               "" \
               "El vigilante la ha lanzado y el run existe, asi que la cobertura de hoy esta cubierta." \
               "Lo que NO esta resuelto es por que no corrio sola: si esto se repite varios dias," \
@@ -182,7 +193,7 @@ jobs:
           else
             asunto="la nocturna no ha corrido y NO se ha podido lanzar"
             detalle=$(printf '%s\n' \
-              "CI de $REPO ($RAMA): la suite completa de UI lleva mas de $HORAS h sin correr y el" \
+              "CI de $REPO (${{ steps.comprobar.outputs.rama }}): la suite completa de UI lleva mas de $HORAS h sin correr y el" \
               "intento de lanzarla desde el vigilante no ha creado ningun run." \
               "" \
               "Es decir: hoy NO hay cobertura de UI, y el mecanismo de respaldo tampoco funciona." \
