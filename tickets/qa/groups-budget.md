@@ -419,9 +419,9 @@ Un límite por grupo, en la moneda del grupo, tal como se decidió. **Un solo ca
 1. **Device-QA de dos teléfonos** (no es mío: pide TestFlight y App Attest en `enforce`): que el
    límite que fija un admin aparezca en el teléfono de otro miembro tras el sync, que un no-admin no
    pueda cambiarlo, y —si se implementan los avisos— que la notificación llegue.
-2. **Staging arrastra ya TRES migraciones sin aplicar**: g13_04, g13_05 y ahora g14_01. Mismo
-   bloqueo desde el 4-sep: **no hay credencial de DDL de staging** (el conector MCP solo lista
-   producción). Es acceso de Jürgen. Producción sí está al día y verificada.
+2. ~~**Staging arrastra ya TRES migraciones sin aplicar**~~ — **RESUELTO el 2026-09-08**: las tres aplicadas en staging y verificadas por md5 (`join_group` `4982b50d…`/5365, `apply_group_delta` `61c38595…`, el reader `2cac864c…`), grants intactos y `anon` revocado. Se destrabó dando acceso al proyecto de staging por el conector. Registro: `docs/RUNBOOK-staging-ddl.md`. Lo que decía: g13_04,
+   g13_05 y g14_01 pendientes desde el 4-sep por falta de credencial de DDL. Producción ya estaba al
+   día; ahora staging también, y **la bomba del dead-letter queda desarmada**.
 3. **Device-QA de los avisos**, que van dentro de este mismo cambio (ver abajo) pero cuya entrega
    real solo se puede ver en un teléfono: la notificación al cruzar 50/75/90/100 %.
 

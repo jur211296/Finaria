@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (176)
+## Index (177)
 
 | id | status | path |
 |----|--------|------|
@@ -93,6 +93,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | gate-doc-says-swift-testing-only | backlog | tickets/backlog/gate-doc-says-swift-testing-only.md |
 | gateway-has-no-telemetry | backlog | tickets/backlog/gateway-has-no-telemetry.md |
 | gateway-typecheck-roto-y-fuera-del-ci | backlog | tickets/backlog/gateway-typecheck-roto-y-fuera-del-ci.md |
+| goldens-de-staging-solo-pasan-a-trozos | backlog | tickets/backlog/goldens-de-staging-solo-pasan-a-trozos.md |
 | group-balance-service-shares-not-deduped | backlog | tickets/backlog/group-balance-service-shares-not-deduped.md |
 | group-joiner-flag-consumers-still-narrow | qa | tickets/qa/group-joiner-flag-consumers-still-narrow.md |
 | group-notif-credits-payer-not-editor | done | tickets/done/group-notif-credits-payer-not-editor.md |

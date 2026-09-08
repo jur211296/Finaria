@@ -127,7 +127,7 @@ commit ajeno de `gateway/src`, así que este despliegue sólo añade este cambio
    sólo ve el proyecto de producción, y `~/Secrets/yala-supabase-test/` únicamente tiene JWTs de
    usuario. Queda **drift staging↔producción** en `join_group`. No rompe nada —los goldens no miran
    `changed` y se verificó que pasan sin él— pero hay que cerrarlo cuando haya acceso, aplicando el
-   mismo fichero. **Actualizado el 2026-09-08:** ya no es esta sola — staging arrastra **tres**
+   mismo fichero. ****RESUELTO el 2026-09-08**: las tres aplicadas en staging y verificadas por md5 (`join_group` `4982b50d…`/5365, `apply_group_delta` `61c38595…`, el reader `2cac864c…`), grants intactos y `anon` revocado. Se destrabó dando acceso al proyecto de staging por el conector. Registro: `docs/RUNBOOK-staging-ddl.md`.** Antes: ya no era esta sola — staging arrastraba **tres**
    (`g13_04`, `g13_05`, `g14_01`) y se aplican en ese orden. Procedimiento, idempotencia y
    verificación: `docs/RUNBOOK-staging-ddl.md`.
 2. **El Worker de staging tampoco se desplegó, y a propósito**: su último deploy es del 2026-08-12 y

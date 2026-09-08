@@ -115,14 +115,18 @@ control, donde `1.0` es el valor correcto, sigue verde. CI leído por dentro y n
    importa:** medí que en el repo no hay otro remitente, pero eso no cubre un servicio contratado
    desde el navegador —facturación, un formulario, un boletín—; si existe, el informe lo saca y hay
    que añadirlo al SPF **antes** de endurecer.
-2. **Staging arrastra ya TRES migraciones** — g13_04 (4-sep), g13_05 y **g14_01** (7-sep). Mismo
-   bloqueo las tres: **no hay credencial de DDL** (el conector MCP solo lista producción).
-   **El procedimiento ya no hay que reconstruirlo: `docs/RUNBOOK-staging-ddl.md`** — las tres en
-   orden, con las dos vías de aplicación, por qué `psql -1` no es opcional en las dos primeras, dónde
-   está el bloque de verificación de cada una y las dos trampas de g14_01. Se cierran
-   aplicando los tres `.sql` de `qa/cloud/` **en orden**. Es acceso tuyo, no una tarea que se destrabe
-   sola. Con g14_01 el drift ya muerde: fijar un presupuesto contra staging deja un dead-letter
-   permanente, y un dead-letter apaga el Merkle de ese grupo. Producción está al día.
+2. ~~**Staging arrastra ya TRES migraciones**~~ — **HECHO el 2026-09-08.** g13_04, g13_05 y g14_01
+   aplicadas y verificadas por md5: `join_group` en `4982b50d…`/5365 chars, `apply_group_delta` en
+   `61c38595…`, el reader en `2cac864c…`, grants intactos y `anon` revocado. **Staging queda byte a
+   byte igual que producción** y la bomba del dead-letter del presupuesto está desarmada. Se destrabó
+   dando acceso al proyecto de staging por el conector, que era el único bloqueo real. Registro:
+   `docs/RUNBOOK-staging-ddl.md`.
+
+   **Lo que sí quedó abierto de camino:** los 25 goldens completos dan 15/25 — **y no por las
+   migraciones**. Son timeouts (cero aserciones fallidas) y los mismos tests pasan en 1,3 s al
+   correrlos solos; la base está limpia y el reader responde al instante. Ticket:
+   `goldens-de-staging-solo-pasan-a-trozos`.
+
 3. **Desplegar el Worker cuando quieras encender el Merkle nuevo.** El manifest de Grupos va en `c2`;
    hasta que el gateway se despliegue, la verificación Merkle de Grupos queda apagada (los clientes
    saltan por el guard de canon en vez de reportar divergencias falsas). No corre prisa y no rompe

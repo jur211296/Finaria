@@ -3,7 +3,36 @@ updated: 2026-09-08
 tags: [runbook, staging, ddl, owner]
 ---
 
-# Runbook — las tres migraciones que staging arrastra
+# Runbook — las tres migraciones de staging
+
+> ## ✅ APLICADAS Y VERIFICADAS EL 2026-09-08
+>
+> Las tres están dentro. **Este documento queda como registro de cómo se hizo y de qué comprobar si
+> hay que repetirlo**, no como trabajo pendiente. Lo que se midió al aplicarlas:
+>
+> | | Antes | Después |
+> |---|---|---|
+> | `join_group` — claves `changed` | 0 | 3 `true` + 1 `false` |
+> | `join_group` — `yala_group_archived` | 0 | 2 |
+> | `join_group` — md5 / chars | `9653d591…` / 4510 | **`4982b50de23df93ed8f9c8bc369e9e17`** / **5365** |
+> | `split_groups.budget_limit_amount` | no existía | **`bytea`** |
+> | `apply_group_delta` (functiondef) | — | **`61c38595cdd8b7b0ab043437f49a7f2c`** |
+> | `groups_pull_rows_split_groups` | — | **`2cac864c6b67ab6da941601e8e53cf2c`** |
+>
+> Los tres md5 son los que el repo declaraba como esperados ⇒ **staging quedó byte a byte igual que
+> producción**. El punto de partida cuadraba con el `c_before` de la guarda de `g14_01`
+> (`d2e748320da4f2eca82b19a0048e84ab`), así que ninguna abortó.
+>
+> **Una desviación del fichero, y por qué:** a `g14_01` se le quitaron su `begin;`/`commit;` propios
+> porque el applier (`apply_migration`) ya envuelve en transacción y anidarlos habría cerrado la
+> externa antes de tiempo. La atomicidad la puso el applier, igual que en las otras dos, y las
+> guardas de md5 fueron dentro intactas.
+>
+> **Lo que NO se verificó como se esperaba:** los goldens completos dieron 15/25, y **no por las
+> migraciones** — son timeouts, y los mismos tests pasan en 1,3 s al correrlos solos. Ver
+> `tickets/backlog/goldens-de-staging-solo-pasan-a-trozos.md`.
+
+## Cómo se hizo (registro)
 
 **Para quién:** Jürgen. **Por qué él:** no hay credencial de DDL de staging en el entorno del agente —
 el conector MCP de Supabase solo lista producción (`kefvaiymtgytemwbltlz`), no staging

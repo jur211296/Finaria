@@ -177,7 +177,7 @@ la computación llega con el codec canon c1 en I8.
   arrastra commits ajenos (`eb6593ce`, `6bf0f588`), así que desplegar hoy subiría trabajo de otros sin
   revisar. (`npm run deploy:staging`; el `predeploy` copia el manifest.)
 - **«Las migraciones Supabase YA están en staging» era cierto cuando se escribió y hoy no lo es**:
-  staging arrastra **tres** sin aplicar — `g13_04`, `g13_05` y `g14_01`. El procedimiento, el orden y
+  staging arrastraba **tres** — `g13_04`, `g13_05` y `g14_01`, **aplicadas el 2026-09-08**. El orden y
   la verificación están en `docs/RUNBOOK-staging-ddl.md`. Esas sí necesitan credencial de DDL, que no
   está en este entorno.
 - **`SUPABASE_URL`/`SUPABASE_ANON_KEY` de PRODUCTION** en `wrangler.toml` son un placeholder (hoy apuntan a
