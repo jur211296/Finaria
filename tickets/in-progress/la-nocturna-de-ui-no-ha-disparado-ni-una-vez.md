@@ -1,6 +1,6 @@
 ---
 id: la-nocturna-de-ui-no-ha-disparado-ni-una-vez
-status: backlog
+status: in-progress
 priority: medium
 area: ci
 created: 2026-09-08
@@ -24,6 +24,77 @@ gh run list --workflow qa.yml --limit 100 --json event --jq '[.[].event]|group_b
 ```
 
 **Cero runs con `event: schedule`** en la ventana de 100 runs (que llega hasta el 2026-09-06).
+
+## Qué se midió el 2026-09-08 (sesión de diagnóstico)
+
+### La premisa del ticket se sostiene, con una corrección de fecha
+
+El ticket databa la llegada del `cron` a `2.1` en «el 2026-09-08 00:05 UTC». Esa es la fecha del
+**commit** `6a9df989` (2026-09-07T19:05-05:00 = 00:05 UTC). Lo que importa es cuándo llegó a la
+rama por defecto, y llegó **por el merge del PR #93**, cuyo commit es `0f92a91d`:
+
+```
+gh api 'repos/jur211296/Yala/actions/runs?event=push&per_page=100' → 0f92a91d creado 2026-09-08T00:23:59Z
+```
+
+Diecinueve minutos más tarde, y da igual: la ventana de las 08:17 UTC seguía estando **7 h 53 min
+después**. Hubo ventana, y no disparó.
+
+### Cinco causas más, descartadas y medidas
+
+Además de las cuatro del ticket:
+
+| Causa candidata | Medición | Veredicto |
+|---|---|---|
+| Es un fork (los forks no ejecutan `schedule`) | `gh repo view --json isFork` → `false` | descartada |
+| Actions restringido en el repo | `actions/permissions` → `enabled: true`, `allowed_actions: all` | descartada |
+| Apagado que la API no refleja | `gh workflow enable qa.yml` (idempotente) → sigue `active` | descartada |
+| `concurrency` canceló el run | no hay bloque `concurrency` en el fichero | descartada |
+| Colisión con un run en vuelo a esa hora | hueco vacío entre 08:08:38 y 08:50:36 UTC | descartada |
+
+Y una distinción que el silencio no deja ver pero la API sí: **el run no se canceló, no llegó a
+crearse.** Un run cancelado aparecería en la lista con `conclusion: cancelled` y su `event`. El
+filtro por evento da cero absoluto:
+
+```
+gh api 'repos/jur211296/Yala/actions/runs?event=schedule&per_page=100' --jq .total_count
+→ 0    (en TODO el repositorio, cualquier workflow, desde siempre)
+```
+
+### Lo que de verdad se perdió, en números
+
+El ticket decía que sin la nocturna «deja de haber cobertura de UI, en silencio». Cuánta:
+
+```
+runs de QA por día, y cuántos llevaban la suite de UI dentro (>55 min de reloj; la UI son ~67)
+  2026-09-05   runs QA:  52   con UI: 31
+  2026-09-06   runs QA:  39   con UI: 27
+  2026-09-07   runs QA:  39   con UI: 24
+  2026-09-08   runs QA:  31   con UI:  1   ← el día de la mudanza
+```
+
+Esa **una** del día 8 es el `workflow_dispatch` manual de verificación. Corridas **automáticas** de
+UI desde la mudanza: **cero**. Se pasó de 24-31 al día a ninguna, que es exactamente el modo de
+fallo que el YAML avisaba que había que vigilar, ocurriendo desde el primer día.
+
+Conviene separar dos preguntas que el silencio confunde, porque la mitigación de cada una es
+distinta:
+
+- **¿Corrió la UI?** La contestan `schedule` **y** `workflow_dispatch`: los dos ponen
+  `UI_TOCABA=true` y ejecutan la suite entera. Para *cobertura*, un dispatch manual cuenta.
+- **¿Funciona el reloj?** La contesta **solo** `schedule`. Para eso un dispatch manual no prueba
+  nada — y leerlo como prueba es el error que ya se cometió una vez con el run de 89,7 min.
+
+Al preguntar «¿hubo corrida de UI en las últimas 26 h?» hay que filtrar por evento o la respuesta
+es siempre que sí: **59 runs de QA en esa ventana, de los que solo 1 ejecutó la UI.**
+
+### La sonda: contestar hoy en vez de en dos días
+
+Con `qa.yml` la pregunta «¿dispara el `schedule` en este repo?» cuesta dos días, porque su ventana
+es una al día. Se añadió `.github/workflows/cron-canary.yml` (commit `d4195157`, directo a `2.1`
+porque el `schedule` solo corre desde la rama por defecto): un workflow de Linux que dura segundos,
+con `cron: '*/5 * * * *'`. Misma pregunta, una ventana cada cinco minutos. Es temporal y el propio
+fichero dice cuándo se retira.
 
 ## Lo que ya está descartado, medido
 
@@ -57,6 +128,57 @@ La distinción importa porque es justo el modo de fallo que el YAML avisa que ha
 corrida programada que desaparece sin que nadie la toque no rompe nada, no pone nada en rojo y no
 avisa. Simplemente deja de haber cobertura de UI, en silencio, y nadie se entera hasta que un bug de
 UI llega a producción.
+
+## La mitigación: el vigilante (`nocturna-vigilante.yml`, commit `6bddb614`)
+
+El diagnóstico del cron puede tardar días. La ausencia de cobertura, no: hoy es cero. Así que la
+mitigación no espera al veredicto, y además no depende de él — vale igual si el cron acaba
+disparando (puede omitir ventanas, y a los 60 días de inactividad GitHub lo apaga solo) que si no.
+
+Comprueba que la suite de UI corrió sobre `2.1` en las últimas 26 h y, si no, **la lanza él** y
+avisa a Grok. Corre en Linux y dura segundos.
+
+**Dos relojes que fallan de forma distinta**, que es todo el diseño:
+
+- `schedule` (11:43 UTC, 3 h 26 min tras la ventana de la nocturna) — es el mismo mecanismo que
+  vigila, así que por sí solo no vale de nada.
+- `push` a `2.1` — no depende del cron. Cubre lo que de verdad importa: que todo commit que entra
+  en la rama por defecto acabe teniendo una corrida completa de UI.
+
+Punto ciego medido y aceptado: 8 de los últimos 30 días no tuvieron ningún commit en `2.1`, con
+rachas de hasta 3 seguidos. En esos días el reloj de push no suena — pero tampoco hay código nuevo
+que probar, así que lo que se pierde es vigilancia del entorno, no cobertura del código.
+
+### Verificado de punta a punta, no deducido
+
+El camino que lanza la nocturna solo se recorre el día que algo va mal, y un mecanismo de
+emergencia que únicamente se ejercita durante la emergencia no está probado. Por eso la ventana es
+un parámetro del `workflow_dispatch`. Con `horas: 1`, run `34214276978`:
+
+```
+Ventana: desde 2026-09-08T09:13:23Z (hace 1 h) hasta ahora.
+  event=schedule → 0 run(s) dentro de la ventana
+  event=workflow_dispatch → 0 run(s) dentro de la ventana
+##[warning]La nocturna no ha corrido. Se lanza desde aqui.
+Dispatch enviado.
+Buscando un run de qa.yml creado despues de 2026-09-08T10:13:24Z.
+##[notice]El run existe. La suite de UI corre ahora.
+##[warning]Grok recibio el aviso (HTTP 200): la nocturna no habia corrido y se ha lanzado sola.
+```
+
+Los cuatro eslabones, cada uno medido: detecta la ausencia, dispara, **comprueba que el run nació**
+y entrega el aviso. Y el camino normal también, en el run `34214190128` del push que lo introdujo:
+con la ventana por defecto vio `workflow_dispatch → 1` (el dispatch de las 00:24) y no lanzó nada.
+
+Una cosa que se daba por sabida y ahora está medida: **el `GITHUB_TOKEN` sí puede disparar un
+`workflow_dispatch`.** GitHub no crea runs a partir de eventos disparados con ese token —es la
+regla anti-cascada— y `workflow_dispatch` es la excepción documentada. Aquí está comprobada en
+producción, que es distinto de haberla leído.
+
+### Efecto inmediato
+
+Ese disparo de prueba dejó la nocturna corriendo (run `34214288413`, suite completa de UI). La
+cobertura de UI de hoy pasó de cero automáticas a una real.
 
 ## Cómo se cierra
 
