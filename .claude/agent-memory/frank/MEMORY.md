@@ -20,6 +20,7 @@
 - [Las lentes se contradicen entre sí](feedback_lentes_adversariales_se_contradicen.md) — cuando dos discrepan sobre un hecho, no elijas: mídelo; la gravedad que declaran no es evidencia.
 - [El árbol base contesta «¿es mío?»](feedback_el_arbol_base_contesta_si_es_mio.md) — worktree desde HEAD zanja un rojo ajeno en 90 s; y devuelve el disco que se come.
 - [Un «rojo conocido» no exime de bisecar](feedback_rojo_conocido_no_exime_de_bisecar.md) — dos rojos idénticos en el log, causas opuestas: uno era mío y rompía guardar una transacción.
+- [Dos corridas, un simulador](feedback_dos_corridas_un_simulador.md) — el runner no muere de memoria: lo pisa otra sesión; clasifica el rojo por si trae línea de fallo.
 - [Bisecar un flaky miente](feedback_bisect_de_un_flaky_miente.md) — la correlación es azar; lo que zanja es la muestra IMPOSIBLE, y el rojo que se muda de test.
 - [El generador regenera lo que edito](feedback_el_generador_regenera_lo_que_edito.md) — re-corre el script DESPUÉS de editar a mano; dos locales se quedaron con el texto viejo.
 - [El mutante compilado zanja hipótesis](feedback_mutante_compilado_zanja_hipotesis.md) — si un ticket dice que no hay dato para elegir, recompila el código anterior y reproduce: ese es el dato.
