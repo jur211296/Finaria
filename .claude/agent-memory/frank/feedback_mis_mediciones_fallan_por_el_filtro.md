@@ -559,3 +559,24 @@ cómo forzarlo a dar el resultado contrario, no tienes una medición — tienes 
 recorre cuando algo va mal no está probado.** El vigilante que escribí lleva la ventana como
 parámetro únicamente para poder forzarlo (`horas: 1`) y comprobar los cuatro eslabones. Un
 salvavidas que se estrena durante el naufragio es decoración.
+
+
+## Caso 15 (2026-09-08): el filtro laxo contó una SEGUNDA tabla del mismo documento
+
+Al re-contar el índice de `docs/TICKETS.md` tras añadir dos tickets, usé
+`l.startswith("| ") and "tickets/" in l` y el encabezado salió **`## Index (234)`** cuando el disco
+tenía 174. El documento tiene **dos tablas**: el índice (3 columnas) y, 400 líneas más abajo, el
+mapa de origen de YalaWiki (2 columnas, y su segunda columna también contiene `tickets/`). Sesenta
+filas contadas de más.
+
+**Lo que lo salvó fue tener la medición estricta de antes**: `NF>=5 && $4 ~ /tickets\//` había dado
+174/174 diez minutos antes, así que el salto a 234 cantó solo.
+
+**Why:** es el fallo de siempre por el lado contrario. Las otras 14 veces el filtro se comió casos y
+salió un verde falso; aquí el filtro **cogió de más** y salió un número falso. Los dos vienen de lo
+mismo: **elegir el filtro por lo que quiero contar y no por lo que hay en el fichero.** Un documento
+con dos tablas es exactamente el caso que un `startswith("| ")` no distingue.
+
+**How to apply:** cuando cuentes filas de una tabla en un `.md`, **cuenta las columnas** (`NF`) y
+ancla la que identifica la tabla, no solo su contenido. Y cuando un conteo cambie de golpe respecto
+a otro que hiciste hace un rato, **el sospechoso es el filtro nuevo**, no el fichero.

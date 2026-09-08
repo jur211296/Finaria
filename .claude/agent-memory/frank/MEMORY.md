@@ -39,7 +39,7 @@
 - [La cola del reparador de tasas ya tiene salida](project_cola_reparador_tasas.md) — PR #98; dos de los tres daños del ticket eran FALSOS (medido); falta device-QA y deja 3 tickets.
 - [Las escrituras a mano ya no sellan una tasa aproximada](project_fx_escrituras_a_mano.md) — PR #94; eran 14 y no 10, el device-QA NO es simulable, y el AC nº2 pedía algo que no procede.
 - [La ganancia cambiaria ya tiene número](project_fx_pnl_card.md) — PR #92; falta device-QA y NO es simulable (ningún seed es multi-divisa); el FIFO no se simplifica.
-- [El tope de gasto del grupo ya avisa](project_presupuesto_de_grupo.md) — PR #91 y g14_01 en prod; faltan device-QA, TRES migraciones de staging y el deploy del Worker que reenciende el Merkle.
+- [El tope de gasto del grupo ya avisa](project_presupuesto_de_grupo.md) — PR #91 y g14_01 en prod; el ticket ya está en `qa/`, y quedan device-QA, tres migraciones de staging y el Worker.
 - [El recordatorio de deuda ya avisa al deudor](project_recordatorio_liquidacion.md) — PR #89; falta device-QA y una decisión; NO se respeta `simplifyDebts` a propósito.
 - [El Panel ya suma las cuentas filtradas](project_panel_conjunto_de_cuentas.md) — PR #87; falta device-QA y quedan tres preexistentes con ticket propio.
 - [La frontera de la visita](project_la_frontera_de_la_visita.md) — PR #86 cerró la rama privada; faltan device-QA de 2 cuentas y 2 decisiones; el guard que falta suele estar MEDIO puesto.
@@ -49,7 +49,7 @@
 - [La identidad del recién llegado a un grupo](project_identidad_del_joiner_en_grupos.md) — cerrada en código el 4 y 5-sep; falta device-QA de dos teléfonos, y NO se reabre la vía del refresh.
 - [Decisiones que esperan a Jürgen](project_decisiones_que_esperan_a_jurgen.md) — 19 contestadas el 6-sep; «¿queda alguna?» se responde LEYENDO los 94, no con grep; un residual «decisión aparte» en qa/ es huérfano → ticket.
 - [Web: lo que Jürgen decidió, y lo que no](project_web_pr62_espera_a_jurgen.md) — PR #62 mergeado el 4-sep; siguen abiertas dos suyas: legal de Grupos y autoalojar fuentes.
-- [El cron de Actions no dispara en Yala](project_cron_de_actions_no_dispara.md) — medido 8-sep con control positivo; la cobertura de UI la sostiene el vigilante por push, y hay decisión abierta.
+- [El cron de Actions estuvo muerto y revivió](project_cron_de_actions_no_dispara.md) — disparó el 8-sep con 4h35 de retraso; ese retraso supera el margen del vigilante, que cantaría rojo falso.
 - [Hipótesis de la Lista Negra, re-comprobadas](project_hipotesis_lista_negra_recomprobadas.md) — el runner de XCUITest; el CI y sus pasos ADVISORY; y el snapshot de Time Machine que hace inútil liberar disco.
 
 ## Entorno y herramientas
@@ -57,6 +57,7 @@
 - [Avisar a Frank: lo hace el hook, no tú](reference_avisar_a_frank_webhook.md) — el hook manda PR y rojos solo; «prueba» en el texto lo descarta; `--dry-run` NO enseña tu `--texto` y a los 600 caracteres recorta.
 - [El aviso de cierre necesita el cwd del repo](reference_aviso_cierre_necesita_cwd.md) — tras retirar el worktree va a Dan y se descarta en silencio; lee la línea ENVIADO.
 - [Verificar el backend: MCP ve solo prod](reference_verificar_backend_yala.md) — no hay DDL de staging, pero los goldens SÍ corren contra él (hay contraseñas, no solo JWT); sandbox transaccional para lo demás.
+- [Runbook de DDL en staging](reference_runbook_staging_ddl.md) — las tres migraciones en un solo sitio; y `wrangler` SÍ está autenticado: lo que falta es la credencial DDL.
 - [El hook de secretos está desactivado](hook_secretos_disparador_substring.md) — retirado del push el 2026-09-01 (ADR-009); nada escanea hoy. Su trampa del substring, si vuelve.
 - [El hook de /cerrar salta con «cerramos»](hook_cerrar_disparador_substring.md) — verifica la premisa contra su mensaje: cerrar un ticket no es cerrar la sesión, y el bloque de disco es irreversible.
 - [DNS de yala-app.pe](reference_dns_yala_app_pe.md) — el correo autentica desde el 8-sep; qué leer en la cabecera además de los tres `pass`; subir la política tiene ticket y fecha.
