@@ -29,9 +29,14 @@ justamente eso.
 
   El mío dio 629 y el base 628, con una sola diferencia: mi suite nueva. Eso, y no el número de
   fallos, es lo que prueba que no perdí cobertura.
-- **Cuenta los casos a mano.** `grep -cE '^✔ Test .* passed'`. El resumen `Test run with N tests in M
-  suites` de Swift Testing **miente cuando hay fallos**: reportó `5784 in 594` mientras el conteo
-  directo daba 6139 en 629.
+- **Cuenta los casos, pero NO con un grep anclado en `^` — eso es lo que me falló.** Los `print` de la
+  app y el reporter comparten stdout sin lock: un log a media línea la parte en dos y ninguna mitad
+  casa con `^✔ Test .* passed`. Medido el 2026-09-07 sobre tres corridas del mismo árbol, el grep
+  anclado dio **6360 · 6353** (perdiendo 43-50 distintas cada vez) y `Test run with` dio **6414** las
+  tres. ⇒ **el resumen NO miente; mentía mi grep.** Para el detalle por caso, `-resultBundlePath` +
+  `xcrun xcresulttool get test-results summary --path <bundle>`. Si rascas el log, sin ancla
+  (`grep -o '✘ Test '`). Lo de «reportó 5784 in 594 mientras el conteo daba 6139 en 629» era esto
+  mismo leído al revés.
 - **Confirma aislando.** Un rojo que pasa con `-only-testing` y falla en la suite completa es
   interacción (estado global / orden), nunca tu diff.
 - **Y si el rojo sobrevive a todo esto, va a ticket.** «Preexistente» no cierra nada: la regla del
