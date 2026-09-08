@@ -176,12 +176,26 @@ Desde `gateway/`, contra staging real:
 ```bash
 set -a; . ~/Secrets/yala-supabase-test/test-users.env; set +a
 export GROUPS_ENC_KEY=$(cat ~/Secrets/yala-groups-enc/staging.key)
-npx vitest run test/groups.goldens.test.ts    # esperado: 25/25
+npm run sync:manifest                         # ← NO lo hace `npx vitest`: sin esto mides con el manifest viejo
+npx vitest run test/groups.goldens.test.ts    # esperado: 25/25, ~5 min
 ```
 
 **Qué significa hoy y qué significará después.** Hoy pasa 25/25 *porque nadie fija un presupuesto
 contra staging*: la suite mide que un manifest con una columna que el server no tiene no rompe nada
 mientras nadie la use. Tras aplicar `g14_01`, sigue en 25/25 pero ya sin la bomba debajo.
+
+**Antes de creerte un rojo, mira estas dos cosas** (las dos costaron un día el 2026-09-08):
+
+1. **`npm run sync:manifest`.** La copia `gateway/group_capability_manifest.json` está en
+   `.gitignore` y sólo se refresca en `pretest`; `npx vitest` no lo dispara. Con la copia vieja el
+   gateway calcula el Merkle con el contrato de columnas anterior. Desde hoy lo canta
+   `test/manifest.sync.test.ts`, que es offline y tarda 2 ms — córrelo primero si algo huele raro.
+2. **Si el rojo es un TIMEOUT sin aserción, probablemente no está roto: va justo de tiempo.** Un
+   pull cuesta 5 peticiones por cada grupo del usuario, y el corpus de `i5-user-a/b` sólo crece
+   (530 y 678 grupos el 2026-09-08; +20 y +15 por corrida). Medido ese día: la corrida entera son
+   ~32 800 peticiones y 311 s, y el golden más ajustado (`G2 · 2`) consume el **55 %** de su
+   timeout — se cae si el tiempo se multiplica por 1,8, sea por latencia o por corpus. Detalle y
+   decisión pendiente en `corpus-de-test-de-staging-crece-sin-limite`.
 
 ---
 

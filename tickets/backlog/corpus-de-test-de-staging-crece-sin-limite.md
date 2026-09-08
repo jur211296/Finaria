@@ -1,0 +1,73 @@
+---
+id: corpus-de-test-de-staging-crece-sin-limite
+status: backlog
+priority: medium
+area: "qa, cloud"
+created: 2026-09-08
+source: medido al investigar goldens-de-staging-solo-pasan-a-trozos (2026-09-08)
+---
+
+# Los usuarios de test de staging acumulan grupos para siempre, y eso pone fecha de caducidad a los goldens
+
+## El hecho, medido el 2026-09-08
+
+Los dos usuarios de test de staging arrastran los grupos de todas las corridas que se han hecho desde
+julio. Contado contra la misma query que usa el pull (`group_members` del usuario, no borrado, en
+`active|pendingApproval|rejected`):
+
+| Usuario | 2026-07-15 (según el log de perf del pull) | 2026-09-08, antes | después de UNA corrida |
+|---|---|---|---|
+| `i5-user-a` | 76 | 530 | **550** (+20) |
+| `i5-user-b` | — | 678 | **693** (+15) |
+
+**Cada corrida completa de los 25 goldens añade ~20 grupos a A y ~15 a B, y nadie los quita.** No es
+un descuido: el `DELETE` está revocado por diseño (el tombstone es `UPDATE deleted=true`) y
+`groups_forget_user` está prohibido en los tests porque es destructivo global y rompería las
+re-corridas de los dos usuarios compartidos.
+
+## Por qué importa
+
+Un pull cuesta 5 peticiones por grupo del usuario (ver `groups-pull-cuesta-cinco-viajes-por-grupo`),
+así que el coste de los goldens que hacen pull crece linealmente con un número que sólo sube. Medido
+hoy, cuánto de su presupuesto de tiempo consume cada uno:
+
+| Golden | Duración | Timeout | Consumido | Se rompe si el tiempo se multiplica por |
+|---|---|---|---|---|
+| `G2 · 2` (pull de B) | 33,3 s | 60 s | **55 %** | ×1,80 |
+| `G3 · 3-ter` (2 pulls de B) | 65,0 s | 120 s | **54 %** | ×1,85 |
+| `G2 · 7` (6 pulls de A) | 130,0 s | 360 s | 36 % | ×2,77 |
+| `G7 · roundtrip` (1 pull de A) | 26,2 s | 90 s | 29 % | ×3,44 |
+| `G3 · 3-bis` (1 pull de B) | 31,6 s | 120 s | 26 % | ×3,80 |
+
+Con el ritmo de hoy, el primero en caer es `G2 · 2`: rompe cuando B llegue a **~1 220 grupos**, es
+decir dentro de unas **35 corridas completas** — antes si la latencia de red del día es peor, porque
+las dos variables se multiplican. Ese es el mecanismo que hizo que estos goldens dieran 15/25 el
+2026-09-08 por la mañana y 25/25 por la tarde sin que nadie tocara el código.
+
+## La decisión que hace falta (owner)
+
+**Limpiar el corpus es destructivo y no lo decide Claude.** Las opciones, con lo que cuesta cada una:
+
+1. **Vaciar los grupos de los dos usuarios de test.** Devuelve los goldens a los ~7 s por pull de
+   julio y deja el margen en 50×. Requiere credencial de DDL en staging (que hoy **no hay** — ver
+   `docs/RUNBOOK-staging-ddl.md`) o llamar a `groups_forget_user`, que es exactamente lo que los
+   tests tienen prohibido. Riesgo: si alguien depende de datos históricos de esos usuarios, se
+   pierden.
+2. **Un tercer usuario de test, limpio, para los goldens de Grupos**, dejando A y B para el resto.
+   No borra nada; mueve el problema tres meses adelante y cuesta sembrar credenciales nuevas.
+3. **No tocar los datos y arreglar el coste** (`groups-pull-cuesta-cinco-viajes-por-grupo`). Es el
+   arreglo de fondo —el mismo que hace falta para producción— pero es un rediseño del cursor, no un
+   parche.
+4. **Subir los timeouts.** Compra tiempo y no arregla nada; y deja los goldens tardando 10 minutos.
+
+**Lo que NO conviene hacer es nada**: hoy el margen es de ×1,8, y el modo de fallo es un rojo por
+timeout sin aserción — es decir, la forma más cara de fallar, porque no dice qué está mal. Ya costó
+una investigación completa.
+
+## Acceptance Criteria
+
+- [ ] Decisión del owner sobre cuál de los cuatro caminos.
+- [ ] Si se limpia: el conteo de grupos de A y B queda medido antes y después, y los goldens se
+      vuelven a correr para dejar el número nuevo escrito.
+- [ ] El margen (cuánto del timeout consume el golden más ajustado) queda anotado donde se consulte,
+      para que la próxima vez se lea en un minuto y no en un día.

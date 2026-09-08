@@ -384,7 +384,12 @@ describe("G2 goldens · /groups/* contra staging real", () => {
 
     const mA = await merkle(jwtA, gid);
     const mB = await merkle(jwtB, gid);
-    expect(mA.canon_version).toBe("c1");
+    // c2 desde g14_01 (`bb90564a`, 2026-09-07): el tope de gasto añadió `split_groups.budget_limit_amount`
+    // al manifest de GRUPOS y el root depende de TODAS sus columnas, así que el contrato de columnas subió
+    // de versión. El valor va a mano A PROPÓSITO — leerlo del manifest lo volvería tautológico (el server
+    // sirve `groupManifest.canon_version`) y este golden dejaría de fijar nada. Al bumpear el canon, se
+    // actualiza aquí; que se ponga rojo es lo que tiene que pasar.
+    expect(mA.canon_version).toBe("c2");
     expect(mA.group_id).toBe(gid);
     expect(Object.keys(mA.entities).length).toBe(5); // las 5 tablas SIEMPRE
     expect(mA.root).toBe(mB.root); // A y B convergen sobre el mismo corpus visible
@@ -441,7 +446,12 @@ describe("G2 goldens · /groups/* contra staging real", () => {
     expect(confirm.deltas.filter((d) => d.group_id === gid).length).toBe(0);
     const confirmCursor = confirm.cursors[gid];
     if (confirmCursor !== undefined) expect(confirmCursor).toBe(cursorAtDone); // ausente o sin avance
-  }, 360_000); // 6 pulls (baseline + 4 loop + confirm): A acumula 76+ grupos históricos (sin cleanup por diseño). Con el fan-out paralelo del pull (pool de 6 grupos × 5 tablas) cada pull baja de ~42s a segundos; el timeout holgado queda como red.
+    // 6 pulls (baseline + 4 del bucle + confirm). El timeout NO es holgura de cortesía: un pull cuesta
+    // 5 peticiones POR GRUPO del que el usuario es miembro —haya cambios o no—, y el corpus de los users
+    // de test solo crece (sin cleanup por diseño: el DELETE está revocado). Medido el 2026-09-08 con A en
+    // 530 grupos: 16 183 peticiones, 130 s de los 360 disponibles. Cada corrida completa añade ~20 grupos
+    // a A, así que este margen se estrecha solo. Ver `goldens-de-staging-solo-pasan-a-trozos`.
+  }, 360_000);
 
   it("8. merkle autosuficiente: root ESTABLE sobre filas conocidas (2 fetches idénticos, != vacío) + no-member ve root de corpus VACÍO", async () => {
     // Grupo A-ONLY (create_group sin invitar): B NUNCA es member → RLS le oculta TODO.
@@ -471,7 +481,8 @@ describe("G2 goldens · /groups/* contra staging real", () => {
     const mA1 = await merkle(jwtA, gid);
     const mA2 = await merkle(jwtA, gid);
     expect(mA1.root).toBe(mA2.root);
-    expect(mA1.canon_version).toBe("c1");
+    expect(mA1.canon_version).toBe("c2"); // g14_01 — racional en el golden 6
+
     expect(Object.keys(mA1.entities).length).toBe(5);
     expect(mA1.entities.split_expenses.count).toBeGreaterThanOrEqual(1);
     expect(mA1.root).not.toBe(empty);
