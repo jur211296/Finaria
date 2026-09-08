@@ -5,64 +5,50 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-08 (Lima)
 
-**Rama** `2.1` · HEAD `9f8fe601` — la nocturna no suena sola y ya no hace falta que suene: hay un
-vigilante que la lanza. Último cambio de producto: la cola del reparador de tasas (PR #98).
+**Rama** `2.1` · HEAD `8b182ac3` — el chat ya guarda el tipo de cambio que usó. Último cambio de
+producto: la tasa del borrador del chat (PR #99).
 TestFlight build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.** `yala-app.pe` sirve la web
 nueva.
 
 ## Esta sesión, en una línea
 
-**El cron de GitHub no despierta a la nocturna, y la app llevaba un día entero sin una sola corrida
-automática de UI sin que nada lo dijera.** Todo directo a `2.1` (cinco commits: CI, ticket y
-aprendizajes; ningún `.swift`, así que no hubo PR).
+**El chat guardaba «1,00» como tipo de cambio de un gasto en otra divisa**, aunque el importe
+convertido de al lado sí saliera de una conversión real. PR #99, mergeado.
 
-**Lo que cambia para el usuario:** nada visible hoy — cambia que un bug de interfaz vuelve a tener
-quien lo cace antes de llegar a su teléfono.
+**Lo que cambia para el usuario:** abre el detalle de un gasto que dictó al chat en dólares o en
+euros y ve el cambio que se le aplicó, no un 1,00 que no significa nada.
 
-**El número que enmarca el problema.** El día de la mudanza a nocturna:
+**Por qué no se curaba solo, que era la parte que el ticket tenía mal calibrada.** El reparador de
+arranque solo mira las filas marcadas como provisionales. Cuando la conversión es **exacta** —el caso
+normal, con la fila de tasas del día completa— la marca queda en `false`, la fila sale de esa cola y
+el 1,00 se sellaba **para siempre**. O sea que la ruta guardaba un número falso en la mayoría de sus
+ejecuciones, no en la minoría.
 
-| día | runs de QA | con la suite de UI dentro |
-|---|---|---|
-| 2026-09-06 | 39 | 27 |
-| 2026-09-07 | 39 | 24 |
-| **2026-09-08** | **31** | **1** ← y esa una fue un dispatch a mano |
+**El AC que más valía era el tercero, y se midió:** barrido de las **18 construcciones** de
+`TransactionItem` fuera de `Seed` y de tests. Era el **único** sitio del árbol que plantaba una tasa
+falsa habiendo conversión real. De los otros doce que pasan `1.0`, once lo hacen de forma transitoria
+porque llaman `recalculatePreferredCurrency` acto seguido, y uno es el stub del apply de sync, donde
+el grupo `money` llega del wire y recalcular está prohibido. Lo que el barrido sí dejó a la vista: el
+init tiene `exchangeRate: Double = 1.0` por defecto, así que **olvidar esa línea de recálculo es
+silencioso** — once sitios dependen hoy de ella, y así se llegó a este bug.
 
-De 24-31 corridas de UI al día a **cero automáticas**. El modo de fallo es una **ausencia**, y una
-ausencia no se nota: no hay run, no hay rojo y no hay aviso. Todo lo demás en CI deja un artefacto;
-esto deja silencio, que es indistinguible de que todo vaya bien.
+**Una premisa del ticket era falsa.** Decía que estas filas «parecen candidatas del barrido legacy
+sin serlo». Es al revés: `needsRepair` pide `exchangeRate == 1.0` **y** divisa distinta de la
+preferida, que es exactamente el daño. Eran candidatas **legítimas**; lo que las deja sin cura es que
+ese barrido es one-shot por dispositivo y su flag se marca aunque no haya candidatas.
 
-**Diagnóstico: nueve causas descartadas por medición**, cuatro que ya traía el ticket y cinco más
-(fork, Actions restringido, apagado que la API no reflejara, `concurrency`, colisión con un run en
-vuelo). Y una distinción que el silencio esconde y la API sí da: **el run programado no se canceló,
-no llegó a crearse**. Un cancelado aparecería con su evento; el filtro da cero absoluto.
+**La review adversarial cazó lo mío, otra vez.** Tres lentes: (1) un comentario que yo acababa de
+escribir era **falso** — justificaba el umbral diciendo que protegía de «infinito o NaN» cuando la
+guard de entrada ya garantiza finito y positivo; está ahí por paridad con el reparador, y escribir
+una razón plausible en vez de la verdadera tapaba que esa rama es alcanzable y ahí escribe un número
+falso. (2) **Seis defectos en mi propio test**, incluido uno que lo habría puesto rojo *con el fix
+puesto* si el simulador tuviera la divisa preferida guardada como `"jpy"`. (3) Un bug ajeno y peor
+que éste, ver abajo.
 
-**La sonda: contestar en 37 minutos lo que costaba dos días.** Con `qa.yml` la pregunta «¿dispara el
-`schedule` aquí?» tiene una ventana al día. Se montó un canario de Linux con `cron: '*/5'` — misma
-pregunta, una ventana cada cinco minutos. **Siete ventanas, cero runs.** Y con **control positivo**,
-que era lo que hacía falta para que la medición valiera: lanzado a mano corre en verde en segundos,
-así que el workflow es válido y lo que no funciona es el reloj. Sin ese control habría documentado
-un error mío como un fallo de la plataforma.
-
-Lo que la muestra **no** distingue, y queda dicho: «no dispara» y «se retrasa más de 37 min» dan el
-mismo cero. La conclusión operativa es la misma — no se cuelga la cobertura diaria de ese mecanismo.
-
-**La mitigación, verificada en producción y no deducida:** `nocturna-vigilante.yml` comprueba que la
-suite de UI corrió en las últimas 26 h y, si no, **la lanza él** y avisa. Lleva **dos relojes que
-fallan de forma distinta**: su propio `schedule` —que es el mismo mecanismo que vigila, así que solo
-no vale— y **`push` a la rama por defecto**, que no depende del cron y cubre lo que importa: que
-todo commit que entra acabe con una corrida completa de UI. Punto ciego medido: 8 de los últimos 30
-días no tuvieron commits, con rachas de hasta 3.
-
-Los cuatro eslabones, cada uno medido con la ventana forzada a 1 h: detecta la ausencia, dispara,
-**comprueba que el run nació** y entrega el aviso (HTTP 200). Y el anti-duplicado también: cuatro
-ejecuciones del vigilante y **una sola** nocturna, porque cuenta los runs en vuelo.
-
-**Tres trampas que se llevaron por delante una versión de la consulta**, todas en
-`docs/aprendizajes-tecnicos.md`: preguntar «¿corrió el workflow?» responde que sí siempre (59 runs
-de QA en 26 h, uno con UI); `/actions/runs?per_page=100` abarcaba **28 h justas** y un día movido lo
-desborda, contestando «no hubo corrida» habiéndola habido; y `gh workflow run` **en verde no es
-«run creado»**. La segunda la cazó un control positivo ampliado: pedir 240 h devolvía el mismo
-conteo que 26.
+**Verificación:** control positivo por mutación, repetido después de endurecer el test — replantar el
+`1.0` pone el caso en rojo con el número real (0,9752 de desvío en JPY→PEN) mientras la pareja de
+control, donde `1.0` es el valor correcto, sigue verde. CI leído por dentro y no por su conclusión
+(sus pasos son *advisory*): **6.432 tests en 656 suites, cero fallos**.
 
 ## Te espera a ti
 
@@ -82,7 +68,29 @@ conteo que 26.
    cobertura de UI vaya atada al ritmo de trabajo y no al calendario — que en un repo con esta
    cadencia es defendible, porque un día sin commits tampoco trae código nuevo que probar. No corre
    prisa: hoy la suite corrió.
-4. **Del cierre del 2026-09-08 (la cola del reparador, PR #98):**
+4. **Del cierre del 2026-09-08 (la tasa del chat, PR #99) — el primero urge más que el ticket que lo
+   destapó:**
+   - `chat-draft-drops-the-expense-sign` (**high**) — **un gasto dictado al chat SUMA al saldo en vez
+     de restar.** `saveDraft` no usa `draft.isExpense` para firmar el monto y su guard solo acepta
+     positivos; todas las demás rutas sí firman. Las listas cuadran porque clasifican por categoría,
+     pero el saldo suma el monto en crudo. Detalle incómodo: hasta el PR #99 el `1,00` plantado era la
+     señal visible de que esa fila no era de fiar, y arreglarlo se la ha quitado. Falta reproducirlo
+     en ejecución: la evidencia es de código.
+   - **Device-QA pendiente y NO simulable**: ningún seed es multi-divisa, así que para ver el número
+     en el detalle hace falta una cuenta en otra divisa y el chat contra el LLM real. Es la **misma**
+     limitación que bloquea los device-QA de `fx-pnl-card` y `fx-escrituras-a-mano`: sembrar un seed
+     multi-divisa desbloquearía los tres de una vez.
+   - `chat-rows-sealed-before-the-fix-have-no-repair-path` (medium) — el fix es forward-only y el
+     barrido legacy no vuelve a correr, así que lo ya escrito no se cura. **Puede necesitar decisión
+     tuya**: si el corpus es pequeño, quizá no compense re-disparar un barrido sobre toda la tabla.
+   - `exchange-rate-detail-shows-zero-for-low-denomination-currencies` (medium) — el detalle formatea
+     con `%.4f` y VND→USD (0,0000408) se enseña como **«0,0000»**. Preexistente y general, no del
+     chat: esa ruta pasó de un «1,0000» falso a un «0,0000» ilegible.
+   - `fx-rate-derivation-threshold-reseals-one-to-one` (low) — la banda `0 < monto <= 0.0001` cae en
+     el escape del umbral y vuelve a sellar un 1:1. **No se toca en un solo sitio**: el reparador
+     tiene el mismo umbral y romper la paridad haría que la fila cambiara de número al repararse.
+
+5. **Del cierre anterior (la cola del reparador, PR #98):**
    - **Device-QA pendiente y NO es simulable del todo**: hace falta una transacción en una divisa que
      no esté en ninguna cuenta (yenes) fechada en un día cuya fila de tasas ya exista **sin** esa
      divisa. Comprobar que se corrige sola al llegar las tasas, y que abrir y cerrar la app sin
@@ -98,7 +106,7 @@ conteo que 26.
      aproximada pone «≈» al total del mes, porque la marca se acumula por OR sobre el bucket entero.
      Con más población marcada eso pasa de raro a frecuente en multidivisa, y los tres calculadores
      no usan hoy el mismo criterio.
-5. **Decisiones abiertas:**
+6. **Decisiones abiertas:**
    - `groups-archived-still-accepts-changes` — el copy promete que un archivado «ya no acepta cambios»
      y acepta todos: gastos, ediciones, liquidaciones, ajustes, invitaciones. Tres opciones dentro.
    - `groups-owner-debt-no-heir-dead-end` (high, del 6-sep) — el dueño con deuda y SIN heredero sigue
@@ -121,13 +129,13 @@ conteo que 26.
      filtrar una cuenta «excluida de estadísticas», el saldo grande muestra el TOTAL, los widgets 0 y
      el KPI 0: **la pantalla se contradice consigo misma**. Tres salidas dentro (0 en las tres, total
      en las tres, o no dejar filtrarlas). Alcanzable desde el carrusel, que sí lista esas cuentas.
-6. **Publicar la app.** Los avisos de Grupos están completos en servidor y en los dos entornos; falta
+7. **Publicar la app.** Los avisos de Grupos están completos en servidor y en los dos entornos; falta
    el cliente iOS. Llevaría además el saldo de Distribución, la identidad del recién llegado, los
    predeterminados del Panel, el cierre del detalle, la hoja de «Unirme», el freno de la lista,
    «Transferir y salir», la puerta del grupo, la puerta del archivado, la marca de aproximado con su
    corrección del 1:1, el rótulo del hero de Estadísticas, el aviso de visita **y el resumen
    compartible del grupo**.
-7. **La tanda de QA: 48 tickets en `qa/`, y el guion solo cubre 22.** Entra
+8. **La tanda de QA: 48 tickets en `qa/`, y el guion solo cubre 22.** Entra
    **`fx-pnl-education-card`** (7-sep), y su device-QA **no es simulable**: la tarjeta de ganancia
    cambiaria sólo aparece con una cuenta multi-moneda con histórico real, y **ningún perfil de seed
    la produce** —son todos PEN—, así que su cobertura de UI es cero por construcción. Hace falta
@@ -152,21 +160,21 @@ conteo que 26.
    visita en SU store, su saldo inicial, y que el copy quepa en alemán y neerlandés (solo se vio en
    español). Guion en **`qa/guion-tanda.md`**. Los **17 sin montaje asignado** siguen en
    `qa-guion-tanda-no-cubre-17-tickets`.
-8. **La deuda FX del PR #84: el que gobernaba ya está cerrado.**
+9. **La deuda FX del PR #84: el que gobernaba ya está cerrado.**
    `fx-manual-writes-seal-approximate-as-final` pasa a `qa` (PR #94) — eran **catorce** sitios, no
    diez. Era la razón de que la marca de aproximado avisara menos de lo que debía, así que **ahora ya
    se puede probar la marca sin falsos negativos**, que era el motivo de ponerlo primero. Detrás
    siguen `fx-approximate-mark-missing-on-secondary-surfaces` y
    `fx-unknown-currency-code-collapses-to-usd`. Y por delante entra uno nuevo que pesa más que los
    dos: `repair-queue-has-no-exit-for-partial-rate-rows` (high), en el punto 3.
-9. **Diez worktrees comparten un solo simulador, y eso rompía el gate de UI sin que se notara.**
+10. **Diez worktrees comparten un solo simulador, y eso rompía el gate de UI sin que se notara.**
    Cerrado el diagnóstico (PR #96) y puesta una guardia que lo **detecta**, pero la contención sigue:
    la sesión que llega segunda al paso 3 espera a mano, sin saber cuánto, y de madrugada no hay nadie
    mirando. Tres opciones en `diez-worktrees-comparten-un-simulador`: **un simulador clonado por
    worktree** (cuesta disco: el device actual son 9,1 GB), **un `flock`** que haga esperar en vez de
    fallar (barato, pero serializa el gate de todos), o **dejarlo en la guardia**. Toca cómo trabajan
    todas las sesiones, así que no lo decide una.
-10. **Dos decisiones de la web**, sin cambios: el texto legal de Grupos (dice «vía iCloud» y el backend
+11. **Dos decisiones de la web**, sin cambios: el texto legal de Grupos (dice «vía iCloud» y el backend
    propio está al 100 % en prod) y si Vercel despliega al mergear. Y ratificar o revertir el botón «Más
    tarde» del invitado.
 
@@ -249,6 +257,20 @@ sigue sin `ok_`. **Cero `ok_` inventado.**
 
 ## Board
 
+**171 tickets · backlog 92 · qa 50 · blocked 3 · done 20 · discarded 5 · in-progress 1.**
+Recontado sobre disco el 8-sep en `2.1` tras mergear el PR #99: sale
+`chat-assistant-plants-exchange-rate-one` a `qa` y entran **cuatro** hallazgos, tres de su review
+adversarial y ninguno suyo — `chat-draft-drops-the-expense-sign` (**high**, el que más importa: un
+gasto dictado al chat suma al saldo en vez de restar), `chat-rows-sealed-before-the-fix-have-no-repair-path`,
+`exchange-rate-detail-shows-zero-for-low-denomination-currencies` y
+`fx-rate-derivation-threshold-reseals-one-to-one`. `docs/TICKETS.md` cuadra fila a fila y con su
+cabecera: **171 = 171 = 171**, cero huérfanos en ambas direcciones.
+
+**Y el conteo de la línea anterior estaba desviado en 2 antes de esta sesión** (declaraba 165 con 167
+en disco): entre aquel recuento y éste entraron dos tickets de otras ramas. La línea se vuelve a
+desviar en cuanto otra sesión mergea, así que **recuéntala, no la heredes.**
+
+Histórico del recuento anterior:
 **165 tickets · backlog 88 · qa 49 · blocked 3 · done 19 · discarded 5 · in-progress 1.**
 Recontado sobre disco el 8-sep tras cerrar la cola del reparador: sale
 `repair-queue-has-no-exit-for-partial-rate-rows` a `qa` y entran **tres** hallazgos de su review que
