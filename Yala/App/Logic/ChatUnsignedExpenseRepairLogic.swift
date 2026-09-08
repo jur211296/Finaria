@@ -75,6 +75,9 @@ enum ChatUnsignedExpenseRepairLogic {
         let categoryIsIncome: Bool?
         /// `createdAt`, que es lo que acota la ventana. **No `date`**: ver `isWithinWindow`.
         let createdAt: Date
+        /// `true` si esta fila se creó **a la vez que otras**, que es la firma de una importación.
+        /// Ver `batchFlags`. Una fila así no se toca, por decisión de Jürgen del 2026-09-08.
+        let isPartOfACreationBatch: Bool
         let balanceAdjustmentType: String?
         let transferPairID: String?
         let splitExpenseID: String?
@@ -85,6 +88,7 @@ enum ChatUnsignedExpenseRepairLogic {
             amount: Double,
             categoryIsIncome: Bool?,
             createdAt: Date,
+            isPartOfACreationBatch: Bool = false,
             balanceAdjustmentType: String? = nil,
             transferPairID: String? = nil,
             splitExpenseID: String? = nil,
@@ -94,6 +98,7 @@ enum ChatUnsignedExpenseRepairLogic {
             self.amount = amount
             self.categoryIsIncome = categoryIsIncome
             self.createdAt = createdAt
+            self.isPartOfACreationBatch = isPartOfACreationBatch
             self.balanceAdjustmentType = balanceAdjustmentType
             self.transferPairID = transferPairID
             self.splitExpenseID = splitExpenseID
@@ -155,7 +160,78 @@ enum ChatUnsignedExpenseRepairLogic {
         guard row.amount > 0 else { return false }
         guard row.categoryIsIncome == false else { return false }
         guard !row.hasSystemMarker else { return false }
+        guard !row.isPartOfACreationBatch else { return false }
         return isWithinWindow(createdAt: row.createdAt, sweepRunAt: sweepRunAt)
+    }
+
+    // MARK: - Los lotes de creación
+
+    /// Hueco máximo entre dos filas para considerarlas creadas «a la vez».
+    ///
+    /// Dos segundos, y el número sale de los dos lados que hay que separar:
+    /// - **El importador crea el lote entero sin `save()` intermedio** —su propio docblock lo dice:
+    ///   «No realiza `context.save()`. El llamador debe guardar después»— así que sus filas nacen en
+    ///   un bucle cerrado, con milisegundos entre una y la siguiente.
+    /// - **El chat exige un toque humano por fila.** `saveDraft` tiene un único llamador
+    ///   (`ChatAttachmentsView`), y es el `onSave` de UNA tarjeta: no hay «guardar todas». Entre dos
+    ///   gastos dictados hay, como mínimo, el tiempo de pulsar dos veces.
+    ///
+    /// Dos segundos deja fuera cualquier lote y solo alcanzaría a un usuario que pulsara «Guardar» en
+    /// dos tarjetas en menos de dos segundos. Ese caso se pierde a propósito: el encargo es no tocar
+    /// lo importado, así que se falla hacia no tocar.
+    static let batchTolerance: TimeInterval = 2
+
+    /// Marca, para cada fecha de entrada, si esa fila nació dentro de un **lote de creación**.
+    ///
+    /// **Por qué esto identifica una importación, y por qué es la señal que hay.** El 2026-09-08 se
+    /// midió que una fila importada por CSV es indistinguible campo a campo de una del chat: el
+    /// importador no deja rastro en defaults, no hay modelo de sesión de import, y construye el
+    /// `TransactionItem` con exactamente los mismos campos. Lo único que las separa es **cuántas
+    /// nacen a la vez** — y no es una ocurrencia: el propio importador reconoce así sus filas, con un
+    /// `importStart = Date.now` antes del bucle y un `filter { $0.createdAt >= importStart }` después,
+    /// para no confundirlas con las históricas.
+    ///
+    /// Se agrupa por **huecos encadenados**, no por ventana fija: un import de mil filas puede tardar
+    /// varios segundos en total, pero entre dos consecutivas nunca hay una pausa humana. Cortar por el
+    /// hueco captura el lote entero sin tener que adivinar su tamaño.
+    ///
+    /// **Hay que pasarle TODAS las filas del store, no solo las candidatas.** Un import trae gastos e
+    /// ingresos mezclados, y el vecino que delata el lote puede ser cualquiera de ellos: mirando solo
+    /// las positivas, un import de quinientas filas con tres candidatas parecería tres gastos sueltos.
+    ///
+    /// **Residual conocido:** un import de **una sola fila** no tiene vecino y es indistinguible de un
+    /// gasto dictado. No hay señal que lo separe.
+    ///
+    /// - Returns: un array **paralelo a la entrada**, en su mismo orden.
+    static func batchFlags(
+        createdAts: [Date],
+        tolerance: TimeInterval = batchTolerance
+    ) -> [Bool] {
+        guard createdAts.count > 1 else { return Array(repeating: false, count: createdAts.count) }
+
+        // Se ordenan los ÍNDICES, no las fechas, para poder devolver el resultado en el orden de
+        // entrada: quien llama empareja cada bandera con su fila por posición.
+        let ordered = createdAts.indices.sorted { createdAts[$0] < createdAts[$1] }
+        var flags = Array(repeating: false, count: createdAts.count)
+
+        var groupStart = 0
+        func closeGroup(endingAt end: Int) {
+            // Un grupo de uno es una fila solitaria: nadie nació con ella.
+            guard end - groupStart >= 1 else { return }
+            for position in groupStart...end { flags[ordered[position]] = true }
+        }
+
+        for position in 1..<ordered.count {
+            let previous = createdAts[ordered[position - 1]]
+            let current = createdAts[ordered[position]]
+            if current.timeIntervalSince(previous) > tolerance {
+                closeGroup(endingAt: position - 1)
+                groupStart = position
+            }
+        }
+        closeGroup(endingAt: ordered.count - 1)
+
+        return flags
     }
 
     /// Los dos montos ya firmados con los que debe quedar una fila reparada.

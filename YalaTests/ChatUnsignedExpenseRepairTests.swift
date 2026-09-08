@@ -407,6 +407,132 @@ struct ChatUnsignedExpenseRepairTests {
         #expect(defaults.bool(forKey: ChatUnsignedExpenseRepairService.repairSweepKey))
     }
 
+    // MARK: - Lo importado no se toca (decisión de Jürgen, 2026-09-08)
+
+    /// **Un lote de importación sobrevive entero.**
+    ///
+    /// Jürgen aceptó perder reembolsos, no lo importado por CSV. Como esas filas son indistinguibles
+    /// campo a campo de las del chat, lo que las separa es que **nacen a la vez**: el importador crea
+    /// el lote sin `save()` intermedio, mientras el chat exige un toque humano por fila.
+    ///
+    /// El escenario es el que de verdad se colaba: un CSV con años de historia importado DENTRO de la
+    /// ventana, cuyas filas toman como `createdAt` el instante del import.
+    @Test func importedBatchInsideTheWindow_survives() async throws {
+        let context = try makeTestContext()
+        let defaults = try makeIsolatedDefaults()
+        let preferred = CurrencyDefaults.currentPreferred
+
+        // Ocho filas creadas en 40 ms, con fechas de transacción repartidas por años — la firma de un
+        // import histórico. Tres son «gasto positivo», que es la forma que el barrido busca.
+        var imported: [TransactionItem] = []
+        for index in 0..<8 {
+            imported.append(
+                try insertTransaction(
+                    amount: index % 3 == 0 ? 45 : -20,
+                    categoryIsIncome: false,
+                    createdAt: insideWindow.addingTimeInterval(Double(index) * 0.005),
+                    date: beforeWindow.addingTimeInterval(-Double(index) * 60 * 60 * 24 * 200),
+                    context: context, preferred: preferred))
+        }
+
+        let repaired = ChatUnsignedExpenseRepairService.repairUnsignedChatExpensesIfNeeded(
+            context: context, defaults: defaults, now: sweepRunAt)
+
+        #expect(repaired == 0, "ninguna fila de un lote de importación debe tocarse")
+        for (index, row) in imported.enumerated() where index % 3 == 0 {
+            #expect(row.amount == 45.0)
+            #expect(row.amountInPreferredCurrency == 45.0)
+        }
+    }
+
+    /// **Y el gasto del chat que cae en medio de la ventana sí se cura**, que es la mitad que impide
+    /// satisfacer el filtro anterior no reparando nunca nada.
+    ///
+    /// Aquí conviven las dos poblaciones en el mismo store: un lote importado y un gasto dictado un
+    /// rato después. Solo el segundo se voltea.
+    @Test func chatExpenseIsStillRepairedAlongsideAnImportedBatch() async throws {
+        let context = try makeTestContext()
+        let defaults = try makeIsolatedDefaults()
+        let preferred = CurrencyDefaults.currentPreferred
+
+        for index in 0..<5 {
+            try insertTransaction(
+                amount: 45, categoryIsIncome: false,
+                createdAt: insideWindow.addingTimeInterval(Double(index) * 0.005),
+                context: context, preferred: preferred)
+        }
+        // Media hora después, un gasto dictado al chat: nace solo.
+        let dictated = try insertTransaction(
+            amount: 30, categoryIsIncome: false,
+            createdAt: insideWindow.addingTimeInterval(1800),
+            context: context, preferred: preferred)
+
+        let repaired = ChatUnsignedExpenseRepairService.repairUnsignedChatExpensesIfNeeded(
+            context: context, defaults: defaults, now: sweepRunAt)
+
+        #expect(repaired == 1, "solo el gasto dictado; el lote se queda como está")
+        #expect(dictated.amount == -30.0)
+        #expect(try liveBalance(in: context, preferred: preferred) == 45.0 * 5 - 30.0)
+    }
+
+    /// El lote se detecta con TODAS las filas del store, no solo con las candidatas.
+    ///
+    /// Un import real mezcla gastos e ingresos, y el vecino que delata el lote puede ser cualquiera:
+    /// si el barrido mirase solo las positivas, un import con **una sola** candidata entre muchas
+    /// filas parecería un gasto suelto y se colaría. Aquí la candidata está rodeada de ingresos.
+    @Test func aLoneCandidateInsideAnImportedBatch_isStillProtected() async throws {
+        let context = try makeTestContext()
+        let defaults = try makeIsolatedDefaults()
+        let preferred = CurrencyDefaults.currentPreferred
+
+        for index in 0..<6 {
+            try insertTransaction(
+                amount: 900, categoryIsIncome: true,
+                createdAt: insideWindow.addingTimeInterval(Double(index) * 0.005),
+                context: context, preferred: preferred)
+        }
+        let lone = try insertTransaction(
+            amount: 45, categoryIsIncome: false,
+            createdAt: insideWindow.addingTimeInterval(0.030),
+            context: context, preferred: preferred)
+
+        let repaired = ChatUnsignedExpenseRepairService.repairUnsignedChatExpensesIfNeeded(
+            context: context, defaults: defaults, now: sweepRunAt)
+
+        #expect(repaired == 0)
+        #expect(lone.amount == 45.0, "la rodean ingresos del mismo lote: sigue siendo importada")
+    }
+
+    /// La detección de lotes, contra la lógica pura: qué agrupa y qué no.
+    @Test func batchFlagsGroupsByChainedGaps() {
+        let t0 = Date(timeIntervalSince1970: 1_000_000)
+        func at(_ offset: TimeInterval) -> Date { t0.addingTimeInterval(offset) }
+
+        // Una sola fila nunca es lote: no hay con quién nacer a la vez.
+        #expect(ChatUnsignedExpenseRepairLogic.batchFlags(createdAts: [at(0)]) == [false])
+
+        // Dos separadas por más de la tolerancia son dos filas solitarias.
+        #expect(
+            ChatUnsignedExpenseRepairLogic.batchFlags(createdAts: [at(0), at(60)]) == [false, false])
+
+        // Encadenadas: cada hueco es menor que la tolerancia, así que las cinco son UN lote aunque
+        // entre la primera y la última pasen más de dos segundos. Es lo que hace un import grande.
+        #expect(
+            ChatUnsignedExpenseRepairLogic.batchFlags(
+                createdAts: [at(0), at(1.5), at(3), at(4.5), at(6)]) == [true, true, true, true, true])
+
+        // El orden de entrada no importa: el resultado va emparejado a la posición de cada fecha.
+        #expect(
+            ChatUnsignedExpenseRepairLogic.batchFlags(
+                createdAts: [at(100), at(0), at(0.1)]) == [false, true, true])
+
+        // Dos lotes separados por una pausa humana, con una fila suelta entre medias.
+        #expect(
+            ChatUnsignedExpenseRepairLogic.batchFlags(
+                createdAts: [at(0), at(0.2), at(600), at(1200), at(1200.3)])
+                == [true, true, false, true, true])
+    }
+
     // MARK: - Lo que el pre-filtro tapaba
 
     /// **El criterio, por separado del `#Predicate`.**

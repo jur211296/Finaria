@@ -67,23 +67,22 @@ enum ChatUnsignedExpenseRepairService {
             return 0
         }
 
-        // El predicado es SOLO un pre-filtro barato, y deliberadamente más ancho que el criterio: la
-        // decisión de qué fila se voltea la toma entera `ChatUnsignedExpenseRepairLogic.isCandidate`.
-        //
-        // La ventana estaba también aquí y se quitó el 2026-09-08 tras medirlo: con el acotado
-        // duplicado, los tests que exigen que un reembolso de fuera de la ventana sobreviva pasaban
-        // por ESTE filtro y no por el criterio, así que un mutante que borrase la ventana de
-        // `isCandidate` los dejaba VERDES. Dos implementaciones del mismo criterio no solo se
-        // desincronizan: esconden cuál de las dos manda cuando llega el rojo.
-        //
-        // La categoría tampoco entra: es una relación OPCIONAL, y un `#Predicate` que navega una
-        // relación así es terreno resbaladizo en SwiftData — el mismo motivo por el que el reparador
-        // de tasas deja su comparación de divisas fuera del predicado.
-        let descriptor = FetchDescriptor<TransactionItem>(
-            predicate: #Predicate { $0.amount > 0 }
-        )
-
         do {
+            // **Un solo fetch, sin predicado, y `isCandidate` decide todo.** Dos razones, medidas:
+            //
+            // 1. La detección de lotes necesita **todas** las filas, no solo las positivas. Un import
+            //    trae gastos e ingresos mezclados, y el vecino que delata el lote puede ser cualquiera:
+            //    con un predicado `amount > 0`, un import de quinientas filas con tres candidatas
+            //    parecería tres gastos sueltos y se colaría entero.
+            // 2. Un pre-filtro que repite una condición del criterio **la deja sin probar**. Pasó dos
+            //    veces en este fichero —primero con la ventana, después con `amount > 0`— y las dos
+            //    un mutante que borraba el guard de `isCandidate` dejaba la suite VERDE, porque el
+            //    fetch ya había excluido esas filas. Sin predicado no hay dos sitios que discrepen.
+            //
+            // El coste es traer las transacciones una vez, en un barrido que corre una vez por
+            // dispositivo y ya está detrás del gate de quiescencia.
+            let all = try context.fetch(FetchDescriptor<TransactionItem>())
+
             // **El flag no se quema sobre un store que todavía no tiene el corpus.**
             //
             // `awaitPersonalStoreReady()` contesta «¿es seguro guardar?», no «¿han llegado ya los
@@ -98,8 +97,7 @@ enum ChatUnsignedExpenseRepairService {
             //
             // Un store sin NINGUNA transacción no puede contener el corpus, así que el barrido no ha
             // podido hacer su trabajo y se reintenta. El coste en un usuario nuevo de verdad es un
-            // `fetchCount` sobre un store vacío por arranque, hasta que registre su primera
-            // transacción; entonces el barrido corre y el flag se marca.
+            // fetch sobre un store vacío por arranque, hasta que registre su primera transacción.
             //
             // Copiar el re-chequeo de quiescencia que hace `migrateToLiveBalanceIfNeeded` NO cerraría
             // esto: en las dos ramas de escape el store SÍ está quiescente. Lo que falta no es
@@ -108,28 +106,34 @@ enum ChatUnsignedExpenseRepairService {
             // El reparador de tasas del que este barrido copia la forma tiene el mismo punto ciego
             // (`TransactionUpdateService.swift:82-83`). Allí una fila que se escape conserva una tasa
             // 1:1 sellada; aquí infla el saldo para siempre, así que aquí sí compensa cerrarlo.
-            guard try context.fetchCount(FetchDescriptor<TransactionItem>()) > 0 else {
+            guard !all.isEmpty else {
                 #if DEBUG
                 print("ChatUnsignedExpenseRepairService: store sin transacciones; se reintenta en el próximo arranque")
                 #endif
                 return 0
             }
 
-            let candidates = try context.fetch(descriptor).filter {
+            // Las banderas de lote se calculan sobre el store ENTERO y antes de filtrar nada, que es
+            // lo que las hace fiables. Ver `batchFlags`.
+            let batched = ChatUnsignedExpenseRepairLogic.batchFlags(
+                createdAts: all.map { $0.createdAt })
+
+            let candidates = zip(all, batched).filter { transaction, isBatched in
                 ChatUnsignedExpenseRepairLogic.isCandidate(
                     ChatUnsignedExpenseRepairLogic.RowFacts(
-                        amount: $0.amount,
-                        categoryIsIncome: $0.category?.isIncome,
-                        createdAt: $0.createdAt,
-                        balanceAdjustmentType: $0.balanceAdjustmentType,
-                        transferPairID: $0.transferPairID,
-                        splitExpenseID: $0.splitExpenseID,
-                        splitSettlementID: $0.splitSettlementID,
-                        scheduledPaymentID: $0.scheduledPaymentID
+                        amount: transaction.amount,
+                        categoryIsIncome: transaction.category?.isIncome,
+                        createdAt: transaction.createdAt,
+                        isPartOfACreationBatch: isBatched,
+                        balanceAdjustmentType: transaction.balanceAdjustmentType,
+                        transferPairID: transaction.transferPairID,
+                        splitExpenseID: transaction.splitExpenseID,
+                        splitSettlementID: transaction.splitSettlementID,
+                        scheduledPaymentID: transaction.scheduledPaymentID
                     ),
                     sweepRunAt: now
                 )
-            }
+            }.map { $0.0 }
 
             for transaction in candidates {
                 let repaired = ChatUnsignedExpenseRepairLogic.repairedAmounts(

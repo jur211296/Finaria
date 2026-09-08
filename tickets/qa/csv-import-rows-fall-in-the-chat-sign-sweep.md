@@ -1,6 +1,6 @@
 ---
 id: csv-import-rows-fall-in-the-chat-sign-sweep
-status: backlog
+status: qa
 priority: high
 area: "data, import"
 created: 2026-09-08
@@ -68,6 +68,60 @@ admite dictar «un café en marzo» y un CSV puede traer fechas recientes.
 
 ## Criterio de hecho (AC)
 
-- [ ] Decisión de Jürgen sobre las tres salidas.
-- [ ] Si se acota: criterio nuevo con test que fije qué sobrevive.
+- [x] Decisión de Jürgen sobre las tres salidas.
+- [x] Si se acota: criterio nuevo con test que fije qué sobrevive.
 - [ ] Ticket aparte para que el importador estampe `createdAt` y valide la naturaleza de la categoría.
+
+---
+
+# Resuelto: el barrido no toca lo importado (2026-09-08)
+
+## Decisión de Jürgen
+
+**Acotar: el barrido no debe tocar filas importadas por CSV.**
+
+## La señal, y por qué existe pese a lo que decía este ticket
+
+Este ticket afirmaba que no hay forma de separarlas, y **campo a campo es cierto**: no hay modelo de
+sesión de import, el importador no deja nada en `UserDefaults` y construye el `TransactionItem` con
+exactamente los mismos campos que el chat. Lo que sí las separa es **cuántas nacen a la vez**:
+
+- **El importador crea el lote entero sin `save()` intermedio** — su propio docblock lo dice: «No
+  realiza `context.save()`. El llamador debe guardar después». Sus filas nacen en un bucle cerrado,
+  con milisegundos entre una y la siguiente.
+- **El chat exige un toque humano por fila.** `ChatAssistantViewModel.saveDraft` tiene un **único**
+  llamador (`ChatAttachmentsView`), y es el `onSave` de UNA tarjeta: no hay «guardar todas».
+
+Y no es una ocurrencia: **el propio importador ya reconoce así sus filas**, con un
+`importStart = Date.now` antes del bucle y un `filter { $0.createdAt >= importStart }` después, para
+no confundirlas con las históricas al emparejar transferencias.
+
+## Cómo quedó
+
+`ChatUnsignedExpenseRepairLogic.batchFlags` agrupa por **huecos encadenados** (tolerancia 2 s) sobre
+**todas** las filas del store, y una fila que pertenezca a un grupo de dos o más queda fuera del
+barrido. Se agrupa por hueco y no por ventana fija porque un import de mil filas tarda varios segundos
+en total, pero entre dos consecutivas nunca hay una pausa humana.
+
+**Hay que pasarle todas las filas, no solo las candidatas**, y esto es lo que más fácil se hace mal: un
+import mezcla gastos e ingresos, así que mirando solo las positivas un import de quinientas filas con
+tres candidatas parecería tres gastos sueltos. Hay un test justo para eso
+(`aLoneCandidateInsideAnImportedBatch_isStillProtected`).
+
+De paso, el pre-filtro del fetch desapareció: ahora hay **un solo fetch sin predicado** y el criterio
+es la única autoridad. Eso cierra a la vez la duplicación que ya había dejado dos condiciones sin
+probar en este mismo fichero.
+
+## Residual conocido
+
+**Un import de una sola fila no tiene vecino y es indistinguible de un gasto dictado.** No hay señal
+que lo separe. Y un usuario que pulsara «Guardar» en dos tarjetas del chat en menos de dos segundos
+perdería esas dos: se falla hacia no tocar, que es lo que pidió la decisión.
+
+## Verificación
+
+Dos controles positivos por mutación, uno por cada lado del acotado:
+
+- Quitar el guard del lote pone en rojo los tres casos de importación.
+- Hacer que **todo** cuente como lote pone en rojo siete, incluido el caso principal — que es lo que
+  impide satisfacer el acotado dejando de curar nada.

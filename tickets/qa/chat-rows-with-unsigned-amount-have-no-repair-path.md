@@ -191,6 +191,16 @@ pasando** — el barrido no llega a pisar el fixture porque antes espera `awaitP
 el test termina en ~15 s. Así que el gate no arregla un rojo: evita que ese verde dependa de ganar
 una carrera contra un gate de hasta 120 s, cuyo fallo sería intermitente.
 
+## Lo importado por CSV queda fuera (decisión de Jürgen, 2026-09-08)
+
+Al medir el daño colateral apareció que el criterio alcanzaba también a lo importado por CSV, más
+ancho de lo que se había aceptado. Jürgen decidió **acotar: el barrido no toca filas importadas**.
+
+Campo a campo son indistinguibles de las del chat, pero **nacen a la vez**: el importador crea el lote
+sin `save()` intermedio, mientras el chat exige un toque humano por fila. `batchFlags` agrupa por
+huecos encadenados sobre **todas** las filas del store y deja fuera a las que tienen compañía.
+Detalle, residuales y verificación en `csv-import-rows-fall-in-the-chat-sign-sweep`.
+
 ## Residual del criterio: las filas sin categoría se saltan
 
 Una fila del chat cuya categoría se haya **borrado** llega con `category == nil` —la relación es
