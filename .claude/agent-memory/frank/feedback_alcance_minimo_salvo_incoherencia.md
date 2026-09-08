@@ -80,3 +80,24 @@ su decisión nombra es lo que espera por defecto; lo que sigue siendo suyo es am
 La obligación que queda es de transparencia, no de permiso: **la cifra que no casaba y el porqué van
 escritos en el commit**, para que pueda contradecirme leyendo el diff en vez de teniendo que
 reconstruir lo que medí.
+
+## La firma del helper es el corte, y sale gratis (2026-09-08, PR #106)
+
+Un caso donde las dos familias se separaban solas, sin criterio blando. El ticket señalaba **un**
+sitio: `DraftBuilder.suggestSubcategory` no filtraba por naturaleza. El barrido encontró **seis**
+instancias del mismo patrón, y el corte lo dio la firma:
+
+- **Tres pasaban por el helper** (chat, Siri, visión). Añadirle el parámetro `isExpense` **obliga** a
+  tocar los tres: no es ampliar, es que el compilador no te deja dejarlos. Entraron, y con ellos un
+  agravante que solo se ve al editar el sitio —en Siri el modo «solo gastos» forzaba el tipo
+  DESPUÉS de elegir la subcategoría, así que el desajuste salía incluso por la vía buena—.
+- **Tres llamaban al servicio de abajo** (`MerchantMemoryService.suggest`) sin pasar por el helper:
+  Apple Pay, la voz y el prefill de la hoja de la Bandeja. Ésos no los toca la firma, son otras
+  superficies con su propia UI. **Ticket propio.**
+
+**How to apply:** en un fix de helper compartido, la pregunta «¿esto entra?» tiene respuesta
+mecánica: *¿lo obliga la firma que estoy cambiando?* Si sí, entra y se dice en el commit («son tres
+ficheros porque cambiar la firma obliga a sus tres llamadores, no por ampliar»). Si llama un nivel
+más abajo, es otro objeto y va a ticket. Y al escribir ese ticket, deja dentro la decisión que
+quedó abierta —aquí, si el filtro debe subir al servicio, un sitio con seis llamadores— en vez de
+darla por hecha.

@@ -4,7 +4,7 @@ status: backlog
 priority: high
 area: "proceso"
 created: 2026-09-08
-source: medido de camino en chat-draft-sign-can-contradict-its-subcategory (2026-09-08)
+source: medido el 2026-09-05; escalado a ticket el 2026-09-08 al colarse un commit real
 ---
 
 # El candado que prohíbe atribuir un commit a una IA no está puesto en Yala
@@ -16,10 +16,23 @@ porque hay un hook `commit-msg` global que la impone. En este repo ese hook **no
 razón de que el historial esté limpio desde el 2026-09-02 es que las sesiones se han acordado.
 
 El 2026-09-08 una sesión commiteó con `Co-Authored-By: … <noreply@anthropic.com>` y el hook no dijo
-nada. Se detectó al revisar el mensaje contra los commits vecinos y se corrigió con `--amend` antes
-de subir nada, así que no hay daño en el historial — pero la próxima vez puede no detectarse.
+nada. Se detectó al comparar el mensaje con los commits vecinos —ninguno de los últimos lo lleva— y
+se corrigió con `--amend` antes de subir nada, así que no hay daño en el historial: el último commit
+con atribución sigue siendo `f09689b2`, del 2026-09-02. Pero la detección dependió de mirar, y eso
+no se puede prometer.
 
-## Por qué no corre (medido el 2026-09-08, en este árbol)
+## La cronología importa, y no deja bien al método
+
+**Esto se midió el 2026-09-05** y quedó anotado — en la memoria del agente, que es un sitio que solo
+lee él. El 2026-09-08 la misma sesión que tenía la nota delante commiteó igualmente con el trailer:
+la instrucción por defecto de la herramienta pide ponerlo, y en el instante de redactar el mensaje
+ganó ella. Se corrigió con `--amend` antes de subir nada.
+
+O sea que el fallo tiene **dos capas**, y la segunda es la que crea este ticket: el candado no está
+puesto, y saberlo no bastó. Una nota que solo evita el error cuando alguien se acuerda de leerla es
+justo lo que ADR-013 dice que no quiere. Por eso pasa de nota privada a ticket del repo.
+
+## Por qué no corre (medido el 2026-09-05, re-comprobado el 2026-09-08 en este árbol)
 
 `core.hooksPath` no es acumulativo: **el valor local gana y sustituye al global**, no se fusionan.
 
