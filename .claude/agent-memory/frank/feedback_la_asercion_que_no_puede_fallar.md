@@ -38,6 +38,22 @@ completa. El caso entero se colapsó en el primero: menos aserciones, y una llam
 - Sospecha de la aserción que copiaste de otro fichero: si el escenario es el mismo, la cobertura ya
   existe allí y aquí solo añade ruido.
 
+**Y hay un tercer eslabón, medido el 2026-09-08 en `chat-rows-with-unsigned-amount-have-no-repair-path`:
+el mutante puede salir rojo, la aserción estar viva, y aun así estar demostrando OTRA COSA — porque el
+ESCENARIO que monta el test no es el de producción.**
+
+Justifiqué el filtro de marcadores de un barrido diciendo que sin él «el saldo inicial de las cuentas
+se voltearía a −500». Escribí el test, corrí el mutante, salió rojo justo en ese caso y en ningún
+otro. Parecía la demostración perfecta. Era falsa: `InitialBalanceService` **nunca asigna `category`**,
+así que en producción esas filas ni entran al criterio — se salvan por otro guard, tres líneas antes.
+Mi test montaba la fila con una categoría explícita porque mi helper la ponía siempre. El rojo era
+real; lo que probaba era mi helper, no el mundo.
+
+⇒ **Un mutante en rojo demuestra que el test distingue dos versiones del CÓDIGO. No demuestra que el
+caso exista.** Cuando el rojo sea la prueba de una afirmación sobre producción («esta fila real caería
+en el criterio»), hay que verificar aparte que el fixture **se construye como lo construye producción**
+— y la vía barata es leer el sitio que la crea y comparar campo a campo con el helper del test.
+
 Relacionado: [[mi-docblock-tambien-es-una-premisa]] — el mensaje de un `#expect` es un docblock más, y
 el mío afirmaba algo falso sobre producción. Y [[mutante-compilado-zanja-hipotesis]], que sigue siendo
 la herramienta buena: lo que esta memoria acota es **qué** demuestra exactamente.
