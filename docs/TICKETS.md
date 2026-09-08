@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (150)
+## Index (151)
 
 | id | status | path |
 |----|--------|------|
@@ -48,6 +48,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | ci-suite-simulador-duplicada-y-allowlist-incompleta | done | tickets/done/ci-suite-simulador-duplicada-y-allowlist-incompleta.md |
 | ci-verde-con-la-suite-en-rojo | done | tickets/done/ci-verde-con-la-suite-en-rojo.md |
 | ci-warns-but-does-not-block | backlog | tickets/backlog/ci-warns-but-does-not-block.md |
+| ci-workflow-cites-missing-testing-strategy | backlog | tickets/backlog/ci-workflow-cites-missing-testing-strategy.md |
 | cloud-fx-rates-blob-two-faces | qa | tickets/qa/cloud-fx-rates-blob-two-faces.md |
 | cloud-tx-epoch-orphan-relations | backlog | tickets/backlog/cloud-tx-epoch-orphan-relations.md |
 | creategroup-throw-after-commit-loses-owner | backlog | tickets/backlog/creategroup-throw-after-commit-loses-owner.md |
@@ -59,7 +60,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | distribution-balance-kpi-skips-fx | qa | tickets/qa/distribution-balance-kpi-skips-fx.md |
 | doble-conteo-dia1-previo-thismonth | done | tickets/done/doble-conteo-dia1-previo-thismonth.md |
 | edgecases-extreme-minimum-flaky-under-load | backlog | tickets/backlog/edgecases-extreme-minimum-flaky-under-load.md |
-| el-job-de-tests-del-ci-no-tiene-timeout | backlog | tickets/backlog/el-job-de-tests-del-ci-no-tiene-timeout.md |
+| el-job-de-tests-del-ci-no-tiene-timeout | done | tickets/done/el-job-de-tests-del-ci-no-tiene-timeout.md |
 | el-saldo-de-distribucion-no-se-entera-de-un-registro-nuevo | backlog | tickets/backlog/el-saldo-de-distribucion-no-se-entera-de-un-registro-nuevo.md |
 | entitlement-sync-forzado-es-noop-si-hay-otro-en-vuelo | backlog | tickets/backlog/entitlement-sync-forzado-es-noop-si-hay-otro-en-vuelo.md |
 | exportable-insights | backlog | tickets/backlog/exportable-insights.md |
@@ -183,7 +184,21 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | yala-android | backlog | tickets/backlog/yala-android.md |
 | zone-decisions-still-per-row | backlog | tickets/backlog/zone-decisions-still-per-row.md |
 
-Counts by folder: backlog 76 · in-progress 1 · qa 46 · blocked 2 · done 16 · discarded 5 = 146. *(Recontados sobre disco el 2026-09-07 por la sesión de `groups-budget`, que aporta dos de los cambios: `groups-budget` pasa a in-progress y entran `gateway-typecheck-roto-y-fuera-del-ci`, `groups-stats-no-deduplica-gastos` y `groups-canal-sin-capability-set` (los dos ultimos, hallazgos de su review adversarial que no son suyos). Los otros tres —qa 44 → 46, backlog 72 → 74— ya estaban en disco y no en esta línea: los dejó la sesión del resumen compartible. La tabla de arriba SÍ cuadra fila a fila con el disco, 144 y 144; esta línea era, otra vez, la única desviada.)*
+Counts by folder: backlog 79 · in-progress 1 · qa 47 · blocked 2 · done 17 · discarded 5 = 151. *(Recontados sobre disco el 2026-09-07 por la sesión del timeout del CI, que aporta dos de los cambios: `el-job-de-tests-del-ci-no-tiene-timeout` pasa a done y entra `ci-workflow-cites-missing-testing-strategy` (hallazgo de camino, no suyo). Los otros cinco se midieron contra git en vez de suponerlos —`git diff --diff-filter=A bb90564a HEAD -- tickets/`—: son las cuatro altas de la review de `fx-pnl-education-card` más el propio `fx-pnl-education-card` pasando a `qa/`. La cuenta cierra: 146 + 4 + 1 = 151. **Esta línea lleva tres sesiones siendo la única desviada mientras la tabla de arriba cuadra fila a fila** — se recalcula sola con un `find`, así que el problema no es medirla sino acordarse.)*
+
+Frank 2026-09-07 (timeout del CI + UI a nocturna): la suite entera de UI sale del PR y pasa a una
+corrida nocturna sobre `2.1`; el PR se queda con build + unit y **ya tiene tope de tiempo**, que era el
+agujero del ticket: sin `timeout-minutes`, GitHub aplica su default de 360 min, así que un cuelgue real
+era indistinguible de una corrida lenta y nadie se enteraba hasta las seis horas. **La cifra del ticket
+se volvió a medir y estaba corta**: decía «~80 min de media» sobre 4 runs; sobre 39 runs y leyendo los
+tiempos POR PASO, la mediana del job es 89 min y el paso de UI se lleva 67 de ellos — el 76 % del reloj.
+El PR baja a ~22 min. Topes: 45 min el job en un PR (1,5× el máximo medido de build+unit), 150 en la
+nocturna, más uno por paso. **Un hallazgo de camino sale a ticket propio**
+(`ci-workflow-cites-missing-testing-strategy`): el workflow manda tres veces a `TESTING-STRATEGY.md`,
+que no está en el repo desde que se retiró el espejo de `.planning/` y vive en el vault que `CLAUDE.md`
+declara no-SSOT. Y lo que casi rompo sin que nadie lo pidiera: `outcome` vale `skipped` tanto para
+«saltado a propósito» como para «no llegó a correr», así que saltar la UI en los PR habría hecho que el
+aviso gritara «la suite NO llegó a correr» en cada uno — se distingue ahora con `UI_TOCABA`.
 
 Frank 2026-09-06 (decisiones): Jürgen respondió en una sentada las **seis** decisiones de producto que tenían
 tickets parados sin código que escribir; cada una está en su ticket bajo «Decisión Jürgen (2026-09-06)», con

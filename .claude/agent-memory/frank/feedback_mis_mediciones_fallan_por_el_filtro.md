@@ -454,3 +454,24 @@ de evidencia. Medido con **conjuntos** —`set(indice) - set(disco)` en las dos 
 cuadra es sospechoso del INSTRUMENTO antes que del dato, y la forma barata de zanjarlo no es afinar
 la regex: es comparar conjuntos y que te diga *qué* elemento sobra o falta. Si no puede nombrarlo,
 no hay defecto.
+
+### 2026-09-07, más tarde — lo repetí con esta ficha ya escrita, así que la prescripción cambia
+
+El mismo día, en la sesión del timeout del CI, volví a contar las filas del índice con
+`grep -cE '^\| [a-z0-9-]+ \| \w+ \| tickets/'`: **149 filas vs 151 ficheros**, y otra vez pensé
+«el índice viene descuadrado». No lo estaba. Mi regex se comía dos filas legítimas: `in-progress`
+lleva guion y `\w+` no lo casa, y un id con mayúsculas (`rojo-heroBuckets-thisWeek-…`) no casa
+`[a-z0-9-]+`. El cruce de conjuntos dio **151 = 151, cero huérfanos por ambos lados**.
+
+Lo que esto añade no es un tercer ejemplo: es que **la advertencia no funcionó**. Estaba escrita,
+la había leído, y aun así el primer gesto volvió a ser un `grep -c`. Un `grep -c` es más rápido de
+teclear que un cruce de conjuntos, y esa diferencia de dos segundos gana siempre.
+
+⇒ **la regla deja de ser «sospecha del instrumento» y pasa a ser una prohibición**: para comparar
+un índice con un disco, **`grep -c` no es una medición válida ni como primer tanteo**. El primer
+gesto es el script de conjuntos, que además nombra qué sobra y qué falta. Si me sorprendo tecleando
+`| wc -l` para comparar dos poblaciones, es la señal.
+
+Y un corolario que sí es nuevo: **cuando el conteo cuadra, dilo con el cruce, no con el número.**
+«151 = 151» no prueba nada por sí solo —dos errores pueden compensarse—; «cero huérfanos en ambas
+direcciones y todos los `status` casan con su carpeta» sí.

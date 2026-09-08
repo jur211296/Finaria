@@ -9,6 +9,37 @@ on:
   push:
     branches: ["2.1", "1.0"]
   pull_request:
+  # La suite de UI entera NO corre en el PR: corre aqui, una vez al dia sobre `2.1`
+  # (decision del owner, 2026-09-06). El PR tiene que dar senal dentro de una sesion de
+  # trabajo y no la daba — medido sobre 39 runs con la suite ejecutada (2026-09-06/07):
+  # el job entero tardaba 89 min de mediana y el paso de UI se llevaba 67 de ellos, asi
+  # que el check no cerraba nunca a tiempo y el patron real era mergear sin esperarlo.
+  # Sin el paso de UI el PR baja a ~22 min. La cobertura no se pierde, se mueve: el gate
+  # local ya corre los XCUITest de las areas tocadas antes de cada commit (paso 3 de
+  # `/gate`, cruzando el diff contra los `codeGlobs` de `qa/coverage-index.json`), y esto
+  # cubre la suite COMPLETA a diario.
+  #
+  # `schedule` corre sobre la rama por defecto del repositorio y no se puede elegir otra;
+  # aqui la rama por defecto ES `2.1` (comprobado el 2026-09-07 con
+  # `gh api repos/jur211296/Yala --jq .default_branch`), que es justo lo que se queria. Si
+  # algun dia se cambia la rama por defecto, esta corrida se muda con ella sin avisar.
+  #
+  # El minuto 17 no es decorativo: los cron en punto son los mas congestionados de GitHub
+  # y es cuando mas se retrasa el disparo. 08:17 UTC = 03:17 en Lima (UTC-5 todo el ano,
+  # Peru no cambia la hora), asi que el resultado esta listo antes de que empiece el dia.
+  #
+  # UN APAGADO SILENCIOSO QUE CONVIENE CONOCER: en un repositorio PUBLICO —y este lo es,
+  # comprobado el 2026-09-07— GitHub deshabilita solo los workflows programados cuando el
+  # repo pasa **60 dias sin actividad**. Con la cadencia de hoy no va a ocurrir, pero si
+  # algun dia esta corrida deja de aparecer sin que nadie la haya tocado, mirar ahi antes
+  # que en el YAML: se reactiva desde Actions, o con `gh workflow enable qa.yml`.
+  schedule:
+    - cron: '17 8 * * *'
+  # Para poder lanzar la nocturna a mano sin esperar a la noche — que es como se verifica
+  # que funciona. Un dispatch manual corre EXACTAMENTE lo mismo que la nocturna, UI
+  # incluida: si lo que quieres es repetir el CI normal de un commit, `gh run rerun`
+  # conserva el evento original y no se traga la hora larga de UI.
+  workflow_dispatch:
 
 jobs:
   # Barato y rápido: valida el SSOT de cobertura + el ratchet anti-drift.
@@ -146,6 +177,54 @@ jobs:
     # así que la suite corre igual. Solo un 'false' explícito la salta.
     if: ${{ !cancelled() && needs.changes.outputs.run_tests != 'false' }}
     runs-on: macos-26
+    # ------------------------------------------------------------------------------
+    # TOPES DE TIEMPO (2026-09-07). Sin `timeout-minutes` GitHub aplica su default de
+    # **360 minutos**, y este job no tenia ninguno: ni aqui ni a nivel de workflow. El
+    # problema que eso creaba no era el gasto sino el DIAGNOSTICO — un cuelgue real era
+    # indistinguible de una corrida lenta, y nadie se enteraba hasta las seis horas.
+    #
+    # Los numeros salen de medir, no de estimar: 39 runs con la suite ejecutada
+    # (2026-09-06/07), tiempos por PASO leidos de la API de Actions.
+    #
+    #   paso / conjunto          mediana    p95     max   tope
+    #   Build for testing            9,7   11,9    13,7     25
+    #   Unit pure-logic              8,9   13,2    17,0     30
+    #   Unit context-based           2,4    3,1     3,5     10
+    #   UI (solo nocturna)          67,2   75,5    76,2    110
+    #   JOB en un PR (sin UI)       21,6   27,2    29,9     45
+    #   JOB en la nocturna          88,9   99,5   101,7    150
+    #
+    # Los topes de JOB son ~1,5x el maximo observado; los de PASO, ~1,4-1,8x. Se ha
+    # tirado hacia lo holgado a proposito: el coste de un tope generoso es una hora de
+    # runner, y el de uno ceñido es cortar corridas sanas — que es como se acaba
+    # quitando el tope y volviendo al punto de partida.
+    #
+    # POR QUE TAMBIEN EN CADA PASO, y no solo en el job. Los dos topes cortan, pero NO
+    # producen el mismo desenlace, y la diferencia esta en el codigo del runner
+    # (`StepsRunner.RunStepAsync` + `ExecutionContext.ApplyContinueOnError`, verificado el
+    # 2026-09-07 contra `actions/runner` en `main`):
+    #
+    #   · Tope de PASO agotado ⇒ el paso queda `Failed`. `continue-on-error` SI rescata
+    #     eso: lo pinta de `Succeeded` dejando `outcome: failure`, el job sigue con los
+    #     pasos siguientes con normalidad y el aviso de abajo lo lee y lo cuenta.
+    #   · Tope de JOB agotado ⇒ es una CANCELACION, no un fallo. `ApplyContinueOnError`
+    #     abre con `if (Result != TaskResult.Failed) return;`, asi que **no rescata una
+    #     cancelacion**: el paso en curso muere cancelado y el job entero se va con el.
+    #
+    # Los pasos con `if: always()` SI corren en ese segundo caso —el servidor re-evalua
+    # las condiciones de los pasos pendientes y solo cancela los que dan `false`—, pero
+    # contra una ventana de 5 minutos y con el job ya perdido. (Esto ultimo se comprobo
+    # justo porque la primera version de este comentario afirmaba lo contrario: que el
+    # aviso no llegaria. Era una inferencia, y la fuente la desmiente.)
+    #
+    # ⇒ los topes de PASO son el corte bueno: dicen QUE se colgo y dejan el job vivo para
+    # contarlo. El del JOB es la red de debajo, para lo que se cuelgue fuera de estos
+    # cuatro pasos, y su desenlace es mas tosco a proposito.
+    #
+    # `timeout-minutes` admite una expresion (comprobado con actionlint 1.7.12, que
+    # rechaza el texto plano con «expecting a single ${{...}} expression or float number
+    # literal»), y es lo que deja tener UN solo job en vez de dos casi identicos.
+    timeout-minutes: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 150 || 45 }}
     # Los tests de intervalos construyen sus expectativas con un calendario fijado a
     # America/Lima, pero el SSOT que comparan (`DetailPeriod.dateInterval`) resuelve sus
     # fechas con `userConfiguredCalendar()` = `Calendar.current`. En la Mac del owner las
@@ -171,6 +250,13 @@ jobs:
     # aplicarlo es exactamente el modo de fallo que este bloque arregla.
     env:
       TEST_RUNNER_TZ: America/Lima
+      # Unica fuente de «esta corrida lleva UI». La gobierna el paso de UI (`if:`) y la
+      # lee el paso de aviso para no confundir «saltado a proposito» con «no llego a
+      # correr» — dos cosas que en `steps.<id>.outcome` se llaman IGUAL: `skipped`.
+      # La condicion aparece dos veces en el fichero (aqui y en `timeout-minutes` del
+      # job) porque el tope del job se evalua antes de que exista `env`. Si cambia una,
+      # cambia la otra.
+      UI_TOCABA: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     steps:
       - uses: actions/checkout@v4
       - name: Seleccionar Xcode (latest-stable 26.x)
@@ -183,6 +269,7 @@ jobs:
       - name: Crear Secrets.xcconfig (placeholder para CI)
         run: cp Secrets.xcconfig.template Secrets.xcconfig
       - name: Build for testing
+        timeout-minutes: 25
         run: |
           xcodebuild build-for-testing \
             -scheme "Yala Dev" \
@@ -199,6 +286,7 @@ jobs:
       - name: Unit tests (YalaTests pure-logic) — advisory (flaky crash SwiftData in-memory; ver Lista Negra)
         id: unit_pure
         continue-on-error: true
+        timeout-minutes: 30
         run: |
           xcodebuild test-without-building \
             -scheme "Yala Dev" \
@@ -221,6 +309,7 @@ jobs:
       - name: Unit tests (YalaTests context-based) — advisory (SwiftData insert-trap flaky; ver Lista Negra)
         id: unit_context
         continue-on-error: true
+        timeout-minutes: 10
         run: |
           xcodebuild test-without-building \
             -scheme "Yala Dev" \
@@ -236,9 +325,19 @@ jobs:
             -derivedDataPath .ddp \
             -parallel-testing-enabled NO \
             -retry-tests-on-failure
-      - name: UI tests (YalaUITests) — advisory (flaky en runner frío, ver Lista Negra)
+      # SOLO EN LA NOCTURNA (2026-09-06, decision del owner). La suite entera de UI, sin
+      # paralelismo y con reintentos, tarda 67 min de mediana y 76 en el peor caso medido:
+      # es el 76 % del reloj del job y la razon por la que el check de un PR no cerraba
+      # dentro de una sesion de trabajo. En un PR este paso queda `skipped` a proposito.
+      #
+      # Lo que cubre el hueco en el PR es el gate local, que corre los XCUITest de las
+      # areas TOCADAS antes de cada commit; aqui se corre la suite COMPLETA cada noche.
+      # Sigue siendo advisory, por lo mismo que los dos de arriba.
+      - name: UI tests (YalaUITests) — solo nocturna · advisory (flaky en runner frío, ver Lista Negra)
         id: ui
+        if: ${{ env.UI_TOCABA == 'true' }}
         continue-on-error: true
+        timeout-minutes: 110
         run: |
           xcodebuild test-without-building \
             -scheme "Yala Dev" \
@@ -269,6 +368,7 @@ jobs:
           R_UNIT_PURE: ${{ steps.unit_pure.outcome }}
           R_UNIT_CONTEXT: ${{ steps.unit_context.outcome }}
           R_UI: ${{ steps.ui.outcome }}
+          UI_TOCABA: ${{ env.UI_TOCABA }}
           REPO: ${{ github.repository }}
           RAMA: ${{ github.ref_name }}
           SHA: ${{ github.sha }}
@@ -287,13 +387,26 @@ jobs:
           # CERO tests — el MISMO error de lectura que este bloque vino a arreglar, un escalon
           # mas arriba: comprobar el resultado de los tests sin comprobar antes que llegaran a
           # correr. Medido el 2026-09-03: seis runs seguidos en 2.1 asi, y el aviso callado.
+          #
+          # OJO (2026-09-07): desde que la UI corre SOLO en la nocturna, `skipped` significa
+          # DOS cosas distintas y opuestas — "se salto a proposito" (todo bien) y "no llego a
+          # correr" (nada bien). Distinguirlas exige mirar si a la UI le TOCABA correr, no su
+          # `outcome`. Sin esto el aviso gritaria "la suite NO llego a correr" en CADA PR, y un
+          # canal que grita cuando no pasa nada se acaba silenciando — que es el mismo final
+          # que el canal mudo que este bloque vino a arreglar, por el otro extremo.
           sin_correr=""
-          for r in "$R_UNIT_PURE" "$R_UNIT_CONTEXT" "$R_UI"; do
+          for r in "$R_UNIT_PURE" "$R_UNIT_CONTEXT"; do
             case "$r" in
               success|failure) ;;
               *) sin_correr="si" ;;
             esac
           done
+          if [ "$UI_TOCABA" = "true" ]; then
+            case "$R_UI" in
+              success|failure) ;;
+              *) sin_correr="si" ;;
+            esac
+          fi
 
           if [ -n "$sin_correr" ]; then
             asunto="la suite NO llego a correr"
@@ -301,7 +414,8 @@ jobs:
               "CI de $REPO ($RAMA): el job murio antes de los tests y la suite NO llego a correr." \
               "" \
               "Los pasos de test quedaron sin ejecutar (pure-logic: $R_UNIT_PURE, context-based:" \
-              "$R_UNIT_CONTEXT, UI: $R_UI). Esto NO es un verde: es un run que no probo nada." \
+              "$R_UNIT_CONTEXT, UI: $R_UI — a la UI le tocaba correr: $UI_TOCABA)." \
+              "Esto NO es un verde: es un run que no probo nada." \
               "La causa esta en un paso ANTERIOR del job — mira el log.")
           elif [ -n "$fallidos" ]; then
             asunto="hay tests en rojo"
@@ -311,9 +425,13 @@ jobs:
               "Estos pasos son advisory a proposito (continue-on-error), asi que el run NO se pone" \
               "en rojo y el repo sigue mergeando. Este aviso existe para que el rojo no pase inadvertido." \
               "" \
-              "Pasos en rojo:$(printf "$fallidos")")
+              "Pasos en rojo:$(printf '%b' "$fallidos")")
           else
-            echo "::notice title=Suite en verde::Los tres pasos advisory corrieron y ninguno fallo."
+            if [ "$UI_TOCABA" = "true" ]; then
+              echo "::notice title=Suite en verde::Los tres pasos advisory corrieron (UI incluida) y ninguno fallo."
+            else
+              echo "::notice title=Suite en verde::Los dos pasos de unit corrieron y ninguno fallo. La UI corre en la nocturna."
+            fi
             exit 0
           fi
 

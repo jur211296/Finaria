@@ -54,3 +54,26 @@ ninguna de las tres cosas que sí seguían rotas.
   eliminaba). Lo que cambia es **cuál es el trabajo**, no si lo hay.
 - Y díselo a Jürgen en esos términos: «el bug que reportaste ya no se reproduce, lo cerró X; lo que
   encontré abierto es esto otro». Ver [[mis-mediciones-fallan-por-el-filtro]].
+
+## 2026-09-07 — la variante silenciosa: la cifra no era falsa, era de la magnitud equivocada
+
+En `el-job-de-tests-del-ci-no-tiene-timeout` el ticket traía una tabla de duraciones y una
+conclusión: «~80 minutos de media», con la recomendación de «un `timeout-minutes` alrededor de 120».
+Nada de eso era mentira. Pero:
+
+- **la muestra eran 4 runs.** Con los 39 que había (todos los que dispararon el job en dos días), la
+  mediana real es **89**, no 80, y el p95 sube a 99,5. Cuatro puntos no sostienen un percentil, y el
+  ticket llamaba «percentil alto» a lo que era el máximo de cuatro.
+- **y sobre todo, medía el objeto equivocado.** La decisión que el propio ticket recogía sacaba la
+  UI del PR; en cuanto la sacas, el número que gobierna el tope del PR ya no es el del job entero
+  sino el de **build + unit**, que nadie había medido: p95 **27,2**, máximo **29,9**. El «alrededor
+  de 120» del ticket habría sido un tope cuatro veces mayor que el peor caso real — o sea, ninguno.
+
+La única forma de ver esto fue medir **por paso**, no por job (`/actions/runs/<id>/jobs` trae cada
+step con `started_at`/`completed_at`). Coste: un bucle de `gh api` y un script de 30 líneas.
+
+⇒ a la lista de premisas verificables se añade una que no parece premisa: **una cifra correcta pero
+agregada al nivel equivocado**. La pregunta no es «¿es cierto este número?» sino «¿mide el objeto
+que mi decisión va a acotar?». Cuando la decisión cambia la forma del trabajo —aquí, partirlo en dos
+corridas—, las mediciones del ticket describen un mundo que ya no existe, y sirven de línea base, no
+de respuesta. Y desconfía de un percentil con menos de ~20 puntos: dilo como «máximo observado».
