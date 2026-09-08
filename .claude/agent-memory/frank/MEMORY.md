@@ -48,6 +48,7 @@
 - [La identidad del recién llegado a un grupo](project_identidad_del_joiner_en_grupos.md) — cerrada en código el 4 y 5-sep; falta device-QA de dos teléfonos, y NO se reabre la vía del refresh.
 - [Decisiones que esperan a Jürgen](project_decisiones_que_esperan_a_jurgen.md) — 19 contestadas el 6-sep; «¿queda alguna?» se responde LEYENDO los 94, no con grep; un residual «decisión aparte» en qa/ es huérfano → ticket.
 - [Web: lo que Jürgen decidió, y lo que no](project_web_pr62_espera_a_jurgen.md) — PR #62 mergeado el 4-sep; siguen abiertas dos suyas: legal de Grupos y autoalojar fuentes.
+- [El cron de Actions no dispara en Yala](project_cron_de_actions_no_dispara.md) — medido 8-sep con control positivo; la cobertura de UI la sostiene el vigilante por push, y hay decisión abierta.
 - [Hipótesis de la Lista Negra, re-comprobadas](project_hipotesis_lista_negra_recomprobadas.md) — el runner de XCUITest; el CI y sus pasos ADVISORY; y el snapshot de Time Machine que hace inútil liberar disco.
 
 ## Entorno y herramientas

@@ -1,6 +1,6 @@
 ---
 name: mis-mediciones-fallan-por-el-filtro
-description: Mis errores de medición se repiten con la misma forma — el filtro descarta justo lo que busco y la ausencia se lee como resultado. Catorce casos entre el 2026-09-02 y el 2026-09-07, incluidas las dos variantes inversas: el filtro INVENTA un defecto (y casi "reparo" un documento sano), y el filtro FABRICA el no-determinismo que se investigaba.
+description: Mis errores de medición se repiten con la misma forma — el filtro descarta justo lo que busco y la ausencia se lee como resultado. Quince casos entre el 2026-09-02 y el 2026-09-08, incluidas las variantes inversas: el filtro INVENTA un defecto, el filtro FABRICA el no-determinismo que se investigaba, y el INSTRUMENTO entero que acabo de escribir da un cero idéntico al cero bueno si nadie lo calibra.
 metadata:
   type: feedback
 ---
@@ -524,3 +524,28 @@ Tres cosas que retener, más allá del ancla:
 
 ⇒ **Si mido texto que dos procesos escriben a la vez, no tengo una medición: tengo una carrera.**
 Antes de anclar en `^`, preguntarme quién más escribe en ese descriptor.
+
+---
+
+**Caso 15 (2026-09-08): el instrumento que monto para medir puede estar roto, y su cero es
+idéntico al cero bueno.** Para saber si el `cron` de GitHub Actions dispara en Yala monté un
+workflow canario con `*/5` — la pregunta costaba dos días sobre la nocturna real y treinta minutos
+sobre el canario. Siete ventanas, cero runs. Iba a concluir «el `schedule` no sirve aquí».
+
+**Lo que faltaba era una línea:** lanzar el canario a mano. Corrió y acabó en verde en segundos, y
+solo entonces el cero significaba algo — el workflow es válido, ejecutable y GitHub lo reconoce,
+así que lo que falla es el reloj. **Sin ese control positivo habría documentado un error mío como
+un fallo de la plataforma**, y con la firmeza que da un número.
+
+Es una vuelta de tuerca sobre los catorce de arriba, y por eso la anoto aparte: allí el defectuoso
+era el **filtro** sobre datos buenos; aquí lo sería el **instrumento entero**, que yo mismo acababa
+de escribir. Un aparato recién construido es la fuente menos fiable de la sala, y es justo el que
+llega sin historial de fallos que me haga desconfiar.
+
+⇒ **Un instrumento nuevo se calibra antes de creerle un cero: hazle producir un uno.** Si no sabes
+cómo forzarlo a dar el resultado contrario, no tienes una medición — tienes una esperanza.
+
+⇒ Corolario del mismo día, y aplica a cualquier mecanismo de emergencia: **el camino que solo se
+recorre cuando algo va mal no está probado.** El vigilante que escribí lleva la ventana como
+parámetro únicamente para poder forzarlo (`horas: 1`) y comprobar los cuatro eslabones. Un
+salvavidas que se estrena durante el naufragio es decoración.
