@@ -70,3 +70,24 @@ impide que el guardado complete con ese importe. Y un aviso de método pagado ho
 en esa misma línea, lo produjo también un **bug real** introducido en esta sesión (una alerta con el
 label del botón dependiendo del `@State`). ⇒ el síntoma no identifica la causa; hay que bisecar.
 
+
+
+## Medición del 2026-09-07 (noche) — «es determinista» no se sostiene
+
+La entrada del 6-sep concluía: **«No es flaky bajo carga: es determinista… Falla también
+corriéndolo SOLO»**. Medido hoy con el reproductor de cinco suites, `test_extremeMinimumAmountSaves`
+**pasó 12 corridas seguidas** (12/12, dentro de tanda las doce), con el disco a 25 GB y también a
+12 GB forzados, y con el swap lleno. Un test que pasa doce veces seguidas no es determinista en
+rojo. Lo que aquella medición tenía delante era, con toda probabilidad, otra cosa.
+
+**Y hay una segunda vía por la que este test aparece en rojo sin serlo** (medido en
+[[rojo-xcuitest-runner-muere-tras-el-primer-caso]]): cuando otra sesión corre XCUITest sobre el mismo
+simulador, el runner muere y `test_extremeMinimumAmountSaves` sale listado en `Failing tests` **sin
+haber impreso una sola línea de fallo**. Salió así en las dos reproducciones de esa medición.
+
+⇒ **Antes de anotar nada aquí: `grep -c "Test Case .* failed"` sobre el log.** Si da 0, el test no
+falló — murió el runner. Y `bash qa/scripts/sim-libre.sh` antes de correr, o la muestra no vale.
+
+Sobre el contexto de la observación original: allí se decía que con **26 GB libres** el disco «no lo
+explica esa vez». Es correcto, y ahora se puede afirmar más fuerte: el disco no lo explica **nunca**
+— también pasa a 12 GB.
