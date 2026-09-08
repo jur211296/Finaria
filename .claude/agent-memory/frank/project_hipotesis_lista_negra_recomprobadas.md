@@ -1,6 +1,6 @@
 ---
 name: hipotesis-lista-negra-recomprobadas
-description: Registro de hipótesis de la Lista Negra re-medidas y cuándo. El runner de XCUITest se cayó el 6-sep y NO se reprodujo el 7 (tres corridas de 134 casos); hay un flake NUEVO de 1 rojo por corrida con víctima variable; el CI sigue vivo y su job `tests` corre la suite UI sin timeout; qué esconde el informe de disco y qué NO.
+description: Registro de hipótesis de la Lista Negra re-medidas y cuándo. RESUELTO el 7-sep: «el runner de XCUITest está roto» era OTRA corrida pisando el simulador, ni disco ni memoria; hay un flake aparte de 1 rojo por corrida con víctima variable; el CI sigue vivo y su job `tests` corre la suite UI sin timeout; qué esconde el informe de disco y qué NO.
 metadata:
   type: project
 ---
@@ -257,3 +257,25 @@ el borrado de mejor relación riesgo/beneficio de la lista cuando se ha trabajad
 worktrees seguidos — que en este repo es lo normal. Y confirmado otra vez que `rm -rf` está
 bloqueado por el sandbox incluso con ruta absoluta: `find <dir> -type f -delete` y luego
 `find <dir> -depth -type d -empty -delete`.
+
+
+## RESUELTO el 2026-09-07 (noche): «el runner de XCUITest está roto» era otra corrida encima
+
+Las dos entradas de arriba se contradecían —verde el 5-sep, roto el 6— y la explicación no era que
+la hipótesis caducara en un día: **es que el runner sólo se cae cuando otra sesión está corriendo
+XCUITest sobre el mismo simulador**. Comparten bundle id; la segunda mata al runner de la primera.
+Reproducido 2/2 a voluntad, con control en la dirección contraria. Detalle y método en
+[[dos-corridas-un-simulador]]; la causa y las cifras, en el ticket
+`rojo-xcuitest-runner-muere-tras-el-primer-caso` (cerrado) y en `.claude/rules/testing.md`.
+
+**Lo que esto le hace a este registro:** las re-comprobaciones de «¿corre el runner?» que no anotaron
+si había otra sesión corriendo **no miden lo que creen medir**. La del 5-sep (8 tests verdes) y la
+del 6-sep (roto) son perfectamente compatibles: una corrió sola y la otra no. ⇒ **a partir de ahora,
+toda medición del runner anota `bash qa/scripts/sim-libre.sh` antes de correr**, o no vale como
+muestra.
+
+**Y una corrección a mi propia forma de leer el disco aquí:** la afirmación de que el disco explica
+los rojos del runner no se sostiene en ninguna dirección. Medido a 25 GB y a **12 GB forzados**, el
+mismo reproductor da 11/11 verde. Dos tickets se contradecían sobre este hecho —uno decía que ninguna
+muestra se había tomado por encima de 25 GB, otro documentaba un fallo **con 26 GB**— y la salida no
+era elegir entre ellos: era medir a los dos lados.

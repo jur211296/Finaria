@@ -91,3 +91,23 @@ sin alcanzar `idle` y el guardado no completaba). ⇒ **un fallo en `transaction
 archiva como «rojo conocido» sin bisecar contra el árbol base**: el síntoma es idéntico en los dos
 casos y solo esa medición los distingue.
 
+
+
+---
+
+## Nota del 2026-09-07 (noche): el rojo del locale es real; los tres vecinos «de tanda», no siempre
+
+Este ticket sigue en pie tal cual para lo suyo: `…preservesDraftDate` compara un mes formateado
+contra un literal en inglés y eso es un rojo de aserción de verdad, con su línea de fallo y su
+mensaje. **Nada de lo de abajo lo toca.**
+
+Lo que sí cambia es cómo leer a los otros tres que se citan aquí como bloque. Medido en
+[[rojo-xcuitest-runner-muere-tras-el-primer-caso]]: dos corridas de XCUITest sobre el mismo simulador
+se derriban entre sí y sacan a `QuickActionsFavorites.test_saveAsFavorite…`,
+`TransactionsCrud.test_createTransaction` y `EdgeCases.test_extremeMinimumAmountSaves` en el bloque
+`Failing tests` **sin una sola línea `Test Case … failed`** — los tres salieron así, literalmente,
+en las dos reproducciones. Es el mismo trío que aquí se explicaba por «fragilidad por CARGA».
+
+⇒ Al clasificar un CI o un gate en rojo, el `grep -c "Test Case .* failed"` separa las dos familias
+antes de mirar ningún test. Y el paso de UI del CI sigue siendo `continue-on-error`, así que el
+aviso de este ticket —«el verde del CI no dice que los XCUITest pasaran»— vale igual.

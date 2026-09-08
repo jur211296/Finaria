@@ -1,6 +1,6 @@
 ---
 description: Gate único antes de commitear — build, unit, XCUITest de las áreas tocadas, audit de calidad y validación del índice de QA
-allowed-tools: Bash(git:*), Bash(xcodebuild:*), Bash(bash qa/validate-coverage.sh:*), Bash(bash qa/scripts/worktree-stamp.sh:*), Bash(python3 qa/qa-sync.py:*), Bash(grep:*), Bash(jq:*), Read, Glob, Grep
+allowed-tools: Bash(git:*), Bash(xcodebuild:*), Bash(bash qa/scripts/sim-libre.sh:*), Bash(bash qa/validate-coverage.sh:*), Bash(bash qa/scripts/worktree-stamp.sh:*), Bash(python3 qa/qa-sync.py:*), Bash(grep:*), Bash(jq:*), Read, Glob, Grep
 ---
 
 Verificación completa de los cambios actuales. Sustituye a `/verify-ios` + `/test-smart` + `/swift-audit` corridos por separado. Un solo informe; el commit se apoya en él.
@@ -48,6 +48,18 @@ Si un archivo no tiene ninguna suite, **regístralo como gap** en el informe. No
 
 Esto es nuevo y es el punto del gate: la fase de UI ya no espera a CI.
 
+**Primero, comprobá que el simulador está libre. No es opcional:**
+
+```bash
+bash qa/scripts/sim-libre.sh
+```
+
+Si sale `1`, **esperá**: hay otra sesión corriendo tests. Dos corridas de XCUITest sobre el mismo
+simulador se derriban entre sí y las dos salen en rojo **sin una sola línea de fallo real** (exit 65,
+`Restarting after unexpected exit`, casos en `Failing tests` que nunca fallaron). Medido el
+2026-09-07 — detalle en `.claude/rules/testing.md`. Correr igual no da un veredicto: da ruido que
+parece tuyo.
+
 Cruza los archivos modificados contra `codeGlobs` de `qa/coverage-index.json`; para las áreas que casen y tengan `coverage: "xcuitest:<File>#<test>"`, corre esas suites:
 
 ```bash
@@ -57,6 +69,8 @@ xcodebuild -scheme "Yala Dev" -destination 'platform=iOS Simulator,name=iPhone 1
 ```
 
 **No hace falta pasar `-parallel-testing-enabled NO`**: desde el 2026-07-24 ambas schemes llevan `parallelizable = "NO"` en sus `TestableReference`. Si alguna vez vuelves a ver `Simulator device failed to launch … xctrunner` con `RequestDenied`, no es el test: es que se está clonando el simulador y el disco está lleno. Corre `bash qa/scripts/disk-report.sh`.
+
+**Y si lo que ves es `Restarting after unexpected exit` con casos en `Failing tests` que no imprimieron ninguna línea de fallo, tampoco es el disco**: es otra corrida pisándote el simulador. `bash qa/scripts/sim-libre.sh` lo dice en un segundo.
 
 ## 4 · Audit de calidad
 

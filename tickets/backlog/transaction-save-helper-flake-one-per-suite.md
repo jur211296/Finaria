@@ -143,3 +143,36 @@ futuro de este aserto.
 siempre, en tanda falla; disco entre 11 y 14 GB en estas cuatro, dentro del rango ya observado. Lo
 que sigue sin descartarse es que el umbral de 25 GB importe: **ninguna de las 21 muestras se ha
 tomado con el disco por encima de él**. Es la comprobación más barata que queda y no se ha hecho.
+
+
+## Quinta medición (2026-09-07, noche) — la pregunta del disco ya tiene respuesta, y es «no»
+
+Este ticket cerraba diciendo que **ninguna de las 21 muestras se había tomado con el disco por
+encima de 25 GB** y que era «la comprobación más barata que queda». Hecha, y además a los dos lados
+del umbral, con el reproductor de 5 suites de la cuarta medición:
+
+| Condición | Corridas | Casos | Fallos | Reinicios |
+|---|---|---|---|---|
+| Disco **24-25 GB** | 9 | 99 | **0** | 0 |
+| Disco **12 GB** (forzado con un fichero de relleno) | 3 | 33 | **0** | 0 |
+
+**El umbral no cambia nada**, ni hacia arriba ni hacia abajo. Y la memoria tampoco: el swap estuvo
+lleno (6,0-6,1 GB de 6,1 GB) en las doce. Nota para quien lea la afirmación original: era falsa
+además por otro lado — `edgecases-extreme-minimum-flaky-under-load` ya documentaba un fallo **con
+26 GB libres** el 5-sep, por encima del umbral. Dos tickets se contradecían sobre el mismo hecho.
+
+**Lo que sí apareció es un segundo fenómeno, y hay que separarlo de éste antes de gastar muestras**
+(medido en [[rojo-xcuitest-runner-muere-tras-el-primer-caso]]): dos corridas de XCUITest sobre el
+mismo simulador se derriban entre sí y producen rojos **sin ninguna línea `Test Case … failed`**.
+Con 10 worktrees vivos y un solo simulador, eso pasa cuando dos sesiones llegan al gate a la vez.
+
+⇒ **Antes de anotar una muestra en este ticket, clasificá el rojo:** si el caso trae su línea de
+fallo con el mensaje de `XCUIApplication+Yala.swift:208`, es de aquí. Si sólo aparece en el bloque
+`Failing tests` y nunca imprimió una línea de fallo, **no es de aquí** y no cuenta como muestra.
+Parte de las 21 pueden ser de la otra familia; no hay forma de saberlo a posteriori porque no se
+registró el log completo.
+
+Lo que este ticket sigue teniendo abierto es intacto: **por qué `transaction_success_accept` no
+aparece en 10 s** cuando el rojo SÍ trae su línea de fallo. Los candidatos 1 (race del producto) y 2
+(presupuesto de la espera) no se tocan. Corré el reproductor con `bash qa/scripts/sim-libre.sh` en
+verde, o la muestra no vale.
