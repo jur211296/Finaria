@@ -5,27 +5,33 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-09 (Lima)
 
-**Rama** `2.1` — Merge #115: la familia FX recorrida entera en simulador
+**Rama** `2.1` — Merge #120: once ideas del 9-sep al backlog, medidas contra el código
 TestFlight build **13** (CPV 13) — subido el 2026-09-09, `VALID` e `IN_BETA_TESTING`.
 **Subida Yala (TF/store) = solo Mini.**
 
 ## Esta sesión
 
-**La familia FX ya no espera montaje: espera red y decisiones.** Los siete tickets recorridos con
-el seam de #114 más dos fixtures nuevos — `-uitest-seed-chat-sealed-rate` y
-`-uitest-seed-group-bridge-fx`. **5 PASS con evidencia en pantalla**, 2 parciales por causa propia.
+**Once ideas de Jürgen pasaron de su cabeza al board, y tres no eran lo que parecían.** Captura sin
+spec: cinco al arrancar (cuentas, sheet de media altura, multi-divisa, hero de Distribución, FAB) y
+seis a mitad de sesión (Siri de iOS 27 **high**, chat caído **high**, iPad, chat multi-transacción,
+iPhone Duo, Apple Watch). **Diez tickets nuevos**; `apple-watch` ya existía y se actualizó en vez de
+duplicarse.
 
-Lo que vale de cada veredicto, en una línea: el «≈» aparece con el arg y no sin él, y las tres
-diferencias son los importes del fixture al céntimo; la fila envenenada del chat pasa de `TC 1.0000`
-a `0.0237` **sin mover el importe**; y el gasto de grupo marca mientras su ingreso no, que es la
-prueba de que la magnitud dudosa de la pata suprimida sí llega al numerador.
+Aunque el encargo era capturar, cada premisa se midió contra el árbol, y **tres cambiaron**: el
+«nuevo registro» **no** usa detent medium hoy —se presenta con `.large` explícito, y el `[.medium]`
+de `NewTransactionView` es de un sub-sheet interno—; al hero **no le falta** llegar a Distribución,
+sino que hay **cinco heros paralelos** y ninguno se comparte; y el FAB **sí anima en el Panel** y no
+en Estadísticas, con el vocabulario ya escrito dentro del propio componente. Un cuarto dato ahorra
+trabajo: el chat **ya transporta un array** de borradores, así que el tope de «una transacción por
+mensaje» no está en la estructura de datos.
 
-**Las tres trampas del montaje están ahora en `.claude/rules/testing.md`**, que es donde se cargan
-solas: `-uitest-seed` siempre siembra (relanzar sin reset duplica el corpus), `-uitest-reset` no
-rebobina un one-shot de arranque, y un fixture tiene que ser **discriminante** y no solo sembrar.
-La cuarta es de lectura y vale aquí: **con «Todo el tiempo» el fixture NO marca** (0,36 % < 5 %) —
-acota el período o lees un falso negativo, y ese mismo par es el umbral de `approximate-mark-ors`
-visto en pantalla.
+**Y una corrección propia, que conviene leer antes que lo anterior:** el hallazgo de camino de esta
+sesión —el `commit-msg` de ADR-013 no corre en Yala— **ya tenía ticket desde el 8-sep**
+(`el-hook-que-prohibe-atribuir-a-una-ia-no-corre-en-este-repo`, **high**). Se creó un duplicado por
+no buscarlo antes, se detectó al escribir este estado y se retiró; lo único que aportaba —**768 de
+3335 commits (23 %) llevan el trailer**, el más antiguo del 13-ene— se fusionó en el ticket bueno.
+La búsqueda de duplicados se hizo para las cinco ideas y **no** para el hallazgo: ahí estuvo el
+fallo.
 
 ## Abiertos
 
@@ -52,21 +58,17 @@ visto en pantalla.
 
 ## Siguiente
 
-**Cuatro tickets nuevos, y tres son la misma forma**: una superficie que la tabla de su ticket padre
-no nombraba. `live-anchor-breakdown-doubles-the-approximate-glyph` (el «≈» del copy y el de la marca
-se suman: la divisa dudosa sale «≈ ≈» y la buena «≈», o sea que se distinguen por *cuántas veces*
-aparece el símbolo — en los 16 `.lproj`), `pie-header-total-unmarked` (4.673 sin marca donde otras
-tres pantallas lo marcan) y `weekday-bar-daily-average-unmarked` (dos tarjetas «Promedio diario»,
-una marcada y otra no). El cuarto es de proceso:
-`uitest-seed-reseeds-the-corpus-without-reset`.
+**El backlog creció a 230 tickets y trae dos `high` nuevos que no estaban ayer**:
+`chat-assistant-is-down` (el chat de IA caído — capturado, **sin investigar**, porque el encargo era
+captura) y `siri-ai-integration-ios-27` (pide investigación antes que spec: hay que averiguar qué
+expone iOS 27 y si obliga a subir el suelo, que hoy es iOS 26+).
 
-`pie-header-total-unmarked` corrige además la premisa con la que `fx-category-totals-unmarked`
-justifica su prioridad baja — dice que «el total que agrega estas líneas sí avisa», y no avisa.
-
-Del board anterior siguen abiertos `preferred-currency-has-three-different-defaults`,
-`financial-report-amounts-unmarked`, `widget-fallback-summary-uses-ten-rows`,
-`bridge-synthesis-trusts-a-zero-converted-amount`, `fx-historical-balance-curve-unmarked` y
-`records-summary-mixes-preferred-currencies`.
+Sigue en pie lo de la tanda anterior: cuatro tickets de FX del 9-sep
+(`live-anchor-breakdown-doubles-the-approximate-glyph`, `pie-header-total-unmarked`,
+`weekday-bar-daily-average-unmarked`, `uitest-seed-reseeds-the-corpus-without-reset`) y del board
+previo `preferred-currency-has-three-different-defaults`, `financial-report-amounts-unmarked`,
+`widget-fallback-summary-uses-ten-rows`, `bridge-synthesis-trusts-a-zero-converted-amount`,
+`fx-historical-balance-curve-unmarked` y `records-summary-mixes-preferred-currencies`.
 
 ## Bloqueo
 
@@ -77,3 +79,10 @@ aviso; sigue siendo el hueco grande de esta familia),
 los **cuatro** commits de esta sesión se verificaron con un grep a mano, y el cuerpo del PR salió
 sucio hasta que se editó: el grep del commit no cubre `gh pr create`),
 `corpus-de-test-de-staging-crece-sin-limite` y el filtro de naturaleza.
+
+**Y dos nuevas, cortas, de la tanda del 9-sep:**
+
+- **¿Se ataca ya el chat caído?** Es `high` y es función de pago; está sólo capturado.
+- **`fab-appears-without-animation` quedó en `low`**, la única de las once que se desvía del «medium
+  salvo que el área diga otra»: es polish y no corrige nada incorrecto. Una línea del frontmatter si
+  prefieres subirla.
