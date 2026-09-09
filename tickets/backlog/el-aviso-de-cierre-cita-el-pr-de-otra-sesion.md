@@ -9,6 +9,30 @@ source: medido al cerrar fx-approximate-mark-missing-on-secondary-surfaces (2026
 
 # El aviso de cierre cita el PR de otra sesión, y `--rama` no lo arregla
 
+
+## Segunda causa, medida el 2026-09-09 (PR #118): en una sesión autónoma larga NO se anota ningún PR
+
+El ticket describe un aviso que cita el PR **equivocado**. Hay un modo de fallo distinto y más
+silencioso: que no cite **ninguno**.
+
+Medido al cerrar el #118. El fichero de sesión sólo traía dos claves y ninguna era un PR:
+
+```
+~/.claude/cache/avisos-grok/sesiones/<id>.json  →  claves: ['fallos', 'rastro']
+PR anotados: (ninguno)
+```
+
+**Por qué:** quien anota el PR es el hook `artefacto-pr`, y el hook **corre al TERMINAR un turno**.
+En una sesión autónoma que abre el PR y sigue trabajando —gate, merges de `2.1`, arreglos, CI— el
+turno no termina hasta mucho después, y en este caso el hook no llegó a anotarlo nunca. El aviso de
+cierre salió `HTTP 200`, con aspecto correcto, **y mudo en lo único que ya no tiene wake propio**
+desde ADR-021.
+
+⇒ Al arreglar esto, las dos causas piden cosas distintas: la del ticket es de **resolución** (usa el
+puntero de la rama equivocada); ésta es de **captura** (el rastro nunca se escribe). Un arreglo que
+solo toque la resolución deja este caso igual, y es el que se da en toda sesión lanzada larga —
+justo aquellas en las que Jürgen no está delante.
+
 ## Qué pasa
 
 El aviso de «la sesión ha llegado a su fin» que llega al móvil lleva arriba y en negrita el PR de la
