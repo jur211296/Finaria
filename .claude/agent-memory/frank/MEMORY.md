@@ -12,7 +12,8 @@
 - [Prefiere lo limpio a lo defensivo](feedback_prefiere_lo_limpio_a_lo_defensivo.md) — retira el mecanismo que falla en vez de apuntalarlo; nombra siempre qué se pierde al limpiar.
 
 ## Cómo mido y cómo entrego
-- [La premisa del ENCARGO también se mide](feedback_la_premisa_del_encargo_tambien_se_mide.md) — hereda los errores del ticket; la peor es la que dice DÓNDE NO MIRAR («cero aserciones»).
+- [La premisa del ENCARGO también se mide](feedback_la_premisa_del_encargo_tambien_se_mide.md) — hereda los errores del ticket; la peor es «no es simulable»: 3 falsas el 8-sep, inflaban la cola de Jürgen.
+- [El barrido de QA rinde por lotes](feedback_el_barrido_qa_rinde_por_lotes.md) — agrupa por estado de simulador; dos números que comparas, mismo lanzamiento; el testigo aritmético gana a la captura.
 - [Instrumentar gana a razonar](feedback_instrumentar_gana_a_razonar.md) — a la tercera hipótesis caída, cuenta en vez de deducir; y lo que no se reproduce no se explica: se acota.
 - [El CI se verifica en LOCAL](feedback_el_ci_se_verifica_en_local.md) — el `run:` de un paso se extrae del YAML y se corre con matriz de escenarios; actionlint con control negativo; y el comentario con que justifiqué mi diseño era falso.
 - [El paso 3 del gate no detecta cero casos](feedback_gate_paso3_no_detecta_cero_casos.md) — XCUITest es XCTest: cuenta «Test Suite» y «Executed», no «Test run with».

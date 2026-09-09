@@ -103,3 +103,39 @@ tumbarla.
 familia», «ninguno es de lógica»), esa clasificación es una **afirmación verificable y barata**, no
 un contexto. Re-córrelo y clasifica tú. Es la versión de «cuando un documento te diga no mires aquí,
 mira» aplicada a la taxonomía del propio fallo. Ver [[rojo-conocido-no-exime-de-bisecar]].
+
+---
+
+## La premisa «esto no se puede probar en simulador» es la más cara de todas (2026-09-08)
+
+En el barrido de `tickets/qa/` **tres** tickets declaraban en su propio cuerpo que su verificación
+era imposible en simulador. Las tres eran falsas, y las tres llevaban meses **inflando la cola de
+device-QA de Jürgen**:
+
+| Lo que decía el ticket | Lo que medí |
+|---|---|
+| «Ningún seed es multi-divisa (son PEN)» | `DevSeedAccounts.swift:22-36` crea cuenta **PEN** y cuenta **USD** |
+| «No hay histórico real de tasas con una fila incompleta» | Las filas sembradas traen **solo PEN/EUR/USD** de 48 divisas: parciales **por construcción** |
+| «La card de P&L no aparece en XCUITest; su cobertura es cero por construcción» | Aparece con el seed `minimal`, sin tocar nada |
+
+Y el `docs/ESTADO.md` que yo mismo escribí repetía la primera.
+
+**Why:** esta familia es peor que una coordenada envejecida por dos motivos. Uno, **se
+autoconfirma**: nadie intenta lo que el documento declara imposible, así que la premisa nunca se
+contrasta y se copia de ticket en ticket (aquí saltó de un ticket de FX a otros dos y al ESTADO).
+Dos, **su coste no es tiempo perdido sino trabajo desviado a la persona equivocada**: cada una de
+esas tres frases mandaba a Jürgen a coger el teléfono para algo que se veía en 5 minutos aquí.
+
+**How to apply:** cuando un ticket diga «necesita device», «no es simulable» o «cobertura cero por
+construcción», trátalo como **la afirmación más sospechosa del fichero**, no como el contexto.
+Comprobarlo cuesta un `grep` al seed: `DevSeedAccounts`, `DevSeedExchangeRates`, `DevSeedGroups`
+dicen exactamente qué corpus existe. Y la pregunta que separa de verdad las dos colas no es «¿el
+camino real pasa por la red?» sino **«¿se puede sembrar el ESTADO FINAL que hay que mirar?»** — casi
+siempre sí. Lo que de verdad no se simula es corto y reconocible: push APNs de verdad, sign-in real,
+un RPC que devuelve un código que solo emite el servidor, Apple Pay, y dos teléfonos a la vez.
+
+Corolario que salió el mismo día: **a veces el bloqueo es real pero la causa está mal atribuida.**
+`groups-owner-transfer-and-leave` figura como device-QA, y lo que impide verlo es que **ningún
+perfil de seed escribe `userID`**, así que `eligibleHeirCount` es siempre 0 y el botón no se pinta.
+Eso no lo arregla un teléfono: lo arregla el seed. Distinguir «no se puede aquí» de «no se puede
+**todavía** aquí» es lo que convierte una cola física en un ticket de backlog.
