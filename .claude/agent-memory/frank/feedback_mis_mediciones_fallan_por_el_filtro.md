@@ -602,3 +602,29 @@ Corolario del mismo día: un test que mide **un número** en vez de **el invaria
 un cambio legítimo. `UITestSeamPersistenceIsolationTests` exigía `pushes == 1` en el primer de
 notificaciones; añadir una segunda preferencia —justo lo que el ticket pedía— lo puso rojo sin que
 nada estuviera mal. Ahora compara contra la lista de símbolos esperados.
+
+
+**Y la vuelta de tuerca del 2026-09-08 (tarde): el filtro que falla puede ser EL DEL PROPIO GATE, y
+con un BORRADO falla siempre.** El paso 2 de `/gate` mapea las suites a correr desde los `.swift`
+modificados, «por convención `<Clase>Tests.swift` y por `grep -rl "<Clase>"`». Borré un método de
+`TransactionService`, corrí las 7 suites que ese mapeo produce, todo verde, sellé y commiteé. El CI lo
+puso rojo: `WidgetSessionSealWiringTests.laPuerta_gateaLos49Escritores` cuenta los call-sites de
+`WidgetDataCache.updateCache(` bajo `Yala/` y el método borrado tenía uno en su última línea.
+
+**El mapeo del gate no podía encontrarlo por construcción**: ese source-scan no menciona
+`TransactionService` ni por nombre de clase ni por fichero — vigila un choke-point del **widget**, un
+área sin ninguna relación temática con lo que toqué. Ningún grep razonable sobre el nombre de la clase
+modificada lo alcanza.
+
+⇒ **Cuando el cambio QUITE código con cuerpo, corre `-only-testing:YalaTests` entero antes de sellar**
+(6513 tests, ~2 min de reloj en esta máquina: más barato que un ciclo de CI de 32 min y un
+re-commit). El corolario de arriba decía que un test que mide un NÚMERO se pone rojo ante un cambio
+legítimo; éste añade **quién** lo mueve: no solo añadir, también **borrar** — y un conteo global de
+call-sites baja cuando se va código muerto, aunque el escritor que desaparece nunca se ejecutara.
+
+Dos cosas que este caso deja claras y conviene no confundir: el test **no estaba mal** (es un
+anti-drift que hace su trabajo, y su docblock ya decía «si el número cambia por una razón legítima,
+ajústalo a conciencia»), y **la review adversarial tampoco lo cazó** — una de las tres lentes buscó
+explícitamente dependencias de test del borrado, revisó suelos de otros source-scans y dio el visto
+bueno. Un conteo exacto en un área remota es un punto ciego de las tres redes a la vez: gate acotado,
+lentes y mi propia lectura. La suite completa es la única que lo ve.
