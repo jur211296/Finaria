@@ -450,5 +450,21 @@
 			<string>Du hast heute %d geplante Zahlungen 📅</string>
 		</dict>
 	</dict>
+	<key>account.currencyChange.confirmTitle</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>%d Buchung umrechnen?</string>
+			<key>other</key>
+			<string>%d Buchungen umrechnen?</string>
+		</dict>
+	</dict>
 </dict>
 </plist>

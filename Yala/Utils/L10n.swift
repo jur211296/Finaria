@@ -3251,6 +3251,45 @@ enum L10n {
             ls("account.secondaryCurrency.reject", comment: "")
         }
 
+        // MARK: - Cambio de divisa con histórico
+        enum CurrencyChange {
+            static var blockedTitle: String { ls("account.currencyChange.blockedTitle", comment: "") }
+            static func blockedMessage(_ reasons: String) -> String {
+                String(format: ls("account.currencyChange.blockedMessage", comment: ""), reasons)
+            }
+            static var blockedReasonTransfer: String {
+                ls("account.currencyChange.blockedReasonTransfer", comment: "")
+            }
+            static var blockedReasonGroupExpense: String {
+                ls("account.currencyChange.blockedReasonGroupExpense", comment: "")
+            }
+            static var blockedReasonGroupSettlement: String {
+                ls("account.currencyChange.blockedReasonGroupSettlement", comment: "")
+            }
+            /// Plural: vive en `.stringsdict` (y flat en las variantes, que no llevan uno propio).
+            static func confirmTitle(_ count: Int) -> String {
+                String(format: ls("account.currencyChange.confirmTitle", comment: ""), count)
+            }
+            static func confirmMessage(_ from: String, _ to: String) -> String {
+                String(format: ls("account.currencyChange.confirmMessage", comment: ""), from, to)
+            }
+            static var confirmAction: String {
+                ls("account.currencyChange.confirmAction", comment: "")
+            }
+            static var progressTitle: String {
+                ls("account.currencyChange.progressTitle", comment: "")
+            }
+            static var progressSubtitle: String {
+                ls("account.currencyChange.progressSubtitle", comment: "")
+            }
+            static var ratesUnavailableTitle: String {
+                ls("account.currencyChange.ratesUnavailableTitle", comment: "")
+            }
+            static var ratesUnavailableMessage: String {
+                ls("account.currencyChange.ratesUnavailableMessage", comment: "")
+            }
+        }
+
         // MARK: - Credit Card
         enum CreditCard {
             static var sectionTitle: String { ls("account.creditCard.sectionTitle", comment: "") }

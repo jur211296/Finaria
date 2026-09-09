@@ -5707,3 +5707,36 @@
 
 /* Delete-blocked hint for a group owner with debt and no heir: points at Archive, which already works with debt. */
 "groups.settings.deleteGroupDisabledHintArchive" = "该群组还有未结清的余额。若想从列表中移除，请将其归档：欠款会保留。";
+
+/* Account currency locked because history is owned elsewhere */
+"account.currencyChange.blockedTitle" = "无法更改币种";
+
+/* %@ = comma-separated list of reasons */
+"account.currencyChange.blockedMessage" = "此账户中有些记录的金额由应用的其他部分管理：%@。在此更改币种会导致金额对不上。";
+
+/* Lowercase, used inside a list */
+"account.currencyChange.blockedReasonTransfer" = "账户间转账";
+
+/* Lowercase, used inside a list */
+"account.currencyChange.blockedReasonGroupExpense" = "群组支出";
+
+/* Lowercase, used inside a list */
+"account.currencyChange.blockedReasonGroupSettlement" = "群组结算";
+
+/* %1 old currency, %2 new currency */
+"account.currencyChange.confirmMessage" = "它们以 %1$@ 记录，将按各自日期的汇率换算为 %2$@。此操作无法撤销。";
+
+/* Confirm button */
+"account.currencyChange.confirmAction" = "换算";
+
+/* Progress overlay title */
+"account.currencyChange.progressTitle" = "正在换算记录";
+
+/* Progress overlay subtitle */
+"account.currencyChange.progressSubtitle" = "正在应用各日期的汇率";
+
+/* Rates could not be fetched */
+"account.currencyChange.ratesUnavailableTitle" = "无法换算";
+
+/* Body of the rates-unavailable alert */
+"account.currencyChange.ratesUnavailableMessage" = "此账户部分日期的汇率缺失。未做任何更改——请检查网络连接后重试。";

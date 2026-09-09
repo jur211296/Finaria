@@ -450,5 +450,21 @@
 			<string>You have %d scheduled payments due today 📅</string>
 		</dict>
 	</dict>
+	<key>account.currencyChange.confirmTitle</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>Convert %d record?</string>
+			<key>other</key>
+			<string>Convert %d records?</string>
+		</dict>
+	</dict>
 </dict>
 </plist>

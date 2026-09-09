@@ -450,5 +450,21 @@
 			<string>Tu as %d paiements planifiés pour aujourd'hui 📅</string>
 		</dict>
 	</dict>
+	<key>account.currencyChange.confirmTitle</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>Convertir %d opération ?</string>
+			<key>other</key>
+			<string>Convertir %d opérations ?</string>
+		</dict>
+	</dict>
 </dict>
 </plist>

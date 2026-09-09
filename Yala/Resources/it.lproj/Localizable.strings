@@ -5705,3 +5705,36 @@
 
 /* Delete-blocked hint for a group owner with debt and no heir: points at Archive, which already works with debt. */
 "groups.settings.deleteGroupDisabledHintArchive" = "Ci sono saldi in sospeso nel gruppo. Per toglierlo dalla lista, archivialo: i debiti si conservano.";
+
+/* Account currency locked because history is owned elsewhere */
+"account.currencyChange.blockedTitle" = "La valuta non può essere modificata";
+
+/* %@ = comma-separated list of reasons */
+"account.currencyChange.blockedMessage" = "Questo conto contiene movimenti i cui importi sono gestiti altrove nell'app: %@. Cambiare la valuta qui li renderebbe incoerenti.";
+
+/* Lowercase, used inside a list */
+"account.currencyChange.blockedReasonTransfer" = "trasferimenti tra conti";
+
+/* Lowercase, used inside a list */
+"account.currencyChange.blockedReasonGroupExpense" = "spese di gruppo";
+
+/* Lowercase, used inside a list */
+"account.currencyChange.blockedReasonGroupSettlement" = "saldi di gruppo";
+
+/* %1 old currency, %2 new currency */
+"account.currencyChange.confirmMessage" = "Sono registrati in %1$@ e passeranno a %2$@ con il tasso di cambio della data di ciascuno. Questa azione non può essere annullata.";
+
+/* Confirm button */
+"account.currencyChange.confirmAction" = "Converti";
+
+/* Progress overlay title */
+"account.currencyChange.progressTitle" = "Conversione dei movimenti";
+
+/* Progress overlay subtitle */
+"account.currencyChange.progressSubtitle" = "Applicazione del tasso di cambio di ogni data";
+
+/* Rates could not be fetched */
+"account.currencyChange.ratesUnavailableTitle" = "Impossibile convertire";
+
+/* Body of the rates-unavailable alert */
+"account.currencyChange.ratesUnavailableMessage" = "Mancano i tassi di cambio per alcune date di questo conto. Non è stato modificato nulla: controlla la connessione e riprova.";
