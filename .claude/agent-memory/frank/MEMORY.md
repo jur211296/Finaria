@@ -38,6 +38,7 @@
 - [Capturas del simulador para la web](feedback_capturas_simulador_para_la_web.md) — receta y trampas: Secrets.xcconfig, nombre efímero, categorías sembradas, `sips -Z` escala el lado largo.
 
 ## Estado del trabajo
+- [El chat ya guarda en la divisa de la cuenta](project_divisa_del_chat_vs_cuenta.md) — PR #107; el hueco grande que queda es editar la divisa de una CUENTA (**high**); falta device-QA, sí simulable.
 - [El borrador del chat ya no se contradice a sí mismo](project_signo_vs_subcategoria_chat.md) — PR #106; el ticket decía 1 sitio y eran 6; falta device-QA (sí simulable) y deja 2 tickets, uno **high** de proceso.
 - [El corpus viejo del chat ya se cura solo](project_barrido_signo_chat.md) — PR #103, acotado para no tocar lo importado por CSV; falta device-QA.
 - [El chat ya guarda la tasa que usó](project_chat_tasa_del_borrador.md) — PR #99; falta device-QA y NO es simulable; deja 4 tickets, uno **high**: el chat pierde el signo y el gasto SUMA al saldo.

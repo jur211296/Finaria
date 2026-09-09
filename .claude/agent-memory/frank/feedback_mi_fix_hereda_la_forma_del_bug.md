@@ -93,6 +93,31 @@ la defensa que sí funcionó fue el control negativo (correr el patrón ingenuo 
 comparar los conteos), no el recuerdo.
 
 
+**Quinto mecanismo, y es el que refuta la defensa de los otros: NOMBRAR la regla no basta si su
+INPUT se calcula en dos sitios. Medido el 2026-09-08 en
+`chat-draft-stamps-its-own-currency-not-the-account`.** El bug era «la divisa que se muestra y la
+que se guarda no coinciden, y nadie avisa». Hice justo lo que el segundo mecanismo prescribe: le di
+nombre a la regla en un solo sitio —`ChatTransactionDraft.effectiveCurrencyCode(account:)`— y la
+llamaron los dos lados. Y aun así divergieron, porque **cada lado resolvía por su cuenta el
+argumento `account`**: la tarjeta contra su `@Query(filter: !isArchived)` y `saveDraft` contra
+`context.model(for:)`, que no filtra. Con una cuenta archivada entre proponer y guardar, misma
+función, mismo nombre, respuestas distintas: el usuario confirmaba «$ 50» y se guardaba «S/ 50».
+**El mismo bug, movido al borde, dentro del commit que existía para cerrarlo** — y con un comentario
+mío al lado declarando ese caso imposible («`saveDraft` aborta si no encuentra la cuenta»: no
+aborta).
+
+⇒ **Una función compartida garantiza que la REGLA es una; no que el DATO lo sea.** Si dos llamadores
+derivan el mismo argumento, tienes dos criterios otra vez, sólo que escondidos un nivel más abajo.
+La defensa que funcionó fue quitar la derivación: guardar el valor ya resuelto en el objeto que
+ambos leen —la divisa vive en el borrador, sincronizada al elegir cuenta y congelada al guardar— para
+que no quede nada que derivar. **Un valor guardado no puede discrepar consigo mismo; dos
+derivaciones sí.**
+
+Y el corolario de método: esto no lo vi yo. Lo cazaron **las tres lentes a la vez**, cada una por su
+lado, y una de ellas encontró además el precedente que zanjaba el diseño —el Inbox ya tiene guarda y
+string propio (`inbox.errorArchivedAccount`) para exactamente este caso—. Cuando un fix consista en
+«derivar aquí lo que ya se deriva allá», pregúntate antes si el valor puede simplemente **guardarse**.
+
 Relacionado: [[mis-mediciones-fallan-por-el-filtro]] (el control positivo también va en los greps de
 auditoría) · [[la-premisa-del-encargo-tambien-se-mide]] (medir la premisa ajena; ésta es su gemela,
 medir la propia) · [[mutante-compilado-zanja-hipotesis]] (cómo comprobar que el test del fix

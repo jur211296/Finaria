@@ -54,6 +54,22 @@ caso exista.** Cuando el rojo sea la prueba de una afirmación sobre producción
 en el criterio»), hay que verificar aparte que el fixture **se construye como lo construye producción**
 — y la vía barata es leer el sitio que la crea y comparar campo a campo con el helper del test.
 
+**Cuarto eslabón: la aserción puede estar VIVA, medir lo correcto, y hacerlo en el MOMENTO
+equivocado — porque un mecanismo posterior del propio fix tapa la divergencia. Medido el 2026-09-08
+en `chat-draft-stamps-its-own-currency-not-the-account`.** Escribí un caso para el borde que una
+lente adversarial había destapado (cuenta archivada entre elegir y guardar) y afirmé que «lo que se
+ve es lo que se guarda» comparando el borrador con la fila **después** de `saveDraft`. Verde. Pero
+`saveDraft` congela la divisa en el borrador como parte del arreglo, así que a esas alturas los dos
+lados ya estaban alineados **aunque la divergencia hubiera existido**: el mutante que quitaba la
+sincronización previa dejaba el caso en VERDE. El daño real —el usuario confirma una divisa y se
+guarda otra— ocurre **antes** de pulsar Guardar, y ahí era donde había que medir. Movida la aserción
+a ese instante, el mismo mutante lo pone rojo.
+
+⇒ **Cuando el fix tiene varios mecanismos en cadena, el test que mide al final los mide juntos y no
+distingue cuál falta.** Pregúntate en qué instante exacto el usuario sufre el bug, y afirma AHÍ. Y la
+señal que lo destapa es barata: si un mutante tumba unos casos y **no** el que escribiste
+específicamente para ese borde, el problema no es el mutante — es que tu caso mide tarde.
+
 Relacionado: [[mi-docblock-tambien-es-una-premisa]] — el mensaje de un `#expect` es un docblock más, y
 el mío afirmaba algo falso sobre producción. Y [[mutante-compilado-zanja-hipotesis]], que sigue siendo
 la herramienta buena: lo que esta memoria acota es **qué** demuestra exactamente.
