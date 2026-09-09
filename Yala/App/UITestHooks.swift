@@ -285,6 +285,31 @@ final class UITestHooks {
         parseValue(after: "-uitest-seed", from: args)
     }
 
+    /// Valor de `-uitest-seed-foreign-account <ISO>`: siembra una cuenta en esa divisa con gasto e
+    /// ingreso, para el estado de partida que necesita toda la familia FX — **una divisa AUSENTE de
+    /// la fila de tasas del día**. Ver `DevSeedForeignCurrencyAccount`.
+    ///
+    /// Existe porque a ese estado no se llegaba por ninguna de las dos vías: el selector de Moneda
+    /// del formulario de cuenta es un `NavigationLink` y no responde a los taps sintéticos de la
+    /// automatización (medido el 2026-09-08, cuatro técnicas; el otro `NavigationLink` del mismo
+    /// formulario tampoco abre, así que va con el patrón y no es un bug de la app), y el seed crea
+    /// PEN + USD sembrando tasas de PEN/EUR/USD — multi-divisa, pero nunca una divisa fuera de la
+    /// fila, que es el único estado en el que este módulo falla.
+    ///
+    /// Es **ADITIVO** al perfil y ortogonal a él: se aplica después de `-uitest-seed <perfil>` y
+    /// también funciona a solas (siembra las categorías que le falten). Aditivo y apagado por
+    /// defecto a propósito — la cuenta añade filas con tasa aproximada, y encenderlas siempre le
+    /// pondría «≈» a los totales de toda la suite, que es justo el control negativo que hoy
+    /// sostiene los tickets de FX.
+    nonisolated static var foreignAccountCurrency: String? {
+        #if DEBUG
+        guard isActive else { return nil }
+        return parseValue(after: "-uitest-seed-foreign-account", from: ProcessInfo.processInfo.arguments)
+        #else
+        return nil
+        #endif
+    }
+
     /// `-uitest-deeplink <target>`: simula un deeplink externo a un tab al arranque
     /// (panel/statistics/records/planning/budgets/groups/inbox/scheduledPayments/categories).
     /// Ejercita el wiring de routing a tabs ocultos (bug review-deeplinks).

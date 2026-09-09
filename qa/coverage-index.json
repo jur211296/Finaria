@@ -2109,15 +2109,17 @@
         "Yala/App/Views/Panel/Sections/PanelThematicSection.swift",
         "Yala/Seed/DevSeedExchangeRates.swift",
         "Yala/App/Views/Planning/ScheduledPaymentEditorView.swift",
-        "Yala/App/Views/Profile/ProfileView.swift"
+        "Yala/App/Views/Profile/ProfileView.swift",
+        "Yala/Seed/DevSeedForeignCurrencyAccount.swift",
+        "Yala/App/UITestHooks.swift"
       ],
       "scenarioIDs": [
         "F-SET-05"
       ],
       "classification": "deterministic",
-      "coverage": "xcuitest:YalaUITests/CurrencySettingsUITests — 2026-08-04: la asercion de cierre era un FALSO VERDE (afirmaba un elemento del FONDO, que sigue en el arbol con el sheet puesto). Confirmado por mutacion: sin el tap de cierre el test pasaba igual. Ahora exige el desmontaje con waitForNonExistence del boton de la vista presentada, y la mutacion lo pone rojo. — 2026-08-18 seam B1 (qa_cloud-fx-rates-blob-dos-caras): `-uitest -uitest-seed <perfil>` escribe ExchangeRate.rates como cara post-pull (strings escala-8, no Doubles nativos). Tras `-uitest-reset` el seed restaura secondaryCurrencies=USD,EUR para que el gráfico monte. PanelThematicSection usa children:.contain ANTES de panel_section_<kind> para que panel_exchange_rate_widget siga en el árbol. Identifier: panel_exchange_rate_widget. unit:YalaTests/DevSeedExchangeRatesFaceTests (cara-string vs gemelo Double + restore F1 + contain F2 + ids de sección).",
+      "coverage": "xcuitest:YalaUITests/CurrencySettingsUITests — 2026-08-04: la asercion de cierre era un FALSO VERDE (afirmaba un elemento del FONDO, que sigue en el arbol con el sheet puesto). Confirmado por mutacion: sin el tap de cierre el test pasaba igual. Ahora exige el desmontaje con waitForNonExistence del boton de la vista presentada, y la mutacion lo pone rojo. — 2026-08-18 seam B1 (qa_cloud-fx-rates-blob-dos-caras): `-uitest -uitest-seed <perfil>` escribe ExchangeRate.rates como cara post-pull (strings escala-8, no Doubles nativos). Tras `-uitest-reset` el seed restaura secondaryCurrencies=USD,EUR para que el gráfico monte. PanelThematicSection usa children:.contain ANTES de panel_section_<kind> para que panel_exchange_rate_widget siga en el árbol. Identifier: panel_exchange_rate_widget. unit:YalaTests/DevSeedExchangeRatesFaceTests (cara-string vs gemelo Double + restore F1 + contain F2 + ids de sección). — 2026-09-09 seam `-uitest-seed-foreign-account <ISO>` (qa-no-puede-crear-cuenta-en-otra-divisa): siembra una cuenta en una divisa AUSENTE de la fila del dia (el seed escribe PEN/EUR/USD), con gasto e ingreso recalculados por `recalculatePreferredCurrency` — la calidad la decide el converter, no una constante, que es lo que permite que la asercion se ponga roja. Estado de partida de los 7 tickets de FX que lo esperaban. APAGADO por defecto: encenderlo siempre le pondria «≈» a los totales de toda la suite y destruiria el control negativo. unit:YalaTests/DevSeedForeignCurrencyAccountTests (8 casos, matriz de mutacion de 5) + xcuitest:YalaUITests/ForeignCurrencyAccountSeedUITests (el CABLEADO arg→store, en pareja positivo/negativo).",
       "owner": "",
-      "lastVerified": "2026-08-18"
+      "lastVerified": "2026-09-09"
     },
     {
       "area": "settings-profile-general",

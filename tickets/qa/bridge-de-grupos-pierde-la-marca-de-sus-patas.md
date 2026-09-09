@@ -133,3 +133,15 @@ parados por ella.
 
 - [[approximate-mark-ors-over-whole-period]] — el cambio que convirtió esta ceguera en un peso.
 - [[fx-approximate-mark-missing-on-secondary-surfaces]] — la tanda anterior de la familia.
+
+---
+
+## 2026-09-09 — el montaje que esperabas ya existe
+
+El estado de partida se siembra desde un solo launch con `-uitest -uitest-reset -uitest-skip-onboarding -uitest-seed realista -uitest-seed-foreign-account JPY` (ticket `qa-no-puede-crear-cuenta-en-otra-divisa`, **done**). Deja la cuenta «QA FX» con un ingreso y dos gastos fechados HOY, marcados `isExchangeRateProvisional` por el camino de producción — la fila del día existe y no trae JPY, así que la conversión es `.staticFallback`.
+
+**Aviso para no leer un falso negativo:** con el filtro «Todo el tiempo» el fixture NO marca (750 sobre 206.725 son el 0,36 %, bajo el umbral del 5 %). **Acota el período** — con «Este mes» los tres números del Panel llevan «≈» y sin el arg ninguno.
+
+**Desbloqueado a medias.** La cuenta ya la tienes; lo que tu :112 pide además —«dos patas selladas con coberturas de tasas distintas»— el seam no lo produce, porque siembra las tres filas con la misma cobertura.
+
+Y una corrección: tu :113 dice «Ningún seed es multi-divisa ni marca `isExchangeRateProvisional`». La primera mitad es **falsa desde siempre** — `DevSeedAccounts` crea PEN + USD, y `done/fx-pnl-education-card:213` ya lo había medido. La segunda era cierta y ya no lo es.

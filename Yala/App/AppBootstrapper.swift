@@ -882,6 +882,12 @@ final class AppBootstrapper {
                 currencyCode: appPreferences.defaultCurrencyCode.rawValue
             )
         }
+        // Cuenta en una divisa AUSENTE de la fila de tasas (familia FX). Va DESPUÉS del perfil y
+        // fuera de su `if` a propósito: es aditivo —el corpus del perfil es el denominador contra
+        // el que su parte aproximada tiene que pesar— y también tiene sentido a solas.
+        if let iso = UITestHooks.foreignAccountCurrency {
+            DevSeedService().seedForeignCurrencyAccount(currencyCode: iso, in: context)
+        }
         // Deeplink simulado en uitest: encola la navegación al tab destino (el gate la
         // drena cuando el routing esté listo). Ejercita el wiring de tabs ocultos.
         if let dest = uitestDeeplinkDestination() {

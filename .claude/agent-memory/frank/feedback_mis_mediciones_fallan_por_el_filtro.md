@@ -1,6 +1,6 @@
 ---
 name: mis-mediciones-fallan-por-el-filtro
-description: Mis errores de medición se repiten con la misma forma — el filtro descarta justo lo que busco y la ausencia se lee como resultado. Diecisiete casos entre el 2026-09-02 y el 2026-09-08, incluidas las variantes inversas: el filtro INVENTA un defecto, el filtro FABRICA el no-determinismo que se investigaba, y el INSTRUMENTO entero que acabo de escribir da un cero idéntico al cero bueno si nadie lo calibra.
+description: Mis errores de medición se repiten con la misma forma — el filtro descarta justo lo que busco y la ausencia se lee como resultado. Veinte casos entre el 2026-09-02 y el 2026-09-09 — el del 9 es una REINCIDENCIA con el mismo fichero y la misma regex de una que ya estaba escrita aquí, incluidas las variantes inversas: el filtro INVENTA un defecto, el filtro FABRICA el no-determinismo que se investigaba, y el INSTRUMENTO entero que acabo de escribir da un cero idéntico al cero bueno si nadie lo calibra.
 metadata:
   type: feedback
 ---
@@ -17,6 +17,39 @@ había roto el orden. **Las dos veces el fallo estaba en mi instrumento y las do
 era la contraria a la realidad.** ⇒ cuando una medición mía diga que un documento del repo está mal,
 el primer sospechoso es el filtro, no el documento: cuesta un `git show HEAD:<fichero>` comparar
 contra el estado anterior y ver si el «defecto» ya estaba.
+
+**Y el 2026-09-09 lo repetí con el MISMO fichero y la MISMA regex, teniendo esta nota escrita.**
+Volví a contrastar el índice de tickets contra el disco con `[a-z0-9][a-z0-9-]*`, volvió a no ver
+`rojo-heroBuckets-thisWeek-trailing-window` (lleva mayúsculas: `heroBuckets`, `thisWeek`), y esta
+vez no me quedé en la conclusión falsa: **añadí la fila que ya existía y la dupliqué**. Dos lecciones
+nuevas, porque el fallo llegó más lejos que la vez anterior:
+
+1. **Tener la nota no basta si no la leo ANTES de escribir el filtro.** La leí después, al ir a
+   actualizar la memoria, y por eso lo cacé. El id de ese ticket es el canario de este error: si
+   aparece en un resultado mío, el filtro está mal.
+2. **Mi verificación tenía el mismo punto ciego que la medición.** Re-verifiqué con
+   `[a-zA-Z0-9]` —ya corregida— y dio «faltan: [], sobran: []», verde. No vio el duplicado porque
+   metía las filas en un `dict`, y **un dict colapsa duplicados**: el error que acababa de cometer
+   era invisible para el instrumento con el que lo comprobaba. ⇒ cuando lo que puede fallar es
+   «hay de más», hay que **contar filas**, no claves; `set` y `dict` son el filtro que borra la
+   evidencia.
+
+**La variante del mismo día en `-only-testing`, que cierra el cerco de la nota de arriba:** el
+filtro casa contra el nombre del **TIPO**, no del fichero. `-only-testing:YalaTests/DeadPointerSeedTests`
+no corrió nada porque ese fichero declara `DeadPointerSeedBehaviorTests` y `DeadPointerSeedWiringTests`
+— ningún tipo se llama como el fichero. Lo cacé porque el gate obliga a comparar «Test run with N
+tests in **M suites**» contra las suites pedidas: dije 6 y salieron 5. Sin ese conteo habría
+declarado verde una suite que nunca se ejecutó. Y ojo al leerlo: dos de las que «faltaban» sí
+corrieron, con su `@Suite("nombre display")`, así que **el nombre que imprime el log no es el que
+acepta el filtro**.
+
+**Y una tercera del mismo día, en la matriz de mutación:** filtré los tests muertos con
+`✘ Test [a-z_]+\(\) failed` y tres mutantes salieron «verdes». No lo estaban — los nombres son
+camelCase (`seededAmounts_hitTheirTarget…`) y `[a-z_]+` no acepta mayúsculas. **Es el mismo error
+del índice, en el mismo día, en otro instrumento.** Lo cazó el control positivo: tres mutantes
+seguidos sin matar a nadie es un resultado sospechoso, y bastó preguntarle al log si los tests
+habían corrido (`TEST FAILED` estaba ahí). ⇒ **un resultado que me conviene es el que más control
+positivo necesita.**
 
 **Why:** el 2026-09-02, en una sola sesión, tropecé **cuatro veces con la misma forma de error** —
 un filtro que descarta lo que busco, y una ausencia que leo como dato:

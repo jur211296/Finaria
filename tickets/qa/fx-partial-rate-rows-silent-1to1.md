@@ -4,7 +4,7 @@ status: qa
 priority: high
 area: "currency, fx, integridad-datos"
 created: 2026-08-28
-updated: 2026-09-03
+updated: 2026-09-09
 ---
 
 # Filas de tasas FX incompletas y conversión 1:1 silenciosa que se declara exacta
@@ -396,3 +396,13 @@ el de mayúsculas).
 Los tres pasos del ticket están implementados. Queda **device-QA** con los tres criterios de
 aceptación, que necesitan red y un histórico real de tasas. Salen a ticket propio, como se decidió:
 `fx-presentation-still-shows-1to1` y `fx-widget-drops-missing-currency`.
+
+---
+
+## 2026-09-09 — el montaje que esperabas ya existe
+
+El estado de partida se siembra desde un solo launch con `-uitest -uitest-reset -uitest-skip-onboarding -uitest-seed realista -uitest-seed-foreign-account JPY` (ticket `qa-no-puede-crear-cuenta-en-otra-divisa`, **done**). Deja la cuenta «QA FX» con un ingreso y dos gastos fechados HOY, marcados `isExchangeRateProvisional` por el camino de producción — la fila del día existe y no trae JPY, así que la conversión es `.staticFallback`.
+
+**Aviso para no leer un falso negativo:** con el filtro «Todo el tiempo» el fixture NO marca (750 sobre 206.725 son el 0,36 %, bajo el umbral del 5 %). **Acota el período** — con «Este mes» los tres números del Panel llevan «≈» y sin el arg ninguno.
+
+**Desbloqueado a medias.** El montaje cubre la fila parcial. Siguen fuera las dos cosas que tu propio texto pide: **red** (:397) y, en tu AC nº3, **cambiar la divisa preferida** — que es la salida 3 del ticket ancla (`-uitest-preferred-currency <ISO>`) y NO se implementó, por ejercitar `CurrencyChangeService`, otro objeto. Si retomas este ticket, ése es el seam que hay que pedir.

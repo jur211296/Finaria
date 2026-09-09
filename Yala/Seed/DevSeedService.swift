@@ -264,6 +264,29 @@ final class DevSeedService {
         SessionState.shared.incrementDataVersion()
     }
 
+    // MARK: - Cuenta en divisa ausente de la fila (familia FX)
+
+    /// Siembra la cuenta de `-uitest-seed-foreign-account <ISO>`.
+    ///
+    /// **Aditivo, no excluyente**, al revés que los otros dos fixtures de este servicio: los suyos
+    /// se aíslan porque el seed aleatorio contaminaría sus totales, y aquí es al contrario — el
+    /// corpus del perfil ES el denominador contra el que la parte aproximada tiene que pesar el 5 %
+    /// de `ApproximateMarkThreshold`. A solas también funciona (siembra las categorías que falten),
+    /// pero entonces no hay fila de tasas y la conversión degrada por otro escalón.
+    ///
+    /// No toca `devSeedDataExecuted` ni `hasSeeded`: no es un seed completo, y marcarlo haría creer
+    /// al arranque siguiente que ya hay corpus.
+    func seedForeignCurrencyAccount(currencyCode: String, in context: ModelContext) {
+        seedCategoriesIfNeeded(in: context)
+        let subcategoryLookup = buildSubcategoryLookup(in: context)
+        DevSeedForeignCurrencyAccount.create(
+            currencyCode: currencyCode,
+            subcategoryLookup: subcategoryLookup,
+            in: context
+        )
+        SessionState.shared.incrementDataVersion()
+    }
+
     // MARK: - Dead-pointer fixture (AC-c fantasma)
 
     /// Seed AISLADO para `-uitest-seed dead-pointer`: categorías + una cuenta + UNA TX
