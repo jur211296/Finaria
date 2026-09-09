@@ -524,6 +524,16 @@ final class ChatAssistantViewModel {
         // `abs()`— solo que aquí se rechaza a `.failed` en vez de llegar hasta esta línea.
         let amountDouble = draft.isExpense ? -dbl : dbl
         let preferredCurrency = CurrencyDefaults.currentPreferred
+        // La divisa la pone la CUENTA, no el dictado. Hasta el 2026-09-08 esta ruta estampaba
+        // `draft.currencyCode`, así que dictar «50 dólares» sin tener cuenta en dólares y elegir
+        // la de soles dejaba una transacción USD dentro de una cuenta PEN. `LiveBalanceCalculator`
+        // agrupa por `tx.currencyCode` y convierte cada grupo con la tasa de HOY, de modo que esa
+        // cuenta enseñaba un saldo que no cuadraba y que además se movía solo al moverse el cambio.
+        //
+        // Es la regla que el formulario YA aplica a este mismo borrador
+        // (`NewTransactionViewModel.prefill(fromChatDraft:)`): la incoherencia era que en la misma
+        // tarjeta «Editar» y «Guardar» hacían lo contrario. Detalle en `effectiveCurrencyCode`.
+        let effectiveCurrency = draft.effectiveCurrencyCode(account: account)
         // `on: draft.date` y no la tasa de HOY. La transacción se estampa con `draft.date`, que el
         // parseo resuelve como `parsed.date ?? Date.now`: el usuario puede dictar «un café ayer» y
         // esta ruta convertía ese gasto a la tasa de hoy. Las otras seis rutas de creación convierten
@@ -534,7 +544,7 @@ final class ChatAssistantViewModel {
         // como definitivo: una tasa de otra fecha, marcada como la buena.
         let outcome = CurrencyConverter.shared.convertChecked(
             amount,
-            from: draft.currencyCode,
+            from: effectiveCurrency,
             to: preferredCurrency,
             on: draft.date,
             context: context
@@ -580,7 +590,7 @@ final class ChatAssistantViewModel {
         let transaction = TransactionItem(
             date: draft.date,
             amount: amountDouble,
-            currencyCode: draft.currencyCode,
+            currencyCode: effectiveCurrency,
             note: draft.note.isEmpty ? nil : draft.note,
             category: subcategory.safeCategory,
             subcategory: subcategory,
@@ -601,6 +611,13 @@ final class ChatAssistantViewModel {
             try TransactionService.shared.create(transaction)
             draft.status = .saved
             draft.savedTransactionID = transaction.persistentModelID
+            // La divisa que REALMENTE se estampó, congelada en el borrador. La tarjeta ya guardada
+            // formatea con `draft.currencyCode`, así que sin esta línea seguiría enseñando un valor
+            // derivado en vivo de la cuenta mientras la fila persistida tiene el suyo congelado: al
+            // editar la divisa de esa cuenta —o al archivarla— la tarjeta se reetiquetaría sola y
+            // diría algo distinto de lo que hay en Registros. Con la línea, lo que se ve es lo que
+            // se guardó, y deja de depender de que nada cambie después.
+            draft.currencyCode = effectiveCurrency
             replaceDraft(draft, at: location)
             persistSession()
         } catch {
@@ -669,7 +686,28 @@ final class ChatAssistantViewModel {
             }
         }
         // Double-optional permite distinguir "no cambies" (nil-outer) de "set a nil" (.some(nil)).
-        if case .some(let value) = accountID { draft.accountID = value }
+        if case .some(let value) = accountID {
+            draft.accountID = value
+            // La divisa VIAJA con la cuenta. `updateDraft` no acepta `currencyCode` y no debe: la
+            // divisa no es un campo que el usuario edite aparte, es una consecuencia de la cuenta
+            // (ver `ChatTransactionDraft.effectiveCurrencyCode`). Sincronizarla aquí es lo que
+            // mantiene el borrador coherente CONSIGO MISMO, y eso importa más de lo que parece:
+            // mientras el borrador lleve la divisa dictada, cada consumidor tiene que recalcular la
+            // efectiva por su cuenta, y basta con que dos lo hagan con criterios distintos para que
+            // reaparezca el bug. Pasó, y por eso está esta línea: la tarjeta resolvía la cuenta
+            // contra su `@Query` (que filtra `!isArchived`) y `saveDraft` la resuelve con
+            // `context.model(for:)` (que NO filtra), así que con una cuenta archivada entre medias
+            // la tarjeta enseñaba la divisa dictada y el guardado estampaba la de la cuenta — el
+            // usuario confirmaba «$ 50» y se guardaba «S/ 50».
+            //
+            // Se resuelve contra el contexto, igual que `saveDraft`, y a propósito: si el criterio
+            // fuera otro volvería la asimetría por la puerta de al lado.
+            if let id = value, let context = modelContext,
+                let account = context.model(for: id) as? Account
+            {
+                draft.currencyCode = account.currencyCode
+            }
+        }
         if case .some(let value) = subcategoryID {
             // Validación: si la subcategoría no es nil, debe matchear el tipo del draft
             // (income subcat para ingreso, expense subcat para gasto). La UI ya lo filtra,
