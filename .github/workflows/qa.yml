@@ -258,17 +258,23 @@ jobs:
     env:
       TEST_RUNNER_TZ: America/Lima
       # Unica fuente de «esta corrida lleva UI». La gobierna el paso de UI (`if:`) y la
-      # lee el paso de aviso para no confundir «saltado a proposito» con «no llego a
-      # correr» — dos cosas que en `steps.<id>.outcome` se llaman IGUAL: `skipped`.
+      # lee el JOB `aviso` de mas abajo para no confundir «saltado a proposito» con «no
+      # llego a correr» — dos cosas que en `steps.<id>.outcome` se llaman IGUAL: `skipped`.
       # La condicion aparece dos veces en el fichero (aqui y en `timeout-minutes` del
       # job) porque el tope del job se evalua antes de que exista `env`. Si cambia una,
       # cambia la otra.
       UI_TOCABA: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     steps:
-      # `UI_TOCABA` es del `env:` del job, y el contexto `env` NO esta disponible en
-      # `jobs.<id>.outputs` (comprobado con actionlint 1.7.12: «context "env" is not
-      # allowed here»). Se saca por un paso para que el job del aviso pueda leerlo sin
-      # que la condicion tenga que escribirse una TERCERA vez en este fichero.
+      # `UI_TOCABA` sale por un paso, y no como `outputs: ui_tocaba: ${{ env.UI_TOCABA }}`,
+      # porque el output de un paso es el camino sin ambiguedad: `steps.<id>.outputs` esta
+      # disponible en `jobs.<id>.outputs` sin discusion. Lo medido con actionlint 1.7.12 es
+      # que `env` SI se rechaza en `jobs.<id>.env` («context "env" is not allowed here») y
+      # NO se queja en `jobs.<id>.outputs` — que no es lo mismo que saber que funciona en
+      # ejecucion, y aqui un vacio haria que el aviso gritara «la suite no corrio» en cada
+      # PR. Una linea de mas cuesta menos que averiguarlo en produccion.
+      #
+      # Lo que evita: que la condicion de UI_TOCABA se escriba una TERCERA vez en el fichero
+      # (ya esta en el `env:` de este job y en su `timeout-minutes`).
       - name: Exponer si a la UI le tocaba correr
         id: contexto
         run: echo "ui_tocaba=$UI_TOCABA" >> "$GITHUB_OUTPUT"
