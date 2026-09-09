@@ -57,20 +57,47 @@ traducciones; el único «Detectamos» que queda es el de la barrera local.
 mes después, y nadie revisó el docblock. Es el patrón de «el comentario describe la intención, no el
 comportamiento», con el agravante de que aquí la premisa era **una dependencia entre dos barreras**.
 
+## Y tras el relanzamiento tampoco valida (medido el 2026-09-09, segunda pasada del owner)
+
+El owner comprobó el desenlace: **al reabrir, la app entra directa al onboarding de alta nueva, sin
+ninguna validación**. No es un olvido, es el destino retenido:
+
+```swift
+if let pending = WelcomePendingDestinationStore.consume() {
+    switch pending {
+    case .privateOnboarding:
+        showOnboarding = true      // ContentView.swift:1390-1393 — sin mirar datos
+```
+
+Su docblock lo justifica: *«el usuario YA eligió, y lo que este arranque tiene que hacer es honrar esa
+elección en vez de volver a preguntar»*. Coherente — pero significa que **el flujo entero no tiene ni
+un solo punto donde se compruebe si hay datos en iCloud**: ni antes del reinicio (store neutro vacío)
+ni después (destino retenido que no pregunta).
+
 ## Qué debería pasar
 
 La confirmación tiene que colgar de «¿hay datos en el destino que voy a estrenar?», no de «¿hay filas
-en el store que tengo montado ahora mismo?». Dos vías, no excluyentes:
+en el store que tengo montado ahora mismo?». El owner propuso dos salidas; evaluadas contra el diseño:
 
-- **A — preguntar antes del relanzamiento** (lo que pide el owner). En el momento de elegir privado ya
-  se sabe que se va a encender el espejo; ahí se consulta iCloud (la señal del KV-store que
-  `RestoreOfferGate.hasReturningSignal` ya lee, y que **no se retiró** — la siguen leyendo
-  `ContentView` y `WelcomeRestoreView`) y se confirma. Evita el reinicio en vano.
-- **B — comprobar después del relanzamiento**, ya con el espejo montado y antes de dar el alta por
-  buena. Más fiable (mira datos reales, no una señal), pero llega tarde: el usuario ya reinició.
+- **A — preguntar antes del relanzamiento.** En el momento de elegir privado ya se sabe que se va a
+  encender el espejo; ahí se consulta la señal del KV-store (`RestoreOfferGate.hasReturningSignal`,
+  que **no se retiró**: la siguen leyendo `ContentView` y `WelcomeRestoreView`). Evita el reinicio en
+  vano. Límite: es una **señal**, no los datos — puede faltar aunque haya datos.
+- **B — validar en el `case .privateOnboarding`, antes de montar el alta.** Es el punto de enganche
+  natural y **respeta** la decisión de honrar la elección: no vuelve a preguntar *qué* quería, sólo
+  confirma *que borre*. ⚠️ **Tiene una carrera**: el espejo acaba de montarse en ese arranque y los
+  datos de CloudKit pueden no haber bajado aún, así que una lectura inmediata puede dar cero igual.
+  Es exactamente el hueco (3) que el docblock viejo ya nombraba, *«CloudKit mirror sync que llega
+  post-Hero»*.
+- **C — volver al Welcome al reabrir** (la otra idea del owner). Simple, pero **contradice** la
+  decisión escrita en `ContentView.swift:1385-1389`: el destino retenido existe justo para no volver a
+  preguntar. Descartable salvo que se revise esa decisión.
 
-**Decisión de producto pendiente**: A es lo que el owner describe y ahorra el viaje; B es lo que de
-verdad ve los datos. Probablemente A como aviso y B como red.
+**Recomendación**: **A + B**. A ahorra el viaje y B es la red que de verdad ve los datos; ninguna de
+las dos basta sola — A puede no tener señal, y B puede llegar antes que la sincronización. Y si se
+implementa B, su espera tiene que ser por **llegada de datos**, no por temporizador.
+
+**Decisión de producto pendiente del owner.**
 
 ## Cómo se comprueba
 
