@@ -20,7 +20,7 @@
 - [Mi docblock también es una premisa](feedback_mi_docblock_tambien_es_una_premisa.md) — describo la intención como si fuera el comportamiento; y «esto lo fija <suite>» exige que la suite TOQUE el fichero.
 - [El source-scan de dos literales no es una red](feedback_el_source_scan_de_dos_literales_no_es_una_red.md) — si el target es inalcanzable, fija el cuerpo ENTERO; y vigila las pasarelas, los swaps y el escenario que no recorre su rama.
 - [El denominador de una resta es el número que se ve](feedback_el_denominador_de_una_resta_es_el_numero_que_se_ve.md) — numerador en magnitudes, denominador en lo que se muestra; y una decisión escrita gana a dos lentes que coinciden.
-- [La aserción que no puede fallar](feedback_la_asercion_que_no_puede_fallar.md) — el mutante valida el CASO, no cada `#expect`; la columna que no cambia en el escenario es tan vacua como la derivada: ensúciala.
+- [La aserción que no puede fallar](feedback_la_asercion_que_no_puede_fallar.md) — el mutante valida el CASO, no cada `#expect`; ensucia la columna que no cambia; y la que depende de la MÁQUINA no la caza ningún mutante.
 - [El pre-filtro tapa al criterio](feedback_el_prefiltro_tapa_al_criterio.md) — misma condición en el fetch y en la lógica: el mutante de la lógica sale VERDE. Me pasó dos veces el 8-sep.
 - [La tabla del ticket nombra un sitio por pantalla](feedback_la_tabla_del_ticket_nombra_un_sitio_por_pantalla.md) — 7 superficies eran 21; el mismo número marcado y exacto en la misma vista; los punteros a tickets en docblocks caducan.
 - [El mecanismo que existe se probó con OTRO corpus](feedback_el_mecanismo_existente_se_probo_con_otro_corpus.md) — reusar un barrido sobre un corpus nuevo puede destruir datos buenos; el AC dice QUÉ, no CÓMO.
