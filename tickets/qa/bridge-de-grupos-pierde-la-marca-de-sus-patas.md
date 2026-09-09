@@ -110,9 +110,15 @@ test de comportamiento **y** el source-scan).
 **Device-QA.** Y **no es simulable hoy**: el escenario necesita una cuenta en divisa distinta de la
 preferida —la conversión identidad es `.exact` por construcción
 (`CurrencyConverter.swift:238`)—, más dos patas selladas con coberturas de tasas distintas. Ningún
-seed es multi-divisa ni marca `isExchangeRateProvisional`. Es el sexto ticket bloqueado por
-[[qa-no-puede-crear-cuenta-en-otra-divisa]] (**high**), que sigue siendo la palanca con mejor relación
-coste/desbloqueo del board.
+seed es multi-divisa ni marca `isExchangeRateProvisional`.
+
+Espera a [[qa-no-puede-crear-cuenta-en-otra-divisa]] (**high**), que sigue siendo la palanca con
+mejor relación coste/desbloqueo del board. **La cifra, medida hoy y no heredada** —`docs/ESTADO.md`
+decía «cinco»—: en `tickets/qa/` hay **tres** que se declaran *no* simulables por esta causa (éste,
+`chat-assistant-plants-exchange-rate-one` y `fx-manual-writes-seal-approximate-as-final`) y **dos**
+más que piden el mismo montaje declarándose *sí* simulables (`chat-rows-sealed-before-the-fix-...` y
+`fx-approximate-mark-missing-on-secondary-surfaces`). Cinco esperan la misma palanca; tres están
+parados por ella.
 
 ## Hallazgos que NO se arreglan aquí, con ticket propio
 
