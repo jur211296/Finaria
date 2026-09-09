@@ -244,6 +244,59 @@ struct GroupBridgeStatsAdjustmentTests {
         #expect(!adj.isSuppressed(lent))
     }
 
+    // MARK: - La incertidumbre de tasa viaja con el monto
+
+    /// Pareja del ticket `bridge-de-grupos-pierde-la-marca-de-sus-patas`, con las cuatro
+    /// combinaciones de flags. La pata de préstamo está SUPRIMIDA del recorrido, así que su flag no
+    /// lo lee nadie — pero su monto sí entra en el importe sintetizado.
+    ///
+    /// El numerador son **magnitudes sumadas, nunca el neto**: es el contrato explícito de
+    /// `ApproximateMarkThreshold`, escrito con esta misma pareja («1.000 y 900 dudosos no dejan 100
+    /// de incertidumbre: dejan 1.900»). Cada fila de abajo es un veredicto distinto, así que
+    /// devolver el neto marcado, o un booleano, o cero, pone alguna en rojo.
+    @Test(arguments: [
+        (realProv: false, lentProv: true,  esperado: 900.0),   // el caso del ticket
+        (realProv: true,  lentProv: false, esperado: 1_000.0), // el que ya se detectaba
+        (realProv: true,  lentProv: true,  esperado: 1_900.0), // el ejemplo del contrato
+        (realProv: false, lentProv: false, esperado: 0.0),     // control positivo
+    ])
+    func synthesizedAmount_accumulatesMagnitudesOfEveryProvisionalLeg(
+        caso: (realProv: Bool, lentProv: Bool, esperado: Double)
+    ) throws {
+        let ctx = try makeTestContext()
+        let eid = UUID().uuidString
+        let real = makeLeg(ctx, amount: -1_000, system: false, splitExpenseID: eid)
+        real.isExchangeRateProvisional = caso.realProv
+        let lent = makeLeg(ctx, amount: 900, system: true, splitExpenseID: eid,
+                           subcategory: systemSubcat(ctx, name: "loanToGroups"))
+        lent.isExchangeRateProvisional = caso.lentProv
+        try ctx.save()
+
+        let adj = GroupBridgeStatsAdjustment.build(from: [real, lent])
+
+        // Premisa: el bridge SÍ neteó. Sin esto, apagar el bridge deja el caso «las dos exactas»
+        // en verde por el camino equivocado (la fila cae al flag de la propia transacción).
+        #expect(adj.amountInPreferredCurrency(real) == -100, "el importe no cambia: -1.000 + 900")
+        #expect(adj.isSuppressed(lent), "premisa: la pata de préstamo está suprimida")
+        // La magnitud que se le pasa es el NETO que el llamador está sumando (100). Para una fila
+        // ajustada se ignora, y ahí está el fondo del asunto: la incertidumbre no es el neto.
+        #expect(adj.approximateMagnitude(real, magnitude: 100) == caso.esperado)
+    }
+
+    /// Una TX sin ajuste aporta su propia magnitud, o cero. Es lo que hace que cablear el accessor
+    /// en los calculadores no cambie nada para quien no usa grupos.
+    @Test func unadjustedTx_contributesItsOwnMagnitude() throws {
+        let ctx = try makeTestContext()
+        let suelta = makeLeg(ctx, amount: -50, system: false, splitExpenseID: nil)
+        suelta.isExchangeRateProvisional = true
+        try ctx.save()
+
+        let adj = GroupBridgeStatsAdjustment.build(from: [suelta])
+        #expect(adj.approximateMagnitude(suelta, magnitude: 50) == 50)
+        suelta.isExchangeRateProvisional = false
+        #expect(adj.approximateMagnitude(suelta, magnitude: 50) == 0)
+    }
+
     // MARK: - .none = identidad
 
     @Test func none_isIdentity() throws {
@@ -255,5 +308,8 @@ struct GroupBridgeStatsAdjustmentTests {
         #expect(adj.amountInPreferredCurrency(real) == -300)
         #expect(!adj.isSuppressed(real))
         #expect(adj.incomeAwarePreferred(real) == -300)
+        real.isExchangeRateProvisional = true
+        #expect(adj.approximateMagnitude(real, magnitude: 300) == 300,
+                "con `.none` la magnitud dudosa es la de la propia fila")
     }
 }

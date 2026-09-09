@@ -31,6 +31,13 @@
 //    · el rol de subcategoría SOLO se consulta para desambiguar una pata de préstamo SUELTA
 //      (sin hermana de costo) de un "saldo inicial: me deben" — ambos `+income` — con skip-if-nil.
 //
+//  LA INCERTIDUMBRE VIAJA CON EL MONTO. Quien sume `amountInPreferredCurrency(_:)` NO puede leer el
+//  `isExchangeRateProvisional` de la fila: ese flag describe UNA pata y el monto son varias, y la
+//  pata de préstamo está suprimida del recorrido. El accessor es
+//  `approximateMagnitude(_:magnitude:)`, que devuelve `Σ|patas provisionales|` — obligatorio en los
+//  numeradores de `ApproximateMarkThreshold` (HeroBucketsCalculator, CashFlowCalculator rama «misma
+//  divisa», RecordsViewModel.calculateSummary, WidgetDataCache.buildPeriodSummary).
+//
 //  CONSUMIDORES (mantener sincronizado — un consumidor de gasto que olvide cablearse vuelve a
 //  inflar el Caso A). Expense-magnitude: TagSpending / TopSpendingCategories / TopSubcategories /
 //  Weekday / DailySpending / PivotTable / CashFlowProjection calculators; BudgetsViewModel;
@@ -51,6 +58,9 @@ struct GroupBridgeStatsAdjustment {
     private struct AdjustedAmounts {
         let native: Double
         let preferred: Double
+        /// `Σ|contribución en divisa preferida|` de las patas provisionales que se sumaron para
+        /// formar `preferred`. **Magnitudes, nunca el neto.** Ver `approximateMagnitude(_:magnitude:)`.
+        let approximatePreferred: Double
     }
 
     /// Por id de la pata REAL Caso A: montos ajustados (`native`/`preferred`) = `-myShare`.
@@ -85,6 +95,40 @@ struct GroupBridgeStatsAdjustment {
     /// en superficies income-aware (mata el "ingreso fantasma" +lent).
     func isSuppressed(_ tx: TransactionItem) -> Bool {
         suppressed.contains(tx.persistentModelID)
+    }
+
+    /// Hermano de `amountInPreferredCurrency(_:)` para el **numerador** de
+    /// `ApproximateMarkThreshold`: cuánta magnitud dudosa hay detrás del importe que aquel devuelve.
+    ///
+    /// **Existe porque el importe sintetizado no es de una sola fila.** La pata de préstamo está
+    /// SUPRIMIDA del recorrido, así que su `isExchangeRateProvisional` no lo lee nadie — y sin
+    /// embargo su monto sí entra en el número que se muestra. Un gasto de grupo con la pata real
+    /// exacta (−1.000) y la de préstamo provisional (+900) se contaba como 100 % exacto, cuando el
+    /// 90 % de la aritmética que produjo esos −100 salió de una tasa dudosa. Importa más desde el
+    /// 2026-09-08 (`approximate-mark-ors-over-whole-period`): el importe entra en un **cociente**,
+    /// así que una atribución mal hecha no solo se pierde — desplaza el umbral del bucket entero.
+    ///
+    /// **Devuelve `Σ|patas provisionales|`, NO el neto marcado.** Es el contrato explícito de
+    /// `ApproximateMarkThreshold`, con este mismo ejemplo: «un gasto de 1.000 y un reembolso de 900,
+    /// los dos con tasa dudosa, no dejan 100 de incertidumbre: dejan 1.900». Un gasto de grupo es
+    /// justo esa resta, y marcar el neto falla en las **dos** direcciones — medido:
+    ///
+    /// - **Se queda corto** cuando mi parte es pequeña: viaje, adelanto el hotel de 10 personas
+    ///   (10.000, mi parte 1.000, préstamo 9.000 con tasa dudosa) y el resto del mes son 25.000
+    ///   exactos. Con el neto, 1.000/26.000 = 3,8 % ⇒ sin marca, con un tercio de la aritmética
+    ///   dudosa. Con magnitudes, 9.000/26.000 = 34,6 % ⇒ marca.
+    /// - **Se pasa** cuando mi parte es grande: cena de dos, 10.000, mi parte 9.700, préstamo 300
+    ///   con tasa dudosa, mes de 10.300. Con el neto, 9.700/10.300 = 94 % ⇒ marca el mes entero por
+    ///   300 dudosos. En el límite, dos céntimos dudosos marcarían el mes — que es exactamente la
+    ///   erosión que el umbral vino a evitar.
+    ///
+    /// - Parameter magnitude: la magnitud que el llamador está sumando al DENOMINADOR de esa misma
+    ///   TX. Solo se usa para las filas sin ajuste (ahí el numerador es esa misma magnitud, o cero);
+    ///   pedirla en vez de recalcularla es lo que mantiene numerador y denominador en la misma
+    ///   unidad cuando el llamador aplica su propio fallback (`WidgetDataCache.preferredAmount`).
+    func approximateMagnitude(_ tx: TransactionItem, magnitude: Double) -> Double {
+        if let ajustada = adjustedReal[tx.persistentModelID] { return ajustada.approximatePreferred }
+        return tx.isExchangeRateProvisional ? magnitude : 0
     }
 
     /// Accessor COMBINADO obligatorio en superficies income-aware (income/expense/net): `nil` ⇒
@@ -143,7 +187,19 @@ struct GroupBridgeStatsAdjustment {
                     let native = realLeg.amount + loanBySign.reduce(0) { $0 + $1.amount }
                     let preferred = realLeg.amountInPreferredCurrency
                         + loanBySign.reduce(0) { $0 + $1.amountInPreferredCurrency }
-                    adjustedReal[realLeg.persistentModelID] = AdjustedAmounts(native: native, preferred: preferred)
+                    // La incertidumbre viaja con el monto, y se acumula en MAGNITUDES: las patas
+                    // de préstamo se suprimen del recorrido, así que esta suma es la única vía por
+                    // la que su tasa dudosa llega a un calculador. Sumarla con signo la cancelaría
+                    // contra la pata real justo cuando más pesa — el neto de una resta apalancada
+                    // no mide su propia incertidumbre.
+                    let approximate = (realLeg.isExchangeRateProvisional
+                        ? abs(realLeg.amountInPreferredCurrency) : 0)
+                        + loanBySign.reduce(0) {
+                            $0 + ($1.isExchangeRateProvisional ? abs($1.amountInPreferredCurrency) : 0)
+                        }
+                    adjustedReal[realLeg.persistentModelID] = AdjustedAmounts(
+                        native: native, preferred: preferred, approximatePreferred: approximate
+                    )
                     // Multi-real (no debería ocurrir): solo la primera se ajusta; el resto quedan
                     // sin tocar (estado inconsistente que el próximo re-bridge sana).
                 }

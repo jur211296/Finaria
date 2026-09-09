@@ -133,6 +133,16 @@ dos**:
   más historial tiene**. El numerador es el caso contrario y no se confunden: ése suma magnitudes
   siempre, porque los errores de dos conversiones distintas no se cancelan. Y el test tiene que
   DISCRIMINAR: dos importes iguales dan el mismo veredicto con las dos reglas.
+- **Cuando el importe no sale de UNA fila, su marca tampoco.** Un gasto de grupo bridgeado se
+  sintetiza como `pata real + Σ patas de préstamo` (`GroupBridgeStatsAdjustment`), y las de préstamo
+  están **suprimidas del recorrido**: su `isExchangeRateProvisional` no lo lee nadie. La magnitud
+  dudosa la sirve `approximateMagnitude(_:magnitude:)`, y devuelve **`Σ|patas provisionales|`, no el
+  neto marcado** — que es el contrato del numerador, escrito con esta misma pareja. Marcar el neto
+  falla en las dos direcciones y las dos están medidas (2026-09-09): con mi parte pequeña
+  (1.000 de 10.000, 9.000 prestados dudosos sobre un mes de 26.000) se queda en 3,8 % y **no marca**
+  un mes con un tercio de aritmética dudosa; con mi parte grande (9.700 de 10.000, 300 dudosos sobre
+  10.300) da 94 % y **marca el mes entero por 300** — en el límite, dos céntimos. Regla corta: **el
+  numerador cuenta la incertidumbre que ENTRÓ, el denominador el número que SALE.**
 - **`LiveBalanceCalculator` marca con un OR por DIVISA y eso es deliberado** — decisión de Jürgen del
   2026-09-08 (`approximate-mark-ors-over-whole-period`): su unidad ya es la divisa, no la
   transacción, y una divisa entera sin tasa sí es una ausencia que merece la marca. Consecuencia

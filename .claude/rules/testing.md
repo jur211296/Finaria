@@ -53,7 +53,19 @@ Detalles completos en `$VAULT/planning/TESTING-STRATEGY.md`. Reglas mínimas:
 - NUNCA `UserDefaults.standard` directo en tests → `UserDefaults(suiteName: "test.\(UUID().uuidString)")!` (helper `makeIsolatedDefaults()`).
 
 - **NUNCA aserjar el valor EN MEMORIA de un `@Model` ya persistido justo después de un `context.rollback()` — es dependiente del runtime (medido 2026-07-30 en iOS 26.5 y 27.0).** `rollback()` deja el STORE limpio en los dos, pero solo 27.0 re-hidrata el snapshot del objeto; en 26.5 la propiedad sigue devolviendo el valor mutado hasta el siguiente `fetch`. ⇒ **aserja contra el store (contexto fresco) o contra el re-fetch**, que además es la aserción MÁS FUERTE: sin el `rollback()` el objeto sigue sucio y un `fetch` no descarta cambios pendientes, así que el re-fetch caza la mutación y el store no. Costó un rojo en la Mac estable, una entrada de Lista Negra y un chip entero persiguiendo un «laundering en iOS 26.x» que no existía (`context.hasChanges == false` ⇒ ningún save ajeno persiste nada). Corolario de método: cuando un test falla en un runtime y pasa en otro, **mide qué tiene el disco antes de escribir la hipótesis** — con dos `print` de sonda se habría visto en cinco minutos.
+- **`.serialized` ordena DENTRO de una suite, no entre suites hermanas del mismo archivo.** Como el
+  container se cachea por `#fileID` y `makeTestContext()` **vacía el store en cada llamada**, dos
+  suites del mismo archivo que pidan contexto comparten store y el wipe de una borra las filas de la
+  otra. ⇒ **la segunda suite de un archivo que necesite `makeTestContext()` va en archivo propio.**
+  Medido el 2026-09-09: con `GroupBridgeApproximateMarkTests` dentro de
+  `ApproximateAmountMarkTests.swift` —donde ya vivía `RecordsSummaryApproximateMarkTests`, que
+  también pide contexto— sus dos casos de Registros pasaban en solitario y daban `expense == 0` en la
+  suite completa. El síntoma es ese: **verde a solas, cero acompañado**.
 - NUNCA tocar singletons `.shared` sin `@Suite(.serialized)` + `defer { restore }` o `_testReset()`.
+  Y el estado global no es solo `.shared`: un ViewModel puede leer `UserDefaults.standard` por su
+  cuenta. `RecordsViewModel.applyFilters` consulta `includeGroupTransactionsInFeed` y, en `false`,
+  descarta **toda** fila con `splitExpenseID` — un test cuyo escenario sean filas de grupo se pone a
+  cero por una clave que nadie escribió en él. Fija y restaura también esas.
 - NUNCA `Task.sleep(.seconds(N))` con N>0.5 — usar señales determinísticas. Excepción: `≤50ms` para forzar dealloc.
 - NUNCA `Date()` / `Calendar.current` en lógica testeada — inyectar vía param opcional `now: Date = .now` (patrón canónico, ya en `FinancialScoreCalculator`/`BudgetAlertService`).
 - NUNCA `@Test(.disabled(...))` sin entrada en Lista Negra (TESTING-STRATEGY.md) con owner + deadline.

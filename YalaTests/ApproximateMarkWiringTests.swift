@@ -395,6 +395,93 @@ struct ApproximateMarkSecondarySurfacesWiringTests {
             repo ya se quitó una vez de `LiveAnchorInfo`.
             """)
     }
+
+    /// Cuerpo de una función, acotado entre dos anclas de CÓDIGO (los comentarios ya vienen
+    /// filtrados).
+    ///
+    /// El ancla de cierre hace falta por `WidgetDataCache`, que **sí** lee el flag crudo más abajo
+    /// en la misma función y con razón (el saldo histórico no lleva ajuste). En los otros tres el
+    /// fichero no tiene ninguna ocurrencia hoy, así que ahí el acotado no acota nada — pero es la
+    /// misma forma para los cuatro y no cuesta nada mantenerla.
+    ///
+    /// Si un ancla deja de resolver, el ámbito se encoge y la aserción POSITIVA se pone roja: la
+    /// dirección del fallo es la segura, un ámbito vacío nunca da falso verde.
+    private static func scope(_ src: String, from: String, to: String) throws -> String {
+        let inicio = try #require(src.range(of: from), "no está el ancla «\(from)»")
+        let resto = String(src[inicio.upperBound...])
+        let fin = try #require(resto.range(of: to), "no está el ancla «\(to)»")
+        return String(resto[..<fin.lowerBound])
+    }
+
+    /// **Quién decide si un importe es aproximado cuando el importe son VARIAS filas.**
+    /// Ticket `bridge-de-grupos-pierde-la-marca-de-sus-patas`.
+    ///
+    /// Los cuatro numeradores del umbral suman `adjustment.amountInPreferredCurrency(tx)`, que en un
+    /// gasto de grupo bridgeado es la pata real MÁS las de préstamo. El flag de la fila describe
+    /// solo una de ellas, y las de préstamo están suprimidas del recorrido: nadie las mira. Este
+    /// scan es lo que impide que un consumidor NUEVO —o un revert de una línea— vuelva a leer el
+    /// flag crudo al lado de un importe sintetizado.
+    ///
+    /// Los tests de comportamiento están en `GroupBridgeApproximateMarkTests`; esto solo cierra el
+    /// hueco del quinto consumidor que todavía no existe.
+    ///
+    /// Va con `arguments:` y no con un bucle a propósito: `scope` LANZA, así que un ancla rota
+    /// dentro de un `for` aborta la iteración y los ficheros siguientes se dejan de comprobar en
+    /// silencio. Con `arguments:` cada fichero es un caso independiente.
+    @Test("Los numeradores del umbral leen la magnitud del ajuste, no el flag de la fila",
+          arguments: [
+        (fichero: "Yala/App/Logic/Calculators/HeroBucketsCalculator.swift",
+         desde: "static func calculate(", hasta: "return Buckets(",
+         accessor: "adjustment.approximateMagnitude(tx, magnitude: amount)"),
+        (fichero: "Yala/App/Logic/Calculators/CashFlowCalculator.swift",
+         desde: "static func calculateCashFlow(", hasta: "var chartData: [CashFlowData] = []",
+         accessor: "adjustment.approximateMagnitude(tx, magnitude: abs(val))"),
+        (fichero: "Yala/App/ViewModels/RecordsViewModel.swift",
+         desde: "private func calculateSummary()", hasta: "let newSummary = RecordsSummary(",
+         accessor: "statsAdjustment.approximateMagnitude(record, magnitude: magnitude)"),
+        (fichero: "Yala/Services/WidgetDataCache.swift",
+         desde: "static func buildPeriodSummary(", hasta: "var balanceApproximateMagnitude",
+         accessor: "adjustment.approximateMagnitude(tx, magnitude: abs(amount))"),
+    ])
+    func thresholdNumeratorsReadTheAdjustmentMagnitude(
+        ambito: (fichero: String, desde: String, hasta: String, accessor: String)
+    ) throws {
+        let cuerpo = try Self.scope(
+            try Self.code(ambito.fichero), from: ambito.desde, to: ambito.hasta
+        )
+        #expect(cuerpo.contains(ambito.accessor), """
+            \(ambito.fichero) tiene que pedirle la magnitud dudosa al ajuste
+            (`\(ambito.accessor)`), y pasarle la MISMA magnitud que suma al denominador.
+            """)
+        #expect(!cuerpo.contains("isExchangeRateProvisional"), """
+            \(ambito.fichero) lee el flag de la FILA dentro del bucle que suma el importe AJUSTADO.
+            En un gasto de grupo ese importe es el NETO de varias patas y el flag describe una sola:
+            un gasto del que el 90 % salió de una tasa dudosa se cuenta 100 % exacto, y como el
+            umbral es un cociente, además desplaza la marca del bucket entero.
+            """)
+    }
+
+    /// La contrapartida del scan de arriba: los DOS sitios donde leer el flag de la fila es lo
+    /// correcto, porque el importe que los acompaña **no** lleva ajuste de bridge. Sin esto, el
+    /// arreglo de este ticket invita a cablear el accessor también aquí, y ahí sí cambiaría el
+    /// número que se muestra.
+    @Test("El saldo histórico y la fila del widget siguen leyendo el flag de la fila")
+    func unadjustedSurfacesKeepTheRowFlag() throws {
+        let cache = try Self.code("Yala/Services/WidgetDataCache.swift")
+
+        let saldo = try Self.scope(
+            cache, from: "if let allTx = allTransactionsForBalance {",
+            to: "let topCategories = buildTopCategories("
+        )
+        #expect(saldo.contains("tx.isExchangeRateProvisional"), """
+            El saldo histórico suma `preferredAmount(tx)` SIN ajuste —los saldos reflejan montos
+            reales, no «mi parte»—, así que su marca es la de la fila. Cablear aquí el accessor del
+            ajuste emparejaría una magnitud neteada con un importe sin netear.
+            """)
+
+        // La fila de `WidgetTransaction` también lleva su flag crudo, y eso ya lo fija
+        // `homeWidgetProducesAndPaintsTheMark` unos tests más arriba: no se repite aquí.
+    }
 }
 
 @Suite("El umbral replicado en el widget no puede divergir del de la app")
