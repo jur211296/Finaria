@@ -49,6 +49,17 @@ convivir así.
 Es probable que afecte a **cualquier repo con `core.hooksPath` local**, no solo a éste. Sin
 comprobar en los demás.
 
+## El volumen histórico, medido el 2026-09-09
+
+El ticket dice arriba que «el historial está limpio desde el 2026-09-02», y es cierto en el sentido
+que importa —no se han sumado más—. Pero el acumulado de antes no se había contado, y conviene
+tenerlo delante al elegir camino: **768 de 3335 commits (23 %)** llevan `Co-Authored-By: Claude` o
+`🤖 Generated with` como línea propia del mensaje. El más antiguo es del 2026-01-13 (`40e7c3ce`).
+
+Medido con dos métodos independientes que coinciden. **No cambia el arreglo** —reescribir la
+historia rompería todos los SHAs y no se plantea—, pero sí el tamaño de lo que ya viaja en cualquier
+clon, que es el argumento de confidencialidad de abajo.
+
 ## Por qué importa
 
 No es cosmético: engancha con la regla de confidencialidad del `CLAUDE.md` global —«no se revela el
