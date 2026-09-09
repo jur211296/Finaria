@@ -28,11 +28,13 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (220)
+## Index (231)
 
 | id | status | path |
 |----|--------|------|
+| account-form-as-medium-detent-sheet | backlog | tickets/backlog/account-form-as-medium-detent-sheet.md |
 | account-goldens-freeze-read-test-times-out | backlog | tickets/backlog/account-goldens-freeze-read-test-times-out.md |
+| accounts-need-more-visibility-in-the-ui | backlog | tickets/backlog/accounts-need-more-visibility-in-the-ui.md |
 | adopt-terminal-claims-ready-without-checking-engine | backlog | tickets/backlog/adopt-terminal-claims-ready-without-checking-engine.md |
 | ai-recommended-budgets | backlog | tickets/backlog/ai-recommended-budgets.md |
 | apple-watch | backlog | tickets/backlog/apple-watch.md |
@@ -49,7 +51,9 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | canarios-y-breadcrumbs-sin-emisor | backlog | tickets/backlog/canarios-y-breadcrumbs-sin-emisor.md |
 | cashflow-spend-prediction | backlog | tickets/backlog/cashflow-spend-prediction.md |
 | changing-an-account-currency-orphans-its-whole-history | backlog | tickets/backlog/changing-an-account-currency-orphans-its-whole-history.md |
+| chat-assistant-is-down | backlog | tickets/backlog/chat-assistant-is-down.md |
 | chat-assistant-plants-exchange-rate-one | qa | tickets/qa/chat-assistant-plants-exchange-rate-one.md |
+| chat-creates-only-one-transaction-per-message | backlog | tickets/backlog/chat-creates-only-one-transaction-per-message.md |
 | chat-draft-drops-the-expense-sign | qa | tickets/qa/chat-draft-drops-the-expense-sign.md |
 | chat-draft-sign-can-contradict-its-subcategory | qa | tickets/qa/chat-draft-sign-can-contradict-its-subcategory.md |
 | chat-draft-stamps-its-own-currency-not-the-account | qa | tickets/qa/chat-draft-stamps-its-own-currency-not-the-account.md |
@@ -82,12 +86,14 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | diez-worktrees-comparten-un-simulador | backlog | tickets/backlog/diez-worktrees-comparten-un-simulador.md |
 | distribucion-recalcula-dos-veces-por-toque-y-sin-debounce | backlog | tickets/backlog/distribucion-recalcula-dos-veces-por-toque-y-sin-debounce.md |
 | distribution-balance-kpi-skips-fx | done | tickets/done/distribution-balance-kpi-skips-fx.md |
+| distribution-subviews-miss-the-new-panel-hero | backlog | tickets/backlog/distribution-subviews-miss-the-new-panel-hero.md |
 | dmarc-sube-la-politica-tras-observar | backlog | tickets/backlog/dmarc-sube-la-politica-tras-observar.md |
 | doble-conteo-dia1-previo-thismonth | done | tickets/done/doble-conteo-dia1-previo-thismonth.md |
 | dos-criterios-de-aproximado-en-la-misma-pantalla | backlog | tickets/backlog/dos-criterios-de-aproximado-en-la-misma-pantalla.md |
 | dry-run-del-avisador-envia-igual | backlog | tickets/backlog/dry-run-del-avisador-envia-igual.md |
 | edgecases-extreme-minimum-flaky-under-load | backlog | tickets/backlog/edgecases-extreme-minimum-flaky-under-load.md |
 | el-aviso-de-cierre-cita-el-pr-de-otra-sesion | backlog | tickets/backlog/el-aviso-de-cierre-cita-el-pr-de-otra-sesion.md |
+| el-commit-msg-global-no-corre-en-yala | backlog | tickets/backlog/el-commit-msg-global-no-corre-en-yala.md |
 | el-gate-no-corre-un-check-que-el-ci-si-bloquea | backlog | tickets/backlog/el-gate-no-corre-un-check-que-el-ci-si-bloquea.md |
 | el-hook-que-prohibe-atribuir-a-una-ia-no-corre-en-este-repo | backlog | tickets/backlog/el-hook-que-prohibe-atribuir-a-una-ia-no-corre-en-este-repo.md |
 | el-job-de-tests-del-ci-no-tiene-timeout | done | tickets/done/el-job-de-tests-del-ci-no-tiene-timeout.md |
@@ -96,6 +102,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | entitlement-sync-forzado-es-noop-si-hay-otro-en-vuelo | backlog | tickets/backlog/entitlement-sync-forzado-es-noop-si-hay-otro-en-vuelo.md |
 | exchange-rate-detail-shows-zero-for-low-denomination-currencies | backlog | tickets/backlog/exchange-rate-detail-shows-zero-for-low-denomination-currencies.md |
 | exportable-insights | backlog | tickets/backlog/exportable-insights.md |
+| fab-appears-without-animation | backlog | tickets/backlog/fab-appears-without-animation.md |
 | filtro-de-cuentas-se-colapsa-al-navegar-a-registros | backlog | tickets/backlog/filtro-de-cuentas-se-colapsa-al-navegar-a-registros.md |
 | financial-report-amounts-unmarked | backlog | tickets/backlog/financial-report-amounts-unmarked.md |
 | fx-approximate-mark-missing-on-secondary-surfaces | qa | tickets/qa/fx-approximate-mark-missing-on-secondary-surfaces.md |
@@ -167,10 +174,13 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | invite-backend-stale-config | qa | tickets/qa/invite-backend-stale-config.md |
 | invite-link-five-causes-one-message | qa | tickets/qa/invite-link-five-causes-one-message.md |
 | invite-refresh-forzado-es-noop-si-hay-otro-en-vuelo | qa | tickets/qa/invite-refresh-forzado-es-noop-si-hay-otro-en-vuelo.md |
+| ipad-native-app | backlog | tickets/backlog/ipad-native-app.md |
+| iphone-duo-native-app | backlog | tickets/backlog/iphone-duo-native-app.md |
 | joiner-flag-residuals-cosmetic-and-service-guard | backlog | tickets/backlog/joiner-flag-residuals-cosmetic-and-service-guard.md |
 | la-nocturna-de-ui-no-ha-disparado-ni-una-vez | done | tickets/done/la-nocturna-de-ui-no-ha-disparado-ni-una-vez.md |
 | live-anchor-breakdown-doubles-the-approximate-glyph | backlog | tickets/backlog/live-anchor-breakdown-doubles-the-approximate-glyph.md |
 | merchant-memory-suggests-across-natures-in-three-more-places | backlog | tickets/backlog/merchant-memory-suggests-across-natures-in-three-more-places.md |
+| multi-currency-accounts | backlog | tickets/backlog/multi-currency-accounts.md |
 | no-hay-seed-con-miembro-rechazado | backlog | tickets/backlog/no-hay-seed-con-miembro-rechazado.md |
 | notifications-not-delivered-testflight | done | tickets/done/notifications-not-delivered-testflight.md |
 | only-testing-filters-may-be-silently-empty | backlog | tickets/backlog/only-testing-filters-may-be-silently-empty.md |
@@ -215,6 +225,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | secondary-visit-data-lost-on-signout-unannounced | backlog | tickets/backlog/secondary-visit-data-lost-on-signout-unannounced.md |
 | secondary-visitor-writes-owner-domain | qa | tickets/qa/secondary-visitor-writes-owner-domain.md |
 | seeds-de-grupos-no-escriben-userid-ni-memberkey | backlog | tickets/backlog/seeds-de-grupos-no-escriben-userid-ni-memberkey.md |
+| siri-ai-integration-ios-27 | backlog | tickets/backlog/siri-ai-integration-ios-27.md |
 | siri-intent-dual-container | qa | tickets/qa/siri-intent-dual-container.md |
 | smart-ai-notifications | backlog | tickets/backlog/smart-ai-notifications.md |
 | staging-test-credentials-in-public-repo | done | tickets/done/staging-test-credentials-in-public-repo.md |
