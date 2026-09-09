@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (222)
+## Index (223)
 
 | id | status | path |
 |----|--------|------|
@@ -99,6 +99,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | exportable-insights | backlog | tickets/backlog/exportable-insights.md |
 | filtro-de-cuentas-se-colapsa-al-navegar-a-registros | backlog | tickets/backlog/filtro-de-cuentas-se-colapsa-al-navegar-a-registros.md |
 | financial-report-amounts-unmarked | backlog | tickets/backlog/financial-report-amounts-unmarked.md |
+| fresh-start-privado-no-ve-los-datos-de-icloud | backlog | tickets/backlog/fresh-start-privado-no-ve-los-datos-de-icloud.md |
 | fx-approximate-mark-missing-on-secondary-surfaces | qa | tickets/qa/fx-approximate-mark-missing-on-secondary-surfaces.md |
 | fx-category-totals-unmarked | backlog | tickets/backlog/fx-category-totals-unmarked.md |
 | fx-historical-balance-curve-unmarked | backlog | tickets/backlog/fx-historical-balance-curve-unmarked.md |
