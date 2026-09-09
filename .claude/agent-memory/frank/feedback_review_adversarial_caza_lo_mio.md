@@ -256,3 +256,20 @@ más cara: **citar el precedente no es haberlo leído**.
 **How to apply:** cuando un cambio toque un cálculo que ya tiene un primo resuelto en el repo, la
 lente que más paga es la que compara los dos **línea a línea**, no la que revisa el mío solo. Y si mi
 docblock nombra a otro fichero como modelo, ese fichero entra en la review.
+
+## 2026-09-09: refutó el DISEÑO, no un descuido — y el criterio que lo zanjó ya estaba escrito
+
+Las tres lentes dieron 12 hallazgos y el que importaba era de fondo: mi `isApproximate` propagaba un
+booleano y metía el **neto** en el numerador del umbral. No era un olvido ni un borde: era la forma
+del arreglo, ya compilada, verde y con nueve tests que la fijaban como correcta.
+
+Lo decisivo fue que **el criterio estaba escrito** —el docblock del helper, con el mismo ejemplo
+numérico— así que no hubo que consultar a Jürgen: había decisión suya del 8-sep y la lente la estaba
+citando. Es el reverso de la nota de [[el-denominador-de-una-resta-es-el-numero-que-se-ve]]: cuando
+una lente contradice una decisión escrita, gana la decisión; cuando la **invoca**, gana la lente y no
+hay pregunta que hacer.
+
+**How to apply:** si la review propone cambiar el diseño y no solo un detalle, busca **el criterio
+escrito** antes de decidir si es tuyo o de Jürgen. Y rehaz los tests: los nueve que tenía pasaban con
+las dos implementaciones — el caso que las distingue casi nunca es el del ticket, hay que construirlo
+(aquí, dos: parte pequeña y parte grande).

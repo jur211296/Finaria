@@ -139,3 +139,19 @@ Corolario que salió el mismo día: **a veces el bloqueo es real pero la causa e
 perfil de seed escribe `userID`**, así que `eligibleHeirCount` es siempre 0 y el botón no se pinta.
 Eso no lo arregla un teléfono: lo arregla el seed. Distinguir «no se puede aquí» de «no se puede
 **todavía** aquí» es lo que convierte una cola física en un ticket de backlog.
+
+## Y la premisa heredada no siempre es del encargo: el 2026-09-09 vino del `docs/ESTADO.md`
+
+El NOW decía «**cinco** tickets de FX bloqueados por `qa-no-puede-crear-cuenta-en-otra-divisa`», y
+escribí «éste es el **sexto**» en el ticket, en el PR y a punto de mandarlo. Al contar: **tres** se
+declaran *no* simulables por esa causa y **dos** más piden el mismo montaje declarándose *sí*
+simulables. Ni cinco ni seis, y la diferencia importa porque esa cifra es la que justifica priorizar
+la palanca.
+
+**Why:** una cifra de un documento se copia sin fricción — no parece una afirmación, parece un dato.
+Y en este repo la documentación envejece más rápido que el código.
+
+**How to apply:** **toda cifra que vayas a REUSAR se re-mide**, venga del encargo, del ticket o del
+estado. Cuesta un `grep -rl`. Y si al medirla sale otra, dilo en el sitio donde la reusaste **y
+corrige el documento de origen**: dejarlo pasar es lo que hace que la próxima sesión herede el mismo
+número.
