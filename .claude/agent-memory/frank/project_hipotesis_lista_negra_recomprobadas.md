@@ -195,6 +195,21 @@ algo (el simulador) sin ganar nada.
 
 ## El job `tests` del CI es ADVISORY por diseño — no lo esperes como si bloqueara (2026-09-07)
 
+**Matizado el 2026-09-09, y el matiz es el que importa: `Build for testing` NO es advisory.** Los
+tres pasos que llevan la palabra en el nombre son los que *ejecutan* tests; el paso que los precede
+y los **compila** no la lleva. Cuando ese cae, los tres advisory quedan en `skipped` y el job sale
+`fail` **sin haber corrido una sola línea de test** — un rojo que se lee igual que el conocido y
+significa lo contrario: no es «hay tests rotos», es «no se probó nada». El propio CI lo anota:
+«Nadie se ha enterado de que la suite NO llego a correr».
+
+⇒ Ante un `tests: fail`, **mira qué paso cayó** (`gh run view --job <id>` los lista con su nombre
+literal) antes de archivarlo como advisory. Ticket:
+`ci-runner-se-queda-sin-simuladores-y-tumba-build-for-testing` (medium).
+
+Aquel día la causa fue el runner `macos-26` arrancando **sin ningún runtime de simulador**
+(«Available destinations: … Any iOS Device» y nada más), y lo zanjó una **muestra imposible**: el
+mismo sha `9f35afaa` dio `success` a las 11:41 y `failure` a las 12:57. Relanzarlo bastó.
+
 **Dónde se comprueba, y cuesta un comando:** `gh run view --job <id>` lista los pasos, y los tres de
 test se llaman literalmente *«Unit tests (YalaTests pure-logic) — **advisory** (flaky crash SwiftData
 in-memory; ver Lista Negra)»*, *«… context-based — advisory»* y *«UI tests (YalaUITests) — advisory
