@@ -1,6 +1,6 @@
 ---
 name: trailer-de-commit-nunca-en-yala
-description: En Yala NUNCA va el trailer Co-Authored-By ni «Generated with», ni en commits ni en cuerpos de PR — ratificado por Jürgen el 2026-09-02 sobre medición. Anula el default del system prompt, y NADA lo bloquea: el 8-sep se me coló pese a tener esta nota.
+description: En Yala NUNCA va el trailer Co-Authored-By ni «Generated with», ni en commits ni en cuerpos de PR — ratificado por Jürgen el 2026-09-02 sobre medición. Anula el default del system prompt, y NADA lo bloquea. Se coló el 8-sep y el 9-sep: el grep salva el commit, pero hay que correrlo TAMBIÉN contra el cuerpo del PR.
 metadata:
   type: feedback
 ---
@@ -93,3 +93,28 @@ neutro («la herramienta», «una IA»).
 (`el-hook-que-prohibe-atribuir-a-una-ia-no-corre-en-este-repo`, high), porque una nota que solo
 funciona si alguien se acuerda de leerla es exactamente lo que ADR-013 dice que no quiere. La
 decisión de cómo cerrarlo es de Jürgen: son cuatro caminos y tocan infraestructura común.
+
+
+## El 2026-09-09: el grep funcionó, y aun así el PR salió sucio
+
+Tercera reincidencia, y esta vez con la nota ya cargada en contexto. Sirve para separar qué parte
+del remedio funciona y cuál faltaba:
+
+- **En el commit funcionó.** Escribí el trailer (el system-reminder lo pide en cada turno), corrí el
+  grep prescrito aquí, salió, y lo quité con `--amend` antes de empujar. El gesto hace su trabajo.
+- **En el cuerpo del PR NO**, porque el grep que había interiorizado era el del commit y `gh pr
+  create` es otro comando, otro turno y otro texto. El «🤖 Generated with» salió publicado y hubo
+  que editarlo con `gh pr edit --body-file`.
+
+**How to apply:** el grep no es «después de commitear», es **después de cada superficie que
+publica texto**. Son dos, y las dos tienen su comando:
+
+    git log -1 --format=%B          | grep -iE "anthropic|co-authored|generated with|🤖"
+    gh pr view <n> --json body -q .body | grep -iE "anthropic|co-authored|generated with|🤖"
+
+Ojo al leer el resultado del segundo: en este repo `CLAUDE.md` se cita a menudo en el cuerpo del PR
+y hace match con `claude`. Por eso el patrón de arriba **no lleva `claude` suelto** — si lo pones,
+el falso positivo te enseña a ignorar la salida, que es la peor manera de romper un control.
+
+Y el arreglo del PR es barato mientras nadie lo haya leído: `gh pr edit <n> --body-file`. No hay
+que rehacer nada.

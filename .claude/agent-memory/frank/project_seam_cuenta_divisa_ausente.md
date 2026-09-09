@@ -40,3 +40,35 @@ escribir constantes. Ver [[la-asercion-que-no-puede-fallar]].
 bloqueados y el `docs/ESTADO.md` decía cinco. **Son siete** los que esperan el montaje, y de los
 cuatro que nombraba, dos pedían además otra cosa y uno no declaraba bloqueo alguno.
 Ver [[la-premisa-del-encargo-tambien-se-mide]].
+
+## 2026-09-09 (tarde) — la familia recorrida entera, PR #115
+
+**5 PASS con evidencia en pantalla** (`fx-presentation-still-shows-1to1`,
+`fx-approximate-mark-missing-on-secondary-surfaces`, `chat-rows-sealed-...`,
+`bridge-de-grupos-...`, `approximate-mark-ors-over-whole-period`) y **2 parciales por causa
+propia**: `fx-manual-writes-seal-approximate-as-final` (el flag no tiene superficie por fila: no hay
+nada que mirar) y `fx-partial-rate-rows-silent-1to1` (red + el seam `-uitest-preferred-currency`,
+que sigue sin existir).
+
+**Los dos que «necesitaban más seed» ya lo tienen**: `-uitest-seed-chat-sealed-rate <ISO>` y
+`-uitest-seed-group-bridge-fx <ISO>`. Los dos idempotentes, los dos con suite propia y mutantes.
+
+**Lo que hay que saber para volver a correr esto:**
+
+- **El veredicto del barrido legacy necesita DOS arranques**, y sale gratis del orden que ya existe:
+  el barrido es el paso 2 del bootstrap y el seed el 19, así que el arranque que siembra deja la
+  fila envenenada y el siguiente la cura.
+- **En el segundo arranque NO pases `-uitest-seed <perfil>`**: duplica el corpus entero
+  (2.326 → 4.651). Ticket propio: `uitest-seed-reseeds-the-corpus-without-reset`.
+- **El barrido depende del gate de quiescencia de CloudKit** y puede no correr en un arranque
+  concreto. Si el log no dice `repair sweep …`, relanza; no es un FAIL.
+- **Con «Todo el tiempo» el fixture no marca** (0,36 % < 5 %). Acota el período o leerás un falso
+  negativo — y ese par es, a la vez, la demostración en pantalla del umbral de
+  `approximate-mark-ors-over-whole-period`.
+
+**Quedan 4 tickets**, tres de ellos superficies que las tablas de sus padres no nombraban:
+`live-anchor-breakdown-doubles-the-approximate-glyph` (el «≈» del copy y el de la marca se suman y
+salen «≈ ≈»), `pie-header-total-unmarked`, `weekday-bar-daily-average-unmarked` y el del seed.
+
+**Y lo que sigue sin poder verificarse aquí**: el widget de inicio (simulable, no cupo), el
+asistente (LLM real), la red y el cambio de divisa preferida.
