@@ -36,6 +36,7 @@ extension XCUIApplication {
         icloudIdentity: Bool = false,
         joinPhase: String? = nil,
         joinSoftTimeout: String? = nil,
+        foreignAccount: String? = nil,
         extraArguments: [String] = []
     ) -> XCUIApplication {
         var args = ["-uitest"]
@@ -92,6 +93,15 @@ extension XCUIApplication {
         if let joinSoftTimeout {
             args.append("-uitest-join-soft-timeout")
             args.append(joinSoftTimeout)
+        }
+        // Cuenta en una divisa AUSENTE de la fila de tasas (familia FX). Va NOMBRADO y no por
+        // `extraArguments:` por la misma razón que sus vecinos, y con el mismo agravante que el seam
+        // de identidad: un typo que lo dejara fuera no da rojo — da un VERDE que mide el corpus SIN
+        // filas aproximadas creyendo medirlo con ellas, que es justo el estado que estos tests
+        // existen para distinguir.
+        if let foreignAccount {
+            args.append("-uitest-seed-foreign-account")
+            args.append(foreignAccount)
         }
         // Args crudos adicionales (aditivo — p.ej. "-uitest-cloud-chooser").
         args.append(contentsOf: extraArguments)

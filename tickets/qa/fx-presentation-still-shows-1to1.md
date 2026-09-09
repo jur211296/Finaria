@@ -4,7 +4,7 @@ status: qa
 priority: medium
 area: currency
 created: 2026-09-03
-updated: 2026-09-06
+updated: 2026-09-09
 source: residual explícito de fx-partial-rate-rows-silent-1to1 (decisión del owner, 2026-09-03)
 ---
 
@@ -121,3 +121,13 @@ justo lo que no puede afirmarse desde aquí.
 Ojo al interpretarlo: hasta que se cierre `fx-manual-writes-seal-approximate-as-final`, la marca
 puede **faltar** en totales cuyas transacciones nacieron mal selladas. Una ausencia de «≈» no
 prueba, por sí sola, que la propagación esté rota.
+
+---
+
+## 2026-09-09 — el montaje que esperabas ya existe
+
+El estado de partida se siembra desde un solo launch con `-uitest -uitest-reset -uitest-skip-onboarding -uitest-seed realista -uitest-seed-foreign-account JPY` (ticket `qa-no-puede-crear-cuenta-en-otra-divisa`, **done**). Deja la cuenta «QA FX» con un ingreso y dos gastos fechados HOY, marcados `isExchangeRateProvisional` por el camino de producción — la fila del día existe y no trae JPY, así que la conversión es `.staticFallback`.
+
+**Aviso para no leer un falso negativo:** con el filtro «Todo el tiempo» el fixture NO marca (750 sobre 206.725 son el 0,36 %, bajo el umbral del 5 %). **Acota el período** — con «Este mes» los tres números del Panel llevan «≈» y sin el arg ninguno.
+
+**Queda desbloqueado ENTERO**, y el par «aparece / no aparece» que tu :118-119 daba por imposible en simulador está medido: con «Este mes», Disponible ≈ S/ 5.327,00 · Ingresos ≈ S/ 10.000,00 · Gastos ≈ S/ 4.673,00 **con** el arg, y S/ 4.577,00 · S/ 8.500,00 · S/ 3.923,00 **sin** él. Las diferencias son los importes del fixture al céntimo.

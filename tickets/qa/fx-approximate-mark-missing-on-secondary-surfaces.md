@@ -237,3 +237,13 @@ la facturación bruta).
   que debería** en cualquier superficie.
 - `fx-widget-drops-missing-currency` — el widget de TASAS omite la divisa en vez de marcarla; es otra
   decisión y **no bloqueaba** al widget de inicio, contra lo que decía este ticket.
+
+---
+
+## 2026-09-09 — el montaje que esperabas ya existe
+
+El estado de partida se siembra desde un solo launch con `-uitest -uitest-reset -uitest-skip-onboarding -uitest-seed realista -uitest-seed-foreign-account JPY` (ticket `qa-no-puede-crear-cuenta-en-otra-divisa`, **done**). Deja la cuenta «QA FX» con un ingreso y dos gastos fechados HOY, marcados `isExchangeRateProvisional` por el camino de producción — la fila del día existe y no trae JPY, así que la conversión es `.staticFallback`.
+
+**Aviso para no leer un falso negativo:** con el filtro «Todo el tiempo» el fixture NO marca (750 sobre 206.725 son el 0,36 %, bajo el umbral del 5 %). **Acota el período** — con «Este mes» los tres números del Panel llevan «≈» y sin el arg ninguno.
+
+**Queda desbloqueado ENTERO.** Tu :213 pedía exactamente «una cuenta en divisa ausente de la fila de tasas» y nada más, así que ya puedes recorrer las superficies secundarias y ver en cuáles falta la marca.

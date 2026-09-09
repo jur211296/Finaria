@@ -4,7 +4,7 @@ status: qa
 priority: high
 area: currency
 created: 2026-09-06
-updated: 2026-09-07
+updated: 2026-09-09
 source: hallazgo de camino en fx-presentation-still-shows-1to1 (2026-09-06)
 ---
 
@@ -120,3 +120,13 @@ barrido real un paso después. El control positivo ahora incluye las dos formas.
 
 - `fx-partial-rate-rows-silent-1to1` (en `qa/`) — el converter y el punto de paso, ya arreglados.
 - `fx-presentation-still-shows-1to1` — que el número **mostrado** declare que es aproximado.
+
+---
+
+## 2026-09-09 — el montaje que esperabas ya existe
+
+El estado de partida se siembra desde un solo launch con `-uitest -uitest-reset -uitest-skip-onboarding -uitest-seed realista -uitest-seed-foreign-account JPY` (ticket `qa-no-puede-crear-cuenta-en-otra-divisa`, **done**). Deja la cuenta «QA FX» con un ingreso y dos gastos fechados HOY, marcados `isExchangeRateProvisional` por el camino de producción — la fila del día existe y no trae JPY, así que la conversión es `.staticFallback`.
+
+**Aviso para no leer un falso negativo:** con el filtro «Todo el tiempo» el fixture NO marca (750 sobre 206.725 son el 0,36 %, bajo el umbral del 5 %). **Acota el período** — con «Este mes» los tres números del Panel llevan «≈» y sin el arg ninguno.
+
+**Desbloqueado a medias.** El montaje cubre la fila incompleta; lo que tu :108 pide además es **red**, y eso sigue fuera del simulador. Los diez sitios que sellan se pueden verificar con este corpus salvo en la parte que exige que las tasas LLEGUEN.

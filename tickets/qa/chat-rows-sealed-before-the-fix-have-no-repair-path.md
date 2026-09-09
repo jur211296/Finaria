@@ -4,7 +4,7 @@ status: qa
 priority: medium
 area: "currency, chat"
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 source: hallazgo de camino en chat-assistant-plants-exchange-rate-one (2026-09-08)
 ---
 
@@ -163,3 +163,15 @@ verdad.
 - `fx-repair-sweep-seals-on-a-partially-restored-store` (medium)
 - `fx-repair-sweep-is-the-only-boot-sweep-without-a-uitest-gate` (low)
 - `fx-repair-sweep-has-no-canary` (low)
+
+---
+
+## 2026-09-09 — el montaje que esperabas ya existe
+
+El estado de partida se siembra desde un solo launch con `-uitest -uitest-reset -uitest-skip-onboarding -uitest-seed realista -uitest-seed-foreign-account JPY` (ticket `qa-no-puede-crear-cuenta-en-otra-divisa`, **done**). Deja la cuenta «QA FX» con un ingreso y dos gastos fechados HOY, marcados `isExchangeRateProvisional` por el camino de producción — la fila del día existe y no trae JPY, así que la conversión es `.staticFallback`.
+
+**Aviso para no leer un falso negativo:** con el filtro «Todo el tiempo» el fixture NO marca (750 sobre 206.725 son el 0,36 %, bajo el umbral del 5 %). **Acota el período** — con «Este mes» los tres números del Panel llevan «≈» y sin el arg ninguno.
+
+**Desbloqueado a medias.** La cuenta ya la tienes; falta la otra mitad de tu :156 —una fila sembrada con `exchangeRate = 1.0` y monto convertido real—, que es la población envenenada que el reparador debe curar. El seam siembra filas SANAS-pero-aproximadas, que es el caso contrario.
+
+Ojo al elegir cómo sembrarla: `.claude/rules/currency-fx.md` avisa de que reabrir una fila cuyo monto ya era bueno DESTRUYE datos, y las dos poblaciones se distinguen por el cociente `amountInPreferredCurrency / amount`.

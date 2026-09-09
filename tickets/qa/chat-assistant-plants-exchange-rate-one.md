@@ -4,7 +4,7 @@ status: qa
 priority: medium
 area: "currency, chat"
 created: 2026-09-07
-updated: 2026-09-08
+updated: 2026-09-09
 source: hallazgo de camino en fx-manual-writes-seal-approximate-as-final (2026-09-07)
 ---
 
@@ -129,3 +129,15 @@ escribiendo cualquier número distinto de 1.0.
 
 Device-QA. **No es simulable con los seeds actuales** — ninguno es multi-divisa, así que para ver el
 número en el detalle hace falta una cuenta en otra divisa y el chat contra el LLM real.
+
+---
+
+## 2026-09-09 — el montaje que esperabas ya existe
+
+El estado de partida se siembra desde un solo launch con `-uitest -uitest-reset -uitest-skip-onboarding -uitest-seed realista -uitest-seed-foreign-account JPY` (ticket `qa-no-puede-crear-cuenta-en-otra-divisa`, **done**). Deja la cuenta «QA FX» con un ingreso y dos gastos fechados HOY, marcados `isExchangeRateProvisional` por el camino de producción — la fila del día existe y no trae JPY, así que la conversión es `.staticFallback`.
+
+**Aviso para no leer un falso negativo:** con el filtro «Todo el tiempo» el fixture NO marca (750 sobre 206.725 son el 0,36 %, bajo el umbral del 5 %). **Acota el período** — con «Este mes» los tres números del Panel llevan «≈» y sin el arg ninguno.
+
+**Desbloqueado a medias.** La cuenta en otra divisa ya la tienes; sigue haciendo falta **el chat contra el LLM real** (:131), que no se simula.
+
+Y una corrección a tu :130: «ninguno es multi-divisa» es **falso** — `DevSeedAccounts` crea PEN + USD desde siempre (`done/distribution-balance-kpi-skips-fx:281` ya lo midió). Lo que faltaba no era multi-divisa, era una divisa FUERA de la fila.
