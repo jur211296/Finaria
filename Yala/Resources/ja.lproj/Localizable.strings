@@ -5707,3 +5707,36 @@
 
 /* Delete-blocked hint for a group owner with debt and no heir: points at Archive, which already works with debt. */
 "groups.settings.deleteGroupDisabledHintArchive" = "グループに未精算の残高があります。一覧から外すにはアーカイブしてください。負債はそのまま保持されます。";
+
+/* Account currency locked because history is owned elsewhere */
+"account.currencyChange.blockedTitle" = "通貨は変更できません";
+
+/* %@ = comma-separated list of reasons */
+"account.currencyChange.blockedMessage" = "この口座には、アプリの別の場所で金額が管理されている記録があります（%@）。ここで通貨を変更すると、金額が合わなくなります。";
+
+/* Lowercase, used inside a list */
+"account.currencyChange.blockedReasonTransfer" = "口座間の振替";
+
+/* Lowercase, used inside a list */
+"account.currencyChange.blockedReasonGroupExpense" = "グループの支出";
+
+/* Lowercase, used inside a list */
+"account.currencyChange.blockedReasonGroupSettlement" = "グループの精算";
+
+/* %1 old currency, %2 new currency */
+"account.currencyChange.confirmMessage" = "これらは%1$@で記録されており、それぞれの日付の為替レートで%2$@に換算されます。この操作は取り消せません。";
+
+/* Confirm button */
+"account.currencyChange.confirmAction" = "換算";
+
+/* Progress overlay title */
+"account.currencyChange.progressTitle" = "記録を換算しています";
+
+/* Progress overlay subtitle */
+"account.currencyChange.progressSubtitle" = "各日付の為替レートを適用しています";
+
+/* Rates could not be fetched */
+"account.currencyChange.ratesUnavailableTitle" = "換算できませんでした";
+
+/* Body of the rates-unavailable alert */
+"account.currencyChange.ratesUnavailableMessage" = "この口座の一部の日付の為替レートがありません。何も変更していません。接続を確認してからもう一度お試しください。";

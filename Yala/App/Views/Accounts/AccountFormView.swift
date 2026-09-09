@@ -193,6 +193,98 @@ struct AccountFormView: View {
                 }
             }
         )
+        .alert(
+            viewModel.pendingCurrencyConversion.map {
+                L10n.Account.CurrencyChange.confirmTitle($0.rowCount)
+            } ?? "",
+            isPresented: Binding(
+                get: { viewModel.pendingCurrencyConversion != nil },
+                // **El setter solo cierra el alert; NO revierte la divisa.** En iOS un alert no tiene
+                // gesto de descarte: se cierra pulsando un botón, y SwiftUI escribe `false` aquí al
+                // pulsar CUALQUIERA de ellos — Convertir incluido. Si este setter cancelara, competiría
+                // con la acción del propio botón que lo disparó. Revertir es trabajo de Cancelar, que
+                // lo hace explícitamente.
+                set: { if !$0 { viewModel.pendingCurrencyConversion = nil } }
+            ),
+            actions: {
+                // El dato se lee AQUÍ, síncronamente, y viaja en la llamada: el cuerpo `async` no
+                // puede depender de un estado que el setter de arriba está a punto de limpiar.
+                // (Sin `accessibilityIdentifier`: dentro del closure de un `.alert` no llega al árbol
+                // de accesibilidad — `docs/aprendizajes-tecnicos.md`, 2026-09-04.)
+                let pending = viewModel.pendingCurrencyConversion
+                Button(L10n.Account.CurrencyChange.confirmAction) {
+                    guard let pending else { return }
+                    confirmCurrencyConversion(pending)
+                }
+
+                Button(L10n.Common.cancel, role: .cancel) {
+                    viewModel.cancelCurrencyConversion()
+                }
+            },
+            message: {
+                if let pending = viewModel.pendingCurrencyConversion {
+                    Text(L10n.Account.CurrencyChange.confirmMessage(
+                        pending.fromCurrencyCode,
+                        pending.toCurrencyCode
+                    ))
+                }
+            }
+        )
+        .alert(
+            L10n.Account.CurrencyChange.blockedTitle,
+            isPresented: $viewModel.isShowingCurrencyChangeBlocked,
+            actions: {
+                Button(L10n.Common.understood, role: .cancel) {
+                    viewModel.cancelCurrencyConversion()
+                }
+            },
+            message: {
+                Text(L10n.Account.CurrencyChange.blockedMessage(blockedReasonsText))
+            }
+        )
+        .alert(
+            L10n.Account.CurrencyChange.ratesUnavailableTitle,
+            isPresented: $viewModel.isShowingCurrencyRatesUnavailable,
+            actions: {
+                Button(L10n.Common.understood, role: .cancel) {}
+            },
+            message: {
+                Text(L10n.Account.CurrencyChange.ratesUnavailableMessage)
+            }
+        )
+        .overlay {
+            if viewModel.isConvertingCurrency {
+                currencyConversionOverlay
+            }
+        }
+        // A media conversión el histórico está partido entre dos divisas: cerrar el formulario ahí
+        // dejaría la cuenta en un estado que ninguna pantalla sabe leer.
+        .interactiveDismissDisabled(viewModel.isConvertingCurrency)
+    }
+
+    /// Tapa la pantalla mientras se reexpresa el histórico. Espeja el overlay del cambio de divisa
+    /// preferida (`CurrencySettingsView`), que resuelve el mismo problema.
+    private var currencyConversionOverlay: some View {
+        ZStack {
+            Color.black.opacity(DS.Opacity.overlay)
+                .ignoresSafeArea()
+
+            VStack(spacing: DS.Spacing.lg) {
+                ProgressView()
+
+                Text(L10n.Account.CurrencyChange.progressTitle)
+                    .font(DS.Typography.headline)
+                    .foregroundStyle(.primary)
+
+                Text(L10n.Account.CurrencyChange.progressSubtitle)
+                    .font(DS.Typography.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(DS.Spacing.xxl)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.lg))
+        }
+        .accessibilityIdentifier("account_currency_converting")
     }
 
     // MARK: Secciones de la vista
@@ -247,31 +339,74 @@ struct AccountFormView: View {
 
     private var currencySection: some View {
         SectionBox(title: L10n.Account.currency) {
-            NavigationLink {
-                CurrencySelectorView(selectedCurrency: $viewModel.selectedCurrency)
-                    .swipeBack()
-            } label: {
-                HStack(spacing: DS.Spacing.md) {
-                    Text(currencyInfo(for: viewModel.selectedCurrency).flag)
-                        .font(DS.Typography.title)
+            VStack(alignment: .leading, spacing: DS.Spacing.none) {
+                if viewModel.isCurrencyEditable {
+                    NavigationLink {
+                        CurrencySelectorView(selectedCurrency: $viewModel.selectedCurrency)
+                            .swipeBack()
+                    } label: {
+                        currencyRow(showsChevron: true)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("account_currency_link")
+                } else {
+                    // Sin `NavigationLink`: no hay destino al que llegar, así que tampoco hay tap.
+                    // El motivo va debajo y no en un alert porque se puede leer ANTES de intentarlo
+                    // — un alert solo aparecería después de un toque que no lleva a ninguna parte.
+                    // La divisa de la CUENTA, no `selectedCurrency`: si el bloqueo aparece por una
+                    // fila que llegó por sync mientras el selector estaba abierto, enseñar la
+                    // elección del usuario junto a «no se puede cambiar» afirmaría algo falso.
+                    currencyRow(showsChevron: false, currency: viewModel.balanceDisplayCurrency)
+                        .accessibilityIdentifier("account_currency_locked")
 
-                    Text(L10n.Account.currency)
-                        .font(DS.Typography.body)
-                        .foregroundStyle(.primary)
-
-                    Spacer()
-
-                    Text(currencyInfo(for: viewModel.selectedCurrency).name.capitalized)
-                        .foregroundStyle(.secondary)
-
-                    Image(systemName: "chevron.right")
+                    Text(L10n.Account.CurrencyChange.blockedMessage(blockedReasonsText))
                         .font(DS.Typography.caption)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal)
+                        .padding(.bottom)
+                        .accessibilityIdentifier("account_currency_locked_reason")
                 }
-                .padding()
             }
-            .buttonStyle(.plain)
         }
+    }
+
+    private func currencyRow(showsChevron: Bool, currency: CurrencyCode? = nil) -> some View {
+        let shown = currency ?? viewModel.selectedCurrency
+        return HStack(spacing: DS.Spacing.md) {
+            Text(currencyInfo(for: shown).flag)
+                .font(DS.Typography.title)
+
+            Text(L10n.Account.currency)
+                .font(DS.Typography.body)
+                .foregroundStyle(showsChevron ? .primary : .secondary)
+
+            Spacer()
+
+            Text(currencyInfo(for: shown).name.capitalized)
+                .foregroundStyle(.secondary)
+
+            if showsChevron {
+                Image(systemName: "chevron.right")
+                    .font(DS.Typography.caption)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .padding()
+    }
+
+    /// Los motivos del bloqueo, como lista legible. El orden lo fija el ViewModel para que el texto
+    /// no cambie entre aperturas.
+    private var blockedReasonsText: String {
+        viewModel.blockedCurrencyReasons
+            .map { reason in
+                switch reason {
+                case .transfer: return L10n.Account.CurrencyChange.blockedReasonTransfer
+                case .groupExpense: return L10n.Account.CurrencyChange.blockedReasonGroupExpense
+                case .groupSettlement: return L10n.Account.CurrencyChange.blockedReasonGroupSettlement
+                }
+            }
+            .formatted(.list(type: .and))
     }
 
     private var adjustmentSection: some View {
@@ -324,6 +459,7 @@ struct AccountFormView: View {
         .onChange(of: viewModel.selectedAdjustmentMode) {
             viewModel.adjustmentModeChanged()
         }
+        .disabled(viewModel.isCurrencyChangeRequested)
     }
 
     private var balanceSection: some View {
@@ -341,7 +477,7 @@ struct AccountFormView: View {
                         Spacer()
                         Text(
                             formatAmount(
-                                viewModel.currentBalance, currency: viewModel.selectedCurrency)
+                                viewModel.currentBalance, currency: viewModel.balanceDisplayCurrency)
                         )
                         .font(DS.Typography.headline)
                         .foregroundStyle(.primary)
@@ -605,6 +741,23 @@ struct AccountFormView: View {
                 dismiss()
             }
             // else: alert will show and dismiss after user responds
+        }
+    }
+
+    /// El usuario dijo que sí: convierte y guarda.
+    ///
+    /// El `Task` no es decorativo — la conversión refresca tasas antes de tocar importes, y eso hace
+    /// red. Cerrar solo si el guardado salió bien deja el formulario abierto cuando algo falló, que
+    /// es lo mismo que hace el guardado normal.
+    private func confirmCurrencyConversion(
+        _ pending: AccountFormViewModel.PendingCurrencyConversion
+    ) {
+        Task {
+            if await viewModel.confirmCurrencyConversion(pending, context: modelContext) {
+                if viewModel.currencyToSuggestAsSecondary == nil {
+                    dismiss()
+                }
+            }
         }
     }
 

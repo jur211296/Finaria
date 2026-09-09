@@ -104,3 +104,37 @@ funcionaba — y los mensajes hablaban de lo que ven Panel e informes, o sea del
 Relacionado: [[mi-docblock-tambien-es-una-premisa]] — el mensaje de un `#expect` es un docblock más, y
 el mío afirmaba algo falso sobre producción. Y [[mutante-compilado-zanja-hipotesis]], que sigue siendo
 la herramienta buena: lo que esta memoria acota es **qué** demuestra exactamente.
+
+## El sexto eslabón, y el único que un mutante NO caza: la aserción que depende de la MÁQUINA
+
+**2026-09-09.** `sinTasaDeEseDia_cuentaComoAproximada` afirmaba `#expect(row.isExchangeRateProvisional)`
+tras convertir a un `"USD"` literal. Ese flag lo escribe `recalculatePreferredCurrency`, que describe
+la pata `amount → preferida`; cuando el destino **es** la preferida esa pata es la identidad, sale
+`.exact` y el flag queda en `false` aunque la conversión origen→destino haya sido aproximada. Verde
+en mi máquina (preferida PEN), **rojo en CI** (preferida USD). Nueve mutantes, tres lentes
+adversariales y la suite completa en local pasaron por encima sin verlo: **todos corrían en el mismo
+entorno**.
+
+**Why:** un mutante prueba que el test reacciona al CÓDIGO. No dice nada de si reacciona al ENTORNO,
+y `CurrencyDefaults.currentPreferred` lee `UserDefaults.standard`, que en un simulador de CI recién
+creado no vale lo mismo que en el mío.
+
+**How to apply:**
+
+- **La pregunta gemela de la de arriba:** ¿qué valor tendría esta columna en OTRA máquina? Si un
+  `#expect` toca algo que dependa de la divisa preferida, el idioma, la región, la zona horaria o la
+  fecha de hoy, **derívalo en el test** en vez de escribir el literal. Aquí: leer la preferida y
+  elegir un destino que no sea ella.
+- **Y fija la asimetría con un test hermano.** El control
+  (`haciaLaDivisaPreferida_elConteoLoDiceYElFlagNo`) hace la MISMA conversión aproximada hacia la
+  preferida y exige el flag en `false`. Con los dos, la dependencia del entorno queda descrita en vez
+  de descubrirse en la siguiente corrida de CI — que aquí costó **28 minutos**.
+- Es la familia del helper de fecha de ese mismo fichero, que sí fijé en UTC por este motivo
+  (`CurrencyConverter` deriva el `dateKey` en UTC). La diferencia es que aquélla la vi al escribirla
+  y ésta no.
+
+**Y el aviso estaba escrito.** La primera lente adversarial lo dijo con todas las letras — «pasa por
+coincidencia; con destino == preferida ese `#expect` se pone rojo»— y lo dejé pasar porque el
+hallazgo venía dentro de otro más grande. ⇒ **una nota de una lente sobre un test es un hallazgo,
+no un comentario**: los hallazgos de los tests se atienden igual que los del código, o se pagan
+enteros después. Ver [[review-adversarial-caza-lo-mio]].

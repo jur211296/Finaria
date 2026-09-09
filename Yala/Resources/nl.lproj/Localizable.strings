@@ -5707,3 +5707,36 @@
 
 /* Delete-blocked hint for a group owner with debt and no heir: points at Archive, which already works with debt. */
 "groups.settings.deleteGroupDisabledHintArchive" = "Er staan nog saldi open in deze groep. Archiveer hem om hem uit je lijst te halen: de schulden blijven bestaan.";
+
+/* Account currency locked because history is owned elsewhere */
+"account.currencyChange.blockedTitle" = "De valuta kan niet worden gewijzigd";
+
+/* %@ = comma-separated list of reasons */
+"account.currencyChange.blockedMessage" = "Deze rekening bevat boekingen waarvan de bedragen elders in de app worden beheerd: %@. De valuta hier wijzigen zou ze uit de pas laten lopen.";
+
+/* Lowercase, used inside a list */
+"account.currencyChange.blockedReasonTransfer" = "overboekingen tussen rekeningen";
+
+/* Lowercase, used inside a list */
+"account.currencyChange.blockedReasonGroupExpense" = "groepsuitgaven";
+
+/* Lowercase, used inside a list */
+"account.currencyChange.blockedReasonGroupSettlement" = "groepsafrekeningen";
+
+/* %1 old currency, %2 new currency */
+"account.currencyChange.confirmMessage" = "Ze zijn vastgelegd in %1$@ en gaan naar %2$@ met de wisselkoers van de datum van elke boeking. Dit kan niet ongedaan worden gemaakt.";
+
+/* Confirm button */
+"account.currencyChange.confirmAction" = "Omrekenen";
+
+/* Progress overlay title */
+"account.currencyChange.progressTitle" = "Boekingen omrekenen";
+
+/* Progress overlay subtitle */
+"account.currencyChange.progressSubtitle" = "Wisselkoers van elke datum toepassen";
+
+/* Rates could not be fetched */
+"account.currencyChange.ratesUnavailableTitle" = "Omrekenen niet gelukt";
+
+/* Body of the rates-unavailable alert */
+"account.currencyChange.ratesUnavailableMessage" = "Voor sommige datums van deze rekening ontbreken wisselkoersen. Er is niets gewijzigd — controleer je verbinding en probeer het opnieuw.";

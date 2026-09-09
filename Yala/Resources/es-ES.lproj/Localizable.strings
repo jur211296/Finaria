@@ -4976,3 +4976,39 @@
 
 /* Delete-blocked hint for a group owner with debt and no heir: points at Archive, which already works with debt. */
 "groups.settings.deleteGroupDisabledHintArchive" = "Hay saldos pendientes en el grupo. Si quieres quitártelo de la lista, archívalo: las deudas se conservan.";
+
+/* Account currency locked because history is owned elsewhere */
+"account.currencyChange.blockedTitle" = "La divisa no se puede cambiar";
+
+/* %@ = comma-separated list of reasons */
+"account.currencyChange.blockedMessage" = "Esta cuenta tiene movimientos cuyo importe se administra en otra parte de la app: %@. Cambiar la divisa aquí los dejaría descuadrados.";
+
+/* Lowercase, used inside a list */
+"account.currencyChange.blockedReasonTransfer" = "transferencias entre cuentas";
+
+/* Lowercase, used inside a list */
+"account.currencyChange.blockedReasonGroupExpense" = "gastos de grupo";
+
+/* Lowercase, used inside a list */
+"account.currencyChange.blockedReasonGroupSettlement" = "liquidaciones de grupo";
+
+/* %1 old currency, %2 new currency */
+"account.currencyChange.confirmMessage" = "Están registrados en %1$@ y pasarán a %2$@ con el tipo de cambio de la fecha de cada uno. Esta acción no se puede deshacer.";
+
+/* Confirm button */
+"account.currencyChange.confirmAction" = "Convertir";
+
+/* Progress overlay title */
+"account.currencyChange.progressTitle" = "Convirtiendo movimientos";
+
+/* Progress overlay subtitle */
+"account.currencyChange.progressSubtitle" = "Aplicando el tipo de cambio de cada fecha";
+
+/* Plural del padre materializado flat: la variante no lleva .stringsdict propio */
+"account.currencyChange.confirmTitle" = "¿Convertir %d movimientos?";
+
+/* Rates could not be fetched */
+"account.currencyChange.ratesUnavailableTitle" = "No se pudo convertir";
+
+/* Body of the rates-unavailable alert */
+"account.currencyChange.ratesUnavailableMessage" = "Faltan tipos de cambio de algunas fechas de esta cuenta. No se cambió nada: revisa tu conexión e inténtalo otra vez.";

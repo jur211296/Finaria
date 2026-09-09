@@ -4960,3 +4960,39 @@
 
 /* Delete-blocked hint for a group owner with debt and no heir: points at Archive, which already works with debt. */
 "groups.settings.deleteGroupDisabledHintArchive" = "There are outstanding balances in this group. To take it off your list, archive it — the debts are kept.";
+
+/* Account currency locked because history is owned elsewhere */
+"account.currencyChange.blockedTitle" = "The currency can't be changed";
+
+/* %@ = comma-separated list of reasons */
+"account.currencyChange.blockedMessage" = "This account has records whose amounts are managed elsewhere in the app: %@. Changing the currency here would leave them out of step.";
+
+/* Lowercase, used inside a list */
+"account.currencyChange.blockedReasonTransfer" = "transfers between accounts";
+
+/* Lowercase, used inside a list */
+"account.currencyChange.blockedReasonGroupExpense" = "group expenses";
+
+/* Lowercase, used inside a list */
+"account.currencyChange.blockedReasonGroupSettlement" = "group settlements";
+
+/* %1 old currency, %2 new currency */
+"account.currencyChange.confirmMessage" = "They're recorded in %1$@ and will move to %2$@ using the exchange rate from each one's date. This can't be undone.";
+
+/* Confirm button */
+"account.currencyChange.confirmAction" = "Convert";
+
+/* Progress overlay title */
+"account.currencyChange.progressTitle" = "Converting records";
+
+/* Progress overlay subtitle */
+"account.currencyChange.progressSubtitle" = "Applying each date's exchange rate";
+
+/* Plural del padre materializado flat: la variante no lleva .stringsdict propio */
+"account.currencyChange.confirmTitle" = "Convert %d records?";
+
+/* Rates could not be fetched */
+"account.currencyChange.ratesUnavailableTitle" = "Couldn't convert";
+
+/* Body of the rates-unavailable alert */
+"account.currencyChange.ratesUnavailableMessage" = "Exchange rates are missing for some of this account's dates. Nothing was changed — check your connection and try again.";
