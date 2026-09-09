@@ -23,6 +23,14 @@ sabe todo eso, elige el destino por el cwd y escribe el registro.
   sabe quien trabajó), así que entra por `--texto`, pasa por `sanear` (quita rutas, recorta) y sale.
   Sin `--texto` se niega: «un aviso de cierre sin resumen no es una noticia». Medido: `ENVIADO
   destino=frank motivo=cierre-resumen HTTP 200`.
+- **El PR que sale en el aviso de cierre puede ser el de OTRA sesión, y `--rama` no lo arregla.**
+  Medido el 2026-09-09: el aviso salió con `#109` cuando los míos eran `#111` y `#112`. La anotación
+  del hook estaba bien —`ultimas/Yala__encargo-<slug>.txt` apuntaba a mi sesión, con los dos PR
+  dentro—; lo que falla es la resolución, que usa `ultimas/Yala__2.1.txt` (la rama del árbol
+  principal, desde donde se avisa) y sirve el PR de quien cerró antes. `--dry-run` da lo mismo con
+  el flag y sin él, así que el flag no llega ahí. **Comprueba el número antes de dar el cierre por
+  bueno**: `cat ~/.claude/cache/avisos-grok/ultimas/<repo>__<rama-con-guiones>.txt` y compara contra
+  `sesiones/<id>.json`. Ticket: `el-aviso-de-cierre-cita-el-pr-de-otra-sesion` (medium).
 - **`<motivo>` a secas NO envía** — corregido el 2026-09-05, midiendo el log antes y después:
   `main()` solo desvía a `modo_manual` con `--dry-run` o `--probar`; sin flag cae al **modo hook**,
   que espera el JSON del evento por stdin, revienta al no encontrarlo y **sale 0 sin decir nada**.
