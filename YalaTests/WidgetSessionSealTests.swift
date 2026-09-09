@@ -160,6 +160,51 @@ struct WidgetSessionSealTests {
         #expect(decoded.sessionSeal == nil)
         #expect(WidgetSessionSeal.isFresh(snapshotSeal: decoded.sessionSeal, activeSeal: nil))
     }
+
+    /// El mismo compromiso, un escalón más abajo: un snapshot legacy **con transacciones dentro** y
+    /// sin las claves de la marca de aproximado (`fx-approximate-mark-missing-on-secondary-surfaces`,
+    /// 2026-09-09).
+    ///
+    /// **Lo que añade de verdad es `WidgetTransaction`**: el test de arriba ya lleva un
+    /// `thisMonthSummary` sin las cuatro claves nuevas, así que ése ya cubre `WidgetPeriodSummary`.
+    /// Lo que no cubre es una FILA, porque su `transactions` va vacío — y es justo donde el primer
+    /// intento de este ticket habría roto.
+    ///
+    /// **Lo que protege, dicho con el daño concreto**: `thisMonthSummary` NO es opcional, así que una
+    /// clave nueva no opcional dentro de él revienta el snapshot ENTERO al decodificar —
+    /// `loadSnapshot()` devuelve nil y TODOS los widgets de la pantalla de inicio se quedan en cero
+    /// hasta que el usuario abra la app. En un widget eso pueden ser horas. Este caso puso rojo el
+    /// primer intento del ticket, que los declaraba `Bool` a secas.
+    @Test func snapshotLegacyConTransacciones_decodificaSinLasClavesDeAproximado() throws {
+        let legacy = """
+        {"lastUpdated":0,"preferredCurrencyCode":"PEN","currencyDisplayFormat":"symbol",
+         "accountBalances":[],"totalBalance":0,
+         "transactions":[{"id":"1","date":0,"amount":-45.5,"currencyCode":"PEN","note":null,
+           "categoryName":"Comida","categoryColor":"#FF0000","categoryIcon":"fork.knife",
+           "subcategoryIcon":null,"subcategoryName":null,"isIncome":false,
+           "amountInPreferredCurrency":-45.5}],
+         "budgets":[],"scheduledPayments":[],
+         "trendData":{"dailyPoints":[],"weeklyPoints":[],"monthlyPoints":[]},
+         "thisMonthSummary":{"totalIncome":0,"totalExpense":45.5,"netCashFlow":-45.5,
+           "topCategories":[],"topSubcategories":[],"cashFlowPoints":[]},
+         "allTimeSummary":{"totalIncome":0,"totalExpense":45.5,"netCashFlow":-45.5,
+           "topCategories":[],"topSubcategories":[],"cashFlowPoints":[]},
+         "periodSummaries":{}}
+        """
+        let decoded = try JSONDecoder().decode(WidgetDataSnapshot.self, from: Data(legacy.utf8))
+
+        #expect(decoded.transactions.count == 1)
+        #expect(decoded.transactions.first?.isExchangeRateProvisional == nil, """
+            Ausente y no `false`: el snapshot viejo no sabía nada de la calidad de aquella tasa, y
+            fingir que la sabía es lo que este campo NO debe hacer.
+            """)
+        #expect(decoded.thisMonthSummary.expenseIsApproximate == nil)
+        #expect(decoded.thisMonthSummary.periodBalanceIsApproximate == nil)
+        #expect(decoded.thisMonthSummary.totalExpense == 45.5, """
+            Y el snapshot llega ENTERO: si las claves nuevas no fueran opcionales, este `decode`
+            habría lanzado y no habría ningún número que leer.
+            """)
+    }
 }
 
 // MARK: - El ORDEN de la frontera de salida (comportamiento, vía el seam)

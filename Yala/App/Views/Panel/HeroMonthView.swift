@@ -145,7 +145,8 @@ struct HeroMonthView: View {
                                 value: periodSummary.income,
                                 currencyCode: currencyCode,
                                 font: DS.Typography.subheadline, secondaryFont: DS.Typography.captionSmall,
-                                tint: .secondary
+                                tint: .secondary,
+                                isEstimate: periodSummary.incomeApproximate
                             )
                         }
                         .opacity(hasNatureFilter && !isIncomeFiltered ? 0.3 : 1.0)
@@ -172,7 +173,10 @@ struct HeroMonthView: View {
                                 value: periodSummary.expense,
                                 currencyCode: currencyCode,
                                 font: DS.Typography.subheadline, secondaryFont: DS.Typography.captionSmall,
-                                tint: .secondary
+                                tint: .secondary,
+                                // El MISMO número que el hero pinta con «≈» en Solo Gastos: sin esto
+                                // el usuario ve el gasto marcado en un modo y exacto en el otro.
+                                isEstimate: periodSummary.expenseApproximate
                             )
                         }
                         .opacity(hasNatureFilter && !isExpenseFiltered ? 0.3 : 1.0)

@@ -252,7 +252,8 @@ struct InsightsTabView: View {
                         value: summary.totalIncome,
                         currencyCode: defaultCurrencyCode,
                         font: DS.Typography.subheadline, secondaryFont: DS.Typography.captionSmall,
-                        tint: .secondary
+                        tint: .secondary,
+                        isEstimate: summary.incomeAmountsAreApproximate
                     )
                     .accessibilityIdentifier("stats_kpi_income")
                     if appPreferences.showVariations {
@@ -270,7 +271,8 @@ struct InsightsTabView: View {
                     value: summary.totalExpense,
                     currencyCode: defaultCurrencyCode,
                     font: DS.Typography.subheadline, secondaryFont: DS.Typography.captionSmall,
-                    tint: .secondary
+                    tint: .secondary,
+                    isEstimate: summary.expenseAmountsAreApproximate
                 )
                 .accessibilityIdentifier("stats_kpi_expense")
                 if appPreferences.showVariations {
@@ -555,7 +557,11 @@ struct InsightsTabView: View {
                 AmountText(
                     value: stats.dailyAverage,
                     currencyCode: defaultCurrencyCode,
-                    font: DS.Typography.heroAmount, secondaryFont: DS.Typography.heroAmountSecondary
+                    font: DS.Typography.heroAmount, secondaryFont: DS.Typography.heroAmountSecondary,
+                    // `dailyAverage` es `cashFlow.totalExpense` dividido entre un entero exacto: el
+                    // cociente aproximado/total que mide `ApproximateMarkThreshold` no cambia al
+                    // dividir, así que la marca del gasto es exactamente la suya.
+                    isEstimate: summary.expenseAmountsAreApproximate
                 )
 
                 // Reserva altura constante: evita salto visual al alternar

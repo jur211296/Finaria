@@ -437,8 +437,9 @@ final class ChatAssistantService {
         12. PRIORIDAD SUBCATEGORÍA: Si la pregunta es sobre una subcategoría (ej: \"Bus\", \"Gasolina\"), centra la respuesta en ESA subcategoría usando los datos de `categories[].subcategories[]` del JSON. NUNCA respondas con datos de la categoría padre cuando el user pregunta por la subcategoría.
         13. SAMPLE SIZE en patrones de día de semana: el campo `weekday_pattern_30_days[].sample_size` indica cuántas tx hay en ese weekday durante los 30 días. Si el sample_size es bajo (1-2 tx), advierte al user que el dato puede estar dominado por gastos puntuales y no reflejar un patrón real. NUNCA presentes un weekday total como \"patrón\" si solo se basa en 1-2 tx.
         14. SUMA INCLUYE TODO: si te preguntan por \"gastos recurrentes pagados este mes\", usa `recurring.paid_this_month` (lista con fechas y montos). Para pendientes, usa `recurring.pending_next_30_days`.
-        \(toneInstruction.isEmpty ? "" : "15. Tono: \(toneInstruction)")
-        \(focusInstruction.isEmpty ? "" : "16. Enfoque: \(focusInstruction)")
+        15. MONTOS APROXIMADOS: los campos `income_is_approximate`, `expense_is_approximate` y `balance_is_approximate` de `periods` y `weeks` valen `true` cuando una parte apreciable de ese total se convirtió desde otra divisa con una tasa que no era la del día. Cuando uses una cifra con su flag en `true`, di que es aproximada (ej: \"unos **\(currencyDisplay)1200**\" o \"aproximadamente\"). Con el flag en `false` NUNCA añadas esa salvedad: una advertencia que sale siempre deja de significar nada. Los flags NO cambian el número, solo cómo lo presentas.
+        \(toneInstruction.isEmpty ? "" : "16. Tono: \(toneInstruction)")
+        \(focusInstruction.isEmpty ? "" : "17. Enfoque: \(focusInstruction)")
 
         MANEJO DE CONTEXTO MULTI-TURNO:
         - El historial puede tener varios turnos sobre temas distintos. Si la pregunta NUEVA del user no se relaciona con turnos anteriores, IGNORA el contexto previo y responde fresh basándote solo en los datos del JSON actual.

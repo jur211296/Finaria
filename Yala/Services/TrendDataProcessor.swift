@@ -43,6 +43,10 @@ struct TrendDataProcessor {
         /// Desglose por moneda nativa del saldo vivo (`liveAnchor`). Habilita
         /// UX educativa multi-currency. Nil cuando `liveAnchor` es nil.
         let liveAnchorNativeBalances: [String: Decimal]?
+        /// `true` si el saldo vivo se armó con alguna tasa que no era la de hoy. Viaja pegado al
+        /// desglose porque lo pinta la misma pantalla: la hoja «¿Cuánto tienes hoy?». `false`
+        /// cuando no hay anchor — sin número que marcar no hay marca.
+        let liveAnchorIsApproximate: Bool
     }
 
     // MARK: - Main Processing Entry Point
@@ -119,7 +123,8 @@ struct TrendDataProcessor {
                 totalExpense: 0,
                 finalBalance: 0,
                 liveAnchor: nil,
-                liveAnchorNativeBalances: nil
+                liveAnchorNativeBalances: nil,
+                liveAnchorIsApproximate: false
             )
         }
 
@@ -142,7 +147,8 @@ struct TrendDataProcessor {
                 totalExpense: totalExpense,
                 finalBalance: 0,
                 liveAnchor: nil,
-                liveAnchorNativeBalances: nil
+                liveAnchorNativeBalances: nil,
+                liveAnchorIsApproximate: false
             )
         }
 
@@ -239,13 +245,18 @@ struct TrendDataProcessor {
         //      fecha por microsegundos e invalida toda la struct observable).
         let liveAnchor: PanelViewModel.BarPoint?
         let liveAnchorNativeBalances: [String: Decimal]?
+        let liveAnchorIsApproximate: Bool
         if let info = liveBalanceOverride, metric == .balance, !rawPoints.isEmpty {
             let anchorDate = calendar.startOfDay(for: Date.now)
             liveAnchor = PanelViewModel.BarPoint(date: anchorDate, value: info.value)
             liveAnchorNativeBalances = info.nativeBalances
+            liveAnchorIsApproximate = info.amountsAreApproximate
         } else {
             liveAnchor = nil
             liveAnchorNativeBalances = nil
+            // Sin anchor no hay número vivo que marcar. Los tres van juntos en el mismo `if` para
+            // que no pueda quedar una marca huérfana de su valor.
+            liveAnchorIsApproximate = false
         }
 
         let finalBalance = liveAnchor?.value ?? rawPoints.last?.value ?? 0
@@ -268,7 +279,8 @@ struct TrendDataProcessor {
             totalExpense: totalExpense,
             finalBalance: finalBalance,
             liveAnchor: liveAnchor,
-            liveAnchorNativeBalances: liveAnchorNativeBalances
+            liveAnchorNativeBalances: liveAnchorNativeBalances,
+            liveAnchorIsApproximate: liveAnchorIsApproximate
         )
     }
 

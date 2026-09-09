@@ -186,7 +186,8 @@ struct TrendsCarouselWidget: View {
                 period: viewModel.currentPeriod,
                 chartHeight: 170,
                 liveAnchor: viewModel.trendLiveAnchor,
-                liveAnchorBreakdown: viewModel.trendLiveAnchorBreakdown
+                liveAnchorBreakdown: viewModel.trendLiveAnchorBreakdown,
+                liveAnchorIsApproximate: viewModel.trendLiveAnchorIsApproximate
             )
         }
     }
