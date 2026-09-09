@@ -25,6 +25,8 @@
 - [La tabla del ticket nombra un sitio por pantalla](feedback_la_tabla_del_ticket_nombra_un_sitio_por_pantalla.md) — 7 superficies eran 21; el mismo número marcado y exacto en la misma vista; los punteros a tickets en docblocks caducan.
 - [El mecanismo que existe se probó con OTRO corpus](feedback_el_mecanismo_existente_se_probo_con_otro_corpus.md) — reusar un barrido sobre un corpus nuevo puede destruir datos buenos; el AC dice QUÉ, no CÓMO.
 - [Mi fix hereda la forma del bug](feedback_mi_fix_hereda_la_forma_del_bug.md) — el arreglo repite el error del bug; enuncia el bug en una frase y aplícasela al arreglo.
+- [El alert de SwiftUI compite con su propio botón](feedback_el_alert_de_swiftui_compite_con_su_propio_boton.md) — el `set` del binding corre al pulsar CUALQUIER botón; si la acción es async, pierde.
+- [Un gate falla ABIERTO por su entrada](feedback_un_gate_falla_abierto_por_su_entrada.md) — lista vacía por error = «no hay»; y el snapshot se congela durante el `await`.
 - [La review adversarial caza lo MÍO](feedback_review_adversarial_caza_lo_mio.md) — 8 el 7-sep, 7 el 8-sep; puede refutar la PREMISA del ticket, y un camino muerto que revives trae sus bugs intactos.
 - [La rule de área es una lente más](feedback_la_rule_de_area_es_una_lente_mas.md) — la que se carga sola hay que leerla CONTRA el diff: el 8-sep cazó lo que las tres lentes no vieron.
 - [Las lentes se contradicen entre sí](feedback_lentes_adversariales_se_contradicen.md) — cuando dos discrepan, mídelo; y la CORRECCIÓN de una lente también puede venir incompleta.
@@ -45,6 +47,7 @@
 - [El fixture hereda la anatomía de producción](feedback_el_fixture_hereda_la_anatomia_de_produccion.md) — no la deduzcas del ticket; el error se ve en el TOTAL, y el fixture tiene que ser DISCRIMINANTE.
 
 ## Estado del trabajo
+- [Cambiar la divisa de una cuenta ya no deja su histórico atrás](project_divisa_de_una_cuenta_con_historico.md) — PR #118; la review cazó SEIS defectos del ARREGLO; deja 5 tickets y un device-QA con trampa.
 - [La familia FX, recorrida entera en simulador](project_seam_cuenta_divisa_ausente.md) — PR #114 y #115: 5 PASS, 2 parciales por red/seam; los dos fixtures que faltaban ya existen y dejan 4 tickets.
 - [El gasto de grupo ya lleva la incertidumbre de sus patas](project_marca_aproximado_gasto_de_grupo.md) — PR #113 cierra la familia del «≈»; falta device-QA y NO es simulable; deja 3 tickets, uno es una pantalla entera sin marca.
 - [El cambio masivo de cuenta ya no arrastra la divisa vieja](project_bulk_cuenta_divisa_vieja.md) — PR #110; el método se BORRÓ (cero llamadores en toda la historia) y el bloque bulk del servicio está muerto entero.
