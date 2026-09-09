@@ -44,6 +44,7 @@
 - [Capturas del simulador para la web](feedback_capturas_simulador_para_la_web.md) — receta y trampas: Secrets.xcconfig, nombre efímero, categorías sembradas, `sips -Z` escala el lado largo.
 
 ## Estado del trabajo
+- [La familia FX ya tiene su estado de partida en simulador](project_seam_cuenta_divisa_ausente.md) — PR #114; eran SIETE los tickets que esperaban, no cuatro; dos siguen parados y les falta seed, no teléfono.
 - [El gasto de grupo ya lleva la incertidumbre de sus patas](project_marca_aproximado_gasto_de_grupo.md) — PR #113 cierra la familia del «≈»; falta device-QA y NO es simulable; deja 3 tickets, uno es una pantalla entera sin marca.
 - [El cambio masivo de cuenta ya no arrastra la divisa vieja](project_bulk_cuenta_divisa_vieja.md) — PR #110; el método se BORRÓ (cero llamadores en toda la historia) y el bloque bulk del servicio está muerto entero.
 - [Las filas que el chat selló con tasa falsa ya se curan](project_barrido_tasa_sellada_chat.md) — PR #108; el plan obvio (reabrir) DAÑABA; falta device-QA, sí simulable; deja 3 tickets.
