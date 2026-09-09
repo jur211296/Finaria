@@ -5,33 +5,38 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-09 (Lima)
 
-**Rama** `2.1` — Merge #120: once ideas del 9-sep al backlog, medidas contra el código
+**Rama** `2.1` — Merge #118: cambiar la divisa de una cuenta ya no deja su histórico atrás
 TestFlight build **13** (CPV 13) — subido el 2026-09-09, `VALID` e `IN_BETA_TESTING`.
 **Subida Yala (TF/store) = solo Mini.**
 
 ## Esta sesión
 
-**Once ideas de Jürgen pasaron de su cabeza al board, y tres no eran lo que parecían.** Captura sin
-spec: cinco al arrancar (cuentas, sheet de media altura, multi-divisa, hero de Distribución, FAB) y
-seis a mitad de sesión (Siri de iOS 27 **high**, chat caído **high**, iPad, chat multi-transacción,
-iPhone Duo, Apple Watch). **Diez tickets nuevos**; `apple-watch` ya existía y se actualizó en vez de
-duplicarse.
+**Se cerró el hueco grande de la familia FX, y la review adversarial cazó seis defectos del
+ARREGLO.** Decisión de Jürgen: **prohibir, y ofrecer convertir cuando se puede** — no «avisar y
+seguir», que dejaba vivo el desemparejamiento y el round-trip roto de exportación.
 
-Aunque el encargo era capturar, cada premisa se midió contra el árbol, y **tres cambiaron**: el
-«nuevo registro» **no** usa detent medium hoy —se presenta con `.large` explícito, y el `[.medium]`
-de `NewTransactionView` es de un sub-sheet interno—; al hero **no le falta** llegar a Distribución,
-sino que hay **cinco heros paralelos** y ninguno se comparte; y el FAB **sí anima en el Panel** y no
-en Estadísticas, con el vocabulario ya escrito dentro del propio componente. Un cuarto dato ahorra
-trabajo: el chat **ya transporta un array** de borradores, así que el tope de «una transacción por
-mensaje» no está en la estructura de datos.
+Ahora, con movimientos, Guardar pide confirmación con el número de filas y reexpresa cada importe
+con la tasa **de su fecha**. Si el histórico lo manda otra entidad, el selector ni se abre. Las
+tres clases que bloquean lo hacen porque su conversión **no se sostiene**, medido: el re-bridge
+pisa el `amount` de un gasto de grupo en cada pasada y, en cuanto su divisa deja de casar, **borra
+la transacción** (`GroupTransactionBridge:391`, `:410-422`).
 
-**Y una corrección propia, que conviene leer antes que lo anterior:** el hallazgo de camino de esta
-sesión —el `commit-msg` de ADR-013 no corre en Yala— **ya tenía ticket desde el 8-sep**
-(`el-hook-que-prohibe-atribuir-a-una-ia-no-corre-en-este-repo`, **high**). Se creó un duplicado por
-no buscarlo antes, se detectó al escribir este estado y se retiró; lo único que aportaba —**768 de
-3335 commits (23 %) llevan el trailer**, el más antiguo del 13-ene— se fusionó en el ticket bueno.
-La búsqueda de duplicados se hizo para las cinco ideas y **no** para el hallazgo: ahí estuvo el
-fallo.
+**Es el primer sitio del repo que reescribe el `amount` crudo de filas ya persistidas** —
+`CurrencyChangeService` barre el corpus entero pero solo toca las derivadas, que tienen reparador.
+Por eso: confirmación explícita, tasas antes, y si falta cobertura no se convierte nada.
+
+**De los seis defectos del arreglo, el peor lo vieron dos lentes por separado:** el `set` del
+binding del alert competía con su propio botón Convertir —en iOS un alert no tiene gesto de
+descarte, así que SwiftUI escribe `false` al pulsar cualquiera— y en el peor orden guardaba la
+divisa **vieja** sobre el histórico ya convertido. El bug del ticket, recreado por su arreglo.
+
+**Y un séptimo lo cazó el CI, no las lentes:** una aserción que dependía de la divisa preferida de
+la máquina. Verde en local (PEN), roja en CI (USD), con 19.569 tests y un solo issue. Nueve
+mutantes y tres lentes pasaron por encima porque **todos corrían en el mismo entorno**.
+
+**Dos premisas del ticket eran falsas y se corrigieron en él:** el grupo `money` de `tx_items` tiene
+**cinco** columnas, no cuatro, y `currency_code` no es una; y lo inferido sobre CloudSync apuntaba
+al applier de `tx_items` cuando la rama que propaga el daño es la de `accounts`.
 
 ## Abiertos
 
@@ -44,26 +49,36 @@ fallo.
 3. **Tres veredictos de QA escritos en sus propios tickets están caducos**:
    `scheduled-payments-notif-dedup` y `welcome-start-fresh-wipes-before-ask` pedían un seam que **ya
    existe**, y el callout de `siri-intent-dual-container` lo refuta su ticket hermano.
-4. **El avisador de rojos advisory del CI no puede avisar** (`ci-avisador-de-rojos-advisory-tiene-la-clave-mal`,
-   **high**): `Invalid API key`. Mientras siga así, un `tests: fail` no distingue «hay tests rotos»
-   de «la credencial está mal».
+4. **El avisador de rojos del CI no solo no avisa: BLOQUEA EL MERGE**
+   (`ci-avisador-de-rojos-advisory-tiene-la-clave-mal`, **high**). Medido hoy en dos corridas del
+   mismo PR: con un paso advisory en rojo, el avisador sale `exit 1` por `Invalid API key` y pone
+   el job entero en rojo; sin rojos advisory, pasa. **Anula el `continue-on-error` de sus propios
+   pasos** justo cuando se quería lo contrario. Ojo al arreglarlo: el `exit 1` está bien puesto — lo
+   que falla es la credencial.
 5. **El aviso de cierre cita el PR de OTRA sesión** (`el-aviso-de-cierre-cita-el-pr-de-otra-sesion`,
    **medium**): falla en silencio, con `HTTP 200` y aspecto bueno.
 6. **El build 13 llega al grupo interno, no al externo.** «Test interno» tiene un tester
-   (Jürgen, `INSTALLED`) y ahí ya es instalable. «Testers Yala» son 3 y su
-   `externalBuildState` es `READY_FOR_BETA_SUBMISSION`: para que les llegue hay que pasar
-   beta review de Apple. Si el segundo teléfono del device-QA no usa el Apple ID de
-   Jürgen, no verá el build hasta resolver eso — es decisión suya, no se tocó.
+   (Jürgen, `INSTALLED`). «Testers Yala» son 3 y su `externalBuildState` es
+   `READY_FOR_BETA_SUBMISSION`: para que les llegue hay que pasar beta review. Si el segundo
+   teléfono del device-QA no usa el Apple ID de Jürgen, no verá el build hasta resolver eso.
 7. **DMARC el 15-sep** · **cobertura de UI el 22-sep**. Esperan al calendario, no a nadie.
 
 ## Siguiente
 
-**El backlog creció a 230 tickets y trae dos `high` nuevos que no estaban ayer**:
-`chat-assistant-is-down` (el chat de IA caído — capturado, **sin investigar**, porque el encargo era
-captura) y `siri-ai-integration-ios-27` (pide investigación antes que spec: hay que averiguar qué
-expone iOS 27 y si obliga a subir el suelo, que hoy es iOS 26+).
+**Device-QA de `changing-an-account-currency-orphans-its-whole-history`**, ya en `tickets/qa/` con
+guion. Sí es simulable, pero **dos de los cuatro pasos van a mano**: el selector de Moneda es un
+`NavigationLink` y no responde a taps sintéticos (medido el 8-sep con cuatro técnicas).
 
-Sigue en pie lo de la tanda anterior: cuatro tickets de FX del 9-sep
+**El backlog está en 235 y trae cinco tickets nuevos de esta sesión.** El que más pesa:
+`account-currency-change-leaves-scheduled-and-favorites-stale` — tras convertir la cuenta, un
+alquiler programado de 3.500 soles nace como 3.500 dólares, y se repite cada mes. Los otros:
+`cloudsync-account-currency-orphans-receiver-history`,
+`account-currency-conversion-overlay-has-no-ceiling`,
+`save-error-alert-lies-when-the-context-autosaves`,
+`bridge-virtual-only-currency-mismatch-is-silent`.
+
+Siguen en pie los dos `high` de la tanda anterior —`chat-assistant-is-down` (capturado, sin
+investigar) y `siri-ai-integration-ios-27`—, los cuatro de FX del 9-sep
 (`live-anchor-breakdown-doubles-the-approximate-glyph`, `pie-header-total-unmarked`,
 `weekday-bar-daily-average-unmarked`, `uitest-seed-reseeds-the-corpus-without-reset`) y del board
 previo `preferred-currency-has-three-different-defaults`, `financial-report-amounts-unmarked`,
@@ -72,17 +87,17 @@ previo `preferred-currency-has-three-different-defaults`, `financial-report-amou
 
 ## Bloqueo
 
-**Las mismas cuatro decisiones tuyas**: `changing-an-account-currency-orphans-its-whole-history`
-(**high** — editar la divisa de una cuenta deja su histórico entero en la vieja, en masa y sin
-aviso; sigue siendo el hueco grande de esta familia),
-`el-hook-que-prohibe-atribuir-a-una-ia-no-corre-en-este-repo` (**high**, toca a todos los agentes —
-los **cuatro** commits de esta sesión se verificaron con un grep a mano, y el cuerpo del PR salió
-sucio hasta que se editó: el grep del commit no cubre `gh pr create`),
+**Tres decisiones tuyas** (era una más: la divisa de la cuenta se decidió hoy y ya está cerrada):
+`el-hook-que-prohibe-atribuir-a-una-ia-no-corre-en-este-repo` (**high**, toca a todos los agentes;
+los **seis** commits de esta sesión se verificaron con un grep a mano, uno a uno),
 `corpus-de-test-de-staging-crece-sin-limite` y el filtro de naturaleza.
 
-**Y dos nuevas, cortas, de la tanda del 9-sep:**
+**Y dos cortas de la tanda del 9-sep, sin contestar:**
 
 - **¿Se ataca ya el chat caído?** Es `high` y es función de pago; está sólo capturado.
-- **`fab-appears-without-animation` quedó en `low`**, la única de las once que se desvía del «medium
-  salvo que el área diga otra»: es polish y no corrige nada incorrecto. Una línea del frontmatter si
-  prefieres subirla.
+- **`fab-appears-without-animation` quedó en `low`**: es polish y no corrige nada incorrecto. Una
+  línea del frontmatter si prefieres subirla.
+
+**Un efecto de hoy que ninguna pantalla avisa, y que puede merecer decisión:** un CSV exportado
+**antes** de convertir una cuenta deja de poder importarse a ella, y el fallo aborta el fichero
+entero. Medido, no arreglado, sin ticket propio: dímelo si quieres uno.

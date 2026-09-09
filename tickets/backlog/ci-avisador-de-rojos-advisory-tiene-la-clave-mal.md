@@ -29,6 +29,30 @@ El `SENDER_KEY` del secreto del repo no es válido para el webhook. El paso lo d
 neto es que **el aviso no llega a nadie** y el job entero se pone rojo por un fallo de credencial, no
 por los tests.
 
+## Medido el 2026-09-09 en el PR #118: además de no avisar, **BLOQUEA EL MERGE**
+
+Dos corridas del mismo PR, con la misma credencial mala, y el resultado opuesto:
+
+| Run | Pasos advisory | Paso «Avisar a Grok» | Job `tests` | El PR |
+|---|---|---|---|---|
+| `34405910548` | uno en ROJO | `Invalid API key` → `exit 1` | **fail** (28m20s) | no se puede mergear |
+| `34413108303` | todos verdes | `success` (no llega al `curl`) | **pass** (25m18s) | `CLEAN`, mergeado |
+
+⇒ El daño no es solo «el aviso no llega». **El paso anula el diseño `continue-on-error` de sus
+propios pasos**: la razón de que los tests sean advisory es que un flaky conocido no frene el
+trabajo, y hoy basta uno para que el avisador ponga el job en rojo y el PR deje de ser mergeable.
+El repo pasa a comportarse como si los tests fueran bloqueantes, pero solo cuando fallan — que es
+justo el caso en el que se quería lo contrario.
+
+Y hay una segunda mitad, para quien lo arregle: **el `exit 1` está bien puesto y no hay que
+quitarlo**. Preferir romper el job antes que callar es la decisión correcta; lo que hay que
+arreglar es la credencial. Cambiar el `exit 1` por un `exit 0` haría que un rojo advisory volviera
+a pasar inadvertido, que es el bug que este paso existe para cerrar.
+
+**Cómo reproducirlo sin esperar a un flaky:** cualquier PR con un test en rojo dentro de un paso
+advisory. En el #118 fue una aserción que dependía de la divisa preferida de la máquina — verde en
+local, roja en CI.
+
 ## Por qué es `high` pese a que «el CI ya avisó»
 
 **Porque nunca se había ejercitado y nadie lo sabía.** Medido sobre los 12 runs anteriores del
