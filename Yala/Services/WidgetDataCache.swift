@@ -203,7 +203,8 @@ enum WidgetDataCache {
     /// LA PUERTA. Con un wipe ARMADO el store montado está a punto de morir y sus datos ya no son de
     /// nadie: repoblar el snapshot en esa ventana deja en la pantalla de inicio los saldos de la cuenta
     /// que acaba de cerrar sesión, y ahí se quedan si nadie vuelve a abrir la app. Va AQUÍ y no en los
-    /// **48** call-sites de producción (18 ficheros) por la razón que el gemelo de notificaciones ya dejó
+    /// **48** call-sites de producción (22 ficheros — el conteo de ficheros decía 18 y estaba desfasado;
+    /// medido el 2026-09-08) por la razón que el gemelo de notificaciones ya dejó
     /// escrita en `NotificationService.isPersonalWipeArmed`: evaluarlo en el choke-point cierra la ventana
     /// para cualquier productor, presente o futuro, sin rastrear tareas ni mantener una lista.
     ///

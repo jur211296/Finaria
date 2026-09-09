@@ -1,6 +1,6 @@
 ---
 name: mi-docblock-tambien-es-una-premisa
-description: Lo que YO escribo en un docblock mientras implemento es una afirmación sin medir; seis falsas el 8-sep. Dos variantes: inventar una JUSTIFICACIÓN técnica, y ENSANCHAR una premisa prestada hasta volverla falsa.
+description: Lo que YO escribo en un docblock mientras implemento es una afirmación sin medir; siete falsas el 8-sep. Tres variantes: inventar una JUSTIFICACIÓN técnica, ENSANCHAR una premisa prestada, y NOMBRAR UN GUARD que no cubre la superficie que digo.
 metadata:
   type: feedback
 ---
@@ -70,3 +70,28 @@ original. Si el ticket dice «se muestra bien», pregúntate *¿mostrarse o suma
 cubre más superficie que la que medió quien la escribió, la has ensanchado y hay que medir la
 diferencia. El riesgo es peor de lo normal cuando la premisa explica **por qué nadie vio el bug**: esa
 frase es la teoría del caso, y si es falsa, el siguiente hereda el punto ciego entero.
+
+
+**Tercera variante, y la más peligrosa porque promete protección: NOMBRAR UN GUARD QUE VIGILA OTRA
+SUPERFICIE. Medido el 2026-09-08 en `bulk-update-account-leaves-converted-amount-stale`.**
+
+Borré un método muerto y dejé en su sitio una nota larga explicando el porqué. La cerraba así:
+«cualquier reimplementación debe bloquear transferencias y llamar `recalculatePreferredCurrency`. **Lo
+fija `RecordsViewModelBulkAccountCurrencyTests`.**» Los tres casos de esa suite eran buenos, medían
+comportamiento real y tenían mutante en rojo. Y la frase era **falsa**: ninguno de los tres toca
+`TransactionService`. Si alguien repegaba el método borrado tal cual, los tres seguían verdes.
+
+Es peor que las otras dos variantes porque no describe un mecanismo —eso se mide leyendo el código—
+sino una **relación entre un fichero y su red**, y esa relación no está escrita en ningún sitio donde
+se pueda tropezar con ella. La cazó una lente adversarial, no la suite.
+
+⇒ **Cuando escribas «esto lo fija <suite>», comprueba que la suite TOCA el fichero donde lo escribes**
+— `grep <NombreDelFichero> <suite>` — y si no lo toca, o quitas la frase o escribes el guard que la
+hace verdad. Aquí escribí el guard: un source-scan que vigila **por método** (el fichero ya contenía
+un `recalculatePreferredCurrency` en otro método, así que un barrido por FICHERO habría pasado en
+verde con el método malo dentro — que era exactamente el estado del árbol) y con su mutante propio:
+repegar el método lo pone rojo y deja verdes los tres de comportamiento.
+
+**Y la regla general que deja:** un test de comportamiento sobre la ruta A no protege un borrado en la
+ruta B, por parecidas que sean. Borrar código sin llamador es seguro; lo que hay que vigilar es que no
+VUELVA, y eso es un source-scan, no un test de comportamiento.
