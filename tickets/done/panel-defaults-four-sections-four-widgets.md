@@ -1,11 +1,13 @@
 ---
 id: panel-defaults-four-sections-four-widgets
-status: qa
+status: done
 priority: high
 area: panel
 created: 2026-09-04
-updated: 2026-09-04
 source: encargo del owner 2026-09-04 — investigación medida en 2.1 @ 070d76b1 (7 lentes + 14 refutadores)
+updated: 2026-09-08
+qa-status: passed
+qa-date: 2026-09-08
 ---
 
 # El Panel de un usuario nuevo arranca con cuatro secciones y cuatro widgets
@@ -410,3 +412,51 @@ edición.**
 - **`DataWipeService` no borra las claves del Panel del iCloud KV**, solo de UserDefaults: tras un
   borrado de datos, el siguiente arranque puede detectar las claves del usuario anterior y saltarse
   la siembra. Es anterior a este ticket y no se toca aquí.
+
+---
+
+## QA Visual · 2026-09-08
+
+**Veredicto: PASS.** iPhone 17 Pro (iOS 26.5), `Yala Dev`, build del worktree
+`encargo/2026-09-08-barrido-qa-simulador-seeds`.
+
+### Lo que se vio
+
+Los dos caminos de siembra que pedía el ticket, ambos con instalación limpia (`-uitest-reset`
+limpia el centinela en sus tres superficies, según el incremento 4 de la implementación).
+
+| Camino | Args | Resultado |
+|---|---|---|
+| **Sin cuenta iCloud** (`.runNow`) | `-uitest -uitest-reset -uitest-skip-onboarding -uitest-pro -uitest-seed realista` | 4 secciones, 4 widgets |
+| **Con cuenta iCloud** (el del parpadeo) | idem + `-uitest-fake-icloud` | idéntico, **sin parpadeo** |
+
+**Las cuatro secciones, en este orden:** «Tus finanzas» (Cuentas) · Tendencias · Planificación ·
+Últimos registros. **Ni rastro de Salud financiera, Distribución ni Herramientas** — se bajó hasta
+el final del scroll para confirmarlo, no se infirió.
+
+**Los cuatro widgets:** la gráfica de Tendencias **a ancho completo** (`.large`, como pedía la
+decisión 4), Planificados y Presupuestos **emparejados en una misma fila en pequeño**, y Últimos
+registros al final.
+
+**Cuentas arranca plegada** (decisión 2 del owner): se ve la cabecera «Tus finanzas · Tienes ≈ PEN
+73.526,45 en 2 cuentas» sin las tarjetas desplegadas.
+
+**El riesgo gordo no se reprodujo.** El parpadeo de hasta 15 s que el cuerpo daba como «hay que
+resolverlo dentro de este ticket» no aparece en el camino con iCloud: el Panel monta ya con los
+cuatro widgets. Es lo que predice el arreglo por la ruta de **lectura** resuelta, no por la de
+escritura.
+
+### Capturas
+
+- `qa-panel-defaults-01-cuentas-tendencias-20260908-210736.png` — Cuentas plegada + Tendencias a ancho completo
+- `qa-panel-defaults-02-planificacion-registros-20260908-210709.png` — la fila emparejada y el final del Panel
+- `qa-panel-defaults-03-camino-icloud-20260908-210815.png` — el camino con iCloud, sin parpadeo
+
+### Lo que este QA no cubre
+
+- **El engranaje de Tendencias con un solo widget** (riesgo anotado en el cuerpo): se ve el botón
+  de preferencias de la sección, que es lo correcto, pero no se abrió la hoja para recuperar los
+  otros dos.
+- **«Restablecer» devuelve el curado** (decisión 3): no se ejercitó desde la UI. Lo cubren los
+  tests unitarios reescritos, no esta pasada.
+- La restauración desde una copia de 1.x, residual conocido y aceptado.

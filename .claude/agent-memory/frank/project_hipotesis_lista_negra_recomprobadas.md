@@ -279,3 +279,30 @@ los rojos del runner no se sostiene en ninguna dirección. Medido a 25 GB y a **
 mismo reproductor da 11/11 verde. Dos tickets se contradecían sobre este hecho —uno decía que ninguna
 muestra se había tomado por encima de 25 GB, otro documentaba un fallo **con 26 GB**— y la salida no
 era elegir entre ellos: era medir a los dos lados.
+
+
+## El job `tests` del CI ya NO corre la suite UI en cada PR — medido el 2026-09-08
+
+**Qué decía esta ficha:** que su job `tests` corre `-only-testing:YalaUITests` sin `timeout-minutes`,
+y que eso era «literalmente el ticket `el-job-de-tests-del-ci-no-tiene-timeout`, con decisión de
+Jürgen del 6-sep ("UI a nocturna; PR = build + unit con tope") **aún sin implementar**».
+
+**Qué medí** en el PR #109 (`gh run view --job <id>`), leyendo los nombres de los pasos:
+
+```
+* Build for testing
+* Unit tests (YalaTests pure-logic) — advisory (flaky crash SwiftData in-memory; ver Lista Negra)
+* Unit tests (YalaTests context-based) — advisory (SwiftData insert-trap flaky; ver Lista Negra)
+* UI tests (YalaUITests) — solo nocturna · advisory (flaky en runner frío, ver Lista Negra)
+```
+
+**La decisión SÍ está implementada**: el paso de UI dice ahora «**solo nocturna**». O sea que un PR
+ya no arrastra la suite completa y aquello de «una corrida de 01:47 a 03:06» no debería repetirse
+en un PR. Los tres pasos de test siguen siendo **advisory**; el único bloqueante es
+`Build for testing`.
+
+**How to apply:** sigue sin ser motivo para mergear a ciegas, pero cambia la aritmética de la
+espera: si tu diff **no toca código** (`git diff --name-only origin/2.1...HEAD | grep -E '^Yala/'`
+vacío), `Build for testing` compila exactamente lo que ya está en `2.1` y no puede romperse por tu
+causa. Y comprueba lo de «advisory» **en el run que tienes delante**, no de memoria: es una línea de
+`gh run view --job`.

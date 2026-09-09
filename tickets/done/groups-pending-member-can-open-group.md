@@ -1,10 +1,12 @@
 ---
 id: groups-pending-member-can-open-group
-status: qa
+status: done
 priority: high
 area: groups
 created: 2026-08-28
-updated: 2026-09-06
+updated: 2026-09-08
+qa-status: passed
+qa-date: 2026-09-08
 ---
 
 # Un miembro pendiente de aprobación puede entrar al grupo
@@ -315,3 +317,38 @@ verifica»: el caso exige un pendiente real contra el canal backend. Y una compr
 simulador no da: que al **aprobar** al miembro la puerta se abra sin relanzar la app (AC 2) — el
 mecanismo no cambió (`currentMemberStatus` pasa a `.active` y el `displayMode` con él), y
 `groups-approval-banner-stays` ya tiene PASS del owner, pero aquí no se re-verificó en device.
+
+---
+
+## QA Visual · 2026-09-08
+
+**Veredicto: PASS.** iPhone 17 Pro (iOS 26.5), `Yala Dev`, seed `grupos-pendiente`
+(`-uitest -uitest-reset -uitest-skip-onboarding -uitest-pro -uitest-seed grupos-pendiente -uitest-icloud-identity -uitest-groups-consent -uitest-deeplink groups`).
+Estado: **yo soy el miembro en `pendingApproval`** del grupo «Cena de amigos».
+
+### Lo que se vio
+
+1. **La tarjeta aparece** en la lista, rotulada «Cena de amigos · 2 miembros activos · 1 solicitud
+   pendiente · **Esperando aprobación**». La puerta no la esconde, que es lo correcto: se ve que el
+   grupo existe.
+2. **Tocarla NO abre el detalle.** Sale un aviso titulado **«Esperando aprobación»**:
+
+   > El admin del grupo todavía no aprueba tu solicitud. Cuando lo haga vas a poder abrir el grupo
+   > y ver sus gastos. Vuelve a entrar en un rato para comprobarlo.
+
+   Dice qué pasa, quién lo desbloquea y qué hacer. No es un error ni un silencio.
+3. **La prueba negativa que pedía el ticket: `group_members_button` NO existe en el árbol de
+   accesibilidad tras el tap.** Ese identificador solo lo monta el detalle del grupo, así que su
+   ausencia demuestra que la pantalla no llegó a construirse — no que esté tapada por el alert.
+4. **Se cierra con «Entendido» y la lista sigue usable**: vuelven la tarjeta, el buscador, los
+   ajustes de Grupos y el botón de nuevo grupo. No queda inerte.
+
+### Captura
+
+- `qa-pending-member-01-puerta-esperando-aprobacion-20260908-212357.png`
+
+### Lo que sigue siendo device
+
+**El AC 2: que al APROBAR al miembro la puerta se abra sin relanzar la app.** Eso necesita un
+segundo teléfono con la cuenta del admin y el backend real; ningún hook cambia el `status` de un
+miembro en vivo. Queda en la cola del owner, y es lo único que queda de este ticket.

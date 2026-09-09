@@ -1,11 +1,13 @@
 ---
 id: fx-pnl-education-card
-status: qa
+status: done
 priority: medium
 area: panel/finance
 created: 2026-05-03
-updated: 2026-09-07
 source: YalaWiki/Ideas/idea-fx-pnl-card.md
+updated: 2026-09-08
+qa-status: passed
+qa-date: 2026-09-08
 ---
 
 
@@ -194,3 +196,69 @@ Cuatro hallazgos reales de la review, fuera del alcance de este ticket, con tick
 - Anexo B del plan (filosofía coexistencia honesta): `~/.claude/plans/crea-el-spec-y-reactive-cloud.md`
 
 migrated from YalaWiki Ideas/idea-fx-pnl-card.md @ 1934e8ad
+
+---
+
+## QA Visual · 2026-09-08
+
+**Veredicto: PASS**, y con una corrección de fondo: **la premisa de que esto no se podía ver en
+simulador era falsa.**
+
+iPhone 17 Pro (iOS 26.5), `Yala Dev`, seed **`minimal`**
+(`-uitest -uitest-reset -uitest-skip-onboarding -uitest-pro -uitest-seed minimal`). La card salió
+en el Panel sin hacer nada especial.
+
+### La premisa que se cae
+
+El ticket decía: *«Ningún seed de UI test la produce (son PEN), así que la card no aparece en
+XCUITest y su cobertura de UI es cero por construcción.»* **Medido: es falso.**
+`DevSeedAccounts.swift:22-36` crea la cuenta principal en PEN **y una de ahorros en USD** con saldo,
+y `DevSeedExchangeRates` siembra el histórico de tasas con deriva. Eso basta para que el FIFO
+encuentre lotes vivos y la card se pinte. Su cobertura de UI **no** es cero por construcción: era
+cero porque nadie la había mirado.
+
+### Lo que se vio
+
+**La card en el Panel** (`panel_fx_pnl_card`):
+
+> **Pérdida por tipo de cambio** — ≈ S/ **-80,00**
+> «Tus dólares valen hoy un 1.1% menos que cuando entraron a tu cuenta.»
+
+- **El titular casa con el signo**: número negativo, titular «Pérdida». No hay desajuste.
+- **No se pinta en rojo**, que era el requisito explícito: la card usa el tono neutro del tema y
+  una flecha ↘. El verde queda reservado para la ganancia, como pedía el ticket.
+
+**La hoja de detalle**, con la fila por divisa y sus cuatro columnas:
+
+| Divisa | Saldo nativo | TC entrada · TC hoy | Valor hoy | P&L parcial |
+|---|---|---|---|---|
+| **USD** | $ 2.000,00 | «Entró a **3.70** · hoy a **3.66**» | = S/ 7.320,00 | ≈ S/ **-80,00** |
+
+Más el total («En total ≈ S/ -80,00»), el texto educativo que explica de dónde sale el número, y dos
+notas honestas: que el TC de entrada es **un promedio** de todos los movimientos en esa moneda, y
+que «alguna conversión usó un tipo de cambio que no era el de hoy, así que estas cifras son
+aproximadas» — que es el porqué del «≈».
+
+### La aritmética cierra sola
+
+```
+2.000 × 3,70 = 7.400,00   ← lo que valía al entrar
+2.000 × 3,66 = 7.320,00   ← «= S/ 7.320,00» en pantalla ✓
+       diferencia = −80,00 ← «≈ S/ −80,00» ✓
+       80 / 7.400 = 1,08 % → «1.1% menos» ✓
+```
+
+Los cuatro números de la fila son consistentes entre sí y con el titular. Y el TC de 3,66 es el
+mismo que se dedujo por separado en el QA de `groups-budget` (2.584,20 − 1.230 = 1.354,20 sobre
+$370 → 3,66), o sea que dos pantallas distintas están leyendo la misma tabla de tasas.
+
+### Captura
+
+- `qa-fx-pnl-01-hoja-detalle-por-divisa-20260908-212514.png`
+
+### Lo que NO se vio
+
+- **El caso de GANANCIA**, y con él el verde `#0F7A80`. Este corpus da pérdida. Para verlo hace
+  falta un corpus donde la divisa se haya apreciado — probablemente `-uitest-seed pesado`, con
+  10 años de deriva, o repetir hasta que el random-walk caiga del otro lado.
+- El umbral del 0,5 % por debajo del cual la card **no** debe aparecer.

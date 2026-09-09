@@ -8,39 +8,40 @@ paths:
 
 <!-- INDICE:inicio — generado por scripts/indexar_doc.py, no editar a mano -->
 
-## Índice de reglas (24)
+## Índice de reglas (25)
 
-> Este fichero son **25 KB en 24 reglas largas**. No lo leas entero: localiza la regla
+> Este fichero son **26 KB en 25 reglas largas**. No lo leas entero: localiza la regla
 > aquí y lee **solo su tramo** con `sed -n '<linea>,<linea+N>p'`.
 > Los números de línea se desplazan al editar — regenera con
 > `python3 scripts/indexar_doc.py <fichero> --apply`.
 
 | Línea | Regla | Peso |
 |---|---|---|
-| `L50` | TODO `ModelConfiguration` de un test lleva `cloudKitDatabase: .none` EXPLÍCITO — el default es `.automatic` y en el simu | 2.5 KB |
-| `L53` | NUNCA aserjar el valor EN MEMORIA de un `@Model` ya persistido justo después de un `context.rollback()` — es dependiente | 2.2 KB |
-| `L65` | Seed `minimal` por default | 372 B |
-| `L69` | Un `accessibilityIdentifier` aplicado a un CONTENEDOR pisa el de sus hijos, así que el id declarado en el componente pue | 783 B |
-| `L71` | `exists` NO implica alcanzable: con un sheet presentado, la vista de fondo sigue ENTERA en el árbol de accesibilidad y l | 396 B |
-| `L73` | Un seam de QA que FUERZA el resultado de un predicado deja CIEGOS a todos los tests que lo usan: cubren el flujo, no la  | 1.5 KB |
-| `L75` | El tercero de la familia, y el más barato de cometer: cuando el HELPER que construye el fixture omite el campo que decid | 1.7 KB |
-| `L77` | El gemelo del anterior: un seam de QA que PERSISTE pone rojos a los tests de OTRO target (2026-08-05). | 1.5 KB |
-| `L82` | Se finge la sesión, no se relajan las aserciones | 485 B |
-| `L84` | Crear grupo necesita ADEMÁS `-uitest-groups-consent` | 551 B |
-| `L86` | `-uitest-fake-cloud-session` ≠ `-uitest-fake-backend-session` | 476 B |
-| `L88` | `-uitest-fake-icloud` no sirve para esto | 246 B |
-| `L92` | DOS corridas de XCUITest sobre el MISMO simulador se derriban entre sí, y el síntoma NO se parece a un fallo de test (me | 1.4 KB |
-| `L94` | Corolario, y es el que ahorra el diagnóstico entero: la presencia o ausencia de la línea de fallo CLASIFICA el rojo. | 828 B |
-| `L97` | El device DEBE casar con el runtime del SDK contra el que se compila. | 832 B |
-| `L99` | NO apagar el simulador entre corridas. | 386 B |
-| `L101` | La PRIMERA corrida tras bootear un simulador no cuenta — y en iOS 27.0 falla de verdad. | 991 B |
-| `L103` | iOS 27.0 (beta) es ~2× más lento que 26.4.1 para todo el ciclo de vida de UI, y cuelga el teardown de `xcodebuild` ~600  | 412 B |
-| `L105` | En iOS 27.0 NINGÚN swipe sintético materializa una celda de `LazyVGrid` que no esté ya en pantalla ⇒ no navegues por ahí | 2.4 KB |
-| `L107` | Clasificar la corrida por su exit code ANTES de leer el output | 619 B |
-| `L109` | Con Swift Testing, «cero casos» tiene un tercer modo y NO da 70: da exit 0, `TEST SUCCEEDED` y `Executed 0 tests` (2026- | 1.1 KB |
-| `L111` | NUNCA cuentes casos con un grep anclado en `^`: los logs de la app PARTEN las líneas del reporter (2026-09-07). | 1.6 KB |
-| `L113` | `-only-testing` filtra por el TIPO, no por el FICHERO — y varios ficheros de este repo declaran DOS `@Suite` (2026-08-03 | 1015 B |
-| `L115` | Un worktree aislado necesita `Secrets.xcconfig` copiado a mano | 340 B |
+| `L51` | TODO `ModelConfiguration` de un test lleva `cloudKitDatabase: .none` EXPLÍCITO — el default es `.automatic` y en el simu | 2.5 KB |
+| `L54` | NUNCA aserjar el valor EN MEMORIA de un `@Model` ya persistido justo después de un `context.rollback()` — es dependiente | 2.4 KB |
+| `L66` | En QA MANUAL, `-uitest` a secas es OBLIGATORIO y su ausencia no da ningún error (2026-09-08). | 707 B |
+| `L68` | Seed `minimal` por default | 372 B |
+| `L72` | Un `accessibilityIdentifier` aplicado a un CONTENEDOR pisa el de sus hijos, así que el id declarado en el componente pue | 783 B |
+| `L74` | `exists` NO implica alcanzable: con un sheet presentado, la vista de fondo sigue ENTERA en el árbol de accesibilidad y l | 396 B |
+| `L76` | Un seam de QA que FUERZA el resultado de un predicado deja CIEGOS a todos los tests que lo usan: cubren el flujo, no la  | 1.5 KB |
+| `L78` | El tercero de la familia, y el más barato de cometer: cuando el HELPER que construye el fixture omite el campo que decid | 1.7 KB |
+| `L80` | El gemelo del anterior: un seam de QA que PERSISTE pone rojos a los tests de OTRO target (2026-08-05). | 1.5 KB |
+| `L85` | Se finge la sesión, no se relajan las aserciones | 485 B |
+| `L87` | Crear grupo necesita ADEMÁS `-uitest-groups-consent` | 551 B |
+| `L89` | `-uitest-fake-cloud-session` ≠ `-uitest-fake-backend-session` | 476 B |
+| `L91` | `-uitest-fake-icloud` no sirve para esto | 246 B |
+| `L95` | DOS corridas de XCUITest sobre el MISMO simulador se derriban entre sí, y el síntoma NO se parece a un fallo de test (me | 1.4 KB |
+| `L97` | Corolario, y es el que ahorra el diagnóstico entero: la presencia o ausencia de la línea de fallo CLASIFICA el rojo. | 828 B |
+| `L100` | El device DEBE casar con el runtime del SDK contra el que se compila. | 832 B |
+| `L102` | NO apagar el simulador entre corridas. | 386 B |
+| `L104` | La PRIMERA corrida tras bootear un simulador no cuenta — y en iOS 27.0 falla de verdad. | 991 B |
+| `L106` | iOS 27.0 (beta) es ~2× más lento que 26.4.1 para todo el ciclo de vida de UI, y cuelga el teardown de `xcodebuild` ~600  | 412 B |
+| `L108` | En iOS 27.0 NINGÚN swipe sintético materializa una celda de `LazyVGrid` que no esté ya en pantalla ⇒ no navegues por ahí | 2.4 KB |
+| `L110` | Clasificar la corrida por su exit code ANTES de leer el output | 619 B |
+| `L112` | Con Swift Testing, «cero casos» tiene un tercer modo y NO da 70: da exit 0, `TEST SUCCEEDED` y `Executed 0 tests` (2026- | 1.1 KB |
+| `L114` | NUNCA cuentes casos con un grep anclado en `^`: los logs de la app PARTEN las líneas del reporter (2026-09-07). | 1.6 KB |
+| `L116` | `-only-testing` filtra por el TIPO, no por el FICHERO — y varios ficheros de este repo declaran DOS `@Suite` (2026-08-03 | 1015 B |
+| `L118` | Un worktree aislado necesita `Secrets.xcconfig` copiado a mano | 340 B |
 
 <!-- INDICE:fin -->
 
@@ -60,7 +61,9 @@ Detalles completos en `$VAULT/planning/TESTING-STRATEGY.md`. Reglas mínimas:
 
 ## XCUITest (regresión UI determinista) — `YalaUITests`
 - Scheme **Yala Dev**. Lanzar con `XCUIApplication().launchForUITest(...)` (helper en `YalaUITests/Support/`).
-- Launch args (`#if DEBUG`, `UITestHooks`): `-uitest` (modo + store local sin CloudKit), `-uitest-reset`, `-uitest-skip-onboarding`, `-uitest-pro`, `-uitest-seed <minimal|realista|pesado>`.
+- Launch args (`#if DEBUG`, `UITestHooks`): `-uitest` (modo + store local sin CloudKit), `-uitest-reset`, `-uitest-skip-onboarding`, `-uitest-pro`, `-uitest-seed <minimal|realista|pesado|grupos|grupos-invitado|grupos-saldado|grupos-sin-flag|grupos-pendiente|solo-grupos|dead-pointer>` (los diez de `DevSeedProfile`, `Yala/Seed/DevSeedService.swift:13`; un valor no reconocido cae a `.realista` en silencio).
+
+- **En QA MANUAL, `-uitest` a secas es OBLIGATORIO y su ausencia no da ningún error (2026-09-08).** `UITestHooks.isActive` es literalmente `arguments.contains("-uitest")` (`UITestHooks.swift:24-31`), y **todos** los demás hooks cuelgan de él: sin ese flag, `-uitest-seed`, `-uitest-skip-onboarding` y compañía se ignoran **en silencio** y la app arranca en el Welcome como una instalación nueva. En XCUITest nunca muerde porque `launchForUITest` lo siembra siempre; muerde al lanzar a mano (`launch_app_sim` / `simctl launch`) durante un `/qa`, y el síntoma —onboarding en vez de datos— parece «el seed no funciona» en vez de «falta un arg». Costó el primer arranque del barrido del 8-sep.
 
 - **Seed `minimal` por default** (rápido); `realista`/`pesado` solo si el test necesita volumen (arranque más lento, riesgo watchdog).
 - Esperar **`waitForUITestReady()`** (señal `uitest_ready`) antes de interactuar — NUNCA `sleep`.

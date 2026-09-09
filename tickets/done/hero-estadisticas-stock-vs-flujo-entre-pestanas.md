@@ -1,11 +1,13 @@
 ---
 id: hero-estadisticas-stock-vs-flujo-entre-pestanas
-status: qa
+status: done
 priority: medium
 area: statistics
 created: 2026-09-06
-updated: 2026-09-07
 source: hallazgo de la review adversarial de distribution-balance-kpi-skips-fx
+updated: 2026-09-08
+qa-status: passed
+qa-date: 2026-09-08
 ---
 
 # El número grande de Estadísticas significa una cosa en Distribución y otra en las demás pestañas
@@ -171,3 +173,52 @@ estado, no solo con la pestaña. Los casos que importan, porque son los que un r
 3. Tendencias cambiando la métrica entre Balance / Ingresos / Gastos → el rótulo sigue a las tres.
 4. Registros tocando los chips de ingresos/gastos → deja de decir «Neto del período».
 5. Deslizar entre las cuatro con el mismo período: el hueco es el mismo y cada cifra dice qué es.
+
+---
+
+## QA Visual · 2026-09-08
+
+**Veredicto: PASS.** iPhone 17 Pro (iOS 26.5), `Yala Dev`, seed `realista`
+(`-uitest -uitest-reset -uitest-skip-onboarding -uitest-pro -uitest-seed realista`, deeplinks
+`statistics` y `records`).
+
+### Lo que se vio
+
+El rótulo `stats_hero_caption` existe bajo el número grande en las cuatro superficies y **cambia con
+el estado, no solo con la pestaña** — que era justo lo que el ticket pedía comprobar:
+
+| Dónde | Estado | Rótulo | Número |
+|---|---|---|---|
+| Estadísticas · Resumen | — | **Neto del período** | S/ 65.634,40 |
+| Estadísticas · Distribución | sin filtros | **Saldo de cuentas** | S/ 73.526,45 |
+| Estadísticas · Tendencias | métrica Balance | **Neto del período** | S/ 65.634,40 |
+| Estadísticas · Tendencias | métrica **Gasto** | **Gastos del período** | S/ 205.602,00 |
+| Estadísticas · Tendencias | métrica **Ingreso** | **Ingresos del período** | S/ 271.236,40 |
+| Registros | sin chips | **Neto del período** | S/ 65.634,40 |
+| Registros | chip **Gasto** | **Gastos del período** | S/ -205.602,00 |
+
+Lo importante es el par Tendencias/Balance → Tendencias/Gasto: **misma pestaña, distinto rótulo y
+distinto número**. Eso es lo que el ticket llamaba «stock vs flujo» y lo que un rótulo fijo por
+pestaña no habría podido resolver.
+
+Y la distinción que da nombre al ticket queda visible: en Distribución el hero es un **stock**
+(S/ 73.526,45, el saldo de las cuentas) mientras las demás pestañas muestran un **flujo** del
+período (65.634,40 / 205.602,00 / 271.236,40). Los rótulos lo dicen sin ambigüedad.
+
+### Capturas
+
+- `qa-hero-caption-01-resumen-neto-20260908-211438.png`
+- `qa-hero-caption-02-distribucion-saldo-cuentas-20260908-211455.png`
+- `qa-hero-caption-03-tendencias-ingresos-20260908-211526.png`
+- `qa-hero-caption-04-registros-gastos-20260908-211559.png`
+
+### Lo que NO se vio, y se dice
+
+**El quinto valor, «Total del período», no apareció** en ninguno de los estados recorridos. No es un
+fallo observado: es un estado que no se alcanzó (probablemente Distribución con chips de naturaleza
+puestos). Los cuatro rótulos que sí se vieron cubren el comportamiento que el ticket quería
+verificar; si «Total del período» importa como caso propio, necesita su propia pasada.
+
+**El device físico ya no es la razón por la que esto seguía abierto.** El ticket marcaba
+`[~] Device-QA`, pero todo lo que enumeraba como pendiente —las cuatro pestañas, los chips de
+Registros— es local y determinista. Se cierra aquí.
