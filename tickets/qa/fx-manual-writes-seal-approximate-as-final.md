@@ -130,3 +130,46 @@ El estado de partida se siembra desde un solo launch con `-uitest -uitest-reset 
 **Aviso para no leer un falso negativo:** con el filtro «Todo el tiempo» el fixture NO marca (750 sobre 206.725 son el 0,36 %, bajo el umbral del 5 %). **Acota el período** — con «Este mes» los tres números del Panel llevan «≈» y sin el arg ninguno.
 
 **Desbloqueado a medias.** El montaje cubre la fila incompleta; lo que tu :108 pide además es **red**, y eso sigue fuera del simulador. Los diez sitios que sellan se pueden verificar con este corpus salvo en la parte que exige que las tasas LLEGUEN.
+
+---
+
+## Device-QA · 2026-09-09 — PARCIAL (una mitad verificada, la otra no tiene superficie)
+
+Simulador iPhone 17 Pro (`9D0F6D32`), iOS 26.5, `Yala Dev`, con
+`-uitest-seed realista -uitest-seed-foreign-account JPY`. **Se creó una transacción a mano por la
+UI** —el flujo principal que este ticket describe— en la cuenta «QA FX» (JPY, fuera de la fila del
+día): 30.000 ¥, subcategoría «Bares y salidas sociales», guardada con `new_transaction_save`.
+
+**Y el selector de cuenta del formulario de transacción SÍ responde a los taps sintéticos**
+(`account_selector_row_QA FX`), al revés que el selector de Moneda del formulario de CUENTA que
+`qa-no-puede-crear-cuenta-en-otra-divisa` midió inservible. Son controles distintos; no heredes
+aquella conclusión aquí.
+
+### Lo que quedó verificado
+
+El gasto de «Todo el tiempo» pasó de **S/ 206.725,00 → S/ 207.435,00**, o sea **+710,00**.
+`30.000 ¥ × 0,023667 = 710,00` al céntimo. Si la escritura manual hubiera sellado un 1:1 silencioso
+habría sumado **30.000**. ⇒ **la escritura a mano convierte con la escalera real, no 1:1.**
+Captura: `qa/evidencia-fx-20260909/13-escritura-manual-convierte.png`.
+
+### Lo que NO se puede verificar mirando
+
+El ticket es sobre el **flag** `isExchangeRateProvisional`, y ese flag **no tiene ninguna superficie
+por fila**: el detalle de una transacción muestra su importe convertido y su tasa, nunca si la app
+considera esa tasa definitiva. Por agregado tampoco discrimina — el mes ya lleva «≈» por el fixture,
+así que saldría marcado igual con el sellado bien o mal.
+
+Para que este ticket tenga device-QA de verdad hace falta **una de dos**, y las dos son trabajo
+aparte:
+
+1. Una superficie que exponga el flag de una fila (no existe hoy, y crearla es decisión de producto).
+2. Un fixture que siembre la cuenta en divisa ausente **sin** filas propias, de modo que el único
+   aporte al mes sea la transacción creada a mano y el «≈» del período dependa sólo de su sellado.
+   Es un arg de una línea sobre `DevSeedForeignCurrencyAccount` — el candidato barato para la
+   próxima tanda.
+
+### Y lo que sigue fuera del simulador, como decía tu :108
+
+**Red.** La parte del ticket que exige que las tasas LLEGUEN (y que el fallo de API se trague en
+silencio) no se reproduce aquí: en este entorno `ExchangeRateService` falla por AppAttest en todos
+los arranques, que es el caso contrario al que hay que observar.

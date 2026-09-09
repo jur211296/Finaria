@@ -406,3 +406,27 @@ El estado de partida se siembra desde un solo launch con `-uitest -uitest-reset 
 **Aviso para no leer un falso negativo:** con el filtro «Todo el tiempo» el fixture NO marca (750 sobre 206.725 son el 0,36 %, bajo el umbral del 5 %). **Acota el período** — con «Este mes» los tres números del Panel llevan «≈» y sin el arg ninguno.
 
 **Desbloqueado a medias.** El montaje cubre la fila parcial. Siguen fuera las dos cosas que tu propio texto pide: **red** (:397) y, en tu AC nº3, **cambiar la divisa preferida** — que es la salida 3 del ticket ancla (`-uitest-preferred-currency <ISO>`) y NO se implementó, por ejercitar `CurrencyChangeService`, otro objeto. Si retomas este ticket, ése es el seam que hay que pedir.
+
+---
+
+## Device-QA · 2026-09-09 — PARCIAL, y lo que falta NO es montaje
+
+Simulador iPhone 17 Pro (`9D0F6D32`), iOS 26.5, `Yala Dev`, con `-uitest-seed-foreign-account JPY`.
+
+**Verificado**: con la fila del día incompleta, las filas nacen con **tasa real y no 1,0** y
+marcadas como provisionales — es lo que sostiene `DevSeedForeignCurrencyAccountTests` y lo que se ve
+en el detalle de cualquier fila «QA-FX». Y una transacción **creada a mano** por la UI en esa cuenta
+convierte igual de bien: 30.000 ¥ suman 710,00 al gasto, no 30.000
+(ver [[fx-manual-writes-seal-approximate-as-final]]).
+
+**Sigue fuera, y por las dos causas que tu propio texto ya nombraba:**
+
+1. **Red** (:397). En este entorno `ExchangeRateService` falla por AppAttest en todos los arranques,
+   así que el caso «las tasas llegan y la fila se completa» no se reproduce.
+2. **Cambiar la divisa preferida** (tu AC nº3). Es la salida 3 del ticket ancla
+   —`-uitest-preferred-currency <ISO>`— y **no se implementó**, porque ejercita
+   `CurrencyChangeService`, que es otro objeto. Sigue siendo el seam que hay que pedir para cerrar
+   este ticket; no lo cubre ninguno de los tres args de la familia FX.
+
+O sea: de este ticket ya no queda montaje pendiente que un `/qa` pueda resolver. Queda **red** y
+**un seam más**, y el segundo tiene dueño claro.

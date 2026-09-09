@@ -247,3 +247,50 @@ El estado de partida se siembra desde un solo launch con `-uitest -uitest-reset 
 **Aviso para no leer un falso negativo:** con el filtro «Todo el tiempo» el fixture NO marca (750 sobre 206.725 son el 0,36 %, bajo el umbral del 5 %). **Acota el período** — con «Este mes» los tres números del Panel llevan «≈» y sin el arg ninguno.
 
 **Queda desbloqueado ENTERO.** Tu :213 pedía exactamente «una cuenta en divisa ausente de la fila de tasas» y nada más, así que ya puedes recorrer las superficies secundarias y ver en cuáles falta la marca.
+
+---
+
+## Device-QA hecho · 2026-09-09 — PASS con tres hallazgos, ninguno de los cuales lo reabre
+
+Simulador iPhone 17 Pro (`9D0F6D32`), iOS 26.5, `Yala Dev`, mismo lanzamiento que su hermano y
+período «Este mes» (con «Todo el tiempo» el fixture pesa 0,36 % y no marca: no leerlo como fallo).
+
+### Las superficies de tu tabla, una a una
+
+| superficie | veredicto | lo que se vio |
+|---|---|---|
+| «¿Cuánto tienes hoy?» | **PASS** | «Tu saldo hoy **≈ S/ 79.011,40**» — la peor omisión, cerrada |
+| Flujo de caja | **PASS** | Total **≈ S/ +5.327,00**; el «vs S/ 4.704,00» sin marca, como está declarado |
+| Registros | **PASS** | Hero y los dos chips con «≈», **y la etiqueta de VoiceOver también** (`≈ S/ 10.000,00`) |
+| Promedio diario (Resumen) | **PASS** | **≈ S/ 519,22** |
+| Chips de Estadísticas | **PASS** | **≈ S/ 10.000,00** / **≈ S/ 4.673,00** |
+| KPI de Distribución (hero) | **PASS** | **≈ S/ 79.011,40** en modo Balance |
+| Widget de inicio | **no verificado** | exige montar el widget en la pantalla de inicio; queda para la próxima tanda |
+| Asistente | **fuera del simulador** | su salida es el system prompt, y comprobar que usa la salvedad **requiere LLM real** |
+
+El desglose por divisa de la hoja pide la calidad de **cada** conversión, como dice tu texto: PEN sin
+marca (nativa), USD y JPY con ella.
+
+### Tres hallazgos, con ticket propio
+
+1. **[[live-anchor-breakdown-doubles-the-approximate-glyph]]** (medium) — en el desglose por divisa
+   el copy ya traía un «≈» propio, así que la divisa dudosa sale **«≈ ≈ S/ 750,00 hoy»** y la buena
+   «≈ S/ 111.711,40 hoy»: se distinguen sólo por *cuántas veces* aparece el símbolo. El cableado que
+   añadiste aquí es correcto; lo que no llega es la señal. Está en los 16 `.lproj`.
+2. **[[pie-header-total-unmarked]]** (medium) — «Análisis del gasto» pinta **S/ 4.673,00 sin marca**,
+   el mismo número al céntimo que el Panel, Resumen y Registros marcan. Corrige además una premisa
+   de `fx-category-totals-unmarked`, que justifica su `low` diciendo que «el total que agrega estas
+   líneas sí avisa».
+3. **[[weekday-bar-daily-average-unmarked]]** (medium) — hay **dos** tarjetas rotuladas «Promedio
+   diario»: la de Resumen marca (≈ S/ 519,22) y la de Tendencias no (S/ 3.944,00). Tu tabla nombraba
+   `InsightsTabView.swift:546`; la otra es `WeekdayBarPanelWidget.swift:36`, que además se monta
+   también en el Panel.
+
+Los tres son superficies que **la tabla no nombraba** o presentación, no regresiones de lo que este
+ticket cableó — por eso el veredicto es PASS y no vuelve a `in-progress`. Y son, otra vez, el mismo
+corolario del `CLAUDE.md` que tú ya habías escrito aquí: la tabla nombra un sitio por pantalla.
+
+### Lo que queda para cerrar del todo
+
+Verificar el **widget de inicio** con el snapshot reescrito. Es simulable (montar el widget en la
+pantalla de inicio del simulador), sólo que no cabía en esta tanda.

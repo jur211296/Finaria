@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (215)
+## Index (219)
 
 | id | status | path |
 |----|--------|------|
@@ -168,6 +168,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | invite-refresh-forzado-es-noop-si-hay-otro-en-vuelo | qa | tickets/qa/invite-refresh-forzado-es-noop-si-hay-otro-en-vuelo.md |
 | joiner-flag-residuals-cosmetic-and-service-guard | backlog | tickets/backlog/joiner-flag-residuals-cosmetic-and-service-guard.md |
 | la-nocturna-de-ui-no-ha-disparado-ni-una-vez | done | tickets/done/la-nocturna-de-ui-no-ha-disparado-ni-una-vez.md |
+| live-anchor-breakdown-doubles-the-approximate-glyph | backlog | tickets/backlog/live-anchor-breakdown-doubles-the-approximate-glyph.md |
 | merchant-memory-suggests-across-natures-in-three-more-places | backlog | tickets/backlog/merchant-memory-suggests-across-natures-in-three-more-places.md |
 | no-hay-seed-con-miembro-rechazado | backlog | tickets/backlog/no-hay-seed-con-miembro-rechazado.md |
 | notifications-not-delivered-testflight | done | tickets/done/notifications-not-delivered-testflight.md |
@@ -178,6 +179,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | panel-defaults-four-sections-four-widgets | done | tickets/done/panel-defaults-four-sections-four-widgets.md |
 | panel-lee-el-filtro-de-cuentas-en-singular-fuera-del-saldo | backlog | tickets/backlog/panel-lee-el-filtro-de-cuentas-en-singular-fuera-del-saldo.md |
 | panel-no-recalcula-al-llegar-tasas-nuevas | backlog | tickets/backlog/panel-no-recalcula-al-llegar-tasas-nuevas.md |
+| pie-header-total-unmarked | backlog | tickets/backlog/pie-header-total-unmarked.md |
 | preferred-currency-has-three-different-defaults | backlog | tickets/backlog/preferred-currency-has-three-different-defaults.md |
 | prefs-domain-per-secondary-session | qa | tickets/qa/prefs-domain-per-secondary-session.md |
 | prefs-synced-keys-upload-not-download | qa | tickets/qa/prefs-synced-keys-upload-not-download.md |
@@ -227,6 +229,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | trends-comparison-kpi-vs-curve | done | tickets/done/trends-comparison-kpi-vs-curve.md |
 | trends-insight-card-v2-bullets | backlog | tickets/backlog/trends-insight-card-v2-bullets.md |
 | uitest-compara-fechas-sin-fijar-locale | backlog | tickets/backlog/uitest-compara-fechas-sin-fijar-locale.md |
+| uitest-seed-reseeds-the-corpus-without-reset | backlog | tickets/backlog/uitest-seed-reseeds-the-corpus-without-reset.md |
 | undercount-dias-intervalos-cerrados | done | tickets/done/undercount-dias-intervalos-cerrados.md |
 | unit-suite-nondeterministic-reds | done | tickets/done/unit-suite-nondeterministic-reds.md |
 | update-banner-appstore-criteria | done | tickets/done/update-banner-appstore-criteria.md |
@@ -234,6 +237,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | vigilante-margen-menor-que-el-retraso-real-del-cron | backlog | tickets/backlog/vigilante-margen-menor-que-el-retraso-real-del-cron.md |
 | vision-amount-sign-contract-is-only-a-prompt-example | backlog | tickets/backlog/vision-amount-sign-contract-is-only-a-prompt-example.md |
 | web-domain-has-no-spf-dkim-dmarc | done | tickets/done/web-domain-has-no-spf-dkim-dmarc.md |
+| weekday-bar-daily-average-unmarked | backlog | tickets/backlog/weekday-bar-daily-average-unmarked.md |
 | welcome-beacon-reads-owner-icloud-in-secondary | backlog | tickets/backlog/welcome-beacon-reads-owner-icloud-in-secondary.md |
 | welcome-copy-blames-owner | qa | tickets/qa/welcome-copy-blames-owner.md |
 | welcome-fresh-start-alert-leaves-blank-screen | qa | tickets/qa/welcome-fresh-start-alert-leaves-blank-screen.md |

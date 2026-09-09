@@ -175,3 +175,63 @@ El estado de partida se siembra desde un solo launch con `-uitest -uitest-reset 
 **Desbloqueado a medias.** La cuenta ya la tienes; falta la otra mitad de tu :156 —una fila sembrada con `exchangeRate = 1.0` y monto convertido real—, que es la población envenenada que el reparador debe curar. El seam siembra filas SANAS-pero-aproximadas, que es el caso contrario.
 
 Ojo al elegir cómo sembrarla: `.claude/rules/currency-fx.md` avisa de que reabrir una fila cuyo monto ya era bueno DESTRUYE datos, y las dos poblaciones se distinguen por el cociente `amountInPreferredCurrency / amount`.
+
+---
+
+## Device-QA hecho · 2026-09-09 — PASS
+
+**El montaje que faltaba se implementó en esta sesión**: `-uitest-seed-chat-sealed-rate <ISO>`
+(`DevSeedChatSealedRate`) siembra exactamente la población que tu :156 pedía — una fila con
+`exchangeRate = 1.0`, divisa ≠ preferida y **monto convertido real**. El monto sale del converter de
+producción y el veneno se planta DESPUÉS del recálculo; si fuera antes, la fila nacería sana.
+
+Y hace la distinción que avisaba `.claude/rules/currency-fx.md`: como el cociente de los dos montos
+guardados no vale 1, esta fila cae en la población que se **cura en el sitio**, no en la que se
+reabre. Sembrar el monto crudo habría reproducido el caso contrario — el que destruye datos.
+
+### El veredicto, medido
+
+Simulador iPhone 17 Pro (`9D0F6D32`), iOS 26.5, `Yala Dev`. Dos arranques:
+
+1. `-uitest -uitest-reset -uitest-skip-onboarding -uitest-seed realista -uitest-seed-chat-sealed-rate JPY`
+2. lo mismo **sin** `-uitest-reset` y **sin** `-uitest-seed` (ver el aviso de abajo)
+
+| | detalle de la transacción |
+|---|---|
+| tras el arranque 1 | `≈ S/ -600,00` · **`TC: 1.0000`** |
+| tras el arranque 2 | `≈ S/ -600,00` · **`TC: 0.0237`** |
+
+**El importe convertido no cambió y la tasa pasó a ser la verdadera** — que es literalmente el AC.
+Log del barrido: `repair sweep fixed 1 in place and reopened 0 of 1 candidates`, o sea que tomó el
+camino de curar y no el de reabrir. Sin «≈», porque la fila no está marcada como provisional.
+Capturas `qa/evidencia-fx-20260909/10` y `/11`.
+
+### Por qué el par de arranques sale gratis, y qué lo puede estropear
+
+El barrido es el **paso 2** del bootstrap (`loadExchangeRates`) y el seed el **19**
+(`applyUITestSeed`), así que en el arranque que siembra el barrido ya pasó sobre un store vacío y no
+quema el flag (su guard `candidates.isEmpty && fetchCount == 0`). No hubo que tocar el orden.
+
+Dos avisos para quien repita la receta:
+
+- **En el arranque 2, NO pases `-uitest-seed <perfil>`.** Vuelve a sembrar el corpus entero: medido,
+  2.326 → 4.651 registros, con «Bolt» duplicado y los totales al doble. No es un bug de cálculo →
+  [[uitest-seed-reseeds-the-corpus-without-reset]].
+- **El barrido depende del gate de quiescencia de CloudKit**, así que puede no correr en un arranque
+  concreto. Si el log no imprime la línea `repair sweep …`, relanza; no es un FAIL.
+
+### Un defecto del montaje, corregido aquí
+
+`-uitest-reset` **no rebobina el one-shot**: `DataWipeService` borra una lista explícita de claves y
+`fxOneToOneRepairSweep.v2` no está en ella. Sin arreglarlo, el fixture sólo servía **una vez por
+simulador** — a la segunda el barrido salía por su primer `guard`, la fila se quedaba en «1,0000» y
+el QA lo habría leído como un FAIL del producto que no lo es. Lo rebobina ahora el propio fixture
+(`DevSeedChatSealedRate.rewindRepairSweepOneShot`), que es lo mínimo: quien siembra la fila deja el
+barrido en condiciones de correr, sin tocar el «Empezar de cero» de producto, que es otra decisión.
+
+### Verificación del fixture
+
+`YalaTests/DevSeedChatSealedRateTests` (7 casos) + **5 mutantes**, todos rojos donde debían:
+préstamo sellado exacto, pata real puesta a «mi parte», veneno no plantado, clave del one-shot
+desincronizada, guard de idempotencia retirado. El que más importa es el de la clave: si divergiera,
+el fixture rebobinaría una clave muerta y el veredicto sería un falso FAIL.
