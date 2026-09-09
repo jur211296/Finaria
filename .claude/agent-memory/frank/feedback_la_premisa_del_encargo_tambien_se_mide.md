@@ -155,3 +155,35 @@ Y en este repo la documentación envejece más rápido que el código.
 estado. Cuesta un `grep -rl`. Y si al medirla sale otra, dilo en el sitio donde la reusaste **y
 corrige el documento de origen**: dejarlo pasar es lo que hace que la próxima sesión herede el mismo
 número.
+
+## «Necesita DOS TELÉFONOS» es la hermana de «no es simulable», y se cae igual (2026-09-09)
+
+Armando el guion de device-QA del cluster de Grupos, medí ticket a ticket qué montaje pedía cada uno.
+De los **16**, solo **3** necesitaban de verdad dos teléfonos: los que verifican que **sonó un banner
+de APNs con la app cerrada**, que es lo único de esa familia que no se siembra.
+
+Los otros 13 se repartían así, y ninguno lo decía en su cuerpo:
+
+| Lo que hacía falta de verdad | Cuántos | Por qué se leía como «dos teléfonos» |
+|---|---|---|
+| Dos **cuentas**, no dos aparatos | 5 | Hace falta una segunda identidad con sesión real. Dos simuladores contra **staging** (`ENFORCE = "observe"`) dan el mismo estado |
+| **Un** dispositivo | 2 | El estado se siembra reinstalando y volviendo a entrar con la misma cuenta |
+| Un simulador y ya | 4 | Sembrable hoy; estaban en la cola física por herencia |
+| Nada (fuera del guion) | 2 | Uno mide rendimiento no observable a mano; el otro es un spec de diseño, no un caso |
+
+**Why:** «dos teléfonos» suena a restricción física, y una restricción física no se discute — por eso
+nadie la contrasta. Pero casi siempre es una restricción de **identidad** disfrazada: lo que el caso
+pide es un segundo actor con sesión propia, y eso lo da un simulador contra staging. La pregunta que
+las separa no es «¿hay dos personas en el escenario?» sino **«¿el estado final que hay que mirar lo
+produce el sistema operativo, o lo produce el servidor?»**. Solo lo primero (un banner entregado por
+APNs, Apple Pay, un sign-in real) necesita aparato.
+
+**How to apply:** ante una cola de device-QA, clasifica **antes** de montar nada, con esta escalera —
+la primera que baste, gana: ¿un simulador? ¿un simulador con otra cuenta contra staging? ¿un
+dispositivo reinstalando? ¿dos aparatos? Y comprueba el modo de App Attest antes de dar por bueno un
+«no sale en simulador»: en este repo es `enforce` en producción y **`observe` en staging**
+(`gateway/wrangler.toml`), y esa sola línea mueve tickets de la cola de Jürgen a la mía.
+
+**Corolario del mismo día, sobre el binario:** antes de mandar a nadie a comprobar algo en TestFlight,
+verifica que **el fix está dentro del build**. `git log <commit-del-build>..origin/<rama>` lo contesta
+en un comando, y si hay código posterior, el FAIL que lea será falso y costará la tanda entera.
