@@ -6,7 +6,8 @@ tags: [now, punto-de-retomada]
 # NOW — 2026-09-09 (Lima)
 
 **Rama** `2.1` — Merge #115: la familia FX recorrida entera en simulador
-TestFlight build **12** (CPV 12). **Subida Yala (TF/store) = solo Mini.**
+TestFlight build **13** (CPV 13) — subido el 2026-09-09, `VALID` e `IN_BETA_TESTING`.
+**Subida Yala (TF/store) = solo Mini.**
 
 ## Esta sesión
 
@@ -42,7 +43,12 @@ visto en pantalla.
    de «la credencial está mal».
 5. **El aviso de cierre cita el PR de OTRA sesión** (`el-aviso-de-cierre-cita-el-pr-de-otra-sesion`,
    **medium**): falla en silencio, con `HTTP 200` y aspecto bueno.
-6. **DMARC el 15-sep** · **cobertura de UI el 22-sep**. Esperan al calendario, no a nadie.
+6. **El build 13 llega al grupo interno, no al externo.** «Test interno» tiene un tester
+   (Jürgen, `INSTALLED`) y ahí ya es instalable. «Testers Yala» son 3 y su
+   `externalBuildState` es `READY_FOR_BETA_SUBMISSION`: para que les llegue hay que pasar
+   beta review de Apple. Si el segundo teléfono del device-QA no usa el Apple ID de
+   Jürgen, no verá el build hasta resolver eso — es decisión suya, no se tocó.
+7. **DMARC el 15-sep** · **cobertura de UI el 22-sep**. Esperan al calendario, no a nadie.
 
 ## Siguiente
 
