@@ -55,6 +55,16 @@ en cada PR, esto se paga en casi todos.
 - Tocar `.github/` **dispara la suite a propósito** (para que el CI pruebe sus propios cambios), así
   que el PR que arregle esto pagará el 1,5 h una vez. Es correcto que sea así.
 
+## Re-comprobado el 2026-09-09 (PR #120)
+
+Sigue vigente, y visto en vivo: un PR de **once ficheros markdown** (`tickets/` + `docs/`) disparó
+la suite de simulador entera por un solo fichero, `encargos/lanzados/2026-09-09-ideas-backlog-*.md`.
+La allowlist medida en el YAML de ese día es `docs/*|tickets/*|marketing/*|Web/*|.claude/*`,
+`README.md|CLAUDE.md|LICENSE*`, `gateway/*|qa/cloud/*` — `encargos/` no está.
+
+El PR se mergeó igual sin esperar: el propio workflow declara la suite **advisory**
+(«2026-06-04 — TODO advisory; gate duro = coverage-index») y `coverage-index` pasó en 17 s.
+
 ## Relacionados
 
 - [[rojo-xcuitest-runner-muere-tras-el-primer-caso]] — el PR donde se observó
