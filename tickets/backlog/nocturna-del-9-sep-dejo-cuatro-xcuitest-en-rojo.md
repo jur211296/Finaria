@@ -1,0 +1,56 @@
+---
+id: nocturna-del-9-sep-dejo-cuatro-xcuitest-en-rojo
+status: backlog
+priority: high
+area: "testing, qa"
+created: 2026-09-09
+source: run 34354119553 (nocturna de 2.1, 2026-09-09) — encontrado al arreglar el avisador
+---
+
+# La nocturna del 9-sep dejó cuatro XCUITest en rojo y nadie se enteró
+
+## Qué pasa
+
+La corrida nocturna de `2.1` del 2026-09-09 (`34354119553`) ejecutó la suite completa de UI con
+este resultado, leído del log del run:
+
+```
+Executed 145 tests, with 12 failures
+```
+
+Los 12 fallos son **cuatro casos distintos** contados con sus reintentos
+(`-retry-tests-on-failure`):
+
+| Suite | Caso |
+|---|---|
+| `EdgeCasesUITests` | `test_extremeMinimumAmountSaves` |
+| `InboxConvertToGroupUITests` | `test_convertDraftToGroupExpense_preservesDraftDate` |
+| `QuickActionsFavoritesUITests` | `test_saveAsFavoriteFromTransactionAppearsInList` |
+| `TransactionsCrudUITests` | `test_createTransaction` |
+
+`GroupInviteOnboardingUITests` aparece como suite fallida en el log pero ninguno de sus casos
+figura entre los fallos finales: pasó al reintentar.
+
+**El aviso de esos rojos no llegó a nadie.** El paso que avisa salió con `Invalid API key`
+(`ticket ci-avisador-de-rojos-advisory-tiene-la-clave-mal`, ya cerrado), así que la única señal
+fue un `tests: fail` que parecía —y en parte era— un fallo del avisador. Este ticket existe
+porque al arreglar el canal apareció lo que el canal no había podido entregar.
+
+## Lo que hay que hacer
+
+- [ ] Reproducir los cuatro en local y clasificarlos: flaky de runner frío (la Lista Negra ya
+      recoge esa familia para XCUITest) o regresión real. **No dar por buena la clasificación
+      sin bisecar**: dos rojos idénticos en un log pueden tener causas opuestas.
+- [ ] `test_createTransaction` es el más sospechoso de los cuatro por lo que cubre —crear una
+      transacción es el camino central de la app— y por la fecha: la sesión del 2026-09-09 tocó
+      el guardado al cambiar la divisa de una cuenta (PR #118). Empezar por ahí.
+- [ ] Si alguno es regresión, ticket propio con su arreglo. Si es flaky, a la Lista Negra con
+      la fecha de comprobación, que caduca.
+
+## Por qué `high`
+
+Son XCUITest de caminos centrales (crear transacción, guardar favorito, convertir borrador a
+gasto de grupo) que llevan al menos desde el 9-sep en rojo **sin que nadie lo supiera**, y la
+suite de UI ya no corre en los PR: solo en la nocturna. Si estos cuatro se quedan, la nocturna
+pasa a ser un rojo permanente, y un rojo permanente se deja de mirar — que es como se llega
+otra vez a «el CI llevaba semanas en verde con ocho tests en rojo».
