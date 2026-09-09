@@ -196,18 +196,59 @@ struct AccountCurrencyMigrationServiceTests {
     /// Una fecha sin fila de tasas no puede convertirse con la tasa exacta de ese día. El número
     /// sigue saliendo —del escalón que haya— pero el conteo tiene que decirlo: sin él no hay forma de
     /// distinguir «convertido con el dato bueno» de «convertido con lo que había».
+    ///
+    /// **El destino se elige para que NO sea la divisa preferida, y no es un detalle del test.**
+    /// `isExchangeRateProvisional` lo escribe `recalculatePreferredCurrency`, que describe la pata
+    /// `amount → preferida`: cuando el destino ES la preferida esa pata es la identidad, sale
+    /// `.exact`, y el flag queda en `false` **aunque la conversión de origen a destino haya sido
+    /// aproximada**. Fijar el destino en `"USD"` hacía que este test pasara o fallara según qué
+    /// divisa preferida tuviera la máquina — verde en local con PEN, rojo en CI. El conteo
+    /// (`approximateCount`) no tiene ese problema: mide la conversión que de verdad se hizo.
+    ///
+    /// Y el hueco que esto destapa es del PRODUCTO, no del test: con destino == preferida, un importe
+    /// convertido por la tabla estática queda sellado como exacto y fuera del reparador. Lo que lo
+    /// cierra es que `confirmCurrencyConversion` **no convierte** si falta cobertura de tasas.
     @Test func sinTasaDeEseDia_cuentaComoAproximada() throws {
         let context = try makeTestContext()
         try seedRates(context)
 
+        let preferida = normalizeCurrencyCode(CurrencyDefaults.currentPreferred)
+        let destino = preferida == "USD" ? "EUR" : "USD"
+
         // Un año antes de la primera fila sembrada: no hay tasa de ese día ni anterior.
         let huerfana = try makeRow(context, amount: -100, on: "2025-01-15")
         let outcome = AccountCurrencyMigrationService.convertHistory(
-            rows: [huerfana], to: "USD", context: context)
+            rows: [huerfana], to: destino, context: context)
 
         #expect(outcome.convertedCount == 1)
         #expect(outcome.approximateCount == 1)
         #expect(huerfana.isExchangeRateProvisional)
+    }
+
+    /// **El control de la asimetría de arriba, y la razón de que este fichero no pueda fijar el
+    /// destino a un literal.** La misma conversión aproximada, pero HACIA la divisa preferida: el
+    /// conteo sigue diciendo que fue aproximada —mide origen→destino— y el flag queda en `false`,
+    /// porque describe la otra pata y ahí destino y preferida son la misma divisa.
+    ///
+    /// Corre en cualquier máquina sin depender de cuál sea esa divisa, y demuestra que el rojo que
+    /// el CI cazó no era del código: era una aserción que dependía del entorno.
+    @Test func haciaLaDivisaPreferida_elConteoLoDiceYElFlagNo() throws {
+        let context = try makeTestContext()
+        try seedRates(context)
+
+        let preferida = normalizeCurrencyCode(CurrencyDefaults.currentPreferred)
+        // El origen tiene que ser distinto del destino o no habría conversión que medir.
+        let origen = preferida == "PEN" ? "EUR" : "PEN"
+        let huerfana = try makeRow(context, amount: -100, on: "2025-01-15", currency: origen)
+
+        let outcome = AccountCurrencyMigrationService.convertHistory(
+            rows: [huerfana], to: preferida, context: context)
+
+        #expect(outcome.convertedCount == 1)
+        #expect(outcome.approximateCount == 1)
+        // El hueco del producto que esto documenta: sellada como exacta pese a venir de la tabla
+        // estática. Lo cierra `confirmCurrencyConversion`, que no convierte si falta cobertura.
+        #expect(huerfana.isExchangeRateProvisional == false)
     }
 
     @Test func conTasaExactaDelDia_noCuentaComoAproximada() throws {
