@@ -124,6 +124,22 @@ dos**:
 - **La etiqueta de accesibilidad también.** Si el número lleva «≈» en pantalla y su
   `accessibilityLabel` se formatea sin `isEstimate:`, VoiceOver lo lee como exacto: la marca es
   información, y dejarla solo en el glifo la esconde de quien no lo ve.
+- **El denominador de la proporción es el número que se MUESTRA.** Cuando ese número es una resta
+  —un saldo, un neto— NO uses la suma de magnitudes que lo formó: el contrato de
+  `ApproximateMarkThreshold` lo dice («o su valor absoluto cuando el número es una resta») y el
+  2026-09-09 se incumplió en `WidgetDataCache.periodBalanceIsApproximate`, que dividía entre
+  `Σ|monto|` de todo el histórico. Efecto medido: 400 dudosos sobre un saldo de 500 son el 80 % y
+  marcan; sobre una facturación de 300.000 son el 0,13 % y no ⇒ **la marca se perdía justo en quien
+  más historial tiene**. El numerador es el caso contrario y no se confunden: ése suma magnitudes
+  siempre, porque los errores de dos conversiones distintas no se cancelan. Y el test tiene que
+  DISCRIMINAR: dos importes iguales dan el mismo veredicto con las dos reglas.
+- **`LiveBalanceCalculator` marca con un OR por DIVISA y eso es deliberado** — decisión de Jürgen del
+  2026-09-08 (`approximate-mark-ors-over-whole-period`): su unidad ya es la divisa, no la
+  transacción, y una divisa entera sin tasa sí es una ausencia que merece la marca. Consecuencia
+  aceptada: 30 USD olvidados con la tasa caducada marcan un saldo de 42.000 €. Alimenta el saldo del
+  panorama, la hoja «¿Cuánto tienes hoy?» y el KPI de Balance de Distribución. **Una review
+  adversarial lo levantará como bug** —pasó el 2026-09-09, dos lentes a la vez—; está escrito en el
+  docblock de la hoja para que se zanje leyendo.
 - `isEstimate` en los saldos de **Grupos** significa otra cosa —«hubo conversión», no «la tasa era
   mala»— y es una decisión de producto anterior. Es un superconjunto de la nueva, así que no miente;
   no la unifiques sin decisión del owner.
