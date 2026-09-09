@@ -131,3 +131,35 @@ El estado de partida se siembra desde un solo launch con `-uitest -uitest-reset 
 **Aviso para no leer un falso negativo:** con el filtro «Todo el tiempo» el fixture NO marca (750 sobre 206.725 son el 0,36 %, bajo el umbral del 5 %). **Acota el período** — con «Este mes» los tres números del Panel llevan «≈» y sin el arg ninguno.
 
 **Queda desbloqueado ENTERO**, y el par «aparece / no aparece» que tu :118-119 daba por imposible en simulador está medido: con «Este mes», Disponible ≈ S/ 5.327,00 · Ingresos ≈ S/ 10.000,00 · Gastos ≈ S/ 4.673,00 **con** el arg, y S/ 4.577,00 · S/ 8.500,00 · S/ 3.923,00 **sin** él. Las diferencias son los importes del fixture al céntimo.
+
+---
+
+## Device-QA hecho · 2026-09-09 — PASS
+
+Simulador iPhone 17 Pro (`9D0F6D32`), iOS 26.5, scheme `Yala Dev`. Lanzamiento:
+`-uitest -uitest-reset -uitest-skip-onboarding -uitest-seed realista -uitest-seed-foreign-account JPY`.
+
+**El par «aparece / no aparece», que tu :118-119 daba por imposible en simulador, está medido en
+este árbol** — no heredado del ticket ancla. Con «Este mes»:
+
+| número | CON el arg | SIN el arg | Δ |
+|---|---|---|---|
+| Disponible | **≈ S/ 5.327,00** | S/ 4.577,00 | 750,00 |
+| Ingresos | **≈ S/ 10.000,00** | S/ 8.500,00 | 1.500,00 |
+| Gastos | **≈ S/ 4.673,00** | S/ 3.923,00 | 750,00 |
+
+Las tres diferencias son los importes del fixture al céntimo (ingreso 1.500; gastos 400 + 350 = 750),
+así que el testigo aritmético cierra: la marca aparece exactamente cuando entran esas filas y no
+antes. Capturas `qa/evidencia-fx-20260909/01` y `/09`.
+
+**Coherencia entre pantallas, con el mismo lanzamiento y el mismo filtro** — el número grande de
+Estadísticas y su hero, los chips de Resumen y Tendencias, el hero de Registros y sus dos chips
+(incluida la etiqueta de VoiceOver, que anuncia `≈ S/ 10.000,00`), el KPI de Flujo de Efectivo y el
+panorama «Tienes ≈ S/ 79.011,40 en 3 cuentas»: **todos dicen lo mismo a la vez**.
+
+**Y el falso negativo que avisabas es real y conviene no perderlo**: con «Todo el tiempo» ninguno de
+los tres marca (750 sobre 206.725 son el 0,36 %, por debajo del 5 %). No es un fallo — es el umbral
+haciendo su trabajo.
+
+**Lo único que sigue fuera del simulador** es lo que tu propio texto ya decía: un histórico REAL de
+tasas. El fixture reproduce la fila incompleta, no la historia.

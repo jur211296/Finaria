@@ -888,6 +888,17 @@ final class AppBootstrapper {
         if let iso = UITestHooks.foreignAccountCurrency {
             DevSeedService().seedForeignCurrencyAccount(currencyCode: iso, in: context)
         }
+        // Fila envenenada por el chat viejo (tasa 1,0 sobre un monto convertido correcto). Aditiva
+        // e independiente del arg anterior: aquélla siembra filas sanas-pero-aproximadas y ésta el
+        // corpus contrario, el que el barrido `fxOneToOneRepairSweep.v2` cura en el sitio.
+        if let iso = UITestHooks.chatSealedRateCurrency {
+            DevSeedService().seedChatSealedRateRow(currencyCode: iso, in: context)
+        }
+        // Gasto de grupo bridgeado con las dos patas selladas con coberturas distintas. Aditivo:
+        // su magnitud dudosa tiene que pesar contra el corpus del perfil para que la marca salga.
+        if let iso = UITestHooks.groupBridgeFXCurrency {
+            DevSeedService().seedGroupBridgeFXLegs(currencyCode: iso, in: context)
+        }
         // Deeplink simulado en uitest: encola la navegación al tab destino (el gate la
         // drena cuando el routing esté listo). Ejercita el wiring de tabs ocultos.
         if let dest = uitestDeeplinkDestination() {

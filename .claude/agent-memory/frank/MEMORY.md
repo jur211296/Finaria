@@ -42,9 +42,10 @@
 - [Generar y persistir en un solo gesto](feedback_generar_y_persistir_credenciales.md) — una credencial nunca vive solo en pantalla; y verifica si una rotación se aplicó antes de rehacerla.
 - [Medir la web: axe, Lighthouse, preview](feedback_medir_la_web_a11y_y_preview.md) — axe ciego con opacity 0; transiciones congeladas; preview con SSO se verifica por config.json; heredoc suelto en zsh imprime.
 - [Capturas del simulador para la web](feedback_capturas_simulador_para_la_web.md) — receta y trampas: Secrets.xcconfig, nombre efímero, categorías sembradas, `sips -Z` escala el lado largo.
+- [El fixture hereda la anatomía de producción](feedback_el_fixture_hereda_la_anatomia_de_produccion.md) — no la deduzcas del ticket; el error se ve en el TOTAL, y el fixture tiene que ser DISCRIMINANTE.
 
 ## Estado del trabajo
-- [La familia FX ya tiene su estado de partida en simulador](project_seam_cuenta_divisa_ausente.md) — PR #114; eran SIETE los tickets que esperaban, no cuatro; dos siguen parados y les falta seed, no teléfono.
+- [La familia FX, recorrida entera en simulador](project_seam_cuenta_divisa_ausente.md) — PR #114 y #115: 5 PASS, 2 parciales por red/seam; los dos fixtures que faltaban ya existen y dejan 4 tickets.
 - [El gasto de grupo ya lleva la incertidumbre de sus patas](project_marca_aproximado_gasto_de_grupo.md) — PR #113 cierra la familia del «≈»; falta device-QA y NO es simulable; deja 3 tickets, uno es una pantalla entera sin marca.
 - [El cambio masivo de cuenta ya no arrastra la divisa vieja](project_bulk_cuenta_divisa_vieja.md) — PR #110; el método se BORRÓ (cero llamadores en toda la historia) y el bloque bulk del servicio está muerto entero.
 - [Las filas que el chat selló con tasa falsa ya se curan](project_barrido_tasa_sellada_chat.md) — PR #108; el plan obvio (reabrir) DAÑABA; falta device-QA, sí simulable; deja 3 tickets.
@@ -78,3 +79,5 @@
 - [El hook de secretos está desactivado](hook_secretos_disparador_substring.md) — retirado del push el 2026-09-01 (ADR-009); nada escanea hoy. Su trampa del substring, si vuelve.
 - [El hook de /cerrar salta con «cerramos»](hook_cerrar_disparador_substring.md) — verifica la premisa contra su mensaje: cerrar un ticket no es cerrar la sesión, y el bloque de disco es irreversible.
 - [DNS de yala-app.pe](reference_dns_yala_app_pe.md) — el correo autentica desde el 8-sep; qué leer en la cabecera además de los tres `pass`; subir la política tiene ticket y fecha.
+
+- [El disco: los GB están DENTRO del simulador](reference_disco_cache_simulador.md) — coresymbolicationd + containermanagerd ≈ 7,6 GB regenerables; `find -delete`, y vuelve a llenarse en la misma sesión.

@@ -145,3 +145,58 @@ El estado de partida se siembra desde un solo launch con `-uitest -uitest-reset 
 **Desbloqueado a medias.** La cuenta ya la tienes; lo que tu :112 pide además —«dos patas selladas con coberturas de tasas distintas»— el seam no lo produce, porque siembra las tres filas con la misma cobertura.
 
 Y una corrección: tu :113 dice «Ningún seed es multi-divisa ni marca `isExchangeRateProvisional`». La primera mitad es **falsa desde siempre** — `DevSeedAccounts` crea PEN + USD, y `done/fx-pnl-education-card:213` ya lo había medido. La segunda era cierta y ya no lo es.
+
+---
+
+## Device-QA hecho · 2026-09-09 — PASS
+
+**El montaje que tu :112 declaraba imposible se implementó en esta sesión**:
+`-uitest-seed-group-bridge-fx <ISO>` (`DevSeedGroupBridgeFXLegs`) siembra el gasto de grupo con sus
+dos patas selladas con **coberturas distintas** — la real exacta, la de préstamo provisional. Los
+importes salen del converter real y la asimetría se planta después, que es el estado al que llegan
+los tres caminos que tú mismo mediste (aprobar un draft tarde, el reparador por cola, editar la
+pata real).
+
+### El veredicto, y es discriminante
+
+Simulador iPhone 17 Pro (`9D0F6D32`), iOS 26.5, `Yala Dev`, «Este mes». Lanzamiento:
+`-uitest -uitest-reset -uitest-skip-onboarding -uitest-seed realista -uitest-seed-group-bridge-fx JPY`.
+
+Patas sembradas: real **−1.050** PEN (el gasto completo) EXACTA, préstamo **+900** PEN PROVISIONAL.
+
+| número del Panel | sin fixture | con fixture |
+|---|---|---|
+| Gastos | S/ 3.923,00 | **≈ S/ 4.073,00** |
+| Ingresos | S/ 8.500,00 | **S/ 8.500,00** (sin marca) |
+
+Tres cosas a la vez, y cada una comprueba algo distinto:
+
+1. **El gasto sube 150, no 1.050**: la síntesis del bridge funciona — lo que entra es `−total + lent
+   = −myShare`, no la pata real suelta.
+2. **El gasto marca.** La pata real es **exacta**, así que si la síntesis no leyera la pata de
+   préstamo el numerador sería CERO y no habría «≈». Lo hay ⇒ la magnitud de la pata suprimida sí
+   llega. `900 / 4.073 = 22,1 %`, por encima del 5 % de `ApproximateMarkThreshold`.
+3. **Los ingresos NO se mueven ni marcan**: la pata de préstamo está suprimida del recorrido, no
+   sumada como ingreso.
+
+Captura: `qa/evidencia-fx-20260909/12-bridge-patas-gasto-marcado-ingreso-no.png`.
+
+### Una corrección a mi propio fixture, que vale como aviso
+
+La primera versión puso la pata real a **«mi parte»** en vez de al **total**, y el importe
+sintetizado salió **+750**: un gasto de grupo que aparecía como INGRESO. Producción escribe
+`amount: -totalAmount` (`GroupTransactionBridge.swift:428`) con `lent = total - myShare` (`:248`).
+Está fijado por el caso `theAdjustment_suppressesTheLoanLeg_andNetsTheRealOne`, verificado con
+mutante.
+
+### Verificación del fixture
+
+`YalaTests/DevSeedGroupBridgeFXLegsTests` (6 casos) + los mutantes de la tanda. El caso que sostiene
+el ticket es `approximateMagnitude_comesFromTheSuppressedLeg_notFromTheRealOne`: con la pata de
+préstamo sellada exacta devuelve **0.0**, que es exactamente el bug que este ticket describe.
+
+### Lo que sigue fuera
+
+Nada de este ticket. El fixture reproduce el estado; los tres **caminos** que producen la asimetría
+en la vida real (sync remoto que deja un draft, cola del reparador, edición) siguen sin simularse, y
+eso es otro alcance — aquí lo que se verifica es que la marca lee bien el estado resultante.

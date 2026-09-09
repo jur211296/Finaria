@@ -221,3 +221,35 @@ cambio están verificados con mutante: recompilado el código anterior, se ponen
   divisa (es la decisión), así que el glifo «≈» significa dos cosas en la misma pantalla.
 - [[bridge-de-grupos-pierde-la-marca-de-sus-patas]] — preexistente, pero ahora que el importe entra
   en un cociente, una atribución mal hecha **desplaza el umbral** en vez de solo perderse.
+
+---
+
+## Device-QA hecho · 2026-09-09 — PASS
+
+Simulador iPhone 17 Pro (`9D0F6D32`), iOS 26.5, `Yala Dev`, con
+`-uitest -uitest-reset -uitest-skip-onboarding -uitest-seed realista -uitest-seed-foreign-account JPY`.
+
+**El umbral se ve funcionando, y el par que lo demuestra es el mismo fixture leído con dos filtros
+distintos** — o sea que no hace falta montar nada más para verificar esta decisión:
+
+| filtro | parte aproximada / total del lado | «≈» |
+|---|---|---|
+| **Todo el tiempo** | 750 sobre 206.725 = **0,36 %** | **no** |
+| **Este mes** | 750 sobre 4.673 = **16,0 %** | **sí** |
+
+Son **las mismas transacciones** en los dos casos. Con el OR anterior el filtro «Todo el tiempo»
+habría marcado igual —basta una fila provisional en el bucket—, así que la ausencia de marca ahí es
+exactamente la erosión que la decisión (b) vino a evitar, vista en pantalla.
+
+Capturas: `qa/evidencia-fx-20260909/01-panel-este-mes-CON-arg.png` (marca) y el snapshot de «Todo el
+tiempo» del mismo lanzamiento (sin marca).
+
+**La otra mitad de la decisión también se vio**: `LiveBalanceCalculator` conserva su OR, y por eso
+el panorama dice **«Tienes ≈ S/ 79.011,40 en 3 cuentas»** con «Todo el tiempo» mientras los tres
+números grandes de esa misma pantalla no llevan marca. Es lo que decidiste el 2026-09-08 —«su unidad
+ya es la divisa, no la transacción»— y lo que [[dos-criterios-de-aproximado-en-la-misma-pantalla]]
+registra como coste asumido. **Conviene saber que se ve así de junto**: dos criterios de «≈», en la
+misma pantalla, a la vez.
+
+**No se verificó** el borde inclusivo del 5 % ni el suelo de 0,01: son bordes de coma flotante y su
+sitio son los tests, que ya los cubren.
