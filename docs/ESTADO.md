@@ -46,7 +46,12 @@ llevarla, queda escrito por qué **con su ticket**. Detalle en el ticket y en el
 4. **El avisador de rojos advisory del CI no puede avisar** (`ci-avisador-de-rojos-advisory-tiene-la-clave-mal`,
    **high**): `Invalid API key`. Mientras siga así, un `tests: fail` no distingue «hay tests rotos»
    de «la credencial está mal».
-5. **DMARC el 15-sep** · **cobertura de UI el 22-sep**. Esperan al calendario, no a nadie.
+5. **El aviso de cierre cita el PR de OTRA sesión** (`el-aviso-de-cierre-cita-el-pr-de-otra-sesion`,
+   **medium**, nuevo): el de esta sesión salió con `#109` en vez de `#111`. La anotación del hook era
+   correcta; lo que falla es la resolución del puntero, y `--rama` —que el skill documenta como
+   obligatorio justo para esto— no cambia el resultado. Falla en silencio: `HTTP 200` y la línea sale
+   con aspecto bueno. Afecta a todas las sesiones lanzadas que cierran solas.
+6. **DMARC el 15-sep** · **cobertura de UI el 22-sep**. Esperan al calendario, no a nadie.
 
 ## Siguiente
 
