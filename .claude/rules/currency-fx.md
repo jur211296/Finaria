@@ -61,6 +61,46 @@ de arriba por otra puerta. En el destino era peor: devolvía **0**, que parece u
 tienen que ser **la misma**: `CurrencyConverter.isUsableRate`. Al añadir un camino que lea tasas,
 fíltralo por ahí o los escalones no podrán rescatar la divisa.
 
+## Reabrir una fila para que el reparador la recalcule NO es neutro
+
+`isExchangeRateProvisional = true` parece una marca inocente —«que la mire otro»— y no lo es:
+`TransactionItem.recalculatePreferredCurrency` **sobrescribe `amountInPreferredCurrency`** con lo que
+dé la conversión de HOY, sea cual sea su calidad. Solo el flag distingue exacto de degradado; el monto
+se pisa igual.
+
+⇒ **reabrir solo es seguro si el monto guardado ya estaba mal.** Antes de mandar una fila a la cola,
+pregunta cuál de sus columnas miente:
+
+| lo que está mal | qué hacer |
+|---|---|
+| el monto convertido (la conversión falló y se guardó el crudo) | reabrir: recalcular solo puede mejorarlo |
+| **solo la tasa** (hubo conversión real y se plantó un `1.0` al lado) | **corregir la tasa en el sitio**, deduciéndola de los montos ya guardados |
+
+Las dos poblaciones caen bajo el mismo criterio de `ExchangeRateRepairLogic.needsRepair`
+(`exchangeRate == 1.0` + divisa ajena) y **se distinguen por el cociente**
+`amountInPreferredCurrency / amount`: si vale 1, el monto tampoco se convirtió; si no, ése ES el
+número que hay que escribir en `exchangeRate` (`rateFromStoredAmounts`).
+
+Tratarlas igual destruye datos buenos, y no en teoría: si la tasa de la fecha de la fila ya no está en
+disco, `resolveRates` baja los escalones hasta la **tabla estática**, que es un snapshot congelado
+(`ars: 1050.0` en `CurrencyUtils`, a un orden de magnitud del valor de 2025). El monto correcto se va,
+y hay camino a que la pérdida sea **permanente**: el pase siguiente ya no cambia nada,
+`allFetchesSucceeded` sella la huella futile de `FXRepairQueueLogic` y la cola deja de reintentarlo.
+
+**Y decide QUÉ se emite al canal nube, que es la mitad menos evidente.** Las cuatro columnas de dinero
+están en el grupo de coherencia `money` y `DeltaEmitter` expande cualquiera de ellas al grupo entero
+con un HLC fresco. Reabrir emite la fila con la tasa envenenada **todavía puesta**: bajo LWW por
+unidad, ese barrido le gana a un dispositivo par que ya la hubiera reparado y **difunde el veneno**.
+Si vas a tocar una fila envenenada, **corrígela antes de guardar** — lo que viaja es el estado final,
+no la intención.
+
+**Un one-shot de reparación se sella solo cuando ha podido mirar.** El flag en `UserDefaults` se marca
+aunque el barrido no encontrara nada, y eso está bien **si había corpus**: sobre un store vacío es un
+sellado prematuro que deja el daño sin cura para siempre. Y `isImportQuiescent` no basta para saberlo
+—vale `true` ANTES de que empiece ningún import (`lastImportDate == nil`), como documenta
+`BootSaveGateLogic`—: la quiescencia y la presencia del corpus son preguntas distintas y hacen falta
+las dos.
+
 ## La marca de aproximado en un total
 
 **El importe agregado casi nunca pasa por el converter.** Cuando la divisa de destino es la preferida
