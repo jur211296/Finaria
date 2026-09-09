@@ -331,14 +331,23 @@ struct WidgetSessionSealWiringTests {
         #expect(widget.contains("let sessionSeal: String?"))
     }
 
-    /// LA PUERTA, y su CONTEO. `updateCache` es un choke-point con 49 call-sites de producción en 22
-    /// ficheros: el guard vive en la puerta justamente porque gatear 49 sitios es una lista que envejece.
+    /// LA PUERTA, y su CONTEO. `updateCache` es un choke-point con 48 call-sites de producción en 22
+    /// ficheros: el guard vive en la puerta justamente porque gatear 48 sitios es una lista que envejece.
     /// El conteo es el anti-drift que pide el ticket — si alguien añade un escritor, este test le obliga a
     /// leer por qué el gate está donde está en vez de copiar un guard local.
     ///
     /// Si el número cambia por una razón legítima, ajústalo a conciencia.
     ///
-    /// **2026-09-08: de 48 a 49.** El escritor nuevo es
+    /// **2026-09-08 (tarde): de 49 a 48.** Se BORRÓ `TransactionService.bulkUpdateAccount`
+    /// (`bulk-update-account-leaves-converted-amount-stale`), que llamaba a `updateCache` en su última
+    /// línea. **El escritor que desaparece no era un escritor**: ese método no tuvo un llamador en toda
+    /// la historia del repo (`git log -S`, todas las ramas, cero commits), así que su `updateCache` no
+    /// se ejecutó nunca. El conteo baja porque el código muerto se fue, no porque nadie haya dejado de
+    /// republicar el snapshot. Y sirve de aviso para el siguiente que borre: **este conteo lo mueve
+    /// también quitar código**, no solo añadirlo, y el rojo sale en el CI y no en un gate acotado por
+    /// suites — corre la suite completa cuando borres algo con cuerpo.
+    ///
+    /// **2026-09-08 (mañana): de 48 a 49.** El escritor nuevo era
     /// `ChatUnsignedExpenseRepairService`, el barrido one-shot que le devuelve el signo a los gastos
     /// que el chat guardó sin firmar (`chat-rows-with-unsigned-amount-have-no-repair-path`). Corrige
     /// el saldo de filas ya guardadas, así que tiene que republicar el snapshot como cualquier otro
@@ -348,7 +357,7 @@ struct WidgetSessionSealWiringTests {
     /// por la puerta a propósito, que es el argumento de este test.
     ///
     /// De paso, el conteo de FICHEROS del docblock estaba desfasado: decía 18 y eran 21 antes de éste.
-    @Test func laPuerta_gateaLos49Escritores() throws {
+    @Test func laPuerta_gateaLos48Escritores() throws {
         let cache = Self.codeOnly(try Self.source("Yala/Services/WidgetDataCache.swift"))
 
         #expect(cache.contains("guard !isWipeArmed else {"),
@@ -370,7 +379,7 @@ struct WidgetSessionSealWiringTests {
             callSites += src.components(separatedBy: "WidgetDataCache.updateCache(").count - 1
         }
 
-        #expect(callSites == 49, "los escritores del snapshot pasaron de 49 a \(callSites)")
+        #expect(callSites == 48, "los escritores del snapshot pasaron de 48 a \(callSites)")
     }
 
     /// El predicado de la puerta es el MISMO que el del gemelo de notificaciones, literalmente. Si uno de
