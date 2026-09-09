@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (191)
+## Index (194)
 
 | id | status | path |
 |----|--------|------|
@@ -53,7 +53,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | chat-draft-sign-can-contradict-its-subcategory | qa | tickets/qa/chat-draft-sign-can-contradict-its-subcategory.md |
 | chat-draft-stamps-its-own-currency-not-the-account | qa | tickets/qa/chat-draft-stamps-its-own-currency-not-the-account.md |
 | chat-ignores-expenses-only-mode | backlog | tickets/backlog/chat-ignores-expenses-only-mode.md |
-| chat-rows-sealed-before-the-fix-have-no-repair-path | backlog | tickets/backlog/chat-rows-sealed-before-the-fix-have-no-repair-path.md |
+| chat-rows-sealed-before-the-fix-have-no-repair-path | qa | tickets/qa/chat-rows-sealed-before-the-fix-have-no-repair-path.md |
 | chat-rows-with-unsigned-amount-have-no-repair-path | qa | tickets/qa/chat-rows-with-unsigned-amount-have-no-repair-path.md |
 | ci-allowlist-no-cubre-encargos-ni-qa-scripts | backlog | tickets/backlog/ci-allowlist-no-cubre-encargos-ni-qa-scripts.md |
 | ci-checkout-v4-runs-on-deprecated-node | backlog | tickets/backlog/ci-checkout-v4-runs-on-deprecated-node.md |
@@ -97,6 +97,9 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | fx-pnl-education-card | qa | tickets/qa/fx-pnl-education-card.md |
 | fx-presentation-still-shows-1to1 | qa | tickets/qa/fx-presentation-still-shows-1to1.md |
 | fx-rate-derivation-threshold-reseals-one-to-one | backlog | tickets/backlog/fx-rate-derivation-threshold-reseals-one-to-one.md |
+| fx-repair-sweep-has-no-canary | backlog | tickets/backlog/fx-repair-sweep-has-no-canary.md |
+| fx-repair-sweep-is-the-only-boot-sweep-without-a-uitest-gate | backlog | tickets/backlog/fx-repair-sweep-is-the-only-boot-sweep-without-a-uitest-gate.md |
+| fx-repair-sweep-seals-on-a-partially-restored-store | backlog | tickets/backlog/fx-repair-sweep-seals-on-a-partially-restored-store.md |
 | fx-unknown-currency-code-collapses-to-usd | backlog | tickets/backlog/fx-unknown-currency-code-collapses-to-usd.md |
 | fx-widget-drops-missing-currency | backlog | tickets/backlog/fx-widget-drops-missing-currency.md |
 | gate-doc-says-swift-testing-only | backlog | tickets/backlog/gate-doc-says-swift-testing-only.md |
@@ -224,7 +227,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | yala-android | backlog | tickets/backlog/yala-android.md |
 | zone-decisions-still-per-row | backlog | tickets/backlog/zone-decisions-still-per-row.md |
 
-Counts by folder: backlog 88 · in-progress 1 · qa 49 · blocked 3 · done 19 · discarded 5 = 165. *(Recontados sobre disco con `find` el 2026-09-08 por la sesión de `repair-queue-has-no-exit-for-partial-rate-rows`, que aporta cuatro de los cambios: el propio ticket pasa a `qa/` y entran tres hallazgos de su review adversarial —`wire-decoder-accepts-non-finite-money`, `currency-change-asks-rates-for-the-old-currency` y `ensure-rates-for-existing-transactions-has-no-callers`—, ninguno suyo. La línea anterior decía 152 con 162 filas en el índice: seguía desviada, como avisaba ella misma.)*
+Counts by folder: backlog 105 · in-progress 0 · qa 60 · blocked 2 · done 22 · discarded 5 = 194. *(Recontados sobre disco el 2026-09-08 por la sesión de `chat-rows-sealed-before-the-fix-have-no-repair-path`, que aporta cuatro de los cambios: el propio ticket pasa a `qa/` y entran tres hallazgos de su review adversarial —`fx-repair-sweep-seals-on-a-partially-restored-store`, `fx-repair-sweep-is-the-only-boot-sweep-without-a-uitest-gate` y `fx-repair-sweep-has-no-canary`—. La línea anterior decía 165 con 191 ficheros en disco: llevaba desviada varias sesiones, así que el número se comprueba con un diff índice-contra-disco y no a ojo.)*
 
 Frank 2026-09-07 (timeout del CI + UI a nocturna): la suite entera de UI sale del PR y pasa a una
 corrida nocturna sobre `2.1`; el PR se queda con build + unit y **ya tiene tope de tiempo**, que era el

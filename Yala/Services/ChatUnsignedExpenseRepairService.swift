@@ -103,9 +103,11 @@ enum ChatUnsignedExpenseRepairService {
             // esto: en las dos ramas de escape el store SÍ está quiescente. Lo que falta no es
             // quiescencia, es presencia del corpus.
             //
-            // El reparador de tasas del que este barrido copia la forma tiene el mismo punto ciego
-            // (`TransactionUpdateService.swift:82-83`). Allí una fila que se escape conserva una tasa
-            // 1:1 sellada; aquí infla el saldo para siempre, así que aquí sí compensa cerrarlo.
+            // El reparador de tasas del que este barrido copia la forma tenía el mismo punto ciego, y
+            // desde el 2026-09-08 ya no: `TransactionUpdateService.repairLegacyOneToOneRatesIfNeeded`
+            // lleva su propio guard de presencia (ticket
+            // `chat-rows-sealed-before-the-fix-have-no-repair-path`). Este comentario citaba sus líneas
+            // 82-83, que hoy son otra cosa — por eso nombra la función y no un número.
             guard !all.isEmpty else {
                 #if DEBUG
                 print("ChatUnsignedExpenseRepairService: store sin transacciones; se reintenta en el próximo arranque")

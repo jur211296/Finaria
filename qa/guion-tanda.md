@@ -5,7 +5,7 @@
 > ahorro — siete de ellos necesitan dos teléfonos, y montar eso una vez en lugar de siete es la mitad
 > del trabajo de la tanda.
 >
-> **Actualizado: 2026-09-06 · 22 tickets con montaje asignado.** Al mover algo a `qa/` o sacarlo de ahí,
+> **Actualizado: 2026-09-08 · 23 tickets con montaje asignado.** Al mover algo a `qa/` o sacarlo de ahí,
 > actualiza también este guion; si no, en dos semanas manda a montar cosas que ya no hacen falta.
 >
 > ⚠️ **Medido el 2026-09-06: en `tickets/qa/` hay 39 tickets y aquí se nombran 22.** Los 17 restantes no
@@ -85,7 +85,7 @@ de uno de entrega.
 
 ---
 
-## Grupo D · Simulador con datos (6 tickets)
+## Grupo D · Simulador con datos (7 tickets)
 
 Sin montaje especial. Necesitan una cuenta con **cuentas en dos monedas** y un histórico de varios
 meses, así que siembra primero.
@@ -98,6 +98,7 @@ meses, así que siembra primero.
 | `cloud-fx-rates-blob-two-faces` | Las tasas sobreviven al viaje por la nube |
 | `prefs-synced-keys-upload-not-download` | Los ajustes que suben, vuelven |
 | `update-banner-appstore-criteria` | El banner de actualización, con sus criterios |
+| `chat-rows-sealed-before-the-fix-have-no-repair-path` | Una fila sembrada con tasa `1,0000` en divisa ajena y monto convertido real: al arrancar, el detalle enseña la tasa verdadera, el **importe convertido no cambia** y NO aparece el «≈». El log de DEBUG imprime cuántas curó en el sitio y cuántas reabrió |
 
 ---
 

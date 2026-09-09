@@ -37,4 +37,50 @@ enum ExchangeRateRepairLogic {
         guard exchangeRate == 1.0 else { return false }
         return currencyCode.caseInsensitiveCompare(preferredCurrencyCode) != .orderedSame
     }
+
+    /// La tasa que se deduce de los DOS montos ya guardados, o `nil` si de ahí no se deduce ninguna.
+    ///
+    /// **Existe porque las filas envenenadas no son todas iguales, y tratarlas igual hace daño**
+    /// (medido el 2026-09-08 por la review adversarial de
+    /// `chat-rows-sealed-before-the-fix-have-no-repair-path`). Hay dos poblaciones bajo el mismo
+    /// criterio de `needsRepair`, y se distinguen por si el monto convertido guardado es el resultado
+    /// de una conversión o el monto crudo:
+    ///
+    /// - **La tasa miente, el monto NO** (el corpus del chat): `saveDraft` convertía de verdad y
+    ///   plantaba `exchangeRate: 1.0` al lado. El cociente devuelve la tasa que se usó, así que la fila
+    ///   se arregla **en el sitio**, escribiendo solo esa columna. Reabrirla para que el reparador la
+    ///   reconvirtiera sería estrictamente peor: `recalculatePreferredCurrency` pisa
+    ///   `amountInPreferredCurrency` con lo que dé la conversión de HOY, y si la tasa de aquella fecha
+    ///   ya no está en disco baja los escalones —tasa arrastrada, y al final la tabla estática, que es
+    ///   un snapshot congelado— y **cambia un número que estaba bien**.
+    /// - **Mienten los dos** (el corpus de `fx-partial-rate-rows-silent-1to1`): la conversión falló y
+    ///   se guardó el monto crudo, así que el cociente vale 1 y no dice nada. Ahí sí hace falta volver
+    ///   a convertir, y eso es lo que hace el reparador de arranque cuando la fila vuelve a la cola.
+    ///   Devolver `nil` es lo que las manda por ese camino.
+    ///
+    /// Una paridad REAL de 1:1 entre dos divisas distintas cae en el segundo grupo y se reabre: el
+    /// reparador la recalcula, obtiene lo mismo y la vuelve a sellar. Inofensivo — la conversión es la
+    /// identidad, así que no hay monto que empeorar.
+    ///
+    /// El umbral del monto es el de `TransactionItem.recalculatePreferredCurrency`, y la paridad no es
+    /// estética: es lo que hace que la tasa escrita aquí sea **reproducible por el proceso que existe
+    /// para repararla**. Si divergieran, la fila cambiaría de número al pasar por él.
+    ///
+    /// **La tasa deducida se pasa por `isUsableRate` antes de devolverla**, y no es defensa de más:
+    /// una fila con el monto convertido en `0` da cociente `0`, y escribir eso reproduciría DENTRO de
+    /// este arreglo la forma exacta del bug que las rules de divisas describen —una tasa inservible
+    /// que pasa por dato y en el destino devuelve `0`, que parece un número real—. Una fila así no
+    /// tiene tasa deducible: se reabre, que es el camino que sabe reconvertirla.
+    static func rateFromStoredAmounts(
+        amount: Double,
+        amountInPreferredCurrency: Double
+    ) -> Double? {
+        guard abs(amount) > 0.0001 else { return nil }
+        let rate = abs(amountInPreferredCurrency / amount)
+        guard CurrencyConverter.isUsableRate(rate) else { return nil }
+        // Un cociente indistinguible de 1 significa que el monto convertido ES el monto crudo: la
+        // conversión no llegó a ocurrir y de esta fila no se puede deducir ninguna tasa.
+        guard abs(rate - 1.0) > 0.0001 else { return nil }
+        return rate
+    }
 }
