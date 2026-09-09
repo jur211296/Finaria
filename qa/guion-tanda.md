@@ -84,6 +84,31 @@ de uno de entrega.
 **Un solo recorrido cubre los tres.** Abre la app con datos previos en el teléfono y recorre
 «Empezar» → «Es mi primera vez», probando cancelar en cada punto.
 
+> ⚠️ **La precondición no es «tener datos»: es tener datos LOCALES en el dispositivo en el instante
+> del tap.** Medido en device el 2026-09-09, y costó el intento: el alert
+> «Detectamos datos previos en tu dispositivo. ¿Borrar todo para empezar como nuevo?» lo gobierna
+> `hasExistingData` en `ContentView.startFreshPrivateOnboarding()` — si es `false`, **no hay alert**
+> y se pasa directo al alta. **Reinstalar la app destruye ese estado**: la base local queda vacía y
+> CloudKit aún no ha bajado nada, así que los tres tickets se vuelven inobservables justo cuando
+> creías estar montándolos. Y no basta con esperar: hay que confirmar que los datos ya están
+> **abajo, en la app**, antes de tocar «Es mi primera vez».
+>
+> **El flujo real tiene tres pantallas, no una** — no se puede saltar al botón final:
+> **Hero** («Tus finanzas personales, sin esfuerzo» → «Empezar») → **chooser** («¡Hola! ¿Qué quieres
+> hacer en Yala?») → y ahí se bifurca:
+> - **«Es mi primera vez en Yala»** → alert `welcome.freshStart.*` («Empezar desde cero» / «Borrar
+>   todo y continuar»). Es la entrada de `welcome-start-fresh-wipes-before-ask`.
+> - **«Ya tengo una cuenta»** → `WelcomeRestoreView`, que busca en iCloud y **tiene su propio botón**
+>   «Empezar desde cero» (`welcome.restore.startFresh`). Otro camino y otro ticket.
+>
+> Son dos entradas distintas al mismo borrado y se confunden con facilidad: los literales se parecen
+> y viven en dominios de traducción distintos.
+>
+> **Camino feliz medido en device (build 13):** sin datos locales, «Es mi primera vez» **no** pregunta
+> —correcto, no hay nada que borrar—, limpia las preferencias residuales del KV-Store y pide
+> **«Ya casi está — reinicia Yala»**; al reabrir entra en el alta completa. Eso **no verifica ninguno
+> de los tres tickets**: sólo confirma que la rama sin datos se comporta.
+
 | Ticket | Qué comprobar |
 |---|---|
 | `welcome-fresh-start-alert-leaves-blank-screen` | Cancelar el alert **devuelve al selector**, no a una pantalla en blanco |
