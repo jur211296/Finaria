@@ -97,6 +97,9 @@ struct ChatTransactionDraftCard: View {
             .focused($amountFocused)
             .disabled(draft.status == .saving)
 
+            // `draft.currencyCode` es la divisa EFECTIVA: el ViewModel la sincroniza con la de la
+            // cuenta al elegirla, así que elegir otra cuenta cambia esta etiqueta a la vista y la
+            // combinación imposible deja de poder guardarse en silencio.
             Text(draft.currencyCode)
                 .font(DS.Typography.labelSmall)
                 .foregroundStyle(.thSecondaryText)
@@ -487,7 +490,9 @@ struct ChatTransactionDraftCard: View {
     private var savedFormattedAmount: String {
         guard let amount = draft.amount else { return "–" }
         let dbl = NSDecimalNumber(decimal: amount).doubleValue
-        return appPreferences.currency(dbl, currencyCode: draft.currencyCode, forceFullPrecision: true)
+        // La divisa que se estampó de verdad: `saveDraft` la congela en el borrador al guardar.
+        return appPreferences.currency(
+            dbl, currencyCode: draft.currencyCode, forceFullPrecision: true)
     }
 
     private var savedAmountColor: Color {
@@ -522,6 +527,16 @@ struct ChatTransactionDraftCard: View {
         else { return nil }
         return "\(account.name) · \(account.currencyCode)"
     }
+
+    // Aquí NO va un helper que resuelva la cuenta para deducir la divisa. `draft.currencyCode` ya es
+    // la divisa efectiva: el ViewModel la sincroniza al elegir cuenta y la congela al guardar.
+    //
+    // Se intentó al revés —derivarla aquí resolviendo `draft.accountID` contra `allAccounts`— y se
+    // retiró el mismo día: este `@Query` filtra `!isArchived` y `saveDraft` resuelve con
+    // `context.model(for:)`, que no filtra, así que con una cuenta archivada entre proponer y
+    // guardar los dos lados discrepaban y volvía el bug que el cambio venía a cerrar. Dos criterios
+    // para la misma pregunta son dos respuestas esperando a divergir; con un solo valor en el
+    // borrador no hay nada que sincronizar.
 
     private var currentSubcategoryName: String? {
         guard let id = draft.subcategoryID,
