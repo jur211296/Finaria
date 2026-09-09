@@ -19,8 +19,10 @@
 - [Mi docblock también es una premisa](feedback_mi_docblock_tambien_es_una_premisa.md) — describo la intención como si fuera el comportamiento; dos falsas el 8-sep, cazadas por lentes.
 - [La aserción que no puede fallar](feedback_la_asercion_que_no_puede_fallar.md) — el mutante valida el CASO, no cada `#expect`; y el rojo puede probar mi HELPER, no el mundo.
 - [El pre-filtro tapa al criterio](feedback_el_prefiltro_tapa_al_criterio.md) — misma condición en el fetch y en la lógica: el mutante de la lógica sale VERDE. Me pasó dos veces el 8-sep.
+- [El mecanismo que existe se probó con OTRO corpus](feedback_el_mecanismo_existente_se_probo_con_otro_corpus.md) — reusar un barrido sobre un corpus nuevo puede destruir datos buenos; el AC dice QUÉ, no CÓMO.
 - [Mi fix hereda la forma del bug](feedback_mi_fix_hereda_la_forma_del_bug.md) — el arreglo repite el error del bug; enuncia el bug en una frase y aplícasela al arreglo.
 - [La review adversarial caza lo MÍO](feedback_review_adversarial_caza_lo_mio.md) — 8 el 7-sep, 7 el 8-sep; puede refutar la PREMISA del ticket, y un camino muerto que revives trae sus bugs intactos.
+- [La rule de área es una lente más](feedback_la_rule_de_area_es_una_lente_mas.md) — la que se carga sola hay que leerla CONTRA el diff: el 8-sep cazó lo que las tres lentes no vieron.
 - [Las lentes se contradicen entre sí](feedback_lentes_adversariales_se_contradicen.md) — cuando dos discrepan sobre un hecho, no elijas: mídelo; la gravedad que declaran no es evidencia.
 - [El árbol base contesta «¿es mío?»](feedback_el_arbol_base_contesta_si_es_mio.md) — worktree desde HEAD zanja un rojo ajeno en 90 s; y devuelve el disco que se come.
 - [Un «rojo conocido» no exime de bisecar](feedback_rojo_conocido_no_exime_de_bisecar.md) — dos rojos idénticos en el log, causas opuestas: uno era mío y rompía guardar una transacción.
@@ -38,6 +40,7 @@
 - [Capturas del simulador para la web](feedback_capturas_simulador_para_la_web.md) — receta y trampas: Secrets.xcconfig, nombre efímero, categorías sembradas, `sips -Z` escala el lado largo.
 
 ## Estado del trabajo
+- [Las filas que el chat selló con tasa falsa ya se curan](project_barrido_tasa_sellada_chat.md) — PR #108; el plan obvio (reabrir) DAÑABA; falta device-QA, sí simulable; deja 3 tickets.
 - [El chat ya guarda en la divisa de la cuenta](project_divisa_del_chat_vs_cuenta.md) — PR #107; el hueco grande que queda es editar la divisa de una CUENTA (**high**); falta device-QA, sí simulable.
 - [El borrador del chat ya no se contradice a sí mismo](project_signo_vs_subcategoria_chat.md) — PR #106; el ticket decía 1 sitio y eran 6; falta device-QA (sí simulable) y deja 2 tickets, uno **high** de proceso.
 - [El corpus viejo del chat ya se cura solo](project_barrido_signo_chat.md) — PR #103, acotado para no tocar lo importado por CSV; falta device-QA.
