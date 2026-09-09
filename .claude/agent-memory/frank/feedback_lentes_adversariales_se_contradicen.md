@@ -1,6 +1,6 @@
 ---
 name: lentes-adversariales-se-contradicen
-description: Dos lentes de una misma review adversarial pueden afirmar lo contrario sobre un hecho verificable. El desempate no es la mayoría ni la más severa — es medirlo yo.
+description: Dos lentes de una misma review pueden afirmar lo contrario sobre un hecho verificable, y la CORRECCIÓN de una lente también puede venir incompleta. El desempate es medirlo yo, siempre.
 metadata:
   type: feedback
 ---
@@ -38,6 +38,21 @@ acierta en su hallazgo principal puede fallar en los secundarios.**
 - **Y revisa tus propios comentarios contra lo medido.** El error no llegó de la lente: ya estaba en
   mi código, y la lente solo lo repitió. Un comentario con una premisa falsa es peor que ninguno,
   porque el siguiente que lo lea lo dará por medido.
+
+**Y hay un modo de fallo que no es la contradicción entre dos, sino la CORRECCIÓN INCOMPLETA de una
+sola. Medido el 2026-09-08 en `bulk-update-account-leaves-converted-amount-stale`.** Yo había escrito
+que `.amount =` lo tienen también «`SplitExpense`, `InboxDraft`, `ScheduledPayment`, `Budget`,
+`CashFlowLine`, `Account`, `SplitGroup`». Una lente me corrigió con evidencia —cuatro de esos siete no
+declaran `amount`, usan `limitAmount` / `manualAmount` / `budgetLimitAmount`— y hasta ahí tenía razón.
+Pero su lista de reemplazo («solo `InboxDraft`, `SplitExpense` y `ScheduledPayment`») **también estaba
+incompleta**: un `grep -ln "var amount:" Yala/Models/*.swift` da **siete** modelos, con
+`CashFlowOverride`, `FavoritePayment`, `SplitSettlement` y `SplitShare` que ninguna de las dos listas
+mencionaba.
+
+⇒ **Una corrección que llega con evidencia se siente terminada, y ese es justo el momento de medirla.**
+La lente había demostrado que yo estaba mal; de ahí no se sigue que ella esté bien. El coste de
+comprobarlo fue un `grep` — el mismo que habría evitado mi error original. **Al aceptar una corrección
+numérica, ejecuta el comando que la produce, no la copies.**
 
 Lo que sí vale sin discusión de las tres lentes: cazaron **seis defectos que yo introducía** y que
 mis propios tests en verde no veían — un `> 0` heredado que escondía el hero con saldo negativo, un

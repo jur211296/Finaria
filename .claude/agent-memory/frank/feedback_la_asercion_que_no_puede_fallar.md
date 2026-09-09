@@ -70,6 +70,37 @@ distingue cuál falta.** Pregúntate en qué instante exacto el usuario sufre el
 señal que lo destapa es barata: si un mutante tumba unos casos y **no** el que escribiste
 específicamente para ese borde, el problema no es el mutante — es que tu caso mide tarde.
 
+**Quinto eslabón, y es el más barato de escribir sin darse cuenta: la columna que NO CAMBIA en el
+escenario. Medido el 2026-09-08 en `bulk-update-account-leaves-converted-amount-stale`.** Escribí un
+caso que decía fijar «las cuatro columnas del grupo `money`» al mover una transacción a una cuenta de
+otra divisa. Mutante en rojo, verificado. Una lente midió después que **solo una de las cuatro podía
+fallar**:
+
+- `preferredCurrencyCode` vale lo mismo antes y después (sale de la preferida del entorno, que la
+  operación no toca), y **su default de modelo es `"PEN"`** — justo la preferida más probable del
+  simulador. Pasaba aunque el recálculo no hubiera corrido nunca.
+- `isExchangeRateProvisional` ya venía en `false` del fixture y en `false` se quedaba.
+- `exchangeRate` lo DERIVA el recalculador como `amountInPreferredCurrency / amount`: afirmar los dos
+  era afirmar el mismo número dos veces.
+
+El caso salía rojo con el mutante por la única viva, así que la verificación parecía completa — mismo
+patrón que el primer eslabón, pero por otra puerta: allí la tautología la ponía **producción** con su
+`abs()`; aquí la pone **el escenario**, porque comparar el valor final contra el que el fixture ya
+dejó no distingue «lo recomputó» de «no lo tocó».
+
+⇒ **La cura es ENSUCIAR con centinelas imposibles justo antes de la operación medida** (`-999_999`,
+`"XXX"`, un `true` donde se espera `false`), que es lo que ya hacía el test hermano de
+`bulkUpdateAmount` con su `-999`. Con eso las cuatro pasan a medir «esta operación REESCRIBIÓ la
+columna», que es lo que el ticket quería. Y la pregunta que lo destapa antes de escribirlo: **¿qué
+valor tendría esta columna si el código bajo prueba no hiciera nada?** Si la respuesta es «el mismo
+que espero», la aserción no existe.
+
+**Corolario del mismo día, sobre el otro extremo del test:** todas mis aserciones leían la instancia
+**en memoria**, que el bucle ya había mutado antes del `save()`. Como ese SUT se traga un guardado
+fallido con un `print` bajo `#if DEBUG`, un `save()` que lanzara era indistinguible de uno que
+funcionaba — y los mensajes hablaban de lo que ven Panel e informes, o sea del **store**. Un
+`#expect(context.hasChanges == false)` tras la operación es lo que le da derecho a la frase.
+
 Relacionado: [[mi-docblock-tambien-es-una-premisa]] — el mensaje de un `#expect` es un docblock más, y
 el mío afirmaba algo falso sobre producción. Y [[mutante-compilado-zanja-hipotesis]], que sigue siendo
 la herramienta buena: lo que esta memoria acota es **qué** demuestra exactamente.
