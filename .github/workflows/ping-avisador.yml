@@ -1,0 +1,87 @@
+name: Ping del avisador
+
+# ---------------------------------------------------------------------------------
+# POR QUE EXISTE  (2026-09-09)
+#
+# El avisador de rojos de `qa.yml` solo se ejecuta cuando hay algo que avisar, asi que
+# su camino —secreto, URL, routine viva al otro lado— NO se ejercita en un dia normal.
+# El 2026-09-08 la routine se rehizo y la credencial dejo de valer; el fallo se descubrio
+# en el primer incendio, que es el peor momento posible: el run que traia el rojo real es
+# el mismo que se comio el aviso.
+#
+# Este workflow ejercita el camino ENTERO sin esperar a que algo se rompa. Si el canal
+# esta vivo, sale en verde en 20 segundos; si no, falla con su propio nombre —«Ping del
+# avisador»— y deja el aviso escrito en un issue. La diferencia con descubrirlo en el
+# incendio es que aqui el rojo no compite con ninguna otra señal.
+#
+# POR QUE UN PING DIARIO NO ES RUIDO, aunque «un canal que grita cuando no pasa nada se
+# acaba silenciando». Medido el 2026-09-09 sobre 100 runs de `avisar-grok-push-principal.yml`:
+# por ese mismo webhook ya viajan ~30 avisos al dia (63 verdes en las 46 h del 09-06 al
+# 09-08, 37 rojos en las 28 h siguientes). Un ping diario es un 3 % mas de trafico: el
+# coste real de la alternativa —comprobar antes si el canal se ejercito solo— era mas
+# codigo y un acoplamiento al nombre de otro workflow, y no lo compensa.
+#
+# EL CRON NO ES UN RELOJ FIABLE, y aqui da igual. El 2026-09-08 el cron de Actions
+# disparo con 4 h 35 min de retraso. Para «ejercitar el canal» eso no importa —importa
+# que corra, no cuando—, pero no conviertas esto en el reloj de nada.
+# ---------------------------------------------------------------------------------
+
+on:
+  schedule:
+    # 15:52 UTC = 10:52 en Lima. Ni en punto (los cron en punto son los mas congestionados
+    # de GitHub) ni a la misma hora que `qa.yml` (08:17) o el vigilante (11:43).
+    - cron: '52 15 * * *'
+  workflow_dispatch:
+    inputs:
+      simular_canal_caido:
+        description: "Ejercita el canal de RESPALDO: apunta a una URL muerta a proposito y comprueba que el aviso acaba en un issue. No toca el webhook real."
+        type: boolean
+        default: false
+  # El propio avisador se prueba al tocarlo, desde la rama en que se toca. Es la unica
+  # forma de verificar un cambio del canal ANTES de mergearlo: `workflow_dispatch` solo
+  # se puede lanzar desde la rama por defecto, asi que en una rama de encargo no sirve.
+  push:
+    paths:
+      - '.github/workflows/ping-avisador.yml'
+      - '.github/actions/avisar/action.yml'
+
+permissions:
+  contents: read
+  # Para el canal de respaldo. El repo tiene el permiso por defecto de Actions en `read`,
+  # asi que sin esta linea el respaldo no puede escribir el issue y el aviso se pierde.
+  issues: write
+
+jobs:
+  ping:
+    name: El canal de avisos, ¿esta vivo?
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Hace falta para poder usar la action local `.github/actions/avisar`.
+      - uses: actions/checkout@v4
+
+      - name: Ejercitar el camino entero
+        uses: ./.github/actions/avisar
+        with:
+          # Con `simular_canal_caido` la URL se sustituye por una que no existe: el POST
+          # falla de verdad y el respaldo tiene que recoger el aviso. Es el control
+          # positivo del respaldo — sin el, «el respaldo funciona» es una suposicion.
+          webhook-url: ${{ inputs.simular_canal_caido && 'https://ping-del-avisador.invalid/canal-caido-a-proposito' || secrets.GROK_WEBHOOK_URL }}
+          sender-key: ${{ secrets.GROK_WEBHOOK_SENDER_KEY }}
+          github-token: ${{ github.token }}
+          asunto: >-
+            ${{ inputs.simular_canal_caido
+                && 'PRUEBA del canal de respaldo (no es una incidencia)'
+                || 'ping del avisador del CI' }}
+          texto: |
+            Ping diario del avisador del CI de ${{ github.repository }}. NO requiere ninguna accion.
+
+            Existe para que el camino del aviso —secreto, URL y routine— se ejercite todos los dias
+            y no se descubra roto en el primer incendio, que es como se descubrio el 2026-09-08.
+
+            Si este mensaje deja de llegar varios dias seguidos, el canal esta caido aunque nada
+            haya salido en rojo: mira los runs de «Ping del avisador» y los issues con la etiqueta
+            `aviso-ci`.
+
+            Rama: ${{ github.ref_name }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
