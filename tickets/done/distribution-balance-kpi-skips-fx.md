@@ -1,10 +1,12 @@
 ---
 id: distribution-balance-kpi-skips-fx
-status: qa
+status: done
 priority: high
 area: statistics
 created: 2026-08-26
-updated: 2026-09-06
+updated: 2026-09-08
+qa-status: passed
+qa-date: 2026-09-08
 ---
 
 # KPI de Balance en Distribución no aplica la transformación de moneda que sí usa el Panel
@@ -246,3 +248,50 @@ se etiqueta la cifra en las cuatro pestañas; ningún cálculo cambia.**
 Con **dos o más cuentas seleccionadas** el número puede no cuadrar con el Panel: el Panel colapsa la
 selección a `selectedAccountIDs.first` (`PanelViewModel.swift:291`) mientras Estadísticas respeta el
 set completo. Es una asimetría **preexistente del Panel** y arreglarla exigía tocarlo.
+
+---
+
+## QA Visual · 2026-09-08
+
+**Veredicto: PASS.** iPhone 17 Pro (iOS 26.5), `Yala Dev`, seed `realista`. Los dos números se
+leyeron **en la misma sesión de la app** —sin relanzar entre medias— porque con `-uitest-reset` el
+corpus se regenera y comparar dos lanzamientos sería comparar dos conjuntos de datos distintos.
+
+### Lo que se vio
+
+| Período | Panel · KPI Balance del widget de tendencia | Estadísticas · Distribución · hero | ¿Coinciden? |
+|---|---|---|---|
+| **Este mes** | S/ **+73.526,45** | S/ **73.526,45** — «Saldo de cuentas» | **Sí** |
+| **Mes pasado** | S/ **+73.443,30** | S/ **73.443,30** — «Saldo de cuentas» | **Sí** |
+
+Y los **dos regímenes** que la implementación describe quedan visibles: el período que cubre hoy da
+el stock vivo (73.526,45) y el período **cerrado** da el saldo histórico al cierre (73.443,30). O
+sea que Mes pasado **no muestra el saldo de hoy**, que era la mitad fina del criterio.
+
+**Ingresos/Gastos siguen siendo flujo** (AC 2), y también cuadran entre las dos pantallas:
+S/ 3.905,00 de gasto en «Este mes» y S/ 8.132,00 en «Mes pasado», el mismo número en el Panel y en
+el «Análisis del gasto» de Distribución.
+
+**El panorama no se movió** con el selector de período («Tienes ≈ S/ 73.526,45 en 2 cuentas» en los
+dos), que es justo el motivo por el que la implementación igualó el hero al KPI del widget y no al
+panorama. Se confirma en pantalla la decisión de diseño.
+
+### El AC de multi-moneda: cumplido, y la premisa que lo bloqueaba era falsa
+
+El ticket pedía «Device-QA con cuenta multi-moneda» y el HOLD decía que sin números de aparato no
+había PASS. **El seed `realista` ya es multi-moneda**: `DevSeedAccounts.swift:22-36` crea la cuenta
+principal en **PEN** y una de ahorros en **USD**, y se vieron las dos en pantalla (S/ -33.254,00 y
+$ 30.079,00), con `DevSeedExchangeRates` sembrando ~730 filas diarias de tasa. La condición que el
+ticket daba por imposible en simulador estaba sembrada desde el principio.
+
+### Capturas
+
+- `qa-distribution-balance-01-estemes-distribucion-20260908-211750.png`
+- `qa-distribution-balance-02-mespasado-panel-20260908-211829.png`
+
+### Lo que este QA no cubre
+
+Los **números exactos del aparato del owner** (TF 2.1 build 12) siguen sin conocerse, y con ellos la
+confirmación de que lo que él vio en agosto era este mismo caso. Lo verificado aquí es que hoy los
+dos KPI coinciden en los dos regímenes con un corpus multi-moneda; no que el corpus del owner fuera
+idéntico.

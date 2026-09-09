@@ -1,9 +1,11 @@
 ---
 id: update-banner-appstore-criteria
-status: qa
+status: done
 created: 2026-07-22
-updated: 2026-08-26
 source: YalaWiki/Bugs/ux_update-banner-appstore-criterios-y-forzado.md
+updated: 2026-09-08
+qa-status: passed
+qa-date: 2026-09-08
 ---
 
 
@@ -81,3 +83,46 @@ Método: Fase 1 (confirmación del diagnóstico vía workflow de 5 lectores + de
 - Umbral por `MARKETING_VERSION` (descartado a favor del build number) y soft-nudge / segundo umbral: fuera de scope.
 
 migrated from YalaWiki Bugs/ux_update-banner-appstore-criterios-y-forzado.md @ 1934e8ad
+
+---
+
+## QA Visual · 2026-09-08
+
+**Veredicto: PASS** para las dos superficies que la app puede pintar hoy. iPhone 17 Pro (iOS 26.5),
+`Yala Dev`.
+
+### 1 · Banner normal (`-uitest-force-update`)
+
+En el Panel, bajo las acciones rápidas:
+
+> **Nueva versión disponible** — «La versión 99.0.0 está lista para descargar»
+> [**Actualizar**] (`update_banner_action`)  ✕ (`update_banner_dismiss`)
+
+Es un banner, no un bloqueo: convive con el Panel, que sigue completo y usable debajo. Trae su
+acción y su cierre.
+
+### 2 · Pantalla de actualización forzada (`-uitest-force-required`)
+
+Cover a pantalla completa con identificador `force_update_screen`:
+
+> **Actualiza para continuar**
+> «Esta versión de Yala ya no es compatible. Actualiza para seguir usando la app.»
+> [**Actualizar ahora**]
+
+**Es terminal, y así se comprueba sin adivinar:** en el árbol de accesibilidad del cover el **único**
+elemento tapeable es «Actualizar ahora». No hay ✕, ni «Más tarde», ni botón de cierre — a diferencia
+del banner normal, que sí expone `update_banner_dismiss`. La diferencia entre los dos árboles es la
+prueba de que uno se descarta y el otro no.
+
+### Capturas
+
+- `qa-update-banner-01-banner-normal-y-fxpnl-20260908-212443.png`
+- `qa-update-banner-02-cover-forzado-terminal-20260908-212554.png`
+
+### Lo que NO se verificó, y por qué no es device tampoco
+
+- **Que el banner vuelva tras relanzar** (el dismiss es solo-sesión, decidido a propósito): no se
+  repitió el arranque.
+- **El flujo real con `/config` vivo**: ese tramo está **DARK** y sin deploy del gateway, así que
+  hoy no es verificable **en ningún sitio** — ni en simulador ni en un teléfono. No lo apuntes como
+  device-QA pendiente: está esperando al backend, no a un aparato.

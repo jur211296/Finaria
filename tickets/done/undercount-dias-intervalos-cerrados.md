@@ -1,11 +1,13 @@
 ---
 id: undercount-dias-intervalos-cerrados
-status: qa
+status: done
 priority: medium
 area: statistics
 created: 2026-09-02
-updated: 2026-09-06
 source: hallazgo colateral del fix doble-conteo-dia1-previo-thismonth (2026-09-02)
+updated: 2026-09-08
+qa-status: passed
+qa-date: 2026-09-08
 ---
 
 # Contar días con `dateComponents([.day])` sobre un intervalo que cierra en 23:59:59 da un día de menos
@@ -124,3 +126,48 @@ y se clasificó **no-afectada**. Tocarla cambiaría la semántica de «días que
 acaba hoy, ¿queda 1 día o 0?— y eso es producto, no este bug. Queda escrito para que el próximo
 barrido no la trate como hallazgo nuevo. **Decidido por Jürgen el 2026-09-06: queda 1 — hoy todavía cuenta.**
 Sale a [[budget-days-left-counts-today]] (`backlog/`, low).
+
+---
+
+## QA Visual · 2026-09-08
+
+**Veredicto: PASS**, y con aritmética que no admite interpretación.
+
+iPhone 17 Pro (iOS 26.5), `Yala Dev`, seed `realista`. Estadísticas → Resumen → «Tus cifras», con
+el período en **Mes pasado** (agosto 2026, **31 días**).
+
+### Lo que se vio, y por qué zanja el caso
+
+| Dato | Valor en pantalla |
+|---|---|
+| Gasto del período (Mes pasado) | S/ **8.132,00** |
+| **Promedio diario** | S/ **262,32** |
+
+Y la división:
+
+```
+8.132,00 ÷ 31 = 262,32   ← lo que muestra la app
+8.132,00 ÷ 30 = 271,07   ← lo que mostraría con el día perdido
+```
+
+**El divisor es 31.** Es exactamente el caso que el ticket describe: un período cerrado cuyo
+intervalo termina en 23:59:59, donde `dateComponents([.day])` truncaba y devolvía 30. La diferencia
+entre las dos cifras (8,75, un 3,3 %) es lo bastante grande como para que la coincidencia con 262,32
+no pueda ser casualidad de redondeo.
+
+Esto es preferible a una comprobación visual: **el número solo puede salir si el denominador es el
+correcto**, así que el testigo no puede pasar por la razón equivocada.
+
+### Captura
+
+- `qa-undercount-dias-01-promedio-diario-mespasado-20260908-211935.png`
+
+### Lo que NO se verificó
+
+El **KPI de día de la semana** («Día de más gasto: Miércoles, S/ 617,25» en esta corrida). El ticket
+pedía comprobar que cuenta el último día del período —5 sábados y no 4— y eso exige conocer la
+distribución del corpus por día, que no se extrajo. El promedio diario sí prueba el arreglo del
+denominador, que es la causa común de los dos síntomas; el conteo por día de la semana queda como
+comprobación no hecha, no como comprobación pasada.
+
+Tampoco se recorrió «Semana pasada», el caso del +16,7 % que menciona el cuerpo.

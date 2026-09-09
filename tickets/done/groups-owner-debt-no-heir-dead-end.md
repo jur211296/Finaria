@@ -1,11 +1,13 @@
 ---
 id: groups-owner-debt-no-heir-dead-end
-status: qa
+status: done
 priority: high
 area: groups
 created: 2026-09-06
-updated: 2026-09-08
 source: review adversarial de groups-owner-transfer-and-leave (2026-09-06)
+updated: 2026-09-08
+qa-status: passed
+qa-date: 2026-09-08
 ---
 
 # El dueño con deuda y SIN heredero sigue sin salida
@@ -161,3 +163,48 @@ deuda de nadie, así que el principio que protegiste el 6-sep queda intacto — 
 **(b) queda descartada, y con el motivo medido**, por si alguien la vuelve a proponer: los netos
 suman cero por moneda, así que «eliminar si la deuda es solo con inactivos» exige cambiar de métrica
 (netos → pares), no un filtro. Si el caso aparece de verdad, el diagnóstico ya está escrito arriba.
+
+---
+
+## QA Visual · 2026-09-08
+
+**Veredicto: PASS.** iPhone 17 Pro (iOS 26.5), `Yala Dev`, seed `grupos`
+(`-uitest -uitest-reset -uitest-skip-onboarding -uitest-pro -uitest-seed grupos -uitest-groups-consent -uitest-deeplink groups`).
+Grupo **«Viaje a Cusco»** — soy dueño, 3 miembros, deuda viva (Te deben S/ 190,00 + $ 46,67).
+
+### Lo que se vio en Ajustes del grupo
+
+| Criterio | Resultado |
+|---|---|
+| Sección **«Archivar grupo»** visible y por encima | **Sí** — y es tapeable |
+| **«Eliminar grupo»** deshabilitado | **Sí** — aparece en el árbol solo como texto, **no** como elemento tapeable |
+| Su hint **nombra Archivar** | **Sí**, literal: «Hay saldos pendientes en el grupo. Si quieres quitártelo de la lista, **archívalo**: las deudas se conservan.» |
+
+Que «Eliminar grupo» exista como texto pero **no** como destino tapeable es la prueba de que está
+deshabilitado: el árbol de accesibilidad lista «Archivar grupo» entre los botones y a «Eliminar
+grupo» no. Ya no es el hint mudo de antes: el callejón sin salida tiene salida y está nombrada.
+
+### Por qué este corpus cae justo en la celda del ticket (medido, no supuesto)
+
+El caso exige «dueño **con** deuda y **sin** heredero». Lo segundo sale gratis con cualquier seed, y
+conviene dejarlo escrito porque no es evidente:
+
+- `GroupService.swift:1006` — `eligibleHeirs = activeCoMembers.filter { $0.userID != nil }`
+- `grep -c 'userID\|memberKey' Yala/Seed/DevSeedGroups.swift` → **0**
+
+Ningún perfil de seed escribe `userID` ni `memberKey` en los miembros, así que `eligibleHeirCount`
+es **siempre 0** y el offer del dueño cae siempre en `.debtArchiveInstead`. El escenario de este
+ticket es, de hecho, el único que los seeds saben producir.
+
+**Corolario que afecta a otro ticket:** por esa misma razón `groups-owner-transfer-and-leave` **no
+es simulable hoy** — su botón «Transferir y salir» exige `eligibleHeirCount >= 1` y nunca llega a
+pintarse. No es una limitación del teléfono: es el seed.
+
+### Captura
+
+- `qa-owner-debt-no-heir-01-hint-archivar-20260908-212100.png`
+
+### Lo que no se cubre
+
+No se llegó a **archivar** de verdad desde este hint (el ticket pedía la salida, no ejecutarla).
+Que el archivado funcione lo cubre `groups-archived-group-rejects-join` / `archivado-no-acepta-entradas`.

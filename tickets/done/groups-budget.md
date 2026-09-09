@@ -1,11 +1,13 @@
 ---
 id: groups-budget
-status: qa
+status: done
 priority: medium
 area: groups
 created: 2026-07-01
-updated: 2026-09-08
 source: YalaWiki/Backlog/groups-presupuesto-de-grupo.md
+updated: 2026-09-08
+qa-status: passed
+qa-date: 2026-09-08
 ---
 
 
@@ -550,3 +552,48 @@ Merkle local saltaba esa fila dejando el grupo en divergencia permanente. Ahora 
    un tope a un grupo viejo abre la barra ya excedida — coherente con el resumen compartible, que también
    cubre todo el historial por decisión tuya, pero conviene saberlo. Los AVISOS sí están protegidos por
    la línea base.
+
+---
+
+## QA Visual · 2026-09-08
+
+**Veredicto: PASS** (la mitad de un solo dispositivo; lo cross-device sigue fuera, abajo).
+
+iPhone 17 Pro (iOS 26.5), `Yala Dev`, seed `grupos`, grupo **«Viaje a Cusco»** siendo admin, con
+gastos en **PEN y USD** (S/ 1.230,00 + $ 370,00).
+
+### Lo que se vio
+
+1. **Fijar el tope.** Ajustes del grupo → «Presupuesto del grupo» (decía «Sin presupuesto») →
+   se escribió **5000** → Guardar. La fila de Ajustes pasa a mostrar **S/ 5.000,00**.
+2. **La tarjeta aparece** en la pestaña de gastos del grupo, con identificador `group_budget_card`:
+   - **«Quedan S/ 2.415,80»**
+   - **«≈ S/ 2.584,20 de S/ 5.000,00»**
+   - **«Incluye gastos en otras monedas, convertidos al cambio de hoy.»**
+3. **El «≈» aparece porque hubo conversión**, que es justo lo que pedía el AC. Y la nota lo explica
+   en lenguaje de usuario en vez de dejar el símbolo suelto.
+4. **«Quitar presupuesto»** aparece como fila propia en Ajustes en cuanto hay tope (antes no
+   estaba).
+
+### La aritmética cuadra, y delata la conversión
+
+```
+5.000,00 − 2.584,20 = 2.415,80   ← «Quedan», exacto
+2.584,20 − 1.230,00 = 1.354,20   ← la parte en USD, ya convertida
+1.354,20 ÷ 370,00  = 3,66        ← TC PEN/USD implícito, plausible
+```
+
+O sea que el gasto consumido **no** es la suma cruda de 1.230 + 370: la parte en dólares entró
+convertida a soles a ~3,66. Es la prueba de que el «≈» no es decorativo.
+
+### Captura
+
+- `qa-groups-budget-01-tarjeta-con-aprox-20260908-212258.png`
+
+### Lo que NO se cubrió
+
+- **El no-admin no ve la fila**: exige el perfil `grupos-invitado`, no se recorrió en esta pasada.
+- **Cambiar y quitar** el tope: se vio que «Quitar presupuesto» aparece, pero no se ejecutó.
+- **La mitad cross-device** (que el tope de un admin llegue al teléfono de otro miembro tras el
+  sync) y **la entrega real de los avisos al 50/75/90/100 %**: eso sí es device y sigue en la cola
+  del owner.

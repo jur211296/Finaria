@@ -1,11 +1,13 @@
 ---
 id: groups-shareable-summary
-status: qa
+status: done
 priority: medium
 area: groups
 created: 2026-07-01
-updated: 2026-09-07
 source: YalaWiki/Backlog/groups-resumen-compartible-exportable.md
+updated: 2026-09-08
+qa-status: passed
+qa-date: 2026-09-08
 ---
 
 
@@ -177,3 +179,64 @@ dice «medido» y está mal es peor que no tenerlo.
   quedaba en pantalla, ahora se congela en una imagen) y
   `group-balance-service-shares-not-deduped` (el mismo hueco de repartos duplicados que se cerró
   aquí, todavía abierto en el servicio que alimenta Balances).
+
+---
+
+## QA Visual · 2026-09-08
+
+**Veredicto: PASS.** iPhone 17 Pro (iOS 26.5), `Yala Dev`, seed `grupos`, grupo «Viaje a Cusco»
+(3 miembros, gastos en PEN y USD). Ajustes del grupo → «Compartir resumen».
+
+### Lo que se vio
+
+La previsualización monta la imagen ya rasterizada, con **un bloque por moneda**, que era el AC
+central:
+
+**Bloque PEN** — Total gastado S/ 1.230,00
+
+| Quién | Pagó | Le tocaba |
+|---|---|---|
+| Tú | S/ 600,00 | S/ 410,00 |
+| Ana | S/ 360,00 | S/ 410,00 |
+| Beto | S/ 270,00 | S/ 410,00 |
+
+Para saldar: **Beto → Tú S/ 140,00** · **Ana → Tú S/ 50,00**
+
+**Bloque USD** — Total gastado $ 370,00
+
+| Quién | Pagó | Le tocaba |
+|---|---|---|
+| Tú | $ 170,00 | $ 123,34 |
+| Ana | $ 150,00 | $ 123,34 |
+| Beto | $ 50,00 | $ 123,34 |
+
+Para saldar: **Beto → Tú $ 46,67** · **Beto → Ana $ 26,66**
+
+Cabecera con nombre e icono del grupo, fecha («8 de setiembre de 2026»), pie «Hecho con Yala» y el
+botón **Compartir resumen** que abre el share sheet.
+
+### La aritmética cierra, y con la pantalla anterior
+
+No es solo que los números se vean: **cuadran entre sí y con la cabecera del grupo**.
+
+```
+PEN  600+360+270 = 1.230 ✓      1.230/3 = 410 ✓
+     neto Tú: 600-410 = 190  =  140 + 50 (los dos pagos mínimos) ✓
+USD  170+150+50 = 370 ✓         370/3 = 123,33 → 123,34 ✓
+     neto Tú: 170-123,34 = 46,66 ≈ 46,67 ✓
+```
+
+Y el balance del detalle del grupo decía **«Te deben S/ 190,00 + $ 46,67»** — los mismos dos netos,
+por separado y sin mezclar monedas. Ese cruce es lo que descarta que el resumen esté pintando
+números plausibles pero desconectados del grupo.
+
+**No aparece «≈» y es correcto**: al separar por moneda no hay conversión que marcar.
+
+### Captura
+
+- `qa-shareable-summary-01-dos-bloques-moneda-20260908-212149.png`
+
+### Lo que queda fuera de esta pasada
+
+- **«Guardar en Fotos»** y cómo se ve la imagen ya recibida en WhatsApp/Telegram: eso sí es device.
+- El share sheet se abre desde el botón, pero no se completó ningún envío real.
