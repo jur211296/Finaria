@@ -51,7 +51,9 @@ enum HeroBucketsCalculator {
         ///
         /// Aquí no hay converter que consultar: este calculador suma `amountInPreferredCurrency`,
         /// que se convirtió al guardarse. Quien sabe si aquella tasa era la del día es el flag de la
-        /// propia transacción, y por eso es la única fuente de verdad de esta señal.
+        /// transacción — pero **no se lee de la fila**: lo sirve `GroupBridgeStatsAdjustment`, que
+        /// en un gasto de grupo suma la magnitud dudosa de TODAS las patas (la de préstamo está
+        /// suprimida del recorrido y su flag no lo vería nadie).
         ///
         /// **No es un OR desde el 2026-09-08**: se enciende cuando el importe aproximado PESA sobre
         /// su lado — el criterio vive en `ApproximateMarkThreshold`, no aquí. Antes bastaba una
@@ -112,12 +114,15 @@ enum HeroBucketsCalculator {
             // independientes para que la card "Disponible" sea exacta tanto
             // si el periodo coincide con el mes como si difiere.
             if periodInterval.contains(tx.date) {
+                // La magnitud dudosa la da el `adjustment`, NO la fila: en un gasto de grupo
+                // `amount` es el NETO de varias patas y el flag de la fila describe solo una.
+                let approximate = adjustment.approximateMagnitude(tx, magnitude: amount)
                 if isIncome {
                     periodIncome += amount
-                    if tx.isExchangeRateProvisional { periodIncomeApproximateAmount += amount }
+                    periodIncomeApproximateAmount += approximate
                 } else {
                     periodExpense += amount
-                    if tx.isExchangeRateProvisional { periodExpenseApproximateAmount += amount }
+                    periodExpenseApproximateAmount += approximate
                 }
             }
 

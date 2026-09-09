@@ -339,19 +339,20 @@ final class RecordsViewModel: Filterable {
                     // `statsAdjustment` proyecta un gasto de grupo Caso A a "mi parte" (neto).
                     let amount = statsAdjustment.amountInPreferredCurrency(record)
                     // Este resumen NO convierte: lee el `amountInPreferredCurrency` que ya se
-                    // guardó. Quien sabe si aquella tasa era la del día es el flag de la propia
-                    // transacción — es la rama «misma divisa» de `CashFlowCalculator:112-114`, y
-                    // aquí es la única que hay.
-                    let isApproximate = record.isExchangeRateProvisional
+                    // guardó. Quien sabe si aquella tasa era la del día es el flag — el del
+                    // `adjustment`, que en un gasto de grupo hace el OR de todas las patas que
+                    // forman `amount`. Es la rama «misma divisa» de `CashFlowCalculator`, y aquí
+                    // es la única que hay.
                     let magnitude = abs(amount)
+                    let approximate = statsAdjustment.approximateMagnitude(record, magnitude: magnitude)
                     if TransactionClassificationLogic.isIncome(record) {
                         income += amount
                         incomeTotalMagnitude += magnitude
-                        if isApproximate { incomeApproximateMagnitude += magnitude }
+                        incomeApproximateMagnitude += approximate
                     } else {
                         expense -= amount
                         expenseTotalMagnitude += magnitude
-                        if isApproximate { expenseApproximateMagnitude += magnitude }
+                        expenseApproximateMagnitude += approximate
                     }
                 }
             }

@@ -103,15 +103,19 @@ struct CashFlowCalculator {
             let adjustedNative = adjustment.amount(tx)
             let decimalAmt = Decimal(abs(adjustedNative))
 
-            // Convert using the transaction's date for accurate historical rate
+            // Convert using the transaction's date for accurate historical rate.
+            // `approximate` es el numerador del umbral para ESTA transacción, y se resuelve por
+            // rama porque las dos saben cosas distintas.
             let val: Double
-            let isApproximate: Bool
+            let approximate: Double
             if tx.preferredCurrencyCode == currencyCode {
                 // Use signed amount
                 val = adjustment.amountInPreferredCurrency(tx)
-                // Aquí no hay conversión que juzgar: el monto se convirtió al guardarse, y lo que
-                // sabe si aquella tasa era la del día es el flag de la transacción.
-                isApproximate = tx.isExchangeRateProvisional
+                // Aquí no hay conversión que juzgar: el monto se convirtió al guardarse. En un gasto
+                // de grupo `val` es el NETO de varias patas, y la magnitud dudosa que hay detrás
+                // —`Σ|patas provisionales|`— puede ser mayor que él; el flag de la fila describiría
+                // solo una de las patas, y la de préstamo ni siquiera pasa por aquí.
+                approximate = adjustment.approximateMagnitude(tx, magnitude: abs(val))
             } else {
                 let outcome = converter.convertChecked(
                     decimalAmt,
@@ -119,20 +123,23 @@ struct CashFlowCalculator {
                     to: currencyCode,
                     on: tx.date
                 )
-                isApproximate = !outcome.quality.isExact
                 // Restore sign from the ADJUSTED amount (paridad con la rama preferida).
                 let magnitude = NSDecimalNumber(decimal: outcome.amount).doubleValue
                 val = (adjustedNative < 0) ? -magnitude : magnitude
+                // Esta rama NO pregunta al `adjustment`: el número se acaba de reconvertir desde el
+                // nativo, así que su calidad es la de ESA conversión y no la de las tasas con las
+                // que se sellaron las patas.
+                approximate = outcome.quality.isExact ? 0 : magnitude
             }
 
             let isIncome = category.isIncome
             let magnitude = abs(val)
             if isIncome {
                 incomeTotalMagnitude += magnitude
-                if isApproximate { incomeApproximateMagnitude += magnitude }
+                incomeApproximateMagnitude += approximate
             } else {
                 expenseTotalMagnitude += magnitude
-                if isApproximate { expenseApproximateMagnitude += magnitude }
+                expenseApproximateMagnitude += approximate
             }
 
             // Date Grouping key

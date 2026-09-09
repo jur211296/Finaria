@@ -789,14 +789,15 @@ enum WidgetDataCache {
             if adjustment.isSuppressed(tx) { continue }
             let amount = preferredAmount(tx, adjustment: adjustment)
             // Este cache NO convierte: lee el monto ya guardado. La única vía de la señal es el
-            // flag de la transacción.
-            let isApproximate = tx.isExchangeRateProvisional
+            // flag — el del `adjustment`, que en un gasto de grupo hace el OR de todas las patas
+            // que forman `amount`; el de la fila describiría solo una de ellas.
+            let approximate = adjustment.approximateMagnitude(tx, magnitude: abs(amount))
             if isIncomeTx(tx) {
                 totalIncome += abs(amount)
-                if isApproximate { incomeApproximateMagnitude += abs(amount) }
+                incomeApproximateMagnitude += approximate
             } else {
                 totalExpense += abs(amount)
-                if isApproximate { expenseApproximateMagnitude += abs(amount) }
+                expenseApproximateMagnitude += approximate
             }
         }
 

@@ -628,3 +628,19 @@ ajústalo a conciencia»), y **la review adversarial tampoco lo cazó** — una 
 explícitamente dependencias de test del borrado, revisó suelos de otros source-scans y dio el visto
 bueno. Un conteo exacto en un área remota es un punto ciego de las tres redes a la vez: gate acotado,
 lentes y mi propia lectura. La suite completa es la única que lo ve.
+
+## Dos más el 2026-09-09, y el segundo casi cuela un test que nunca corrió
+
+- **`-only-testing:<Suite>` corrió OTRA suite del mismo archivo.** Añadí dos tests al final de
+  `ApproximateMarkWiringTests.swift` creyendo que caían en la suite del nombre del archivo, y caían
+  en la **segunda** suite (`…SecondarySurfacesWiringTests`). El filtro corría 6 tests de la primera y
+  mis dos nuevos **no se ejecutaron en ninguna de las corridas anteriores**: verde y vacío. Lo destapó
+  un mutante que debía ponerlos rojos y no los puso. ⇒ **un archivo puede tener varias suites, y el
+  filtro va por SUITE, no por archivo.** Cuenta los tests que dice haber corrido y cuádralos.
+- **Una regex mía descartó una fila del índice por las mayúsculas.** `[a-z0-9\-]+` sobre
+  `docs/TICKETS.md` no casó `rojo-heroBuckets-thisWeek-…` y me hizo creer que faltaba en el índice.
+  Estaba. El control que lo cazó fue el más barato: grepear el nombre a mano antes de reportar.
+
+**How to apply:** cuando una medición diga «falta X» o «esto no está», **búscalo una vez a mano**
+antes de escribirlo. Y cuando diga «pasó», exige el número de casos: un filtro que no casa nada sale
+verde por el mismo camino que uno que casa todo.
