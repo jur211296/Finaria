@@ -85,6 +85,22 @@ struct ManualWriteRateQualityTests {
             // escribirlos, no hay nada que sellar. Si alguien la hiciera persistir, la firma cambiaría.
             sentinel: "-> (amount: Double, amountInPreferredCurrency: Double)"
         ),
+        "Yala/App/Logic/ExchangeRateRepairLogic.swift": (
+            reason: """
+                Lógica pura: no importa SwiftData, no ve un `TransactionItem` y no persiste nada. Lo \
+                que el barrido cuenta como escritura es la ETIQUETA DEL PARÁMETRO de entrada de \
+                `rateFromStoredAmounts`, no una asignación — el mismo falso positivo que ya tenía con \
+                `ChatUnsignedExpenseRepairLogic`, allí por la etiqueta de la tupla de salida. Quien \
+                persiste es `TransactionUpdateService`, y lo que escribe es `exchangeRate`, no el \
+                monto convertido: la fila que llega ahí ya tenía su conversión hecha y su flag \
+                decidido el día que se guardó, así que redecidirlo sería inventarse una calidad que \
+                nadie midió.
+                """,
+            // El centinela es la firma ENTERA: mientras la función reciba los montos y DEVUELVA un
+            // número, no hay nada que sellar. Si alguien la hiciera persistir tendría que recibir el
+            // `TransactionItem` o el contexto, y la firma —con ella el centinela— caería.
+            sentinel: "amountInPreferredCurrency: Double\n    ) -> Double? {"
+        ),
         "Yala/Services/ChatUnsignedExpenseRepairService.swift": (
             reason: """
                 No convierte: el barrido del signo del chat solo le cambia el SIGNO a un monto que ya                 estaba convertido y persistido. La calidad de la tasa no cambia al voltear el signo —                 si era exacta sigue siéndolo, y si era provisional sigue en la cola del reparador.                 Decidir el flag aquí sería inventarse una calidad que nadie midió, y volver a sellar                 como definitiva una tasa aproximada es exactamente el bug que este barrido vigila.
@@ -234,9 +250,9 @@ struct ManualWriteRateQualityTests {
         // El suelo va pegado a lo medido (11 el 2026-09-07). Estaba en 8 y toleraba perder tres
         // ficheros vigilados sin decir nada — un suelo holgado es un detector apagado a medias.
         #expect(
-            files.count >= 11,
+            files.count >= 12,
             """
-            el barrido encontró \(files.count) ficheros y esperaba al menos 11 — o se movió el \
+            el barrido encontró \(files.count) ficheros y esperaba al menos 12 — o se movió el \
             código, o el patrón dejó de medir. Si de verdad hay menos escritores, baja el suelo a \
             conciencia: \(files.sorted().joined(separator: ", "))
             """

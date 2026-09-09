@@ -26,7 +26,15 @@ enum TransactionUpdateService {
     ///
     /// - Parameter context: SwiftData ModelContext
     /// Clave del flag idempotente del barrido de reparación. Se corre UNA vez por dispositivo.
-    private static let repairSweepKey = "fxOneToOneRepairSweep.v1"
+    ///
+    /// **`.v2` desde el 2026-09-08, y el número es el mecanismo: subirlo REBOBINA el one-shot.** El
+    /// dispositivo que ya tenga marcada la `.v1` vuelve a barrer una vez, porque entre aquel barrido y
+    /// hoy se siguió produciendo el daño que la `.v1` fue a curar (ticket
+    /// `chat-rows-sealed-before-the-fix-have-no-repair-path`).
+    ///
+    /// La `.v1` **no se borra**: cuesta un bool en `UserDefaults` y es lo único que dice, en un
+    /// dispositivo concreto, si aquel primer barrido llegó a correr.
+    private static let repairSweepKey = "fxOneToOneRepairSweep.v2"
 
     /// Devuelve a la cola de reparación las transacciones que quedaron con un 1:1 envenenado **antes**
     /// de que existiera el fix (`fx-partial-rate-rows-silent-1to1`, paso 2).
@@ -36,18 +44,99 @@ enum TransactionUpdateService {
     /// implementación de la conversión, no dos que se desincronizan — y el barrido se limita a
     /// deshacer el sellado, que es el daño que hay que revertir.
     ///
-    /// **One-shot a propósito.** El estado que busca solo lo produce el código viejo; repetirlo en cada
-    /// arranque sería recorrer todas las transacciones para siempre a cambio de nada. Y `exchangeRate`
-    /// viaja por el canal nube en el grupo de coherencia `money`, así que cada fila marcada emite:
-    /// conviene que ocurra una vez y no en bucle. (Matiz medido el 2026-09-08: emite la fila que
-    /// CAMBIA de valor; una asignación idéntica ensucia el contexto pero no llega al outbox — ver
-    /// `FXRepairQueueOutboxTests`. El razonamiento de fondo se sostiene; su mitad de sync era más
-    /// débil de lo que decía.)
+    /// ## Por qué se rebobina el flag, y qué corpus alcanza la `.v2`
+    ///
+    /// La `.v1` nació el 2026-09-03 (`6ddc4367`) dando por hecho que **el estado que busca solo lo
+    /// produce el código viejo**. Era falso: `ChatAssistantViewModel.saveDraft` siguió plantando
+    /// `exchangeRate: 1.0` literal hasta el 2026-09-08 (`chat-assistant-plants-exchange-rate-one`), y
+    /// con la conversión EXACTA —el caso normal— el flag quedaba en `false`, así que esas filas
+    /// tampoco entraban en el `#Predicate` del reparador (`== true`). Ni el barrido ni el reparador
+    /// las miraban: se quedaban diciendo «1,0000» para siempre.
+    ///
+    /// **Qué alcanza la `.v2`, y por qué no es «solo el delta».** El criterio no cambia
+    /// (`ExchangeRateRepairLogic.needsRepair`), así que vuelve a mirar la tabla entera con la misma
+    /// vara. Lo escrito **después** de la `.v1` es el corpus que motiva el rebobinado —la ventana del
+    /// chat—, pero **no es todo lo que va a encontrar**, y creer lo contrario sería contradecir el
+    /// párrafo de abajo: en un dispositivo donde la `.v1` se quemó antes de tiempo, también hay corpus
+    /// ANTERIOR sin curar. Se alcanza igual, que es justamente lo que se quiere. Y un cambio de divisa
+    /// preferida entre los dos barridos mueve la población candidata sin tocar una línea del criterio,
+    /// porque `needsRepair` compara contra la preferida **de hoy**.
+    ///
+    /// **Lo que la `.v2` NO cura, con ticket propio:** la banda `0 < |monto| <= 0.0001`. Ni se le
+    /// deduce tasa (el umbral de `rateFromStoredAmounts` es el mismo) ni sirve reabrirla, porque el
+    /// reparador tiene ese mismo umbral y volvería a escribir `1.0` —
+    /// `fx-rate-derivation-threshold-reseals-one-to-one`. El valor absoluto no es un detalle: desde el
+    /// PR #102 los gastos del chat se guardan **negativos**, o sea la mitad que un rango sin `abs`
+    /// dejaría fuera.
+    ///
+    /// ## Lo que emite al canal nube, que no es gratis
+    ///
+    /// Las dos columnas que este barrido escribe —`exchangeRate` e `isExchangeRateProvisional`— están
+    /// en el grupo de coherencia `money`, y `DeltaEmitter` expande **cualquiera** de ellas al grupo
+    /// entero con un HLC fresco: cada fila tocada emite las cinco. Aquí no hay escritura idéntica que
+    /// el guard de igualdad pueda ahorrar —todas cambian algo—, así que el coste es una emisión por
+    /// fila candidata, y punto.
+    ///
+    /// **Eso es lo que decide QUÉ se escribe, y no es un detalle de eficiencia.** Reabrir una fila
+    /// emite el grupo `money` con la tasa envenenada TODAVÍA puesta y un HLC nuevo: bajo LWW por
+    /// unidad, este barrido le ganaría a un dispositivo par que ya la hubiera reparado, y difundiría
+    /// el veneno en vez de curarlo. Corrigiendo la tasa **antes** de guardar, lo que viaja es el valor
+    /// bueno. La fila que no se puede corregir en el sitio sí se reabre, y ahí el riesgo es real pero
+    /// acotado: son filas cuyo monto tampoco está convertido, o sea que el par tampoco tenía nada que
+    /// preservar.
+    ///
+    /// ## One-shot, pero que no se queme antes de servir
+    ///
+    /// Sigue siendo one-shot a propósito: repetirlo en cada arranque sería recorrer todas las
+    /// transacciones para siempre a cambio de nada. Lo que cambia es **cuándo tiene derecho a
+    /// sellarse**, porque un one-shot que se marca sin haber visto el corpus deja el daño sin cura para
+    /// siempre. Dos comprobaciones, y hacen cosas distintas:
+    ///
+    /// 1. **El gate de quiescencia** evita el `save()` sobre el store personal mientras el import está
+    ///    EN VUELO —lo que `ccbc97e9` gateó en el resto del boot y este barrido, nacido después, no
+    ///    tenía— y, sobre todo, evita sellar en un arranque donde `updateProvisionalTransactions` sale
+    ///    por su propio gate tres líneas más abajo y no cura nada.
+    ///    **Lo que este gate NO cubre, medido:** `isImportQuiescent` vale `true` ANTES de que empiece
+    ///    ningún import (`lastImportDate == nil`), y así lo documenta `BootSaveGateLogic`. En el
+    ///    arranque en frío de un restore, el paso 2 llega antes del primer evento de CloudKit y el
+    ///    gate está ABIERTO. No es el gate de seis entradas de `awaitPersonalStoreReady`, que este
+    ///    barrido no usa porque no espera nada en absoluto.
+    /// 2. **El guard de presencia** es el que tapa ese hueco: sobre un store sin ninguna transacción no
+    ///    se sella. Es el punto ciego que `ChatUnsignedExpenseRepairService` cerró para su propio
+    ///    barrido citando a éste por su nombre.
+    ///
+    /// **Residual que queda, y conviene no maquillarlo:** el guard distingue *vacío* de *no vacío*, no
+    /// *completo* de *parcial*. Un restore que ya ha entregado tres filas de cinco mil pasa el guard y
+    /// sella; las 4.997 restantes no las barre nadie. Cerrar eso pedía el gate de store-ready, que aquí
+    /// no rige, así que el residual se declara en vez de darlo por resuelto.
+    ///
+    /// **Y el otro residual, el de cualquier one-shot:** un segundo dispositivo con el build viejo
+    /// puede seguir emitiendo filas envenenadas por el canal nube después de que aquí ya se haya
+    /// sellado — el applier las escribe verbatim, porque el grupo `money` es autoritativo y tiene
+    /// prohibido recalcular (`EntityApplyMap`). Se cierra solo cuando ese dispositivo actualiza y corre
+    /// el suyo.
+    ///
+    /// - Parameter isQuiescent: si el store personal está quieto. Se inyecta —en vez de consultarlo
+    ///   dentro, como hace `updateProvisionalTransactions`— porque en un test el singleton de sync
+    ///   responde `true` por ausencia de import, y un gate que nunca puede cerrarse es un gate sin
+    ///   probar: el caso que importa es justamente el que difiere. Es opcional y no un `Bool` con
+    ///   valor por defecto porque el default de un parámetro se evalúa FUERA del actor, y
+    ///   `isImportQuiescent` está aislado a `@MainActor`; `nil` significa «pregúntaselo al singleton»,
+    ///   que es lo que hace producción.
+    @discardableResult
     static func repairLegacyOneToOneRatesIfNeeded(
         context: ModelContext,
-        defaults: UserDefaults = .standard
-    ) {
-        guard !defaults.bool(forKey: repairSweepKey) else { return }
+        defaults: UserDefaults = .standard,
+        isQuiescent: Bool? = nil
+    ) -> (fixed: Int, reopened: Int) {
+        guard !defaults.bool(forKey: repairSweepKey) else { return (0, 0) }
+
+        // Gate de quiescencia, el mismo que su vecino `updateProvisionalTransactions`. Sin marcar el
+        // flag: no es que no hubiera nada que hacer, es que no se ha podido mirar.
+        guard isQuiescent ?? iCloudSyncService.shared.isImportQuiescent else {
+            SaveBreadcrumb.deferred("TransactionUpdateService.repairLegacyOneToOne", "import not quiescent")
+            return (0, 0)
+        }
 
         let preferred = CurrencyDefaults.currentPreferred
         // El predicado filtra por `exchangeRate == 1.0` y la comparación de divisas se hace en Swift:
@@ -65,33 +154,78 @@ enum TransactionUpdateService {
                     preferredCurrencyCode: preferred
                 )
             }
-            // El guard de igualdad, por el mismo motivo que en `recalculatePreferredCurrency`: el
-            // filtro (`needsRepair`) mira la tasa y la divisa, **nunca el flag**, así que la población
-            // que ya está marcada —justo la que produce el bug de la fila parcial— recibía una
-            // asignación idéntica que ensucia la fila y fuerza un `save()` por nada.
+            // **Dos poblaciones bajo el mismo criterio, y cada una tiene su arreglo.** Ver
+            // `ExchangeRateRepairLogic.rateFromStoredAmounts`: si de los montos ya guardados se deduce
+            // una tasa, la conversión SÍ ocurrió y lo único falso es la columna `exchangeRate`, que se
+            // corrige en el sitio; si no se deduce ninguna, tampoco se convirtió el monto y la fila
+            // tiene que volver a la cola para que el reparador la reconvierta.
+            //
+            // Se filtra por `!isExchangeRateProvisional` para las dos: la fila que ya está en la cola
+            // la va a arreglar el reparador tres líneas más abajo, con la lógica buena y en este mismo
+            // arranque. Tocarla aquí sería adelantarle trabajo y ensuciar la fila por nada — el filtro
+            // (`needsRepair`) mira la tasa y la divisa, **nunca el flag**.
+            var fixedCount = 0
             var reopenedCount = 0
             for transaction in candidates where !transaction.isExchangeRateProvisional {
-                transaction.isExchangeRateProvisional = true
-                reopenedCount += 1
+                if let derived = ExchangeRateRepairLogic.rateFromStoredAmounts(
+                    amount: transaction.amount,
+                    amountInPreferredCurrency: transaction.amountInPreferredCurrency
+                ) {
+                    transaction.exchangeRate = derived
+                    fixedCount += 1
+                } else {
+                    transaction.isExchangeRateProvisional = true
+                    reopenedCount += 1
+                }
             }
-            if reopenedCount > 0 {
+            if fixedCount + reopenedCount > 0 {
                 SaveBreadcrumb.willSave("TransactionUpdateService.repairLegacyOneToOne")
                 try context.save()
                 SaveBreadcrumb.didSave("TransactionUpdateService.repairLegacyOneToOne")
             }
-            // El flag se marca aunque no hubiera candidatas: el barrido HIZO su trabajo.
+
+            // **El flag no se quema sobre un store que todavía no tiene el corpus.**
+            //
+            // Antes se marcaba siempre, con el argumento de que «el barrido HIZO su trabajo». Vale
+            // cuando hay filas y ninguna encaja; no vale cuando no hay NINGUNA fila, porque entonces el
+            // barrido no ha mirado el corpus: lo ha adelantado. Un primer arranque tras reinstalar
+            // —sesión de iCloud aún no lista, o restore más lento que la gracia del gate de guardado—
+            // sellaba el one-shot y dejaba sin cura todo lo que bajara después.
+            //
+            // La pregunta se hace **solo cuando no hubo candidatas**, que es el único caso en que la
+            // respuesta cambia algo: si las hubo, el store obviamente tiene corpus. Y se hace con
+            // `fetchCount` sobre un descriptor sin predicado —no trayendo las filas— porque lo único
+            // que se necesita es «¿hay alguna?».
+            //
+            // El coste en un usuario nuevo de verdad es un conteo por arranque hasta que registre su
+            // primera transacción.
+            if candidates.isEmpty,
+                try context.fetchCount(FetchDescriptor<TransactionItem>()) == 0
+            {
+                #if DEBUG
+                print("TransactionUpdateService: store sin transacciones; el barrido se reintenta en el próximo arranque")
+                #endif
+                return (0, 0)
+            }
+
             defaults.set(true, forKey: repairSweepKey)
             #if DEBUG
             print(
-                "TransactionUpdateService: repair sweep reopened \(reopenedCount) of \(candidates.count) candidates"
+                "TransactionUpdateService: repair sweep fixed \(fixedCount) in place and reopened \(reopenedCount) of \(candidates.count) candidates"
             )
             #endif
+            return (fixed: fixedCount, reopened: reopenedCount)
         } catch {
             // Sin marcar el flag: si el fetch falló, el barrido no ha corrido y debe reintentarse en el
             // próximo arranque.
+            //
+            // Tampoco hace falta deshacer lo ya asignado sobre el contexto: el barrido es idempotente
+            // por construcción —solo toca la fila que aún no está marcada—, así que persista o no lo
+            // que hubiera en vuelo, el reintento del próximo arranque no vuelve a tocar lo mismo.
             #if DEBUG
             print("TransactionUpdateService: repair sweep failed: \(error)")
             #endif
+            return (0, 0)
         }
     }
 
