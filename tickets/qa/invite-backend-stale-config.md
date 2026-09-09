@@ -112,6 +112,13 @@ En `.claude/rules/swiftdata-cloudkit.md`: **un gate de feature no puede decidir 
 
 **REMAINS (C) — owner / TestFlight, no Xcode ni staging:**
 
+> 🔄 **CADUCO desde el 2026-09-09: «se une normal» daría FAIL a un comportamiento correcto.** Estos
+> criterios son anteriores a `groups-invite-skips-unirme-sheet-if-onboarded` (2026-09-05), que decidió
+> que el invitado **ya no entra solo**: ahora tiene que salir **siempre** la hoja «Te invitaron al
+> grupo …» y no se une hasta que toque «Unirme al grupo». ⇒ el criterio vivo es **«llega a la hoja,
+> sin alerta de error»**, no «se une». Leído literal, lo de abajo marca como fallo justo lo que se
+> arregló. Guion con el criterio corregido: `qa/guion-grupos-dos-telefonos.md`, Fase 2.
+
 - (1) enlace backend con config ya fresca → se une normal.
 - (2) **reescrito el 2026-09-02, ver abajo.**
 - (4) cold launch + enlace backend → se une tras el arranque. ⚠️ Le aplica el mismo agujero que a (2):
@@ -195,6 +202,12 @@ sigue está MEDIDO en el fuente; el resultado en pantalla es lo que ese fuente p
    (`CloudSyncDebugView.swift:888`). Escribe `cloudSync.debug.remoteFlagsForceOff` y con eso el canal
    de Grupos se lee apagado sin tocar red ni staging. **Acuérdate de apagarlo al terminar**: queda
    guardado y se lleva a la siguiente sesión.
+
+> 🔄 **CADUCO desde el 2026-09-09 — leer antes de usar esta sección para hacer QA.** Ya no es verdad
+> que el enlace exija `s`. Medido en el árbol del build 13 (`039a12ed`): `isInviteLink`
+> (`InviteLinkService.swift:261-270`) termina en `(hasShareParam || hasBackendPair)`, así que la forma
+> mínima `?g=..&t=..` **entra sin `s`**. Lo cambió la pieza 3 de `invite-link-five-causes-one-message`.
+> `s=x` sigue funcionando; lo que ya no aplica es tratar su ausencia como «no llega ni al handler».
 
 ### ⚠️ El enlace exige el parámetro `s`, o no llega ni al handler
 

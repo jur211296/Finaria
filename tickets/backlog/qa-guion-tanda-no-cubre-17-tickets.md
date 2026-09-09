@@ -20,6 +20,15 @@ aparecen en ningún grupo, así que quien haga la tanda siguiendo el guion —qu
 los deja fuera **sin que nada avise**. Un ticket sin montaje asignado no se ve distinto de uno ya
 verificado.
 
+**Re-medido el 2026-09-09: son 52 tickets `.md`, el guion nombra 21 y quedan 31 sin montaje.** El
+hueco no se ha cerrado: ha crecido de 17 a 31 en tres días, que es exactamente la tesis del ticket
+—el recordatorio escrito no sostiene esto—. El título conserva el «17» porque el id es el nombre del
+fichero; la cifra viva es la de esta línea.
+
+Ese mismo día, `qa/guion-grupos-dos-telefonos.md` dio montaje al cluster de Grupos (16 tickets, 12 de
+ellos entre los que no tenían ninguno), así que el reparto pendiente es menor de lo que dice el 31.
+Lo que sigue abierto sin tocar son las familias de chat/FX/modo-nube.
+
 ## Por qué se descuelga
 
 El propio guion lleva la instrucción («al mover algo a `qa/` o sacarlo de ahí, actualiza también este

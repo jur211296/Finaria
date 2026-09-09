@@ -215,6 +215,13 @@ recibe su sección `Causa (código)` con `fichero:línea`, y solo entonces el fi
 - [ ] A, que es el actor, sigue **sin** recibir notificación (no se reintroduce el eco al autor).
 - [ ] Cuando el aviso en background no sea posible, el foreground sigue siendo la red: al entrar en la
       app la notificación aparece **una sola vez** y no se duplica con la que ya llegó en background.
+      > ⚠️ **Este AC no se puede cumplir hoy, y su fallo NO es de este fix** (medido el 2026-09-09 en
+      > el árbol del build 13). El aviso local se entrega con `identifier: "notification-<UUID nuevo>"`
+      > (`NotificationService.swift:246`) y el gateway no manda `apns-collapse-id`
+      > (`gateway/src/push/apns.ts:116-128`), así que el rico **no puede** reemplazar al banner remoto:
+      > quedan dos entradas. Es un defecto posterior, nacido de que este fix añadió un segundo emisor.
+      > Va aparte en [[aviso-de-grupo-llega-dos-veces-remoto-y-local]]. **Al hacer el device-QA,
+      > anótalo ahí y no lo cuentes como FAIL de este ticket.**
 
 Verificación pendiente: los cuatro criterios se comprueban cuando exista causa y fix. **Hoy no hay
 device-QA de este ticket y no se inventa PASS.**

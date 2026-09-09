@@ -8,9 +8,16 @@
 > **Actualizado: 2026-09-08 · 23 tickets con montaje asignado.** Al mover algo a `qa/` o sacarlo de ahí,
 > actualiza también este guion; si no, en dos semanas manda a montar cosas que ya no hacen falta.
 >
-> ⚠️ **Medido el 2026-09-06: en `tickets/qa/` hay 39 tickets y aquí se nombran 22.** Los 17 restantes no
-> tienen montaje asignado, así que una tanda guiada solo por este fichero los deja fuera sin avisar.
-> Repartirlos es trabajo aparte → [[qa-guion-tanda-no-cubre-17-tickets]].
+> ⚠️ **Re-medido el 2026-09-09: en `tickets/qa/` hay 52 tickets `.md` y aquí se nombran 21. Quedan 31
+> sin montaje asignado**, no 17 — la cifra vieja es de cuando la cola tenía 39. Una tanda guiada solo
+> por este fichero los deja fuera sin avisar. Repartirlos es trabajo aparte →
+> [[qa-guion-tanda-no-cubre-17-tickets]].
+>
+> 📍 **El cluster de Grupos tiene guion propio y ejecutable: [`guion-grupos-dos-telefonos.md`](guion-grupos-dos-telefonos.md).**
+> Cubre invitación → entrada → aprobación → gasto → salida en una sola pasada, y **clasifica qué
+> necesita de verdad dos teléfonos**: de los 16 tickets del cluster, solo 3 son irreductibles a APNs
+> real. El resto pide dos *cuentas* (dos simuladores contra staging bastan), un solo dispositivo, o
+> nada más que un simulador.
 >
 > `qa` NO significa «terminado»: significa que el código está hecho y verificado hasta donde el
 > simulador alcanza, y que falta la comprobación en aparato real.
