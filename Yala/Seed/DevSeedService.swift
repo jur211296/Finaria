@@ -287,6 +287,38 @@ final class DevSeedService {
         SessionState.shared.incrementDataVersion()
     }
 
+    // MARK: - Fila envenenada por el chat viejo (barrido fxOneToOneRepairSweep)
+
+    /// Siembra la fila de `-uitest-seed-chat-sealed-rate <ISO>`.
+    ///
+    /// Aditivo y con las mismas reglas que `seedForeignCurrencyAccount`: no toca
+    /// `devSeedDataExecuted` ni `hasSeeded`. El propio fixture es idempotente, porque el veredicto
+    /// del ticket necesita un segundo arranque y ése vuelve a pasar por aquí.
+    func seedChatSealedRateRow(currencyCode: String, in context: ModelContext) {
+        seedCategoriesIfNeeded(in: context)
+        let subcategoryLookup = buildSubcategoryLookup(in: context)
+        DevSeedChatSealedRate.create(
+            currencyCode: currencyCode,
+            subcategoryLookup: subcategoryLookup,
+            in: context
+        )
+        SessionState.shared.incrementDataVersion()
+    }
+
+    // MARK: - Patas de bridge con coberturas de tasa distintas (familia FX)
+
+    /// Siembra el gasto de grupo de `-uitest-seed-group-bridge-fx <ISO>`.
+    func seedGroupBridgeFXLegs(currencyCode: String, in context: ModelContext) {
+        seedCategoriesIfNeeded(in: context)
+        let subcategoryLookup = buildSubcategoryLookup(in: context)
+        DevSeedGroupBridgeFXLegs.create(
+            currencyCode: currencyCode,
+            subcategoryLookup: subcategoryLookup,
+            in: context
+        )
+        SessionState.shared.incrementDataVersion()
+    }
+
     // MARK: - Dead-pointer fixture (AC-c fantasma)
 
     /// Seed AISLADO para `-uitest-seed dead-pointer`: categorías + una cuenta + UNA TX

@@ -310,6 +310,43 @@ final class UITestHooks {
         #endif
     }
 
+    /// Valor de `-uitest-seed-chat-sealed-rate <ISO>`: siembra UNA fila **envenenada por el chat
+    /// viejo** —monto convertido correcto, `exchangeRate` sellado a 1,0— que es el corpus que el
+    /// barrido `fxOneToOneRepairSweep.v2` cura en el sitio. Ver `DevSeedChatSealedRate`.
+    ///
+    /// Es el caso CONTRARIO al de `foreignAccountCurrency`, y por eso son dos args y no uno: aquél
+    /// siembra filas sanas-pero-aproximadas (tasa buena, flag encendido) y éste una fila con la
+    /// tasa falsa y el flag apagado, que es lo que la deja fuera del reparador de arranque.
+    ///
+    /// **El veredicto necesita dos arranques**: el que siembra deja la fila envenenada (el barrido
+    /// ya había corrido sobre un store vacío) y el siguiente, sin `-uitest-reset`, la cura. El seed
+    /// es idempotente para que ese segundo arranque no plante una fila nueva al lado de la curada.
+    nonisolated static var chatSealedRateCurrency: String? {
+        #if DEBUG
+        guard isActive else { return nil }
+        return parseValue(after: "-uitest-seed-chat-sealed-rate", from: ProcessInfo.processInfo.arguments)
+        #else
+        return nil
+        #endif
+    }
+
+    /// Valor de `-uitest-seed-group-bridge-fx <ISO>`: siembra un gasto de grupo bridgeado cuyas dos
+    /// patas tienen **coberturas de tasa distintas** —la real exacta, la de préstamo provisional—,
+    /// que es el escenario de `bridge-de-grupos-pierde-la-marca-de-sus-patas`.
+    /// Ver `DevSeedGroupBridgeFXLegs`.
+    ///
+    /// No se llega a él con los otros seeds: `GroupTransactionBridge` crea las dos patas con la
+    /// misma divisa y la misma fecha, así que **nacen con el mismo flag**; la asimetría solo
+    /// aparece después (aprobar un draft tarde, el reparador por cola, o editar la pata real).
+    nonisolated static var groupBridgeFXCurrency: String? {
+        #if DEBUG
+        guard isActive else { return nil }
+        return parseValue(after: "-uitest-seed-group-bridge-fx", from: ProcessInfo.processInfo.arguments)
+        #else
+        return nil
+        #endif
+    }
+
     /// `-uitest-deeplink <target>`: simula un deeplink externo a un tab al arranque
     /// (panel/statistics/records/planning/budgets/groups/inbox/scheduledPayments/categories).
     /// Ejercita el wiring de routing a tabs ocultos (bug review-deeplinks).
