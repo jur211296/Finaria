@@ -663,3 +663,463 @@ struct ApproximateAmountMarkTests {
     }
 
 }
+
+//
+//  MARK: - Productores nuevos (`fx-approximate-mark-missing-on-secondary-surfaces`, 2026-09-09)
+//
+//  Dos superficies secundarias no tenían señal que cablear: había que PRODUCIRLA. Estos son tests
+//  de comportamiento, no de cableado — el source-scan de `ApproximateMarkWiringTests` fija el texto,
+//  esto fija el resultado.
+//
+
+@MainActor
+@Suite("Marca de aproximado: los productores que no existían")
+struct ApproximateMarkNewProducersTests {
+
+    private let calendar = Calendar.current
+
+    private func day(_ y: Int, _ m: Int, _ d: Int) -> Date {
+        calendar.date(from: DateComponents(year: y, month: m, day: d)) ?? Date()
+    }
+
+    private func makeStoredTx(
+        amount: Double,
+        date: Date,
+        account: Account,
+        category: YalaCategory,
+        provisional: Bool
+    ) -> TransactionItem {
+        let tx = TransactionItem(
+            date: date, amount: amount, currencyCode: "USD", note: "",
+            category: category, account: account, tags: [],
+            amountInPreferredCurrency: amount
+        )
+        tx.preferredCurrencyCode = "USD"
+        tx.isExchangeRateProvisional = provisional
+        return tx
+    }
+
+    // MARK: - El widget de la pantalla de inicio
+
+    /// El widget no convierte: copia montos ya sellados. Su única vía es el flag de la transacción,
+    /// y hasta hoy no lo miraba nadie.
+    @Test("El resumen del widget marca el gasto cuando la parte aproximada pesa")
+    func widgetSummary_marksExpenseWhenApproximateWeighs() {
+        let account = Account(name: "Main", currencyCode: "USD", colorHex: "#6366F1", iconName: "creditcard", type: "bank")
+        let category = YalaCategory(name: "Food", colorHex: "#FF0000", isIncome: false)
+        let start = day(2026, 4, 1)
+        let end = day(2026, 4, 30)
+
+        let txs = [
+            makeStoredTx(amount: -300, date: day(2026, 4, 5), account: account, category: category, provisional: true),
+            makeStoredTx(amount: -700, date: day(2026, 4, 6), account: account, category: category, provisional: false),
+        ]
+
+        let summary = WidgetDataCache.buildPeriodSummary(
+            transactions: txs, periodStart: start, periodEnd: end, currencyCode: "USD"
+        )
+
+        #expect(summary.expenseIsApproximate == true, """
+            300 de 1.000 es el 30 %, muy por encima del 5 %: el gasto del widget se marca.
+            """)
+        #expect(summary.incomeIsApproximate == false, """
+            No hubo ni un ingreso. Marcarlo diría que un total de cero es aproximado.
+            """)
+    }
+
+    /// El control positivo, sin el cual «marcar siempre» pasaría el test de arriba.
+    @Test("Con todo exacto, el resumen del widget no marca nada")
+    func widgetSummary_allExact_marksNothing() {
+        let account = Account(name: "Main", currencyCode: "USD", colorHex: "#6366F1", iconName: "creditcard", type: "bank")
+        let expense = YalaCategory(name: "Food", colorHex: "#FF0000", isIncome: false)
+        let income = YalaCategory(name: "Salary", colorHex: "#00FF00", isIncome: true)
+
+        let txs = [
+            makeStoredTx(amount: -300, date: day(2026, 4, 5), account: account, category: expense, provisional: false),
+            makeStoredTx(amount: 900, date: day(2026, 4, 6), account: account, category: income, provisional: false),
+        ]
+
+        let summary = WidgetDataCache.buildPeriodSummary(
+            transactions: txs, periodStart: day(2026, 4, 1), periodEnd: day(2026, 4, 30),
+            currencyCode: "USD"
+        )
+
+        #expect(summary.expenseIsApproximate == false)
+        #expect(summary.incomeIsApproximate == false)
+        #expect(summary.netCashFlowIsApproximate == false)
+    }
+
+    /// El umbral tiene que ser el MISMO que el de la app, no un `> 0` disfrazado.
+    @Test("Una aproximada que no pesa NO marca el gasto del widget")
+    func widgetSummary_belowThreshold_doesNotMark() {
+        let account = Account(name: "Main", currencyCode: "USD", colorHex: "#6366F1", iconName: "creditcard", type: "bank")
+        let category = YalaCategory(name: "Food", colorHex: "#FF0000", isIncome: false)
+
+        var txs = [makeStoredTx(amount: -40, date: day(2026, 4, 5), account: account, category: category, provisional: true)]
+        // 40 de 1.040 es el 3,8 %: por debajo del 5 %.
+        txs.append(makeStoredTx(amount: -1000, date: day(2026, 4, 6), account: account, category: category, provisional: false))
+
+        let summary = WidgetDataCache.buildPeriodSummary(
+            transactions: txs, periodStart: day(2026, 4, 1), periodEnd: day(2026, 4, 30),
+            currencyCode: "USD"
+        )
+
+        #expect(summary.expenseIsApproximate == false, """
+            Con un OR simple esto marcaría. La decisión del 2026-09-08 pide que PESE, y el widget
+            tiene que usar el mismo criterio o el mismo mes sale marcado en una pantalla y exacto en
+            la otra.
+            """)
+    }
+
+    /// El saldo del período es el número del `BalanceWidget`, y su bucle es otro.
+    @Test("El saldo del período del widget lleva su propia marca")
+    func widgetSummary_periodBalanceCarriesItsOwnMark() {
+        let account = Account(name: "Main", currencyCode: "USD", colorHex: "#6366F1", iconName: "creditcard", type: "bank")
+        let category = YalaCategory(name: "Food", colorHex: "#FF0000", isIncome: false)
+
+        // Fuera del período (no tocan income/expense) pero SÍ dentro del saldo acumulado.
+        let historicas = [
+            makeStoredTx(amount: -500, date: day(2026, 2, 3), account: account, category: category, provisional: true),
+            makeStoredTx(amount: -500, date: day(2026, 2, 4), account: account, category: category, provisional: false),
+        ]
+
+        let summary = WidgetDataCache.buildPeriodSummary(
+            transactions: [], periodStart: day(2026, 4, 1), periodEnd: day(2026, 4, 30),
+            currencyCode: "USD", allTransactionsForBalance: historicas
+        )
+
+        #expect(summary.periodBalanceIsApproximate == true, """
+            El saldo acumula TODO el histórico, no solo el período: su marca sale de ese recorrido y
+            no de los totales del mes, que aquí están vacíos.
+            """)
+        #expect(summary.expenseIsApproximate == false, """
+            Y al revés: ninguna de esas dos cae en el período, así que el gasto del mes no se marca.
+            Si esto sale `true`, los dos bucles se están pisando.
+            """)
+    }
+
+    /// **El caso que separa el denominador bueno del malo, y por eso existe.** El test de arriba
+    /// (−500 dudosa y −500 exacta) da 50 % por las DOS reglas: pasaba igual con el denominador mal
+    /// puesto. Éste no: la review adversarial del 2026-09-09 encontró que `periodBalanceIsApproximate`
+    /// dividía entre `Σ|monto|` —la facturación bruta— en vez de entre el saldo, y la marca se perdía
+    /// justo en quien más historial tiene.
+    @Test("El saldo del widget se mide contra el SALDO, no contra la facturación que lo formó")
+    func widgetSummary_periodBalanceDividesByTheBalance() {
+        let account = Account(name: "Main", currencyCode: "USD", colorHex: "#6366F1", iconName: "creditcard", type: "bank")
+        let gasto = YalaCategory(name: "Food", colorHex: "#FF0000", isIncome: false)
+        let ingreso = YalaCategory(name: "Salary", colorHex: "#00FF00", isIncome: true)
+
+        // Movimientos que casi se cancelan: entra 60.500 y sale 60.000, así que el saldo es 500.
+        // De lo que salió, 400 se convirtió con una tasa que no era la de su día.
+        let historicas = [
+            makeStoredTx(amount: 60_500, date: day(2026, 1, 5), account: account, category: ingreso, provisional: false),
+            makeStoredTx(amount: -59_600, date: day(2026, 1, 6), account: account, category: gasto, provisional: false),
+            makeStoredTx(amount: -400, date: day(2026, 1, 7), account: account, category: gasto, provisional: true),
+        ]
+
+        let summary = WidgetDataCache.buildPeriodSummary(
+            transactions: [], periodStart: day(2026, 4, 1), periodEnd: day(2026, 4, 30),
+            currencyCode: "USD", allTransactionsForBalance: historicas
+        )
+
+        #expect(summary.periodBalance == 500)
+        #expect(summary.periodBalanceIsApproximate == true, """
+            400 sobre el saldo de 500 es el 80 %: la marca tiene que salir. Sobre la facturación
+            bruta (120.500) sería el 0,33 % y el widget afirmaría «500» exacto, cuando cuatro
+            quintas partes de ese número salieron de una tasa dudosa.
+            """)
+    }
+
+    @Test("Sin histórico no hay saldo y por tanto tampoco marca")
+    func widgetSummary_noBalanceMeansNoMark() {
+        let summary = WidgetDataCache.buildPeriodSummary(
+            transactions: [], periodStart: day(2026, 4, 1), periodEnd: day(2026, 4, 30),
+            currencyCode: "USD"
+        )
+        #expect(summary.periodBalance == nil)
+        #expect(summary.periodBalanceIsApproximate == false)
+    }
+
+    // MARK: - El carril del saldo vivo hasta la hoja educativa
+
+    /// El source-scan fija que cada salto existe; esto fija que el valor llega de verdad.
+    @Test("La señal del saldo vivo llega al resultado del processor")
+    func liveAnchorSignalReachesTheProcessorResult() {
+        let account = Account(name: "Main", currencyCode: "USD", colorHex: "#6366F1", iconName: "creditcard", type: "bank")
+        let category = YalaCategory(name: "Food", colorHex: "#FF0000", isIncome: false)
+        let hoy = calendar.startOfDay(for: Date())
+        let interval = DateInterval(
+            start: calendar.date(byAdding: .day, value: -2, to: hoy) ?? hoy,
+            end: calendar.date(byAdding: .day, value: 1, to: hoy) ?? hoy
+        )
+        let tx = makeStoredTx(
+            amount: -100, date: calendar.date(byAdding: .day, value: -1, to: hoy) ?? hoy,
+            account: account, category: category, provisional: false
+        )
+
+        for aproximado in [true, false] {
+            let result = TrendDataProcessor.processTrendData(
+                transactions: [tx], accounts: [], metric: .balance,
+                period: .thisMonth, grouping: .day, interval: interval, currencyCode: "USD",
+                liveBalanceOverride: .init(
+                    value: 1234, nativeBalances: [:], amountsAreApproximate: aproximado
+                )
+            )
+            #expect(result.liveAnchorIsApproximate == aproximado, """
+                El processor tiene que reenviar la señal tal cual; con `aproximado == \(aproximado)`
+                devolvió \(result.liveAnchorIsApproximate).
+                """)
+        }
+    }
+
+    /// Sin anchor no puede quedar una marca huérfana de su número.
+    @Test("Sin saldo vivo, la señal del anchor es false")
+    func noLiveAnchorMeansNoMark() {
+        let account = Account(name: "Main", currencyCode: "USD", colorHex: "#6366F1", iconName: "creditcard", type: "bank")
+        let category = YalaCategory(name: "Food", colorHex: "#FF0000", isIncome: false)
+        let interval = DateInterval(start: day(2026, 2, 1), end: day(2026, 2, 28))
+        let tx = makeStoredTx(
+            amount: -100, date: day(2026, 2, 10), account: account, category: category, provisional: true
+        )
+
+        let result = TrendDataProcessor.processTrendData(
+            transactions: [tx], accounts: [], metric: .balance,
+            period: .lastMonth, grouping: .day, interval: interval, currencyCode: "USD",
+            liveBalanceOverride: nil
+        )
+
+        #expect(result.liveAnchor == nil)
+        #expect(!result.liveAnchorIsApproximate)
+    }
+
+    // MARK: - El KPI de Distribución
+
+    /// El régimen vivo sí sabe; el cerrado no, y devolver `false` ahí dice «no lo sé».
+    @Test("El KPI de Balance marca en el régimen vivo y no en el cerrado")
+    func balanceKPIMarksOnlyTheLiveRegime() {
+        let account = Account(name: "Main", currencyCode: "USD", colorHex: "#6366F1", iconName: "creditcard", type: "bank")
+        let category = YalaCategory(name: "Food", colorHex: "#FF0000", isIncome: false)
+        let hoy = calendar.startOfDay(for: Date())
+
+        // Una cuenta en EUR con el converter en modo inexacto: la conversión de HOY es aproximada.
+        let tx = TransactionItem(
+            date: calendar.date(byAdding: .day, value: -1, to: hoy) ?? hoy,
+            amount: -100, currencyCode: "EUR", note: "",
+            category: category, account: account, tags: [], amountInPreferredCurrency: -100
+        )
+        tx.preferredCurrencyCode = "USD"
+
+        let converter = MockCurrencyConverter(
+            fixedRate: 1.1, quality: .carriedForward(fromDateKey: "2026-04-09")
+        )
+
+        let vivo = BalanceKPICalculator.result(
+            transactions: [tx], accounts: [account],
+            interval: DateInterval(
+                start: calendar.date(byAdding: .day, value: -3, to: hoy) ?? hoy,
+                end: calendar.date(byAdding: .day, value: 1, to: hoy) ?? hoy
+            ),
+            period: .thisMonth, currencyCode: "USD", converter: converter
+        )
+        #expect(vivo.isApproximate, """
+            El período cubre hoy ⇒ saldo vivo ⇒ el `Breakdown` sabe que la tasa de hoy no era exacta.
+            """)
+
+        // La transacción va DENTRO del intervalo cerrado a propósito: con `hasDataInPeriod == false`
+        // el calculador sale por el camino «sin datos», que devuelve el mismo `false` por otra vía y
+        // haría que esta aserción se cumpliera sin haber pisado el régimen cerrado. Lo señaló la
+        // review adversarial del 2026-09-09.
+        let txCerrada = TransactionItem(
+            date: day(2026, 1, 15), amount: -100, currencyCode: "EUR", note: "",
+            category: category, account: account, tags: [], amountInPreferredCurrency: -100
+        )
+        txCerrada.preferredCurrencyCode = "USD"
+
+        let cerrado = BalanceKPICalculator.result(
+            transactions: [txCerrada], accounts: [account],
+            interval: DateInterval(start: day(2026, 1, 1), end: day(2026, 1, 31)),
+            period: .lastMonth, currencyCode: "USD", converter: converter
+        )
+        #expect(cerrado.hasDataInPeriod, """
+            CONTROL DEL ESCENARIO: sin esto, el caso de abajo pasaría por «sin datos» y no por el
+            régimen cerrado, que es lo que dice medir.
+            """)
+        #expect(!cerrado.isApproximate, """
+            El período cerrado lee la curva histórica, que no acumula calidad de conversión. `false`
+            aquí es un PIN del literal, no una red: lo que fija es que nadie lo cablee a la señal del
+            saldo vivo, que describiría otro número. Producir la de verdad es
+            `fx-historical-balance-curve-unmarked`.
+            """)
+    }
+}
+
+//
+//  MARK: - El productor de Registros (review adversarial del 2026-09-09)
+//
+//  Se añade porque la primera versión de este trabajo dejó `RecordsViewModel.calculateSummary` —un
+//  productor NUEVO, con acumuladores por lado y su propio cociente para el neto— cubierto solo por un
+//  source-scan de la VISTA. Intercambiar los acumuladores de ingreso y gasto, o cambiar el neto por
+//  un OR, no ponía nada en rojo.
+//
+//  Va por el camino real (`applyFilters`), no llamando al privado: es lo que la pantalla ejecuta.
+//
+
+@MainActor
+@Suite("Marca de aproximado · el resumen de Registros", .serialized)
+struct RecordsSummaryApproximateMarkTests {
+
+    /// `period` vive en `SessionState.shared`. Se fija a `.allTime` para que el intervalo no dependa
+    /// de la fecha de hoy, y se restaura: es estado global.
+    private func conPeriodoCompleto(_ cuerpo: () throws -> Void) rethrows {
+        let anterior = SessionState.shared.selectedPeriod
+        SessionState.shared.selectedPeriod = .allTime
+        defer { SessionState.shared.selectedPeriod = anterior }
+        try cuerpo()
+    }
+
+    private func makeTx(
+        amount: Double, date: Date, account: Account, category: YalaCategory,
+        provisional: Bool, context: ModelContext
+    ) -> TransactionItem {
+        let tx = TransactionItem(
+            date: date, amount: amount, currencyCode: account.currencyCode, note: "",
+            category: category, account: account, tags: [],
+            amountInPreferredCurrency: amount
+        )
+        tx.preferredCurrencyCode = account.currencyCode
+        tx.isExchangeRateProvisional = provisional
+        context.insert(tx)
+        return tx
+    }
+
+    private func resumen(
+        _ txs: [TransactionItem], _ accounts: [Account], _ context: ModelContext
+    ) -> RecordsViewModel.RecordsSummary {
+        let vm = RecordsViewModel()
+        vm.applyFilters(
+            transactions: txs, accounts: accounts, categories: [], tags: [], context: context
+        )
+        return vm.recordsSummary
+    }
+
+    /// **La marca va por LADO, y este caso lo demuestra en las dos direcciones a la vez.** Con los
+    /// acumuladores intercambiados, las dos aserciones se invierten y el test se pone rojo — que es
+    /// lo que un source-scan de la vista no puede detectar.
+    @Test("Un gasto aproximado marca el gasto y NO el ingreso")
+    func approximateExpenseMarksOnlyTheExpenseSide() throws {
+        try conPeriodoCompleto {
+            let context = try makeTestContext()
+            let account = makeTestAccount(context: context, name: "Diaria", currencyCode: "PEN")
+            let gasto = makeTestCategory(context: context, name: "Comida", isIncome: false)
+            let ingreso = makeTestCategory(context: context, name: "Sueldo", isIncome: true)
+            let hoy = Date()
+
+            let txs = [
+                makeTx(amount: -400, date: hoy, account: account, category: gasto,
+                       provisional: true, context: context),
+                makeTx(amount: -600, date: hoy, account: account, category: gasto,
+                       provisional: false, context: context),
+                makeTx(amount: 5_000, date: hoy, account: account, category: ingreso,
+                       provisional: false, context: context),
+            ]
+            try context.save()
+
+            let s = resumen(txs, [account], context)
+
+            #expect(s.expenseIsApproximate, """
+                400 de 1.000 es el 40 %: el gasto se marca.
+                """)
+            #expect(!s.incomeIsApproximate, """
+                El ingreso no tuvo ni una conversión dudosa. Si esto sale `true`, los acumuladores
+                están cruzados y el usuario ve «≈» sobre un número exacto.
+                """)
+        }
+    }
+
+    @Test("Con todo exacto no se marca ningún lado")
+    func allExactMarksNothing() throws {
+        try conPeriodoCompleto {
+            let context = try makeTestContext()
+            let account = makeTestAccount(context: context, name: "Diaria", currencyCode: "PEN")
+            let gasto = makeTestCategory(context: context, name: "Comida", isIncome: false)
+            let ingreso = makeTestCategory(context: context, name: "Sueldo", isIncome: true)
+            let hoy = Date()
+
+            let txs = [
+                makeTx(amount: -1_000, date: hoy, account: account, category: gasto,
+                       provisional: false, context: context),
+                makeTx(amount: 5_000, date: hoy, account: account, category: ingreso,
+                       provisional: false, context: context),
+            ]
+            try context.save()
+
+            let s = resumen(txs, [account], context)
+
+            #expect(!s.expenseIsApproximate)
+            #expect(!s.incomeIsApproximate)
+            #expect(!s.balanceIsApproximate)
+        }
+    }
+
+    /// El umbral, no un OR. Sin esto, `magnitude > 0` pasaría los dos tests de arriba.
+    @Test("Una aproximada que no pesa NO marca el gasto")
+    func tinyApproximateDoesNotMark() throws {
+        try conPeriodoCompleto {
+            let context = try makeTestContext()
+            let account = makeTestAccount(context: context, name: "Diaria", currencyCode: "PEN")
+            let gasto = makeTestCategory(context: context, name: "Comida", isIncome: false)
+            let hoy = Date()
+
+            let txs = [
+                makeTx(amount: -5, date: hoy, account: account, category: gasto,
+                       provisional: true, context: context),
+                makeTx(amount: -1_000, date: hoy, account: account, category: gasto,
+                       provisional: false, context: context),
+            ]
+            try context.save()
+
+            #expect(!resumen(txs, [account], context).expenseIsApproximate, """
+                5 de 1.005 es el 0,5 %, por debajo del 5 % que decidió el owner el 2026-09-08. Con un
+                OR esto marcaría, y una marca que sale siempre deja de significar nada.
+                """)
+        }
+    }
+
+    /// **El neto necesita su propio cociente y NO el OR de los dos lados.** Es el caso que la review
+    /// adversarial del ticket anterior cazó en `CashFlowCalculator` antes de mergear, replicado aquí
+    /// porque `calculateSummary` reimplementa la misma regla.
+    @Test("Dos lados bajo el umbral con un saldo pequeño SÍ marcan el saldo")
+    func smallBalanceBetweenTwoBigSidesMarks() throws {
+        try conPeriodoCompleto {
+            let context = try makeTestContext()
+            let account = makeTestAccount(context: context, name: "Diaria", currencyCode: "PEN")
+            let gasto = makeTestCategory(context: context, name: "Comida", isIncome: false)
+            let ingreso = makeTestCategory(context: context, name: "Sueldo", isIncome: true)
+            let hoy = Date()
+
+            // Ingreso 1.000.000 con 49.000 dudosos → 4,9 %, no marca su lado.
+            // Gasto 999.000 exacto → no marca su lado.
+            // Saldo mostrado: 1.000, con 49.000 de incertidumbre encima.
+            let txs = [
+                makeTx(amount: 49_000, date: hoy, account: account, category: ingreso,
+                       provisional: true, context: context),
+                makeTx(amount: 951_000, date: hoy, account: account, category: ingreso,
+                       provisional: false, context: context),
+                makeTx(amount: -999_000, date: hoy, account: account, category: gasto,
+                       provisional: false, context: context),
+            ]
+            try context.save()
+
+            let s = resumen(txs, [account], context)
+
+            #expect(s.balance == 1_000)
+            #expect(!s.incomeIsApproximate, "49.000 de 1.000.000 es el 4,9 %: su lado no marca")
+            #expect(!s.expenseIsApproximate, "el gasto es exacto")
+            #expect(s.balanceIsApproximate, """
+                Y aun así el saldo SÍ marca: su incertidumbre es 49 veces el número que se enseña.
+                Con el OR de los dos lados este número saldría limpio precisamente cuando menos lo
+                está.
+                """)
+        }
+    }
+}

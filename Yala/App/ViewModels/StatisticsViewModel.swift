@@ -174,6 +174,10 @@ final class StatisticsViewModel: Filterable {
     /// educativo "Tu saldo hoy" desde la pill "Hoy ⓘ" del chart.
     var trendLiveAnchorBreakdown: [String: Decimal]? = nil
 
+    /// `true` si el saldo vivo se armó con alguna tasa que no era la de hoy. Va a la misma hoja
+    /// educativa, que sin la marca declaraba exacto el número que existe para explicar que no lo es.
+    var trendLiveAnchorIsApproximate: Bool = false
+
     /// Trend grouping based on period
     var trendGrouping: TrendGrouping = .month
 
@@ -396,6 +400,7 @@ final class StatisticsViewModel: Filterable {
             if result.totalExpense != totalExpense { totalExpense = result.totalExpense }
             if result.liveAnchor != trendLiveAnchor { trendLiveAnchor = result.liveAnchor }
             if result.liveAnchorNativeBalances != trendLiveAnchorBreakdown { trendLiveAnchorBreakdown = result.liveAnchorNativeBalances }
+            if result.liveAnchorIsApproximate != trendLiveAnchorIsApproximate { trendLiveAnchorIsApproximate = result.liveAnchorIsApproximate }
             dataMetric = selectedMetric
         } else {
             calculatePerAccountTrend(

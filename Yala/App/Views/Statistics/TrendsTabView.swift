@@ -295,7 +295,8 @@ struct TrendsTabView: View {
                         value: summary.totalIncome,
                         currencyCode: defaultCurrencyCode,
                         font: DS.Typography.subheadline, secondaryFont: DS.Typography.captionSmall,
-                        tint: .secondary
+                        tint: .secondary,
+                        isEstimate: summary.incomeAmountsAreApproximate
                     )
                     if appPreferences.showVariations {
                         VariationChip(variation: summary.incomeVariation, size: .small, isExpenseContext: false)
@@ -312,7 +313,8 @@ struct TrendsTabView: View {
                     value: summary.totalExpense,
                     currencyCode: defaultCurrencyCode,
                     font: DS.Typography.subheadline, secondaryFont: DS.Typography.captionSmall,
-                    tint: .secondary
+                    tint: .secondary,
+                    isEstimate: summary.expenseAmountsAreApproximate
                 )
                 if appPreferences.showVariations {
                     VariationChip(variation: summary.expenseVariation, size: .small, isExpenseContext: true)
@@ -478,7 +480,8 @@ struct TrendsTabView: View {
                     period: trendsViewModel.detailPeriod,
                     chartHeight: 170,
                     liveAnchor: trendsViewModel.trendLiveAnchor,
-                    liveAnchorBreakdown: trendsViewModel.trendLiveAnchorBreakdown
+                    liveAnchorBreakdown: trendsViewModel.trendLiveAnchorBreakdown,
+                    liveAnchorIsApproximate: trendsViewModel.trendLiveAnchorIsApproximate
                 )
             } else {
                 chartEmptyState

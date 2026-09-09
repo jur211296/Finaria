@@ -13,6 +13,12 @@ import AppIntents
 // MARK: - Shared Helpers
 
 /// Compact amount formatting for Lock Screen widgets
+///
+/// **Sin marca «≈» a propósito.** No imprime divisa —devuelve «3,2K», «1,5M» o la cifra pelada— y
+/// el «≈» del repo se antepone al SÍMBOLO de la divisa, no al número. En un widget de pantalla de
+/// bloqueo, donde el ancho es de dos o tres glifos y el propio formato ya redondea a un decimal de
+/// millar, un «≈» delante se lee como parte de la cifra y compite por el espacio con ella. Que el
+/// número sea aproximado se ve en el widget grande del mismo dato, que sí trae divisa.
 private func formatCompact(_ value: Double) -> String {
     let absValue = abs(value)
     let sign = value < 0 ? "-" : ""

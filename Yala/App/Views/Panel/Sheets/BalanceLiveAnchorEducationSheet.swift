@@ -10,6 +10,17 @@ import SwiftUI
 /// varias monedas. Se abre desde la pill "Hoy" y desde el overlay del dot.
 struct BalanceLiveAnchorEducationSheet: View {
     let liveAnchorValue: Double
+    /// `true` si alguna de las divisas de abajo se convirtió con una tasa que no era la de hoy.
+    /// Sale del mismo `LiveBalanceCalculator.Breakdown` que el propio `liveAnchorValue`.
+    ///
+    /// **Su criterio es un OR por DIVISA, no el umbral del 5 % del resto de los totales, y eso es
+    /// una decisión de Jürgen del 2026-09-08** (`approximate-mark-ors-over-whole-period`), escrita
+    /// con este motivo: la unidad de este saldo ya es la divisa, no la transacción, y una divisa
+    /// entera sin tasa sí es una ausencia que merece la marca. Consecuencia aceptada: 30 USD
+    /// olvidados con la tasa caducada marcan un saldo de 42.000 €. No lo «arregles» aplicando
+    /// `ApproximateMarkThreshold` aquí sin volver a preguntárselo — la review adversarial del
+    /// 2026-09-09 lo levantó como bug y lo zanjó esa decisión.
+    let liveAnchorIsApproximate: Bool
     let historicalValue: Double?
     let nativeBalances: [String: Decimal]
     let preferredCurrencyCode: String
@@ -68,7 +79,8 @@ struct BalanceLiveAnchorEducationSheet: View {
                 value: liveAnchorValue,
                 currencyCode: preferredCurrencyCode,
                 font: DS.Typography.heroAmount,
-                secondaryFont: DS.Typography.heroAmountSecondary
+                secondaryFont: DS.Typography.heroAmountSecondary,
+                isEstimate: liveAnchorIsApproximate
             )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -96,6 +108,12 @@ struct BalanceLiveAnchorEducationSheet: View {
             L10n.Panel.LiveAnchorEducation.bodyLineOneFormat(preferredIdentifier)
         ]
         if let historical = historicalValue, abs(historical - liveAnchorValue) > Self.nearZeroEpsilon {
+            // SIN marca a propósito, y es la única excepción de esta hoja: `historicalValue` es el
+            // último punto de la curva —montos convertidos al TC de SU día, no al de hoy— y quien
+            // sabría si aquellas conversiones fueron aproximadas es el acumulador de
+            // `TrendDataProcessor`, que hoy no lo calcula (`fx-historical-balance-curve-unmarked`).
+            // Marcarlo con `liveAnchorIsApproximate` sería atribuirle la incertidumbre de OTRO
+            // número: justo lo que este ticket viene a corregir.
             let formatted = appPreferences.currency(
                 historical,
                 currencyCode: preferredCurrencyCode,
@@ -137,6 +155,8 @@ struct BalanceLiveAnchorEducationSheet: View {
                 .foregroundStyle(.thPrimaryText)
                 .frame(width: 44, alignment: .leading)
 
+            // El saldo en su PROPIA divisa nunca lleva marca: no hubo conversión que juzgar. La
+            // marca, si toca, va en la traducción a la divisa preferida de la derecha.
             AmountText(
                 value: row.nativeDouble,
                 currencyCode: row.code,
@@ -151,7 +171,8 @@ struct BalanceLiveAnchorEducationSheet: View {
                 let convertedFormatted = appPreferences.currency(
                     row.convertedToday,
                     currencyCode: preferredCurrencyCode,
-                    forceFullPrecision: false
+                    forceFullPrecision: false,
+                    isEstimate: row.convertedIsApproximate
                 )
                 Text(L10n.Panel.LiveAnchorEducation.breakdownRowConvertedFormat(convertedFormatted))
                     .font(DS.Typography.caption)
@@ -166,6 +187,9 @@ struct BalanceLiveAnchorEducationSheet: View {
         let code: String
         let native: Decimal
         let convertedToday: Double
+        /// Calidad de ESTA conversión, no la del total. La hoja desglosa divisa a divisa, así que
+        /// heredar el OR del saldo marcaría como dudosa una divisa cuya tasa sí era la de hoy.
+        let convertedIsApproximate: Bool
         var nativeDouble: Double { (native as NSDecimalNumber).doubleValue }
     }
 
@@ -174,16 +198,25 @@ struct BalanceLiveAnchorEducationSheet: View {
     private var orderedBreakdown: [BreakdownRow] {
         nativeBalances.compactMap { (code, native) -> BreakdownRow? in
             let converted: Double
+            let isApproximate: Bool
             if code == preferredCurrencyCode {
                 converted = (native as NSDecimalNumber).doubleValue
+                isApproximate = false
             } else {
-                let convertedDecimal = currencyConverter.convertWithLatestRate(
+                // `convertChecked…` en vez de `convertWithLatestRate`: mismo número, y además la
+                // calidad. Es la misma llamada que hace `LiveBalanceCalculator` para decidir la
+                // marca del total, así que fila y total no pueden contradecirse.
+                let outcome = currencyConverter.convertCheckedWithLatestRate(
                     native, from: code, to: preferredCurrencyCode
                 )
-                converted = (convertedDecimal as NSDecimalNumber).doubleValue
+                converted = (outcome.amount as NSDecimalNumber).doubleValue
+                isApproximate = !outcome.quality.isExact
             }
             guard abs(converted) > Self.nearZeroEpsilon else { return nil }
-            return BreakdownRow(code: code, native: native, convertedToday: converted)
+            return BreakdownRow(
+                code: code, native: native, convertedToday: converted,
+                convertedIsApproximate: isApproximate
+            )
         }
         .sorted { lhs, rhs in
             if lhs.code == preferredCurrencyCode { return true }

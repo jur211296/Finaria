@@ -145,7 +145,8 @@ struct RecordsTabView: View {
                 AmountText(
                     value: recordsSummary.balance,
                     currencyCode: defaultCurrencyCode,
-                    font: DS.Typography.heroAmount, secondaryFont: DS.Typography.heroAmountSecondary
+                    font: DS.Typography.heroAmount, secondaryFont: DS.Typography.heroAmountSecondary,
+                    isEstimate: recordsSummary.balanceIsApproximate
                 )
                 .accessibilityIdentifier("records_summary_balance")
 
@@ -212,7 +213,8 @@ struct RecordsTabView: View {
                             value: recordsSummary.income,
                             currencyCode: defaultCurrencyCode,
                             font: DS.Typography.subheadline, secondaryFont: DS.Typography.captionSmall,
-                            tint: .secondary
+                            tint: .secondary,
+                            isEstimate: recordsSummary.incomeIsApproximate
                         )
                         .accessibilityIdentifier("records_summary_income")
                     }
@@ -220,6 +222,13 @@ struct RecordsTabView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(L10n.Accessibility.metricIncome)
+                // El `accessibilityLabel` del Button TAPA la etiqueta que `AmountText` se pone a sí
+                // mismo, así que sin este `accessibilityValue` VoiceOver no lee el número —ni el
+                // «≈»— en un control que existe para enseñarlo.
+                .accessibilityValue(appPreferences.currency(
+                    recordsSummary.income, currencyCode: defaultCurrencyCode,
+                    isEstimate: recordsSummary.incomeIsApproximate
+                ))
             }
 
             Button {
@@ -243,7 +252,8 @@ struct RecordsTabView: View {
                         value: recordsSummary.expense,
                         currencyCode: defaultCurrencyCode,
                         font: DS.Typography.subheadline, secondaryFont: DS.Typography.captionSmall,
-                        tint: .secondary
+                        tint: .secondary,
+                        isEstimate: recordsSummary.expenseIsApproximate
                     )
                     .accessibilityIdentifier("records_summary_expense")
                 }
@@ -251,10 +261,14 @@ struct RecordsTabView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(L10n.Accessibility.metricExpense)
+            .accessibilityValue(appPreferences.currency(
+                recordsSummary.expense, currencyCode: defaultCurrencyCode,
+                isEstimate: recordsSummary.expenseIsApproximate
+            ))
         }
     }
 
-    private var recordsSummary: (balance: Double, income: Double, expense: Double) {
+    private var recordsSummary: RecordsViewModel.RecordsSummary {
         viewModel.recordsSummary
     }
 

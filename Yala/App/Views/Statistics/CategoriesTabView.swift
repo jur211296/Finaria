@@ -354,7 +354,11 @@ struct CategoriesTabView: View {
                 AmountText(
                     value: isBalanceMode ? (balanceKPI?.value ?? 0) : totalAmount,
                     currencyCode: defaultCurrencyCode,
-                    font: DS.Typography.heroAmount, secondaryFont: DS.Typography.heroAmountSecondary
+                    font: DS.Typography.heroAmount, secondaryFont: DS.Typography.heroAmountSecondary,
+                    // La marca sigue al número, que cambia de fuente con el modo. Fuera de Balance
+                    // el hero es la suma de las tajadas del pie (`TopSpendingCategoriesCalculator`),
+                    // que no acumula calidad de conversión: `fx-category-totals-unmarked`.
+                    isEstimate: isBalanceMode ? (balanceKPI?.isApproximate ?? false) : false
                 )
                 .contentTransition(.numericText())
 

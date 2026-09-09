@@ -145,8 +145,26 @@ final class RecordsViewModel: Filterable {
     /// desde el set AMPLIO. La consumen el chip de resumen y el calendario (DailySpendingCalculator).
     private(set) var statsAdjustment: GroupBridgeStatsAdjustment = .none
 
-    /// Cached summary (balance, income, expense) - updated when groupedRecords changes
-    var recordsSummary: (balance: Double, income: Double, expense: Double) = (0, 0, 0)
+    /// Los tres números del resumen de Registros más la marca «≈» de cada uno.
+    ///
+    /// Era una tupla de tres `Double`. Pasa a struct al ganar las señales: seis elementos sin
+    /// nombre en el punto de asignación es donde se cruzan dos campos del mismo tipo sin que
+    /// nada se ponga rojo.
+    struct RecordsSummary: Equatable {
+        var balance: Double = 0
+        var income: Double = 0
+        var expense: Double = 0
+
+        /// Las tres van **por lado**, igual que en `CashFlowSummary` y por el mismo motivo: la
+        /// pantalla pinta los tres números por separado, y una señal única le pondría «≈» al
+        /// total de ingresos por culpa de un gasto mal convertido.
+        var incomeIsApproximate: Bool = false
+        var expenseIsApproximate: Bool = false
+        var balanceIsApproximate: Bool = false
+    }
+
+    /// Cached summary - updated when groupedRecords changes
+    var recordsSummary = RecordsSummary()
 
     /// Total count of filtered records
     var filteredCount: Int {
@@ -297,6 +315,13 @@ final class RecordsViewModel: Filterable {
     private func calculateSummary() {
         var income: Double = 0
         var expense: Double = 0
+        // Magnitudes sumadas (nunca netos) para el cociente de `ApproximateMarkThreshold`: los
+        // errores de dos conversiones distintas no se cancelan entre sí. Mismo razonamiento que
+        // el `exposedBase` de `FXPnLLogic` y que `CashFlowCalculator`.
+        var incomeApproximateMagnitude: Double = 0
+        var incomeTotalMagnitude: Double = 0
+        var expenseApproximateMagnitude: Double = 0
+        var expenseTotalMagnitude: Double = 0
 
         for group in groupedRecords {
             for record in group.records {
@@ -313,17 +338,44 @@ final class RecordsViewModel: Filterable {
                     // categoría reduce el bucket (reembolso), no suma magnitud.
                     // `statsAdjustment` proyecta un gasto de grupo Caso A a "mi parte" (neto).
                     let amount = statsAdjustment.amountInPreferredCurrency(record)
+                    // Este resumen NO convierte: lee el `amountInPreferredCurrency` que ya se
+                    // guardó. Quien sabe si aquella tasa era la del día es el flag de la propia
+                    // transacción — es la rama «misma divisa» de `CashFlowCalculator:112-114`, y
+                    // aquí es la única que hay.
+                    let isApproximate = record.isExchangeRateProvisional
+                    let magnitude = abs(amount)
                     if TransactionClassificationLogic.isIncome(record) {
                         income += amount
+                        incomeTotalMagnitude += magnitude
+                        if isApproximate { incomeApproximateMagnitude += magnitude }
                     } else {
                         expense -= amount
+                        expenseTotalMagnitude += magnitude
+                        if isApproximate { expenseApproximateMagnitude += magnitude }
                     }
                 }
             }
         }
 
         // Balance is simply the difference (cash flow)
-        let newSummary = (income - expense, income, expense)
+        let newSummary = RecordsSummary(
+            balance: income - expense,
+            income: income,
+            expense: expense,
+            incomeIsApproximate: ApproximateMarkThreshold.marks(
+                approximate: incomeApproximateMagnitude, total: incomeTotalMagnitude
+            ),
+            expenseIsApproximate: ApproximateMarkThreshold.marks(
+                approximate: expenseApproximateMagnitude, total: expenseTotalMagnitude
+            ),
+            // El neto necesita su propio cociente y NO el OR de los dos lados: con umbrales por
+            // lado, un ingreso grande con un 4,9 % dudoso y un gasto grande exacto pueden dejar
+            // un neto pequeño con una incertidumbre mayor que él mismo, y saldría sin marca.
+            balanceIsApproximate: ApproximateMarkThreshold.marks(
+                approximate: incomeApproximateMagnitude + expenseApproximateMagnitude,
+                total: income - expense
+            )
+        )
         if newSummary != recordsSummary { recordsSummary = newSummary }
     }
 

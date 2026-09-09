@@ -45,6 +45,27 @@ enum BalanceKPICalculator {
     struct Result: Equatable {
         let value: Double
         let hasDataInPeriod: Bool
+
+        /// `true` si el número salió de alguna tasa que no era la de su día.
+        ///
+        /// **Hoy solo se rellena en el régimen VIVO.** Ahí el número lo arma `LiveBalanceCalculator`
+        /// convirtiendo cada bucket con el TC de hoy, y su `Breakdown` mide la calidad de cada
+        /// conversión, así que la señal viene con el valor. En el régimen CERRADO el número es el
+        /// último punto de la curva acumulada de `TrendDataProcessor`, que suma
+        /// `amountInPreferredCurrency` sin acumular la calidad de nadie: **no hay señal que leer**,
+        /// ni aquí ni en ninguna otra pantalla que muestre ese saldo. `false` ahí dice «no lo sé»,
+        /// no «es exacto».
+        ///
+        /// **Y que conste que es alcance, no imposibilidad** — la review adversarial del 2026-09-09
+        /// tenía razón en señalarlo. El ingrediente (`tx.isExchangeRateProvisional`) está a mano:
+        /// `result(...)` recibe el array entero. De hecho `WidgetDataCache.buildPeriodSummary` hace
+        /// exactamente ese cálculo para el saldo del widget, en el mismo commit. La diferencia es
+        /// dónde vive el bucle: allí es una suma propia de cuatro líneas; aquí el número sale de
+        /// `fillBalanceBuckets`, que alimenta a la vez la curva y este KPI y tiene dos suites
+        /// encima (`TrendDataProcessorTests`, `BalanceKPIParityTests`). Por eso va aparte, en
+        /// `fx-historical-balance-curve-unmarked` — y por eso ese ticket lleva escrito que en el
+        /// widget sí se pudo.
+        let isApproximate: Bool
     }
 
     /// KPI de Balance para un período, con la misma semántica que el Panel.
@@ -97,7 +118,11 @@ enum BalanceKPICalculator {
         // `BalanceKPIParityTests` compara este camino contra el completo en los ocho
         // períodos y en los bordes; si el atajo divergiera, se ponen rojos.
         if let info = liveOverride, hasDataInPeriod {
-            return Result(value: info.value, hasDataInPeriod: true)
+            return Result(
+                value: info.value,
+                hasDataInPeriod: true,
+                isApproximate: info.amountsAreApproximate
+            )
         }
 
         let finalBalance = TrendDataProcessor.processTrendData(
@@ -112,7 +137,9 @@ enum BalanceKPICalculator {
             liveBalanceOverride: liveOverride
         ).finalBalance
 
-        return Result(value: finalBalance, hasDataInPeriod: hasDataInPeriod)
+        // Régimen cerrado (o sin datos): `finalBalance` sale de la curva histórica, que no lleva
+        // señal. Ver el docblock de `Result.isApproximate`.
+        return Result(value: finalBalance, hasDataInPeriod: hasDataInPeriod, isApproximate: false)
     }
 
     /// Solo el número, para comparar contra el KPI del Panel.

@@ -26,6 +26,20 @@ struct WidgetTransaction: Codable {
     let subcategoryName: String?
     let isIncome: Bool
     let amountInPreferredCurrency: Double
+    /// `true` si el `amountInPreferredCurrency` de arriba se selló con una tasa que no era la de su
+    /// día. Viaja al widget porque su camino de emergencia (`WidgetDataService.buildPeriodSummary`)
+    /// recalcula los totales desde estas filas y, sin el flag, los declararía exactos sin saberlo.
+    ///
+    /// **Opcional aunque este lado solo escriba**: esta struct y su gemela de `YalaWidgets` tienen
+    /// que decodificar el MISMO payload, y en los discos de hoy hay snapshots sin esta clave. Un
+    /// `Bool` a secas los rompería enteros.
+    ///
+    /// Lo fija `WidgetSessionSealTests`, y con una salvedad que importa: **ese test solo alcanza a
+    /// ESTA copia**. El target `YalaTests` sincroniza el grupo `YalaTests` y compila `Yala`, no
+    /// `YalaWidgets` (`project.pbxproj`), así que su `decode(WidgetDataSnapshot.self, …)` resuelve
+    /// aquí. A la copia del widget —la que de verdad lee en producción— la vigila el source-scan
+    /// de `ApproximateMarkSecondarySurfacesWiringTests`.
+    let isExchangeRateProvisional: Bool?
 }
 
 /// Lightweight budget data for widgets
@@ -144,6 +158,25 @@ struct WidgetPeriodSummary: Codable {
     /// For current periods: current total balance
     /// For past periods: balance as it was at the end of that period
     let periodBalance: Double?
+
+    /// Las marcas «≈» de los cuatro números de arriba, una por número.
+    ///
+    /// **Van por lado y no como señal única**, por lo mismo que en `CashFlowSummary`: los widgets
+    /// pintan los totales por separado (`ExpenseWidget` solo el gasto, los pies solo el gasto), y
+    /// una señal común le pondría «≈» a un número en el que no hubo esa conversión. El criterio es
+    /// `ApproximateMarkThreshold`, el mismo umbral del 5 % que usa la app: dos umbrales para el
+    /// mismo problema es como divergen.
+    ///
+    /// **Opcionales aunque este lado solo escriba**, igual que `periodBalance`: esta struct y su
+    /// gemela de `YalaWidgets` decodifican el mismo payload del App Group, y los snapshots ya
+    /// escritos no traen estas claves. Con `Bool` a secas, decodificar uno de esos lanza
+    /// `keyNotFound` y se pierde el snapshot ENTERO —no solo el campo—, porque la clave cuelga de
+    /// `thisMonthSummary`, que no es opcional. Lo fija `WidgetSessionSealTests` **para esta copia**;
+    /// la del widget, el source-scan (ver `isExchangeRateProvisional` arriba).
+    let incomeIsApproximate: Bool?
+    let expenseIsApproximate: Bool?
+    let netCashFlowIsApproximate: Bool?
+    let periodBalanceIsApproximate: Bool?
 }
 
 /// Complete widget data snapshot
@@ -361,7 +394,8 @@ enum WidgetDataCache {
                 subcategoryIcon: tx.subcategory?.iconName ?? tx.category?.iconName,
                 subcategoryName: tx.subcategory?.name,
                 isIncome: isIncomeTx(tx),
-                amountInPreferredCurrency: tx.amountInPreferredCurrency
+                amountInPreferredCurrency: tx.amountInPreferredCurrency,
+                isExchangeRateProvisional: tx.isExchangeRateProvisional
             )
         }
 
@@ -744,15 +778,25 @@ enum WidgetDataCache {
         // proyecta el gasto de grupo Caso A a "mi parte".
         var totalIncome: Double = 0
         var totalExpense: Double = 0
+        // Magnitudes de la parte aproximada, por lado. Suman |contribución|, nunca netos: los
+        // errores de dos conversiones distintas no se cancelan entre sí (mismo razonamiento que
+        // `ApproximateMarkThreshold` documenta y que `CashFlowCalculator` aplica).
+        var incomeApproximateMagnitude: Double = 0
+        var expenseApproximateMagnitude: Double = 0
 
         for tx in periodTransactions {
             guard tx.category != nil else { continue }
             if adjustment.isSuppressed(tx) { continue }
             let amount = preferredAmount(tx, adjustment: adjustment)
+            // Este cache NO convierte: lee el monto ya guardado. La única vía de la señal es el
+            // flag de la transacción.
+            let isApproximate = tx.isExchangeRateProvisional
             if isIncomeTx(tx) {
                 totalIncome += abs(amount)
+                if isApproximate { incomeApproximateMagnitude += abs(amount) }
             } else {
                 totalExpense += abs(amount)
+                if isApproximate { expenseApproximateMagnitude += abs(amount) }
             }
         }
 
@@ -762,9 +806,15 @@ enum WidgetDataCache {
         // This is the sum of ALL transactions up to periodEnd (not just period transactions)
         // Matches TrendDataProcessor.fillBalanceBuckets logic
         var periodBalance: Double = 0
+        // Numerador en MAGNITUDES aunque el saldo sea una resta: los errores de dos conversiones
+        // distintas no se cancelan entre sí. El denominador, en cambio, es el saldo mismo — ver el
+        // comentario del `return`.
+        var balanceApproximateMagnitude: Double = 0
         if let allTx = allTransactionsForBalance {
             for tx in allTx where tx.date < periodEnd {
-                periodBalance += preferredAmount(tx)
+                let amount = preferredAmount(tx)
+                periodBalance += amount
+                if tx.isExchangeRateProvisional { balanceApproximateMagnitude += abs(amount) }
             }
         }
 
@@ -799,7 +849,33 @@ enum WidgetDataCache {
             topCategories: topCategories,
             topSubcategories: topSubcategories,
             cashFlowPoints: cashFlowPoints,
-            periodBalance: allTransactionsForBalance != nil ? periodBalance : nil
+            periodBalance: allTransactionsForBalance != nil ? periodBalance : nil,
+            incomeIsApproximate: ApproximateMarkThreshold.marks(
+                approximate: incomeApproximateMagnitude, total: totalIncome
+            ),
+            expenseIsApproximate: ApproximateMarkThreshold.marks(
+                approximate: expenseApproximateMagnitude, total: totalExpense
+            ),
+            // El neto lleva la incertidumbre de los DOS lados contra el número que se muestra, no
+            // el OR de las dos marcas: un ingreso grande con un 4,9 % dudoso y un gasto grande
+            // exacto dejan un neto pequeño cuya incertidumbre puede superarlo, y ninguna de las
+            // dos marcas por lado lo habría dicho.
+            netCashFlowIsApproximate: ApproximateMarkThreshold.marks(
+                approximate: incomeApproximateMagnitude + expenseApproximateMagnitude,
+                total: netCashFlow
+            ),
+            // El denominador es el SALDO, no la facturación bruta que lo formó. `periodBalance` es
+            // una resta —ingresos menos gastos de todo el histórico— y el contrato de
+            // `ApproximateMarkThreshold` es explícito: cuando el número es una resta, el
+            // denominador honesto es lo que el usuario ve. Con `Σ|monto|` la marca no salía casi
+            // nunca y fallaba justo en quien más historial tiene: 400 dudosos sobre un saldo de 500
+            // dan un 80 %, pero sobre una facturación de 300.000 dan un 0,13 %.
+            periodBalanceIsApproximate: allTransactionsForBalance != nil
+                ? ApproximateMarkThreshold.marks(
+                    approximate: balanceApproximateMagnitude, total: periodBalance
+                )
+                // Sin `periodBalance` no hay número que marcar.
+                : false
         )
     }
 

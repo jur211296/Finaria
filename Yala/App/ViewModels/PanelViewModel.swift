@@ -26,6 +26,9 @@ struct PanelTrendData: Equatable {
     /// educativa multi-currency en el sheet "Tu saldo hoy". Nil cuando no
     /// hay liveAnchor.
     var trendLiveAnchorBreakdown: [String: Decimal]? = nil
+    /// `true` si el saldo vivo se armó con alguna tasa que no era la de hoy. Lo pinta la hoja
+    /// «¿Cuánto tienes hoy?», que existe precisamente porque el saldo es multimoneda.
+    var trendLiveAnchorIsApproximate: Bool = false
 }
 
 struct PanelCategoriesData: Equatable {
@@ -577,6 +580,7 @@ final class PanelViewModel {
     var processedYDomain: ClosedRange<Double> { trendChart.processedYDomain }
     var trendLiveAnchor: BarPoint? { trendChart.trendLiveAnchor }
     var trendLiveAnchorBreakdown: [String: Decimal]? { trendChart.trendLiveAnchorBreakdown }
+    var trendLiveAnchorIsApproximate: Bool { trendChart.trendLiveAnchorIsApproximate }
     var currentInterval: DateInterval { trendChart.currentInterval }
     var currentPeriod: DetailPeriod { trendChart.currentPeriod }
     var trendTotalIncome: Double { trendChart.trendTotalIncome }
@@ -1265,6 +1269,7 @@ final class PanelViewModel {
         var newTrendFinalBalance = trendFinalBalance
         var newTrendLiveAnchor: BarPoint? = nil
         var newTrendLiveAnchorBreakdown: [String: Decimal]? = nil
+        var newTrendLiveAnchorIsApproximate = false
         if trendVisible {
             // For balance, use all transactions (no date filter) to calculate running balance
             let transactionsForTrend = trendType == .balance
@@ -1294,6 +1299,7 @@ final class PanelViewModel {
             newTrendFinalBalance = result.finalBalance
             newTrendLiveAnchor = result.liveAnchor
             newTrendLiveAnchorBreakdown = result.liveAnchorNativeBalances
+            newTrendLiveAnchorIsApproximate = result.liveAnchorIsApproximate
         }
 
         // Categories — Distribución
@@ -1386,7 +1392,8 @@ final class PanelViewModel {
                 dataTrendType: self.trendType,
                 currentBalance: newBalance,
                 trendLiveAnchor: newTrendLiveAnchor,
-                trendLiveAnchorBreakdown: newTrendLiveAnchorBreakdown
+                trendLiveAnchorBreakdown: newTrendLiveAnchorBreakdown,
+                trendLiveAnchorIsApproximate: newTrendLiveAnchorIsApproximate
             )
             if newTrend != trendChart { trendChart = newTrend }
         }

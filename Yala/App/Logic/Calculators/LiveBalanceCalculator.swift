@@ -44,15 +44,21 @@ struct LiveBalanceCalculator {
     /// moneda nativa. El breakdown habilita UX educativa sobre composición
     /// multi-currency (sheet "Tu saldo hoy"). Stats consumers ignoran el
     /// breakdown y usan solo `value`.
-    /// **No lleva la señal de aproximado a propósito.** Se le añadió y se retiró en la misma
-    /// sesión: su único consumidor es `TrendDataProcessor`, que toma de aquí `value` y
-    /// `nativeBalances` para el punto «hoy» de la curva, y llevarla hasta la sheet educativa del
-    /// saldo exigía atravesar el processor y los dos ViewModels. Un campo que nadie lee parece
-    /// cobertura en cualquier auditoría posterior y no lo es. Queda en `Breakdown`, que sí tiene
-    /// consumidor. Pendiente: `fx-live-anchor-sheet-and-distribution-kpi-unmarked`.
+    /// **Historia del campo `amountsAreApproximate`, que importa para no repetirla.** Se añadió y se
+    /// retiró en la misma sesión (`fx-presentation-still-shows-1to1`, 2026-09-06) al medir que nadie
+    /// lo leía: un campo que nadie lee parece cobertura en una auditoría posterior y no lo es.
+    /// Vuelve el 2026-09-09 con `fx-approximate-mark-missing-on-secondary-surfaces` **porque ahora
+    /// sí tiene lector**: la hoja «¿Cuánto tienes hoy?» pinta este mismo `value`, y sin la señal lo
+    /// declaraba exacto justo en la pantalla que existe para explicar que es multimoneda. El carril
+    /// es el que `nativeBalances` ya recorría —processor, los dos ViewModels, `TrendChartView`—, no
+    /// uno nuevo.
     struct LiveAnchorInfo: Equatable, Sendable {
         let value: Double
         let nativeBalances: [String: Decimal]
+
+        /// `true` si alguna divisa nativa se convirtió con una tasa que no era la de hoy. Sale del
+        /// MISMO `Breakdown` que `value`, así que número y marca no pueden divergir.
+        let amountsAreApproximate: Bool
     }
 
     /// Saldo total "hoy" en moneda preferida. Si `selectedAccountIDs` no
@@ -169,7 +175,8 @@ struct LiveBalanceCalculator {
         )
         return LiveAnchorInfo(
             value: (breakdown.convertedTotal as NSDecimalNumber).doubleValue,
-            nativeBalances: breakdown.nativeBalances
+            nativeBalances: breakdown.nativeBalances,
+            amountsAreApproximate: breakdown.amountsAreApproximate
         )
     }
 }

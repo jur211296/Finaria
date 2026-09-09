@@ -407,7 +407,12 @@ final class FullFinancialContextBuilder {
                 balance: safeDouble(cashFlow.netFlow),
                 txCount: periodTx.count,
                 dailyAvg: safeDouble(dailyAvg),
-                savingsRatePercent: savingsRate.map(safeDouble)
+                savingsRatePercent: savingsRate.map(safeDouble),
+                // `cashFlow` ya trae las tres calculadas; hasta hoy se leían 3 de sus 6 campos y el
+                // asistente respondía cifras multidivisa como si fueran exactas.
+                incomeIsApproximate: cashFlow.incomeAmountsAreApproximate,
+                expenseIsApproximate: cashFlow.expenseAmountsAreApproximate,
+                balanceIsApproximate: cashFlow.amountsAreApproximate
             )
         }
 
@@ -424,7 +429,9 @@ final class FullFinancialContextBuilder {
             return FullFinancialContext.WeekSummary(
                 weekStart: Self.isoDateFormatter.string(from: interval.start),
                 income: safeDouble(cashFlow.totalIncome),
-                expense: safeDouble(cashFlow.totalExpense)
+                expense: safeDouble(cashFlow.totalExpense),
+                incomeIsApproximate: cashFlow.incomeAmountsAreApproximate,
+                expenseIsApproximate: cashFlow.expenseAmountsAreApproximate
             )
         }
 

@@ -132,11 +132,26 @@ extension FullFinancialContext {
         let dailyAvg: Double
         let savingsRatePercent: Double?  // null if income == 0
 
+        /// La misma señal de «aproximado» que las pantallas pintan con «≈», aquí en **booleano y no
+        /// en glifo**.
+        ///
+        /// El destino de esta struct es el system prompt del modelo, no la pantalla: los tres
+        /// importes de arriba son `Double` justamente para que el modelo pueda sumar y comparar sin
+        /// parsear texto, y meterles un «≈ 1234» los convertiría en `String`. Un booleano hermano
+        /// dice lo mismo sin romper eso. Va **por lado** por el motivo de siempre: `expense` y
+        /// `income` se preguntan por separado.
+        let incomeIsApproximate: Bool
+        let expenseIsApproximate: Bool
+        let balanceIsApproximate: Bool
+
         enum CodingKeys: String, CodingKey {
             case income, expense, balance
             case txCount = "tx_count"
             case dailyAvg = "daily_avg"
             case savingsRatePercent = "savings_rate_percent"
+            case incomeIsApproximate = "income_is_approximate"
+            case expenseIsApproximate = "expense_is_approximate"
+            case balanceIsApproximate = "balance_is_approximate"
         }
     }
 
@@ -144,10 +159,14 @@ extension FullFinancialContext {
         let weekStart: String   // ISO yyyy-MM-dd
         let income: Double
         let expense: Double
+        let incomeIsApproximate: Bool
+        let expenseIsApproximate: Bool
 
         enum CodingKeys: String, CodingKey {
             case weekStart = "week_start"
             case income, expense
+            case incomeIsApproximate = "income_is_approximate"
+            case expenseIsApproximate = "expense_is_approximate"
         }
     }
 }

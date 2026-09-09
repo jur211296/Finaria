@@ -43,7 +43,8 @@ struct LatestRecordsEntry: TimelineEntry {
                     subcategoryIcon: "fork.knife",
                     subcategoryName: "Restaurantes",
                     isIncome: false,
-                    amountInPreferredCurrency: 45.50
+                    amountInPreferredCurrency: 45.50,
+                    isExchangeRateProvisional: false
                 ),
                 WidgetTransaction(
                     id: "2",
@@ -57,7 +58,8 @@ struct LatestRecordsEntry: TimelineEntry {
                     subcategoryIcon: "car.fill",
                     subcategoryName: "Taxi",
                     isIncome: false,
-                    amountInPreferredCurrency: 150.00
+                    amountInPreferredCurrency: 150.00,
+                    isExchangeRateProvisional: false
                 ),
                 WidgetTransaction(
                     id: "3",
@@ -71,7 +73,8 @@ struct LatestRecordsEntry: TimelineEntry {
                     subcategoryIcon: "banknote",
                     subcategoryName: "Salario",
                     isIncome: true,
-                    amountInPreferredCurrency: 2500.00
+                    amountInPreferredCurrency: 2500.00,
+                    isExchangeRateProvisional: false
                 )
             ],
             currencyDisplayFormat: "symbol",
