@@ -54,9 +54,14 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  # Lo único que necesita: leer los runs y poder disparar `qa.yml`. Sin checkout, así que
-  # `contents` no hace falta.
+  # Leer los runs y poder disparar `qa.yml`.
   actions: write
+  # Para el checkout que trae `.github/actions/avisar`, que es quien entrega el aviso.
+  contents: read
+  # El canal de respaldo de esa action escribe un issue cuando el webhook no responde. El
+  # permiso por defecto de Actions en este repo es `read`, asi que sin esta linea el
+  # respaldo no puede entregar nada — y este workflow avisa justo de lo que nadie ve.
+  issues: write
 
 jobs:
   comprobar:
@@ -172,11 +177,10 @@ jobs:
           echo "nacio=no" >> "$GITHUB_OUTPUT"
           echo "::error title=El dispatch no creo ningun run::gh salio en verde pero no hay run nuevo tras 60 s."
 
-      - name: Avisar a Grok
+      - name: Componer el aviso
+        id: componer
         if: ${{ always() && steps.comprobar.outputs.corridas_ui == '0' }}
         env:
-          WEBHOOK_URL: ${{ secrets.GROK_WEBHOOK_URL }}
-          SENDER_KEY: ${{ secrets.GROK_WEBHOOK_SENDER_KEY }}
           NACIO: ${{ steps.verificar.outputs.nacio }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
@@ -201,35 +205,27 @@ jobs:
               "workflow_dispatch, y entonces esto necesita un token propio.")
           fi
 
-          # Mismo criterio que el aviso de qa.yml: sin secrets no se puede avisar, y morir
-          # en silencio aqui seria repetir el fallo que este workflow vino a arreglar.
-          if [ -z "${WEBHOOK_URL:-}" ] || [ -z "${SENDER_KEY:-}" ]; then
-            echo "::error title=No se pudo avisar de que $asunto::Faltan GROK_WEBHOOK_URL o GROK_WEBHOOK_SENDER_KEY."
-            exit 1
-          fi
-
+          # Un texto de varias lineas necesita delimitador; sin el, `$GITHUB_OUTPUT` se
+          # queda con la primera linea y el aviso viaja decapitado.
           texto=$(printf '%s\n' "$detalle" "" "Log completo: $RUN_URL")
-          jq -n --arg context "$texto" '{context: $context}' > "$RUNNER_TEMP/payload.json"
           printf '%s\n' "$texto" | sed 's/^/  /'
+          {
+            echo "asunto=$asunto"
+            echo "texto<<FIN_DEL_AVISO"
+            printf '%s\n' "$texto"
+            echo "FIN_DEL_AVISO"
+          } >> "$GITHUB_OUTPUT"
 
-          set +e
-          codigo=$(curl -sS -X POST "$WEBHOOK_URL" \
-            -H "Authorization: Bearer $SENDER_KEY" \
-            -H "Content-Type: application/json" \
-            --data-binary "@$RUNNER_TEMP/payload.json" \
-            --retry 3 --retry-delay 5 --retry-connrefused \
-            --max-time 30 \
-            -o "$RUNNER_TEMP/respuesta.txt" -w '%{http_code}')
-          rc=$?
-          set -e
+      # Hace falta para poder usar la action local `.github/actions/avisar`.
+      - uses: actions/checkout@v4
+        if: ${{ always() && steps.comprobar.outputs.corridas_ui == '0' }}
 
-          if [ "$rc" -ne 0 ]; then
-            echo "::error title=El webhook no respondio::curl salio con $rc tras los reintentos. Sin avisar: $asunto."
-            exit 1
-          fi
-          case "$codigo" in
-            2??) echo "::warning title=Aviso entregado::Grok recibio el aviso (HTTP $codigo): $asunto." ;;
-            *)   echo "::error title=El webhook fallo (HTTP $codigo)::Nadie se ha enterado de que $asunto."
-                 head -c 500 "$RUNNER_TEMP/respuesta.txt" || true
-                 exit 1 ;;
-          esac
+      - name: Enviar al webhook, y al respaldo si no responde
+        if: ${{ always() && steps.comprobar.outputs.corridas_ui == '0' }}
+        uses: ./.github/actions/avisar
+        with:
+          webhook-url: ${{ secrets.GROK_WEBHOOK_URL }}
+          sender-key: ${{ secrets.GROK_WEBHOOK_SENDER_KEY }}
+          github-token: ${{ github.token }}
+          asunto: ${{ steps.componer.outputs.asunto }}
+          texto: ${{ steps.componer.outputs.texto }}
