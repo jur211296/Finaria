@@ -187,15 +187,15 @@ Se descartó el selector de cuentas simultáneas porque reintroduce la confusió
 descartó «migrar» una sesión privada sobre una cuenta en la nube que ya tiene datos porque sería una
 fusión de dos datasets personales, que no existe y no conviene construir. Sobre el nombre: Jürgen
 propuso «sesión pública»; Frank propuso «en la nube» porque «pública» en una app de finanzas se lee
-como «visible para otros». Este ADR usa «en la nube»; la palabra sigue siendo de Jürgen.
+como «visible para otros». **Jürgen ratificó «en la nube» el 2026-09-09.**
 
 **Consecuencias.**
 - **La sesión de visita (M1, `SECONDARY_SESSION_ROLLOUT_PERCENT = 0` en prod) se retira.** En el modelo,
   prestar el móvil con una sesión privada activa no es un caso: el dueño cierra sesión (lo local se
   borra, iCloud queda), la otra persona entra con su cuenta en la nube, cierra, y el dueño restaura.
   Sus 12 tickets se descartan con este ADR como motivo; la infraestructura (`YalaModel-Secondary`,
-  `SessionDefaults`, `SecondarySessionStore`) se retira en el último ticket del rediseño. **Ratificación
-  pendiente de Jürgen**: es la única consecuencia que no dictó palabra por palabra.
+  `SessionDefaults`, `SecondarySessionStore`) se retira en el último ticket del rediseño. **Ratificado por
+  Jürgen el 2026-09-09** («no es necesario ese criterio si tendremos sesiones conmutables»).
 - Se abren 13 tickets (abajo) y se descartan 12. Este ADR es el spec de referencia de todos.
 - **Fuera de este repo-territorio:** la web, la FAQ, la política y la ficha de la App Store dicen que
   Grupos viaja «por iCloud»; con este modelo la historia es «Grupos = cuenta en la nube». Es de Lola
@@ -207,6 +207,8 @@ dependencias reales, no preferencias):
 2. `backend-account-kind-complete-or-groups-only` → 3. `cloud-sign-in-discovers-account-kind` ([I]).
 4. `welcome-private-fresh-start-skips-icloud-check` · 5. `groups-only-second-launch-mounts-icloud-mirror`
    · 6. `beacon-routes-only-never-blocks` · 7. `onboarding-purpose-drops-groups-card` (independientes).
+   El 5 lleva además la **retirada de la puerta «datos ajenos»** de «Vengo por un grupo»: medida en device el
+   2026-09-09 bloqueando al propio dueño (captura en el ticket).
 8. `full-mode-activation-must-ask-where-personal-data-lives` (necesita 3 y 4).
 9. `session-exits-one-verb-per-session` · 10. `groups-account-association-in-storage-row` (necesitan 3).
 11. `shell-derives-from-two-session-axes` — el barrido de las 19 vistas y la retirada de M1; va último.

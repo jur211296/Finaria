@@ -39,8 +39,7 @@
   sesiones (ADR 2026-09-09 «Sesiones — dos ejes»).
 - **sesión en la nube** — cuenta Google/Apple en el backend de Yala; sign in / sign out como en
   cualquier app. Es **completa** (personal + grupos) o **solo grupos**. Hay una activa por
-  dispositivo, conmutable. Jürgen la llamó «pública»; la palabra final es suya
-  (`retire-guest-vocabulary-for-session-terms`).
+  dispositivo, conmutable. (Jürgen la llamó «pública» al dictar y ratificó «en la nube» el 2026-09-09.)
 - **cuenta de grupos asociada · equipo** — la sesión en la nube solo-grupos que un usuario con
   sesión privada asocia para usar Grupos. Las dos se mueven juntas al cerrar sesión («equipo») y
   no hay «salir solo de grupos». Se ve y se deshace en «¿Dónde viven tus datos?».

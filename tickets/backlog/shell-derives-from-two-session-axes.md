@@ -41,9 +41,9 @@ mount, `SwiftDataConfiguration.personalStoreDecision`), 2 en `Yala/App/Services`
    nube completa), la decisión de mount (sin espejo salvo sesión privada), qué onboarding falta.
 3. **Retirar** `OnboardingMode.groupInvite` y `UsageFocus.groupsOnly` como *entradas* (pueden quedar
    como valores persistidos legacy que se migran a `SessionShape` en el primer arranque, y se borran
-   después); retirar la puerta «datos ajenos» de `WelcomeGroupsGateView` (`GroupsOrganizerGateLogic`),
-   que en el modelo no tiene caso: si hay sesión privada no se ve el Welcome, y grupos se asocia desde
-   la app.
+   después); retirar lo que quede de `WelcomeGroupsGateView` (`GroupsOrganizerGateLogic`): el término
+   «datos ajenos» ya se fue en `groups-only-second-launch-mounts-icloud-mirror`; aquí caen el de sesión
+   secundaria y el step entero si solo queda el canal (que puede ser un estado del sign-in).
 4. **Retirar la sesión de visita (M1):** `SecondarySessionStore`, `SessionDefaults`, el archivo
    `YalaModel-Secondary`, `SECONDARY_SESSION_ROLLOUT_PERCENT` en cliente y gateway, `SecondaryHydrationBanner`,
    `.signOutSecondary`, y los seams de uitest que los alimentan. Los 12 tickets de «secundaria» ya

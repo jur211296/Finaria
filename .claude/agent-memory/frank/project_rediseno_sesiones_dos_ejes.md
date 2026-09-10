@@ -17,9 +17,11 @@ Jürgen prefirió rediseñar a parchear.
 **How to apply:**
 - Cualquier trabajo en Welcome, onboarding, cierres de sesión, Grupos-cuenta o mount del store
   **empieza leyendo ese ADR**; los tickets viejos de esa familia que no cite el ADR son sospechosos.
-- **Esperan a Jürgen (2):** ratificar que la sesión de visita (M1) se retira —es la única consecuencia
-  que no dictó palabra por palabra; está marcada en el ADR y en `prefs-domain-per-secondary-session`
-  (descartado)— y la palabra «sesión en la nube» vs «pública» (`retire-guest-vocabulary-for-session-terms`).
+- **Ratificado el 9-sep:** M1 se retira («no es necesario ese criterio si tendremos sesiones
+  conmutables») y la palabra es «sesión en la nube». Nada del ADR espera decisión suya.
+- **Evidencia device del 9-sep:** la puerta «datos ajenos» de «Vengo por un grupo» bloqueó al propio
+  Jürgen tras una reinstalación (captura en el ticket del mount). La retirada de esa puerta va en
+  `groups-only-second-launch-mounts-icloud-mirror`, no en el barrido final.
 - **Dos hallazgos medidos en código y NO reproducidos en device todavía:** el segundo arranque de un
   solo-grupos adjunta el espejo de iCloud (`groups-only-second-launch-mounts-icloud-mirror`) y
   «Activar Yala completo» no pregunta dónde viven los datos (`full-mode-activation-must-ask-where-personal-data-lives`).

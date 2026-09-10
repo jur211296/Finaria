@@ -49,7 +49,7 @@
 - [El fixture hereda la anatomía de producción](feedback_el_fixture_hereda_la_anatomia_de_produccion.md) — no la deduzcas del ticket; el error se ve en el TOTAL, y el fixture tiene que ser DISCRIMINANTE.
 
 ## Estado del trabajo
-- [Rediseño de sesiones: dos ejes](project_rediseno_sesiones_dos_ejes.md) — ADR 9-sep + 13 tickets con orden; esperan ratificar M1 retirada y la palabra «en la nube»; T1/T2 medidos en código, no en device.
+- [Rediseño de sesiones: dos ejes](project_rediseno_sesiones_dos_ejes.md) — ADR 9-sep + 13 tickets con orden; M1 retirada y «en la nube» RATIFICADOS; la puerta «datos ajenos» bloqueó a Jürgen en device.
 - [Cambiar la divisa de una cuenta ya no deja su histórico atrás](project_divisa_de_una_cuenta_con_historico.md) — PR #118; la review cazó SEIS defectos del ARREGLO; deja 5 tickets y un device-QA con trampa.
 - [La familia FX, recorrida entera en simulador](project_seam_cuenta_divisa_ausente.md) — PR #114 y #115: 5 PASS, 2 parciales por red/seam; los dos fixtures que faltaban ya existen y dejan 4 tickets.
 - [El gasto de grupo ya lleva la incertidumbre de sus patas](project_marca_aproximado_gasto_de_grupo.md) — PR #113 cierra la familia del «≈»; falta device-QA y NO es simulable; deja 3 tickets, uno es una pantalla entera sin marca.

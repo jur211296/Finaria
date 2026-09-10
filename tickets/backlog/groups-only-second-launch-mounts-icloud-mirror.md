@@ -43,11 +43,28 @@ tiene histórico ajeno; y «Activar Yala completo» (ticket
 `full-mode-activation-must-ask-where-personal-data-lives`) correría el onboarding encima de esos datos
 sin validación.
 
+## Medido en device (2026-09-09, iPhone de Jürgen, TestFlight build 13)
+
+Tras una reinstalación fresca y algún intento previo por otra rama (privado → «reabre Yala», o
+«Restaurar desde iCloud»), el espejo ya estaba adjunto y el histórico de iCloud importado. Al tocar
+«Vengo por un grupo → Crear mi primer grupo», la puerta de grupos (`WelcomeGroupsGateView` /
+`GroupsOrganizerGateLogic`, término «datos ajenos» = `hasLocalDataNow()`) respondió **«Aquí ya hay
+datos guardados … Si son tuyos, crea el grupo desde la app que ya usas»** y solo dejó «Volver». La app
+que ya usa es ésta. Captura: `evidencia-groups-only-mount/2026-09-09-puerta-datos-ajenos-bloquea-al-dueno.png`.
+Es el callejón que describía `welcome-copy-blames-owner` (descartado a favor de este ticket).
+
 ## Lo que se espera (ADR §2-3)
 
 Una sesión en la nube **solo grupos** no tiene sesión privada: su store personal se monta **sin espejo
 de iCloud** en TODOS los arranques, hasta que el usuario elija explícitamente lo personal (privado o
 nube) desde «Activar Yala completo».
+
+**Y la puerta «datos ajenos» se retira aquí, no en el barrido final.** Si al elegir «Vengo por un grupo»
+el store personal ya lleva espejo o datos (porque otra rama lo adjuntó antes), la app **vuelve al
+neutro** —borra lo local, iCloud intacto, arma el neutro duradero, relanza si hace falta— y sigue al
+sign-in. Nunca bloquea: en el modelo, si se ve el Welcome no hay sesión privada, y lo que haya en el
+store es una importación que nadie pidió. Los otros dos términos de la puerta (canal apagado, sesión
+secundaria) siguen hasta que M1 se retire.
 
 ## Alcance
 
@@ -68,6 +85,9 @@ nube) desde «Activar Yala completo».
       ×3: `personalStoreMountedDecision` sigue siendo un mount sin espejo (breadcrumb/canario), y con
       datos en el iCloud del Apple ID **ninguno aparece** en el store personal (`checkHasExistingData
       == false`).
+- [ ] Store con espejo y datos importados + «Vengo por un grupo» → sin pantalla de bloqueo: vuelta al
+      neutro (con relanzamiento si hace falta) y sign-in; el contenedor de iCloud sigue intacto
+      («Restaurar desde iCloud» en otra instalación lo encuentra).
 - [ ] «Restaurar desde iCloud» y «Primera vez → privado» siguen adjuntando el espejo cuando toca.
 - [ ] El cierre de sesión solo-grupos sigue dejando el dispositivo en neutro duradero.
 - [ ] Test unitario sobre `personalStoreDecision` / `shouldMountNeutralDurable` con el escenario

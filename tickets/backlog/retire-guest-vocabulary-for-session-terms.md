@@ -23,12 +23,11 @@ Google/Apple, completa o solo grupos)— y retira los otros tres.
 - Vive en código, comentarios, `.claude/rules/`, `docs/` y tickets. Es una decisión de glosario, no un
   barrido: los identificadores se retiran con el código en `shell-derives-from-two-session-axes`.
 - Sobre el nombre: Jürgen propuso «sesión pública»; Frank propuso «sesión en la nube» («pública» en una
-  app de finanzas se lee como «visible»). El ADR usa «en la nube»; **la palabra sigue siendo de Jürgen**
-  y este ticket es donde se cierra.
+  app de finanzas se lee como «visible»). **Jürgen ratificó «en la nube» el 2026-09-09.**
 
 ## Lo que hay que hacer
 
-- [ ] Jürgen ratifica el par de nombres («privada» / «en la nube» — o «pública»).
+- [x] Jürgen ratificó el par de nombres el 2026-09-09: **«sesión privada» / «sesión en la nube»**.
 - [ ] `docs/glosario.md` (bloque manual): entradas para *sesión privada*, *sesión en la nube* (completa /
       solo grupos), *cuenta de grupos asociada*, *equipo*, *bloques [I] [P] [G]*, y una entrada
       histórica para *visita / secundaria / invitada (retirado)* que apunte al ADR.
