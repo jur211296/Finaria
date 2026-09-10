@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (275)
+## Index (276)
 
 | id | status | path |
 |----|--------|------|
@@ -164,6 +164,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | groups-join-intent-reconciler | blocked | tickets/blocked/groups-join-intent-reconciler.md |
 | groups-leave-rpc-error-10 | qa | tickets/qa/groups-leave-rpc-error-10.md |
 | groups-log-expense-via-chat-voice | backlog | tickets/backlog/groups-log-expense-via-chat-voice.md |
+| groups-only-private-restart-skips-the-wipe-alert | backlog | tickets/backlog/groups-only-private-restart-skips-the-wipe-alert.md |
 | groups-only-second-launch-mounts-icloud-mirror | qa | tickets/qa/groups-only-second-launch-mounts-icloud-mirror.md |
 | groups-organizer-intent-is-lost-on-relaunch | backlog | tickets/backlog/groups-organizer-intent-is-lost-on-relaunch.md |
 | groups-owner-debt-no-heir-dead-end | done | tickets/done/groups-owner-debt-no-heir-dead-end.md |
