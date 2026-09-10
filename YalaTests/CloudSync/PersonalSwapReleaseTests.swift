@@ -137,7 +137,9 @@ struct NeutralDurableMountTests {
     @Test("armado y sin chooser visto ⇒ el device monta neutro")
     func armedAndUnchosen_mountsNeutral() {
         #expect(SwiftDataConfiguration.shouldMountNeutralDurable(
-            neutralMountArmed: true, hasShownWelcomeChooser: false))
+            neutralMountArmed: true, hasShownWelcomeChooser: false,
+            groupsOnlySessionArmed: false,
+            persistedMode: .icloud, mirrorOffArmed: false))
     }
 
     /// **El segundo término es lo que hace IMPOSIBLE el bucle**, y por eso tiene test propio. Sin él, un
@@ -147,14 +149,18 @@ struct NeutralDurableMountTests {
     @Test("con el chooser YA visto la marca queda INERTE — sin esto, relanzamiento en bucle")
     func chooserSeen_makesTheMarkInert() {
         #expect(SwiftDataConfiguration.shouldMountNeutralDurable(
-            neutralMountArmed: true, hasShownWelcomeChooser: true) == false)
+            neutralMountArmed: true, hasShownWelcomeChooser: true,
+            groupsOnlySessionArmed: false,
+            persistedMode: .icloud, mirrorOffArmed: false) == false)
     }
 
     @Test("sin marca no hay neutro durable, se haya visto el chooser o no")
     func unarmed_isNeverNeutral() {
         for chooserSeen in [true, false] {
             #expect(SwiftDataConfiguration.shouldMountNeutralDurable(
-                neutralMountArmed: false, hasShownWelcomeChooser: chooserSeen) == false)
+                neutralMountArmed: false, hasShownWelcomeChooser: chooserSeen,
+                groupsOnlySessionArmed: false,
+            persistedMode: .icloud, mirrorOffArmed: false) == false)
         }
     }
 

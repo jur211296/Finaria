@@ -218,6 +218,91 @@ nonisolated enum StorageModePersistence {
         defaults.removeObject(forKey: neutralMountArmedKey)
     }
 
+    /// **El NEUTRO DURABLE de una sesión SOLO-GRUPOS** (paso 5 del rediseño de sesiones, ADR 2026-09-09
+    /// §2-3). Marca «este device entró por Grupos y NO ha elegido dónde viven sus datos personales», así
+    /// que su store personal monta neutro (`cloudKitDatabase: .none`) en **todos** los arranques.
+    ///
+    /// **Por qué es una key APARTE de `neutralMountArmedKey` y no un tercer escritor de aquélla.** La de
+    /// arriba caduca con `hasShownWelcomeChooser`, y esa caducidad es su anti-bucle: sin ella, un destino
+    /// que necesita el mirror pediría reabrir y el arranque siguiente volvería a montar neutro. Aquí la
+    /// caducidad **no puede aplicarse**, y no es una preferencia: `onSelectPrivateAccount`
+    /// (`ContentView`) marca el chooser en el acto, ANTES de escribir nada. El recorrido MEDIDO que llega
+    /// al alta con el flag ya en `true` es éste: «Primera vez → privado» sin datos ⇒ flag `true` y
+    /// onboarding montado; dentro del onboarding, la card «Solo grupos» ⇒ `onGroupsOnlyComplete` →
+    /// `startGroupsOnlyBranch` → `writePreferences`. Con la key de arriba, ese neutro nacería INERTE.
+    ///
+    /// **Volver al Welcome NO es ese recorrido, y conviene saberlo antes de re-verificar esto**:
+    /// `onCancelFromStep1` repone `hasShownWelcomeChooser` a `false`, así que por ahí se llega limpio. Es
+    /// la razón de que el bug sea intermitente y no constante — el camino limpio de grupos tampoco marca
+    /// el chooser, y eso es deliberado.
+    ///
+    /// **Y por qué no se deriva de `onboardingMode == .groupInvite`, que parecería el eje del ADR §2.**
+    /// Porque ese modo viaja SINCRONIZADO por iKV con merge never-downgrade, así que un device que
+    /// **restaura de iCloud** puede heredarlo (`RestoreRouter.decide` → `.groupsOnly`) con el mirror ya
+    /// adjunto y su histórico bajado. Derivar de ahí le apagaría el espejo en el arranque siguiente, que
+    /// es el daño CONTRARIO al que este ticket arregla. La marca es un hecho de ESTE device: la escriben
+    /// las dos ALTAS solo-grupos y nadie más.
+    ///
+    /// **Quién la levanta** — las dos son necesarias, y la segunda es el anti-bucle que sustituye a la
+    /// caducidad:
+    ///  1. `FullModeActivationView.completeFullActivation` — el usuario activó Yala completo, que es
+    ///     exactamente «ya elegí dónde viven mis datos personales» (decisión de Jürgen, 2026-09-09).
+    ///  2. `onNeedsMirrorRelaunch` (`ContentView`) — el punto ÚNICO donde se decide que un destino
+    ///     necesita el espejo. Sin esto, un device solo-grupos que pide restaurar giraría para siempre:
+    ///     marca puesta ⇒ mount neutro ⇒ «reabre Yala» ⇒ mount neutro otra vez. Es el mismo sitio que ya
+    ///     rompe el predicado hermano poniendo `hasShownWelcomeChooser`, y por eso van juntos.
+    ///
+    /// **No hay migración para el parque instalado, y es una decisión** (Jürgen, 2026-09-10): armarla a
+    /// todo el que tenga `.groupInvite` alcanzaría a los restaurados del párrafo anterior. Quien ya está
+    /// afectado se cura al reinstalar.
+    static let groupsOnlyNeutralMountKey = "cloudSync.groupsOnlyNeutralMount"
+
+    static func armGroupsOnlyNeutralMount(_ defaults: UserDefaults = .standard) {
+        defaults.set(true, forKey: groupsOnlyNeutralMountKey)
+    }
+
+    static func isGroupsOnlyNeutralMountArmed(_ defaults: UserDefaults = .standard) -> Bool {
+        defaults.bool(forKey: groupsOnlyNeutralMountKey)
+    }
+
+    static func clearGroupsOnlyNeutralMount(_ defaults: UserDefaults = .standard) {
+        defaults.removeObject(forKey: groupsOnlyNeutralMountKey)
+    }
+
+    /// **La frontera M1, DENTRO del escritor y no repetida en cada call-site.** Los tres sitios que tocan
+    /// esta marca —las dos altas y la activación de Yala completo— tienen que saltarse la escritura en
+    /// sesión secundaria, porque ahí el `UserDefaults` es el del DUEÑO y esto es una decisión de MOUNT de
+    /// su teléfono: armarla le apagaría el espejo de su iCloud, y desarmarla se lo devolvería, en los dos
+    /// casos por una sesión que no es suya.
+    ///
+    /// **Vive aquí y no en los tres `if` que había antes por una razón de VERIFICABILIDAD, no de estilo.**
+    /// Dos de esos tres call-sites son vistas SwiftUI, así que su único test posible era un source-scan de
+    /// un literal — y un scan así no distingue `if !SecondarySessionStore.isActive()` de `if
+    /// SecondarySessionStore.isActive()`: con el guard invertido, borrado o movido, el literal de la
+    /// llamada no cambia y la suite se queda verde mientras el daño sale a producción. Con el guard aquí,
+    /// `isSecondary` es un parámetro y la frontera se prueba con una tabla.
+    ///
+    /// El molde es el de `GroupsOrganizerOnboarding.writePreferences`, que ya recibe `isSecondarySession`
+    /// por parámetro por lo mismo.
+    static func armGroupsOnlyNeutralMountIfPrimary(
+        _ defaults: UserDefaults = .standard,
+        isSecondary: Bool = SecondarySessionStore.isActive()
+    ) {
+        guard !isSecondary else { return }
+        armGroupsOnlyNeutralMount(defaults)
+    }
+
+    /// El gemelo del anterior, y la simetría es la regla: **quien no arma, no desarma.** Un desarme sin
+    /// guard en secundaria le devolvería el espejo al dueño solo-grupos en su próximo arranque — o sea le
+    /// causaría el bug de este ticket desde la sesión de otra persona.
+    static func clearGroupsOnlyNeutralMountIfPrimary(
+        _ defaults: UserDefaults = .standard,
+        isSecondary: Bool = SecondarySessionStore.isActive()
+    ) {
+        guard !isSecondary else { return }
+        clearGroupsOnlyNeutralMount(defaults)
+    }
+
     /// Marker "wipe de sesión SOLO-GRUPOS ARMADO" (G5-B, camino `groupsOnlySignOut`). Lo escribe el
     /// coordinador como ÚLTIMO write del cierre solo-grupos (kill-safe); el BOOT siguiente (pre-mount,
     /// `SwiftDataConfiguration.performGroupsOnlySignOutWipeIfArmed`) borra SOLO los archivos del store de

@@ -193,8 +193,8 @@ struct GroupsOrganizerNoWriteTests {
 
         // CONTROL POSITIVO. Sin esto la aserción de arriba se cumpliría igual con un inventario vacío, un
         // writer que no escribe o unas keys renombradas — la familia de «Executed 0 tests».
-        GroupsOrganizerOnboarding.writePreferences(displayName: "Ana", writer: writer, isSecondarySession: false)
-        #expect(Set(writer.writes) == Set(GroupsOrganizerOnboarding.writtenKeys),
+        GroupsOrganizerOnboarding.writePreferences(displayName: "Ana", writer: writer, isSecondarySession: false, defaults: defaults)
+        #expect(Set(writer.writes) == Set(GroupsOrganizerOnboarding.writtenPreferenceKeys),
                 "el instrumento no detecta las escrituras del alta: \(writer.writes)")
         #expect(writtenKeysPresent(in: defaults).count == GroupsOrganizerOnboarding.writtenKeys.count)
     }
@@ -231,7 +231,15 @@ struct GroupsOrganizerNoWriteTests {
         let writer = SpyPreferenceWriter(defaults: defaults)
 
         let wrote = GroupsOrganizerOnboarding.writePreferences(
-            displayName: "Ana", writer: writer, isSecondarySession: true)
+            displayName: "Ana", writer: writer, isSecondarySession: true, defaults: defaults)
+
+        // El neutro de solo-grupos es una decisión de MOUNT del device, y en secundaria el device es del
+        // dueño: armarlo aquí le apagaría a él el espejo de iCloud en su próximo arranque. Va con el resto
+        // de escrituras, detrás del mismo guard.
+        #expect(StorageModePersistence.isGroupsOnlyNeutralMountArmed(defaults) == false, """
+            el alta armó el neutro de solo-grupos con la frontera M1 puesta: el dueño de este teléfono \
+            perdería el espejo de su iCloud por una sesión que no es suya.
+            """)
 
         #expect(wrote == false, """
             el alta dijo que había escrito con la frontera M1 puesta. El `Bool` no es cosmético: \
@@ -246,13 +254,19 @@ struct GroupsOrganizerNoWriteTests {
         // CONTROL POSITIVO con el MISMO writer y el MISMO store: sin él, «no escribió nada» se cumpliría
         // igual con un inventario vacío, un writer roto o unas keys renombradas.
         let wroteNow = GroupsOrganizerOnboarding.writePreferences(
-            displayName: "Ana", writer: writer, isSecondarySession: false)
+            displayName: "Ana", writer: writer, isSecondarySession: false, defaults: defaults)
         #expect(wroteNow)
-        #expect(Set(writer.writes) == Set(GroupsOrganizerOnboarding.writtenKeys),
+        // CONTROL POSITIVO del `#expect` de arriba: sin esto, aquella aserción se cumpliría igual con un
+        // arm que no escribe nunca o una key renombrada — la familia de «Executed 0 tests».
+        #expect(StorageModePersistence.isGroupsOnlyNeutralMountArmed(defaults), """
+            sin la frontera puesta el alta TIENE que armar el neutro de solo-grupos: es lo que impide que \
+            el arranque siguiente adjunte el espejo y baje datos ajenos.
+            """)
+        #expect(Set(writer.writes) == Set(GroupsOrganizerOnboarding.writtenPreferenceKeys),
                 "el instrumento no detecta las escrituras del alta: \(writer.writes)")
         // Y son SEIS: el conteo es lo que hace que esto envejezca bien. Una séptima escritura nueva rompe
         // el test y obliga a decidir si entra al inventario, en vez de aparecer en silencio.
-        #expect(GroupsOrganizerOnboarding.writtenKeys.count == 6)
+        #expect(GroupsOrganizerOnboarding.writtenKeys.count == 7)
     }
 
     @Test("el alta escribe el trío completo, y el nombre vacío cae al nombre por defecto")
@@ -260,7 +274,7 @@ struct GroupsOrganizerNoWriteTests {
         let defaults = makeIsolatedDefaults(prefix: "g3.alta")
         let writer = SpyPreferenceWriter(defaults: defaults)
 
-        GroupsOrganizerOnboarding.writePreferences(displayName: "  ", writer: writer, isSecondarySession: false)
+        GroupsOrganizerOnboarding.writePreferences(displayName: "  ", writer: writer, isSecondarySession: false, defaults: defaults)
 
         // El trío que hace la shell.
         #expect(defaults.string(forKey: OnboardingMode.userDefaultsKey) == OnboardingMode.groupInvite.rawValue)
@@ -277,7 +291,7 @@ struct GroupsOrganizerNoWriteTests {
         let defaults = makeIsolatedDefaults(prefix: "g3.alta.nombre")
         let writer = SpyPreferenceWriter(defaults: defaults)
 
-        GroupsOrganizerOnboarding.writePreferences(displayName: "  Ana  ", writer: writer, isSecondarySession: false)
+        GroupsOrganizerOnboarding.writePreferences(displayName: "  Ana  ", writer: writer, isSecondarySession: false, defaults: defaults)
         #expect(defaults.string(forKey: AppPreferences.Keys.userName) == "Ana")
     }
 
@@ -291,7 +305,7 @@ struct GroupsOrganizerNoWriteTests {
             let defaults = makeIsolatedDefaults(prefix: "g4.alta.divisa.\(region)")
             let writer = SpyPreferenceWriter(defaults: defaults)
 
-            GroupsOrganizerOnboarding.writePreferences(displayName: "Ana", writer: writer, regionCode: region, isSecondarySession: false)
+            GroupsOrganizerOnboarding.writePreferences(displayName: "Ana", writer: writer, regionCode: region, isSecondarySession: false, defaults: defaults)
 
             #expect(defaults.string(forKey: AppPreferences.Keys.defaultCurrencyCode) == expected.rawValue,
                     "región \(region) ⇒ esperaba \(expected.rawValue)")
@@ -311,7 +325,7 @@ struct GroupsOrganizerNoWriteTests {
         defaults.set(CurrencyCode.eur.rawValue, forKey: AppPreferences.Keys.defaultCurrencyCode)
         let writer = SpyPreferenceWriter(defaults: defaults)
 
-        GroupsOrganizerOnboarding.writePreferences(displayName: "Ana", writer: writer, regionCode: "US", isSecondarySession: false)
+        GroupsOrganizerOnboarding.writePreferences(displayName: "Ana", writer: writer, regionCode: "US", isSecondarySession: false, defaults: defaults)
 
         #expect(defaults.string(forKey: AppPreferences.Keys.defaultCurrencyCode) == CurrencyCode.eur.rawValue)
         // Contar la escritura, no solo mirar el estado final: re-escribir el MISMO valor dejaría el store

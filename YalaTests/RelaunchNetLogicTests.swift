@@ -208,7 +208,8 @@ struct WelcomeMirrorRelaunchArmedWitnessTests {
         ), "R2: el chooser visto cierra la ventana del mount neutro de fresh")
 
         #expect(!SwiftDataConfiguration.shouldMountNeutralDurable(
-            neutralMountArmed: true, hasShownWelcomeChooser: true
+            neutralMountArmed: true, hasShownWelcomeChooser: true,
+            groupsOnlySessionArmed: false, persistedMode: .icloud, mirrorOffArmed: false
         ), "R4: y también la del neutro durable")
     }
 }

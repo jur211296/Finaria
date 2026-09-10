@@ -221,19 +221,19 @@ struct ICloudRestartAdviceTests {
     @Test("un mount SIN espejo por falta de cuenta + iCloud disponible ahora ⇒ se ofrece el reinicio")
     func warns_whenMountedWithoutMirroring_andICloudAppears() {
         #expect(SwiftDataConfiguration.shouldOfferICloudRestart(
-            mountedDecision: .localNoMirror, mountedWithMirroring: false, iCloudAvailableNow: true))
+            mountedDecision: .localNoMirror, mountedWithMirroring: false, iCloudAvailableNow: true, groupsOnlySessionArmed: false))
     }
 
     @Test("si el mount YA espejaba, no hay nada que avisar")
     func silent_whenMountedWithMirroring() {
         #expect(!SwiftDataConfiguration.shouldOfferICloudRestart(
-            mountedDecision: .iCloudMirror, mountedWithMirroring: true, iCloudAvailableNow: true))
+            mountedDecision: .iCloudMirror, mountedWithMirroring: true, iCloudAvailableNow: true, groupsOnlySessionArmed: false))
     }
 
     @Test("sin iCloud ahora, no hay aviso aunque el mount no espejara")
     func silent_whenICloudStillAbsent() {
         #expect(!SwiftDataConfiguration.shouldOfferICloudRestart(
-            mountedDecision: .localNoMirror, mountedWithMirroring: false, iCloudAvailableNow: false))
+            mountedDecision: .localNoMirror, mountedWithMirroring: false, iCloudAvailableNow: false, groupsOnlySessionArmed: false))
     }
 
     @Test("R9: un mount de MODO NUBE es INERTE — tener iCloud no es un mismatch")
@@ -243,7 +243,7 @@ struct ICloudRestartAdviceTests {
                 for available in [true, false] {
                     #expect(!SwiftDataConfiguration.shouldOfferICloudRestart(
                         mountedDecision: decision, mountedWithMirroring: mirroring,
-                        iCloudAvailableNow: available), "montado=\(decision)")
+                        iCloudAvailableNow: available, groupsOnlySessionArmed: false), "montado=\(decision)")
                 }
             }
         }
@@ -256,7 +256,7 @@ struct ICloudRestartAdviceTests {
         // cambia la cuenta de iCloud. Si el término R9 leyera el modo de ahora, esa ventana pediría un
         // «reinicia la app» encima del que la propia tarjeta de reversa ya está pidiendo.
         #expect(!SwiftDataConfiguration.shouldOfferICloudRestart(
-            mountedDecision: .cloudMirrorOff, mountedWithMirroring: false, iCloudAvailableNow: true))
+            mountedDecision: .cloudMirrorOff, mountedWithMirroring: false, iCloudAvailableNow: true, groupsOnlySessionArmed: false))
     }
 
     @Test("EL PIN DEL CHIP: el aviso se decide por lo que se MONTÓ, no por si había iCloud al arrancar")
@@ -276,7 +276,7 @@ struct ICloudRestartAdviceTests {
         #expect(SwiftDataConfiguration.shouldOfferICloudRestart(
             mountedDecision: .localNoMirror,
             mountedWithMirroring: SwiftDataConfiguration.containerWasCreatedWithCloudKit(defaults),
-            iCloudAvailableNow: true))
+            iCloudAvailableNow: true, groupsOnlySessionArmed: false))
     }
 }
 

@@ -506,6 +506,20 @@ struct GroupInviteOnboardingView: View {
     /// El alta de primer arranque. **Solo para quien NO tiene cuenta** — ver `performJoinOnlySetup` para
     /// qué de todo esto es dañino sobre una cuenta que ya existe, y por qué.
     private func performSilentSetup() {
+        // 0. **El neutro durable de la sesión solo-grupos** (paso 5 del rediseño). Hermano de la línea
+        // equivalente en `GroupsOrganizerOnboarding.writePreferences`: sin ella el arranque SIGUIENTE
+        // adjunta el espejo al store personal y se trae el contenedor privado del Apple ID del teléfono.
+        //
+        // **Va aquí y NO en `performJoinOnlySetup`**, que es la otra rama de `handleJoinTap()`. Aquélla
+        // corre cuando el device ya tiene onboarding hecho —o sea el caso «privada + grupos asociados» del
+        // ADR §2, donde hay sesión privada viva— y ahí el espejo es exactamente lo que el usuario quiere.
+        // Armarla en las dos ramas apagaría iCloud a quien acepta una invitación desde su Yala de siempre.
+        //
+        // El guard de secundaria es propio: este método no tiene el de la cabecera que sí lleva su gemelo
+        // del organizador, y en una sesión secundaria el `UserDefaults` es el del DUEÑO — escribirle una
+        // decisión de mount le apagaría el espejo a él.
+        StorageModePersistence.armGroupsOnlyNeutralMountIfPrimary()
+
         let sync = PreferenceSyncService.shared
         let finalName = userName.trimmingCharacters(in: .whitespacesAndNewlines)
         let effectiveName = finalName.isEmpty ? L10n.Profile.defaultName : finalName
@@ -580,6 +594,7 @@ struct GroupInviteOnboardingView: View {
 
         // 8. KPI registros/día (alta local vía invitación de grupo)
         MetricsService.localRegistrationCompleted(mode: "groupInvite")
+
     }
 
     private func detectCurrencyFromGroup() -> CurrencyCode? {

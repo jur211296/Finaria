@@ -160,7 +160,7 @@ struct NeutralMountDecisionTests {
         #expect(SwiftDataConfiguration.shouldOfferICloudRestart(
             mountedDecision: .neutralNoMirror,
             mountedWithMirroring: SwiftDataConfiguration.containerWasCreatedWithCloudKit(defaults),
-            iCloudAvailableNow: true))
+            iCloudAvailableNow: true, groupsOnlySessionArmed: false))
     }
 
     @Test("el gate del motor DEJA arrancar sobre un mount neutro con el par `.cloud` escrito")

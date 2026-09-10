@@ -102,19 +102,33 @@ struct GroupsOnlyOnboardingPayload: Equatable, Sendable {
 @MainActor
 enum GroupsOrganizerOnboarding {
 
-    /// Las seis keys que este alta puede escribir. Publicadas para que el test pueda afirmar su AUSENCIA en
+    /// Las SIETE keys que este alta puede escribir. Publicadas para que el test pueda afirmar su AUSENCIA en
     /// el camino bloqueado con el mismo inventario que usa el camino que sí escribe — una lista duplicada a
     /// mano en el test se quedaría corta en cuanto alguien añadiera una escritura aquí.
     ///
     /// - Note: `defaultCurrencyCode` es la única CONDICIONAL (solo si está ausente), así que el control
     ///   positivo del test que compara contra este inventario tiene que correr sobre un store limpio.
-    static let writtenKeys: [String] = [
+    /// Las SEIS que viajan por el canal de PREFERENCIAS (el `writer`). Se publican aparte de `writtenKeys`
+    /// porque el spy de los tests solo puede ver éstas: la séptima no pasa por el writer a propósito —no es
+    /// una preferencia del usuario, es la decisión de mount de este teléfono, y propagarla apagaría el
+    /// espejo en el otro device del mismo usuario.
+    static let writtenPreferenceKeys: [String] = [
         AppPreferences.Keys.userName,
         AppPreferences.Keys.defaultPeriod,
         AppPreferences.Keys.defaultCurrencyCode,
         OnboardingMode.userDefaultsKey,
         AppPreferences.Keys.groupsBetaUnlocked,
         AppPreferences.Keys.hasCompletedOnboarding
+    ]
+
+    static let writtenKeys: [String] = writtenPreferenceKeys + [
+        // 2026-09-10 · la séptima, y entra en el inventario A PROPÓSITO (el guard de
+        // `SecondaryOwnerDomainGuardsTests` obliga a decidirlo en vez de dejarla aparecer en silencio).
+        // No es una preferencia del usuario —es la decisión de MOUNT de este teléfono— pero comparte las
+        // dos propiedades que este inventario existe para vigilar: la escribe el alta, y tiene que ir
+        // DESPUÉS del guard de sesión secundaria. Dejarla fuera la habría vuelto invisible para las tres
+        // redes que se alimentan de aquí, incluido el bucle que comprueba ese orden.
+        StorageModePersistence.groupsOnlyNeutralMountKey
     ]
 
     /// Solo las preferencias, sin SwiftData. Separada de `completeSetup` para poder ejercitarla contra un
@@ -143,7 +157,8 @@ enum GroupsOrganizerOnboarding {
                                  writer: any GroupsOrganizerPreferenceWriting,
                                  regionCode: String = Locale.current.region?.identifier ?? "",
                                  explicitCurrencyCode: String? = nil,
-                                 isSecondarySession: Bool = SecondarySessionStore.isActive()) -> Bool {
+                                 isSecondarySession: Bool = SecondarySessionStore.isActive(),
+                                 defaults: UserDefaults = .standard) -> Bool {
         // **C3 · el guard subió de UNA key al MÉTODO ENTERO, y esa es la corrección.** Hasta C3 solo
         // `onboardingMode` lo llevaba, porque el escáner de M1 buscaba los literales de ESA key y C2
         // arregló exactamente lo que el escáner señalaba. Las otras CINCO cruzaban igual: `set(string:)` de
@@ -162,6 +177,25 @@ enum GroupsOrganizerOnboarding {
         // `GroupsOrganizerGateLogic` (`.blockedSecondarySession`), y su choke-point es
         // `ContentView.advanceGroupsOrganizerFlow`. Aquí solo se garantiza que ninguna escritura sale.
         guard !isSecondarySession else { return false }
+
+        // **El neutro durable de la sesión solo-grupos** (paso 5 del rediseño). Sin esto, el arranque
+        // SIGUIENTE monta `.iCloudMirror` sobre el store personal —el archivo ya existe, así que
+        // `isFreshInstallForNeutralMount` deja de ser `true`— y se trae el contenedor privado del Apple ID
+        // del teléfono, que es el bug del ticket.
+        //
+        // Va DENTRO del guard de secundaria (la cabecera de este método) como las otras seis: es una
+        // decisión de mount del DEVICE, y en secundaria el device es de otra persona.
+        //
+        // Local y no sincronizada a propósito: describe cómo monta ESTE teléfono, no qué eligió la
+        // cuenta. Propagarla apagaría el espejo en el otro device del mismo usuario, que puede tener su
+        // sesión privada viva.
+        //
+        // **`defaults` es inyectable y eso NO es cosmética de tests.** El host de `YalaTests` es la app,
+        // así que comparte el `UserDefaults.standard` del simulador: con esta escritura clavada a
+        // `.standard`, correr la suite dejaba la marca puesta y la app de ese simulador montaba neutro
+        // para siempre — rompiendo cualquier QA visual posterior. Las siete llamadas de test pasan su
+        // suite aislado, igual que ya hacen con el `writer`.
+        StorageModePersistence.armGroupsOnlyNeutralMountIfPrimary(defaults, isSecondary: isSecondarySession)
 
         let trimmed = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
         let effectiveName = trimmed.isEmpty ? L10n.Profile.defaultName : trimmed
@@ -200,6 +234,7 @@ enum GroupsOrganizerOnboarding {
         // completo más tarde; la key es per-device y permanente (mismo trato que la entrada por invitación).
         writer.setLocal(true, forKey: AppPreferences.Keys.groupsBetaUnlocked)
         writer.setLocal(true, forKey: AppPreferences.Keys.hasCompletedOnboarding)
+
         return true
     }
 

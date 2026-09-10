@@ -223,6 +223,16 @@ final class CloudSessionSignOut {
         defaults.set(false, forKey: AppPreferences.Keys.hasCompletedOnboarding)
         defaults.set(false, forKey: "hasShownWelcomeChooser")
         defaults.set(false, forKey: AppPreferences.Keys.hasShownYalaAIOnboarding)
+        // El neutro durable de solo-grupos se retira al volver al Welcome: a partir de aquí este device
+        // **vuelve a elegir**, así que la marca de «no ha elegido nada» ya no describe nada. Sin esto
+        // sobrevive al reset y decide el mount de la vida siguiente — la marca no caduca con el chooser,
+        // que es lo que retira a su hermana.
+        //
+        // No cierra el proceso VIVO —el testigo del mount ya se capturó y sigue siendo neutro hasta que la
+        // app se reabra—, así que el hueco de `groups-only-private-restart-skips-the-wipe-alert` sigue
+        // abierto para esta misma sesión. Lo que sí hace es que no PERSISTA: al reabrir, el mount vuelve a
+        // la tabla normal y el camino privado recupera su alert de datos existentes.
+        StorageModePersistence.clearGroupsOnlyNeutralMount(defaults)
     }
 
     // MARK: - Camino nube (.cloud) — push-all verificado + wipe armado
