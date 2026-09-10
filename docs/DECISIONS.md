@@ -178,6 +178,14 @@ tienen ticket propio y se listan abajo.
     otro proveedor u otro usuario.
 11. **El backend sabe decir «completa» o «solo grupos»** por cuenta. Hoy el cliente lo infiere de su
     `storageMode` local, que en un móvil recién instalado no existe; sin ese dato [I] no puede rutear.
+    **[Añadido el 2026-09-10, decisión de Jürgen del mismo día]** Ese `kind` es además **quien gobierna la
+    puerta de «Volver a iCloud»**: la reversa está disponible para toda cuenta `complete`, **haya migrado o
+    no**. Antes la exigía `migrated_at`, que solo estampa el `cutover`, y eso dejaba la fila E de la matriz
+    prometiendo un camino que ninguna cuenta born-cloud podía recorrer — tras el fresh start del 2026-09-10,
+    nadie. Se abre en `g15_02`. Lo que el cambio cierra de paso: `reverse_complete` no toca `migrated_at`
+    (§h.4), así que una cuenta ya revertida podía reclamar la reversa otra vez sin tener nada personal en la
+    nube; con `kind` deja de ser alcanzable. **El re-cutover (volver a la nube después) sigue siendo diseño
+    futuro**: `reverted_at` es su señal y nada de producción lo consume.
 
 **Razones.** Hay gente a la que solo le importa que nadie vea sus datos: para ellos, CloudKit. Para el
 resto, una cuenta Google/Apple es lo familiar. Grupos es la puerta de entrada de usuarios nuevos y

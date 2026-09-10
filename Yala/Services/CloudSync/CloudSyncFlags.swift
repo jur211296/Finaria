@@ -93,6 +93,35 @@ nonisolated enum StorageModePersistence {
         defaults.set(true, forKey: mirrorOffArmedKey)
     }
 
+    /// Marca "en ESTE dispositivo se creó una cuenta en la nube desde cero" (born-cloud). La escribe el alta
+    /// born-cloud y NADIE más — el adopt de un 2.º device también arma el par, así que colgarla de
+    /// `writeCloudArmed` la haría mentir.
+    ///
+    /// **Existe para que la puerta de «Volver a iCloud» pueda FALLAR CERRADO, y ese matiz es todo el punto.**
+    /// El guardarraíl `ReverseEligibility` exige un mapa de coordenadas CloudKit porque sin él remontar el
+    /// mirror puede RESUCITAR lo que el usuario borró durante la época nube (la zona CloudKit sigue teniendo
+    /// esos records). A un born-cloud no le aplica: nunca tuvo zona. Pero «no tengo pruebas de que migrara»
+    /// **no es** «nació en la nube», y derivarlo de la AUSENCIA de algo abre el guardarraíl justo cuando la
+    /// señal falla. Medido el 2026-09-10 con el `CloudMigrationMarker`, que era el candidato obvio: falta en
+    /// un 2.º device adoptado cuyo marcador no llegó por el mirror (su propio belt lo registra y sigue,
+    /// `MigrationWorkExecutor.adoptBackendAccount`) y lo borra un botón del panel DEBUG. En los dos casos, un
+    /// migrado habría pasado por born-cloud.
+    ///
+    /// ⇒ Es una afirmación POSITIVA sobre algo que ocurrió aquí. Si no está, se exige el mapa como siempre.
+    /// El precio es un falso negativo conservador: un born-cloud que entra en un SEGUNDO dispositivo (por
+    /// adopt) no la tiene y no verá el botón — ticket `reverse-hidden-on-a-born-cloud-second-device`.
+    static let bornCloudKey = "cloudSync.bornCloud"
+
+    /// La escribe `BornCloudSignUpService.activateBornCloudStorage`, junto al par. Idempotente.
+    static func markBornCloud(defaults: UserDefaults = .standard) {
+        defaults.set(true, forKey: bornCloudKey)
+    }
+
+    /// ¿Nació en la nube EN ESTE DISPOSITIVO? Ausente = no se sabe ⇒ `false`, y el gate exige el mapa.
+    static func isBornCloud(_ defaults: UserDefaults = .standard) -> Bool {
+        defaults.bool(forKey: bornCloudKey)
+    }
+
     /// INVARIANTE C-1, como aserción comprobable sin leer el journal: `.cloud` persistido con el mirror-off
     /// SIN armar significa "el mirror de CloudKit sigue VIVO en modo nube".
     ///

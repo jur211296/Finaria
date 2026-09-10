@@ -348,6 +348,11 @@ final class BornCloudSignUpService {
         context: ModelContext
     ) -> CloudWelcomeSignInPhase {
         StorageModePersistence.writeCloudArmed(defaults: storageDefaults)
+        // Y la marca de que esta cuenta NACIÓ en la nube aquí. Es lo que le abre luego la puerta de «Volver
+        // a iCloud» sin exigirle el mapa de coordenadas CloudKit que nunca pudo tener: sin zona previa no
+        // hay borrados que puedan resucitar. Va aquí y no en `writeCloudArmed` porque el adopt de un 2.º
+        // device llama a ese mismo escritor y NO es un alta. Ver `StorageModePersistence.bornCloudKey`.
+        StorageModePersistence.markBornCloud(defaults: storageDefaults)
 
         guard !mountedDecision.attachesCloudKitMirror else {
             BornCloudBreadcrumb.storageActivated(terminal: "relaunch")

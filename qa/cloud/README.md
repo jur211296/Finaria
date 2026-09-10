@@ -164,11 +164,32 @@ EXTENDIÓ (los branches `cutover`/`complete` de la ida quedaron intactos) con 4 
 `leader_device_id` + `migration_updated_at` (migración y reversa son mutuamente excluyentes; expiry
 >60min, heartbeat NULL jamás expira — mismo idiom que `claim_account`):
 
-- **`reverse_claim`** — guards: `migrated_at` set (born-cloud v1 → `not_migrated`); `mip=true` con lease
+- **`reverse_claim`** — guards: **`kind = 'complete'` O `reverted_at` no nulo** (si ninguna, `not_complete`); `mip=true` con lease
   VIGENTE → `migration_in_progress`, con lease EXPIRADO → **takeover de la migración ABANDONADA**
   (mip=false, rip=true, líder=caller — el modo de fallo real del device run 2026-07-10); re-claim del
   MISMO líder → ok idempotente SIN edad de lease; reversa ajena con lease expirado → takeover. El claim
   FRESCO (y todo takeover) resetea `reverse_frozen_at`/`reverted_at` del run anterior.
+
+  **⚠️ El guard cambió el 2026-09-10 (`g15_02`): era `migrated_at` set, con born-cloud excluido.** Jürgen
+  abrió la reversa a quien nació en la nube, y `migrated_at` dejó de servir de puerta: tras el fresh start
+  de ese día **toda** cuenta nueva es born-cloud, así que el guard cerraba la fila E de la matriz de
+  escenarios para la población entera. Manda `kind`, la columna que el ADR 2026-09-09 §11 puso para
+  contestar «¿esta cuenta lleva finanzas personales?».
+
+  **La disyunción con `reverted_at` no es cosmética, y casi se quedó fuera.** `reverse_complete` degrada a
+  `groups_only`, así que un guard por `kind` a secas rechaza al **SEGUNDO dispositivo** de una cuenta que ya
+  volvió a iCloud — un device que sigue en modo nube, con el backend congelado y `/sync/push` en 409, y que
+  necesita recorrer su propia vuelta. Y el cliente **no tiene desatascador para un rechazo**: la fase se
+  queda en `reverseClaimLeader` con la barra al 15 % y «Retomar» sin efecto, para siempre (`MigrationRunner`
+  solo tiene salida para `other_leader`). Con el guard viejo ese device convergía. Lo cazó una review
+  adversarial y está medido contra la función viva. ⇒ `reverted_at` no nulo dice «esta cuenta YA volvió», y
+  quien llega detrás tiene derecho a seguirla. Lo que queda cerrado es la cuenta de solo grupos que **nunca**
+  revirtió: antes recibía `not_migrated`, o sea acertaba por el motivo equivocado.
+
+  Consecuencia de orden que hay que saber al escribir goldens: **`reverse_complete` degrada a
+  `groups_only` y con eso CIERRA la reversa**, y `kind` no se puede PATCHear (lo veta el trigger
+  `profiles_kind_guard`). La única vía de vuelta a `complete` es la **promoción** de `claim_account`, que
+  exige `personal_claimed_at is null` — la ruta real de la fila F, «solo-grupos activa Yala completo».
 - **`reverse_freeze`** — guard reverse-líder SIN edad de lease (el lease existe SOLO para que
   competidores usurpen) → `reverse_frozen_at=coalesce(...,now())` idempotente + heartbeat.
 - **`reverse_complete`** — guard reverse-líder → `rip=false` + `reverted_at=now()`. **`migrated_at` NO
@@ -179,6 +200,15 @@ EXTENDIÓ (los branches `cutover`/`complete` de la ida quedaron intactos) con 4 
 
 Cada acción del líder refresca `migration_updated_at` (heartbeat). Goldens 11-18 de
 `account.goldens.test.ts` cubren las 4 acciones (incl. el takeover 1-bis y la acción inválida → 400).
+El **11** pinnea que una cuenta born-cloud SÍ entra, y el **16-bis** las dos mitades del guard nuevo: el
+2.º device de una cuenta ya revertida SÍ, la de solo grupos que nunca revirtió NO (`g15_02`).
+
+**Camino nuevo SIN golden, anotado el 2026-09-10:** el takeover de una migración abandonada **antes** del
+cutover (`mip=true`, lease vencido, `migrated_at` NULO y `kind='complete'` — una promoción de solo-grupos
+que arrancó y no llegó a estampar). Con el guard viejo se rechazaba (`not_migrated`); ahora se acepta. El
+resultado es sano —lo local está completo y es lo que sube a iCloud, y el backend queda con un corpus
+parcial congelado— pero deja el estado `reverted_at IS NOT NULL AND migrated_at IS NULL`, que no existía
+en el esquema. El golden 12 fija el caso POST-cutover, no éste.
 
 **ASIMETRÍA CERRADA (2026-07-11, migración `i11_reverse_claim_cas`) — `reverse_claim` ya es CAS:**
 el review adversarial de I11-3 documentó que `reverse_claim` era read-then-UPDATE (TOCTOU): dos

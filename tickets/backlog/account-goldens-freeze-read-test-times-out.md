@@ -4,7 +4,7 @@ status: backlog
 priority: medium
 area: qa, cloud
 created: 2026-09-03
-updated: 2026-09-03
+updated: 2026-09-10
 source: aparecido al correr la batería del gateway con credenciales vivas (2026-09-03)
 ---
 
@@ -44,6 +44,34 @@ a la luz por primera vez.
 sigue colgándose, `5017 ms`, y **falla idéntico contra `HEAD` limpio** — o sea que no lo introdujo el
 trabajo del 3-sep, sólo lo destapó. Sigue siendo el único rojo de la batería del gateway con las tres
 credenciales cargadas.
+
+## ⚠️ 2026-09-10 — NO se cuelga: TARDA. La hipótesis principal de este ticket es falsa
+
+Medido al correr la batería para `reverse-cutover-cerrado-para-cuentas-born-cloud`:
+
+```
+npx vitest run test/account.goldens.test.ts -t "20. la cuenta congelada" --testTimeout=60000
+✓ 20. la cuenta congelada NO bloquea pull/merkle ni prefs/pull  9314ms
+```
+
+**Pasa en verde en 9,3 s.** O sea que ninguna de las tres llamadas se queda sin resolver: el test
+consume **86 % más** que su presupuesto de 5 s, y el timeout lo corta antes de acabar.
+
+Eso invalida dos cosas escritas arriba, y conviene tacharlas en vez de borrarlas:
+
+- **«El número clavado en el límite dice que el test no tarda: se cuelga»** — el razonamiento era
+  bueno y la conclusión es falsa. Las tres duraciones de `5010/5012/5010 ms` son el timeout
+  disparando con precisión, no un `await` muerto: cualquier test que tarde MÁS de 5 s da ese mismo
+  número. **Un timeout no distingue «lento» de «colgado»; solo lo hace subirlo.**
+- **«Subir el timeout NO es el arreglo»** — se apoyaba en la hipótesis del cuelgue. Con el dato
+  nuevo, subirlo SÍ es un arreglo legítimo: el invariante que este test protege (el freeze no bloquea
+  las lecturas) **queda comprobado de verdad** en cuanto se le da tiempo, y hoy no lo comprueba nadie.
+
+**Lo que sigue vigente y es el trabajo que queda:** saber POR QUÉ tarda 9 s (el paso 1 de «Por dónde
+seguir» — un `console.time` por GET), porque 9 s para tres lecturas sigue siendo mucho y puede estar
+diciendo algo del cálculo del Merkle sobre el corpus de B. La decisión de si se sube el timeout de
+ese `it` mientras se investiga es de Jürgen; **hoy el rojo se queda**, y quien corra la batería del
+gateway debe saber que es éste y que no es suyo.
 
 ## Una hipótesis REFUTADA, para que nadie la repita
 

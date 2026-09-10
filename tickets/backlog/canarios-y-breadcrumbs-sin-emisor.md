@@ -4,7 +4,7 @@ status: backlog
 priority: medium
 area: qa
 created: 2026-09-02
-updated: 2026-09-02
+updated: 2026-09-10
 ---
 
 # Hay 19 señales de vigilancia que no las emite nadie, y dos tickets las usan como prueba de que todo va bien
@@ -243,6 +243,29 @@ y los breadcrumbs en `:136`/`:151`/`:160`/`:169`/`:201`/`:210` (hoy `:160`/`:175
 `GroupsSyncBreadcrumb.swift` pasó de las 213 líneas y 25 funciones que ese informe midió a **275 líneas y
 31 funciones**. El informe no se equivocó: midió bien su HEAD y lo dice en su propia cabecera. El árbol
 se movió debajo.
+
+## Una CUARTA clase, encontrada el 2026-09-10: el canario que ni siquiera es un caso del enum
+
+El barrido de arriba enumera casos de `MetricsCanary` que nadie emite. Hay una variante peor y este
+ticket no la cubría porque su método no podía verla: **un canario prometido en un docblock que nunca
+llegó a existir**.
+
+`cloudReverseDegradedNoMap` — lo promete `Yala/Services/CloudSync/MigrationWorkExecutor.swift`, en el
+docblock de `ReverseEligibility` («`degradedNoMap` dispara el canario `cloudReverseDegradedNoMap`»), y
+lo dan por vivo dos documentos de diseño (`docs/modo-nube/MODO-NUBE-DECISIONES-ESCENARIOS.md` y
+`MODO-NUBE-DIFERIDOS.md`, donde el guardarraíl aparece «gateado por canario»). Medido: **cero
+ocurrencias en todo `Yala/` fuera de ese comentario, y NO es un caso de `MetricsCanary`.**
+
+⇒ No es un contador en cero: es un nombre. Un barrido sobre el enum no lo encuentra, y quien lea el
+docblock o el diseño creerá que el estado degradado se está observando en la flota. **Al barrer esto
+otra vez, la búsqueda no puede ser «casos del enum sin emisor» sino también «nombres de canario que
+aparecen en comentarios y no existen en el enum».**
+
+Encontrado por la review adversarial de `reverse-cutover-cerrado-para-cuentas-born-cloud`
+(2026-09-10), que además retiró la mitad del motivo: desde ese ticket `degradedNoMap` ya no significa
+«born-cloud» sino «migrado que perdió el mapa», que es una población mucho más pequeña — pero también
+la única a la que ese estado le puede costar datos (resurrección de borrados), así que la señal
+importa más que antes, no menos.
 
 ## Qué NO cubre este ticket
 

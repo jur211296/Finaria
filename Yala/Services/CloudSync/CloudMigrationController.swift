@@ -708,6 +708,10 @@ final class CloudMigrationController {
             // jamás debe volverse elegible por el `.cloud` efectivo derivado del descriptor.
             storageMode: StorageModePersistence.read(),
             hasCKMap: hasCKMap,
+            // Marca POSITIVA escrita por el alta born-cloud de este dispositivo. No se deriva de la
+            // ausencia del `CloudMigrationMarker`: ese fetch falla abierto (el marcador falta también en
+            // un 2.º device adoptado y lo borra un botón DEBUG). Ver `StorageModePersistence.bornCloudKey`.
+            isBornCloud: StorageModePersistence.isBornCloud(),
             journaledPhase: journaledPhase)
     }
 
