@@ -1,13 +1,15 @@
 ---
 id: secondary-onboarding-still-crosses-owner-domain
-status: backlog
+status: discarded
 priority: medium
 area: modo-nube
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-09
 ---
 
 # El onboarding de la visita todavía cruza la frontera del dueño por dos sitios
+
+Why: Discarded 2026-09-09. Superado por el ADR 2026-09-09 «Sesiones — dos ejes» (docs/DECISIONS.md): la sesión de visita (M1) se retira del modelo. No hay onboarding «de visita»: sin sesión privada propia solo hay sesión en la nube, y la privada del dueño ya no está montada (su cierre borra lo local).
 
 ## Qué queda abierto, medido (2026-09-07)
 

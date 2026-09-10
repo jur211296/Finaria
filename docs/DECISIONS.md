@@ -2,11 +2,12 @@
 
 <!-- INDICE:inicio — generado por scripts/indexar_doc.py, no editar a mano -->
 
-## Índice (83 entradas)
+## Índice (84 entradas)
 
-> **No hace falta leer este fichero entero** — son 233 KB. Localiza la entrada
+> **No hace falta leer este fichero entero** — son 242 KB. Localiza la entrada
 > aquí y salta a ella.
 
+- `2026-09-09` [Sesiones — dos ejes (privada × nube), un verbo por sesión, y Grupos como mini-app](#2026-09-09-sesiones--dos-ejes-privada--nube-un-verbo-por-sesin-y-grupos-como-mini-app)
 - `2026-09-09` [CI — el aviso de rojos advisory es un check propio, y no calla aunque su canal caiga](#2026-09-09-ci--el-aviso-de-rojos-advisory-es-un-check-propio-y-no-calla-aunque-su-canal-caiga)
 - `2026-09-02` [Panel — la jerarquía manda, el color informa y las tarjetas se quedan](#2026-09-02-panel--la-jerarqua-manda-el-color-informa-y-las-tarjetas-se-quedan)
 - `2026-08-31` [El repo recibe /abrir, /higiene y reorg_docs; lo demás del estándar de casa no aplica](#2026-08-31-el-repo-recibe-abrir-higiene-y-reorgdocs-lo-dems-del-estndar-de-casa-no-aplica)
@@ -18,14 +19,14 @@
 - `2026-07-24` [Tanda 2026-07-24: fase 2.0.5 — 36 entradas (2026-07-08 → 2026-07-22)](#tanda-2026-07-24-fase-205--36-entradas-2026-07-08--2026-07-22)
 - `2026-07-24` [Tanda 2026-07-24 (cierre): últimas 5 entradas de la fase 2.0.5](#tanda-2026-07-24-cierre-ltimas-5-entradas-de-la-fase-205)
 - `2026-07-06` [Stats — Comparativa: KPI "período anterior" alineado a la curva MTD-vs-MTD (p20-15 completo)](#2026-07-06-stats--comparativa-kpi-perodo-anterior-alineado-a-la-curva-mtd-vs-mtd-p20-15-completo)
+- `2026-07-05` [Cold launch — deep link de grupo `yala://groups/<id>` se perdía (gemelo D1 del anterior)](#2026-07-05-cold-launch--deep-link-de-grupo-yalagroupsid-se-perda-gemelo-d1-del-anterior)
 - `2026-07-05` [Siri — migrado al mismo patrón de cola (cierra el ciclo de Apple Pay)](#2026-07-05-siri--migrado-al-mismo-patrn-de-cola-cierra-el-ciclo-de-apple-pay)
 - `2026-07-05` [Cold launch — share-image al share sheet no hacía nada (intent no-serializable pre-init)](#2026-07-05-cold-launch--share-image-al-share-sheet-no-haca-nada-intent-no-serializable-pre-init)
 - `2026-07-05` [Stats — clasificación income/expense por categoría (fase 2 de p20-14)](#2026-07-05-stats--clasificacin-incomeexpense-por-categora-fase-2-de-p20-14)
-- `2026-07-05` [Cold launch — deep link de grupo `yala://groups/<id>` se perdía (gemelo D1 del anterior)](#2026-07-05-cold-launch--deep-link-de-grupo-yalagroupsid-se-perda-gemelo-d1-del-anterior)
 - `2026-07-04` [Apple Pay — el intent deja de tocar SwiftData (patrón de cola App Group)](#2026-07-04-apple-pay--el-intent-deja-de-tocar-swiftdata-patrn-de-cola-app-group)
 - `2026-07-02` [INCIDENTE PROD — sync de grupos muerto 4 días por campo sin deploy de schema + hardening](#2026-07-02-incidente-prod--sync-de-grupos-muerto-4-das-por-campo-sin-deploy-de-schema--hardening)
-- `2026-07-01` [Groups — notificaciones filtradas por participación + copy con voz de marca](#2026-07-01-groups--notificaciones-filtradas-por-participacin--copy-con-voz-de-marca)
 - `2026-07-01` [Groups — pagos planificados de grupo (gasto compartido recurrente)](#2026-07-01-groups--pagos-planificados-de-grupo-gasto-compartido-recurrente)
+- `2026-07-01` [Groups — notificaciones filtradas por participación + copy con voz de marca](#2026-07-01-groups--notificaciones-filtradas-por-participacin--copy-con-voz-de-marca)
 - `2026-06-30` [Personalización — toggle "Iconos coloridos" gobierna también "Más"](#2026-06-30-personalizacin--toggle-iconos-coloridos-gobierna-tambin-ms)
 - `2026-06-28` [Groups — rediseño del split de gastos estilo Splitwise](#2026-06-28-groups--rediseo-del-split-de-gastos-estilo-splitwise)
 - `2026-06-28` [..06-30] Groups — sync de "Solo Grupos" no bajaba cambios de otros miembros](#2026-06-2806-30-groups--sync-de-solo-grupos-no-bajaba-cambios-de-otros-miembros)
@@ -33,8 +34,8 @@
 - `2026-06-19` [..06-22] Groups — saga del crash-loop de sync en restore de iCloud (5 intentos, CERRADA en build 32)](#2026-06-1906-22-groups--saga-del-crash-loop-de-sync-en-restore-de-icloud-5-intentos-cerrada-en-build-32)
 - `2026-06-19` [Fix identity UUIDs colapsados tras restore lento de iCloud (Tag.id/Account.shortcutID/Subcategory.sh](#2026-06-19-fix-identity-uuids-colapsados-tras-restore-lento-de-icloud-tagidaccountshortcutidsubcategoryshortcutid)
 - `2026-06-14` [Fix doble canal de sync CloudKit en Grupos](#2026-06-14-fix-doble-canal-de-sync-cloudkit-en-grupos)
-- `2026-06-10` [Sesión de cierre pre-release 2.0](#2026-06-10-sesin-de-cierre-pre-release-20)
 - `2026-06-10` [OpenAI API key en Info.plist + PrivacyInfo sin FinancialInfo — diferido consciente a post-2.0](#2026-06-10-openai-api-key-en-infoplist--privacyinfo-sin-financialinfo--diferido-consciente-a-post-20)
+- `2026-06-10` [Sesión de cierre pre-release 2.0](#2026-06-10-sesin-de-cierre-pre-release-20)
 - `2026-06-08` [Fix Apple Pay — "No se pudo ejecutar el atajo"](#2026-06-08-fix-apple-pay--no-se-pudo-ejecutar-el-atajo)
 - `2026-06-08` [Fix invite-drop — persistencia de invite pendiente](#2026-06-08-fix-invite-drop--persistencia-de-invite-pendiente)
 - `2026-06-04` [Fix subcategorías duplicadas por re-sync de CloudKit](#2026-06-04-fix-subcategoras-duplicadas-por-re-sync-de-cloudkit)
@@ -44,8 +45,8 @@
 - `2026-05-26` [Refactor robusto del subsistema de routing (F0-F11)](#2026-05-26-refactor-robusto-del-subsistema-de-routing-f0-f11)
 - `2026-05-25` [Transfer pair integrity — épico de 6 commits](#2026-05-25-transfer-pair-integrity--pico-de-6-commits)
 - `2026-05-25` [CSV mirror épico — Budget filters + TransactionItem/InboxDraft tags resilientes a CloudKit lazy hydr](#2026-05-25-csv-mirror-pico--budget-filters--transactioniteminboxdraft-tags-resilientes-a-cloudkit-lazy-hydration)
-- `2026-05-22` [Groups — cleanup de TX/drafts huérfanos post soft-delete (FU-02-cleanup)](#2026-05-22-groups--cleanup-de-txdrafts-hurfanos-post-soft-delete-fu-02-cleanup)
 - `2026-05-22` [Groups — Soft-delete de grupo (FU-02, owner-only, gateado por balance=0)](#2026-05-22-groups--soft-delete-de-grupo-fu-02-owner-only-gateado-por-balance0)
+- `2026-05-22` [Groups — cleanup de TX/drafts huérfanos post soft-delete (FU-02-cleanup)](#2026-05-22-groups--cleanup-de-txdrafts-hurfanos-post-soft-delete-fu-02-cleanup)
 - `2026-05-20` [Onboarding informativo del tab Grupos (3 steps)](#2026-05-20-onboarding-informativo-del-tab-grupos-3-steps)
 - `2026-05-17` [Panel polish — AmountText API simplificada (cierre de sprint)](#2026-05-17-panel-polish--amounttext-api-simplificada-cierre-de-sprint)
 - `2026-05-13` [Stats polish — 4 tabs de Statistics panel-aligned (épico completo, Registros→Insights→Tendencias→Dis](#2026-05-13-stats-polish--4-tabs-de-statistics-panel-aligned-pico-completo-registrosinsightstendenciasdistribucin)
@@ -56,9 +57,9 @@
 - `2026-05-08` [Fix subcategorías vacías en Grupos + FullModeActivation rediseñado](#2026-05-08-fix-subcategoras-vacas-en-grupos--fullmodeactivation-rediseado)
 - `2026-05-08` [Yala AI Onboarding — tutorial de 4 pasos post-consent](#2026-05-08-yala-ai-onboarding--tutorial-de-4-pasos-post-consent)
 - `2026-05-08` [Groups Pulido — Sprint Pulido 2 (9 bugs UX) + Sprint Pulido 3 (cierre diferidos)](#2026-05-08-groups-pulido--sprint-pulido-2-9-bugs-ux--sprint-pulido-3-cierre-diferidos)
+- `2026-05-07` [A4 v3.2 — Fix P0 #2 (nudge dormant sin grupos) + #6 (Welcome Hero residual tras reinstall)](#2026-05-07-a4-v32--fix-p0-2-nudge-dormant-sin-grupos--6-welcome-hero-residual-tras-reinstall)
 - `2026-05-07` [A4 v3.2 — Welcome Hero + Chooser fix unificado (Sprint 2/2.1 polish visual)](#2026-05-07-a4-v32--welcome-hero--chooser-fix-unificado-sprint-221-polish-visual)
 - `2026-05-07` [Cleanup sistémico de duplicados CloudKit (TODO #10)](#2026-05-07-cleanup-sistmico-de-duplicados-cloudkit-todo-10)
-- `2026-05-07` [A4 v3.2 — Fix P0 #2 (nudge dormant sin grupos) + #6 (Welcome Hero residual tras reinstall)](#2026-05-07-a4-v32--fix-p0-2-nudge-dormant-sin-grupos--6-welcome-hero-residual-tras-reinstall)
 - `2026-05-06` [A4 — Landing + AASA + Welcome Chooser (cierra Fase A del épico Grupos)](#2026-05-06-a4--landing--aasa--welcome-chooser-cierra-fase-a-del-pico-grupos)
 - `2026-05-05` [A0-Bridge — rediseño completo del bridge SplitExpense ↔ TransactionItem (modelo M5)](#2026-05-05-a0-bridge--rediseo-completo-del-bridge-splitexpense--transactionitem-modelo-m5)
 - `2026-05-05` [A0-Bridge V2.0 — completa items P0+P1 diferidos](#2026-05-05-a0-bridge-v20--completa-items-p0p1-diferidos)
@@ -109,6 +110,112 @@ Cada decisión sigue esta estructura:
 ---
 
 ## Decisiones Activas
+
+### [2026-09-09] Sesiones — dos ejes (privada × nube), un verbo por sesión, y Grupos como mini-app
+
+**Contexto.** Device-QA guiado por Jürgen sobre el build 13 de TestFlight con una reinstalación
+fresca y un histórico de meses en iCloud privado. Al contrastar lo que esperaba del Welcome con lo que
+hace el código, la conversación se convirtió en un rediseño del modelo de sesiones, porque la
+confusión no era de una pantalla sino del modelo: la app expone **tres estados con nombres distintos**
+—dónde viven los datos (`StorageMode` icloud/cloud), por dónde entró (`OnboardingMode`
+full/groupInvite/completed) y qué usa (`UsageFocus` full/groupsOnly)— más la «sesión secundaria» (M1,
+0 % en producción), y de esos cuatro se derivan **7 verbos de salida** visibles sobre **11 operaciones**
+(`DestructiveScopeLogic.Operation`), **4 caminos** (`CloudSignOutFlowLogic.Path`) y **4 layouts** de
+filas. Lo medido (2026-09-09, árbol `3a94604e`) que motivó cada punto está en
+`docs/sessions/2026-09-09-onboarding-lo-que-jurgen-espera.md`; los hechos que cambian a partir de aquí
+tienen ticket propio y se listan abajo.
+
+**Decisión (Jürgen).**
+
+1. **Vocabulario.** Hay dos clases de sesión y ninguna más:
+   - **Sesión privada** — vive en el dispositivo y sincroniza por el iCloud privado del Apple ID del
+     teléfono (CloudKit). No tiene login ni logout: «salir» es borrar lo local y dejar el contenedor en
+     iCloud; «entrar» es «Restaurar desde iCloud». Es para quien solo quiere que nadie vea sus datos.
+   - **Sesión en la nube** — cuenta Google/Apple en el backend de Yala; sign in / sign out como en
+     cualquier app. Puede ser **completa** (personal + grupos) o **solo grupos**.
+   - **«Cuenta invitada», «visita» y «sesión secundaria» se retiran** del vocabulario: eran un tercer
+     nombre para «una sesión en la nube en un móvil cuya sesión privada es de otra persona».
+2. **Los dos ejes.** Todo estado de la app se deriva de **¿hay sesión privada?** × **¿qué sesión en la
+   nube hay activa? (ninguna / solo grupos / completa)**:
+
+   | | Sin sesión nube | Nube solo grupos | Nube completa |
+   |---|---|---|---|
+   | **Con sesión privada** | Yala privada, sin grupos | privada + **grupos asociados** | *(no existe: la nube completa absorbe lo personal)* |
+   | **Sin sesión privada** | *(nada que mostrar)* | «otro Splitwise» | nacida en la nube |
+
+   La sesión privada **no es obligatoria** (habrá dispositivos solo-nube). Hay **una sesión en la nube
+   activa por dispositivo, conmutable** (cerrar → entrar con otra); no un selector de cuentas simultáneas.
+3. **Grupos es una mini-app dentro de Yala**: vive solo en la nube (su store `YalaGroups` jamás toca
+   iCloud), con sus ajustes, su login y su cierre. Es el gancho para traer usuarios nuevos.
+4. **Asociación.** Un usuario con sesión privada puede **asociar UNA cuenta en la nube para grupos** y
+   desasociarla. Si la cuenta personal **es** en la nube, grupos es esa misma cuenta y no se cambia. La
+   asociación se ve, se deshace y se rehace en **«¿Dónde viven tus datos?»**.
+5. **Equipo.** La sesión privada y su cuenta de grupos asociada **se mueven juntas**: cerrar sesión sube
+   los cambios de grupos, borra lo local, deja iCloud intacto y vuelve al Welcome. **No existe «salir
+   solo de grupos»** cuando hay asociación.
+6. **Dos botones y nada más:** «Cerrar sesión» y «Vaciar datos». «Vaciar datos» en privado vacía local e
+   iCloud; en la nube, el contenido de la cuenta; **grupos, nunca** (con lo que «Seguir con mis grupos»
+   pierde su razón de ser). «Salir del grupo» vive dentro de cada grupo. «Eliminar mi cuenta» **no puede
+   desaparecer** para sesiones en la nube (App Store Guideline 5.1.1 v): deja de ser botón principal y
+   vive dentro de «Tu cuenta de Yala».
+7. **Onboardings = tres bloques reutilizables:** **[I]** identidad en la nube (Apple/Google → ¿existe? →
+   *nueva* / *completa* / *solo grupos*, excluyentes; **todo** sign-in pasa por aquí); **[P]** onboarding
+   personal (los 8 pasos de hoy, **sin la card «Grupos» en el paso *propósito***); **[G]** alta de grupos
+   (consentimiento + nombre + moneda). Flujos: *Primera vez → privado*: validar iCloud → [P] · *Primera
+   vez → nube*: consentimiento → [I] → nueva: [P]; existente: como «Ya tengo cuenta» · *Vengo por un
+   grupo*: [I] → nueva: [G]; solo grupos: entra; completa: entra completa y abre Grupos · *Ya tengo cuenta
+   → iCloud*: restaurar · *Ya tengo cuenta → Apple/Google*: [I] → completa: adopta; solo grupos: entra;
+   no existe: botón hacia «Primera vez → nube» · *Privada + asociar grupos* (desde Grupos): [I] → nueva o
+   solo grupos: [G]; **completa: se bloquea** con dos salidas («Ya tengo cuenta» o asociar otra cuenta).
+8. **«Yala completo» ≠ «nube completa».** Yala completo = personal + grupos; lo personal puede ser
+   privado o en la nube. Quien está en solo-grupos y activa Yala completo **elige** con el mismo chooser
+   de «Primera vez» (privado / nube).
+9. **«Primera vez → privado» valida iCloud ANTES de todo**, también en instalación fresca: si hay datos,
+   alert con doble confirmación; borrar → se borra, pide reinicio, y al reabrir el onboarding es de cero;
+   cancelar → vuelve a la elección. **Nunca** se muestra la pantalla de reinicio sin esa validación.
+10. **El faro (iCloud-KV) solo encamina, nunca bloquea.** Si el Apple ID ya tiene cuenta en la nube,
+    «Primera vez» lleva a entrar con ella, pero el usuario conserva la libertad de crear otra cuenta con
+    otro proveedor u otro usuario.
+11. **El backend sabe decir «completa» o «solo grupos»** por cuenta. Hoy el cliente lo infiere de su
+    `storageMode` local, que en un móvil recién instalado no existe; sin ese dato [I] no puede rutear.
+
+**Razones.** Hay gente a la que solo le importa que nadie vea sus datos: para ellos, CloudKit. Para el
+resto, una cuenta Google/Apple es lo familiar. Grupos es la puerta de entrada de usuarios nuevos y
+tiene que funcionar como un producto propio. Y la confusión medida no se arregla pantalla a pantalla:
+mientras haya tres flags de entrada, cada vista los combinará a su manera (19 vistas lo hacen hoy).
+Se descartó el selector de cuentas simultáneas porque reintroduce la confusión que se quita; se
+descartó «migrar» una sesión privada sobre una cuenta en la nube que ya tiene datos porque sería una
+fusión de dos datasets personales, que no existe y no conviene construir. Sobre el nombre: Jürgen
+propuso «sesión pública»; Frank propuso «en la nube» porque «pública» en una app de finanzas se lee
+como «visible para otros». Este ADR usa «en la nube»; la palabra sigue siendo de Jürgen.
+
+**Consecuencias.**
+- **La sesión de visita (M1, `SECONDARY_SESSION_ROLLOUT_PERCENT = 0` en prod) se retira.** En el modelo,
+  prestar el móvil con una sesión privada activa no es un caso: el dueño cierra sesión (lo local se
+  borra, iCloud queda), la otra persona entra con su cuenta en la nube, cierra, y el dueño restaura.
+  Sus 12 tickets se descartan con este ADR como motivo; la infraestructura (`YalaModel-Secondary`,
+  `SessionDefaults`, `SecondarySessionStore`) se retira en el último ticket del rediseño. **Ratificación
+  pendiente de Jürgen**: es la única consecuencia que no dictó palabra por palabra.
+- Se abren 13 tickets (abajo) y se descartan 12. Este ADR es el spec de referencia de todos.
+- **Fuera de este repo-territorio:** la web, la FAQ, la política y la ficha de la App Store dicen que
+  Grupos viaja «por iCloud»; con este modelo la historia es «Grupos = cuenta en la nube». Es de Lola
+  (`marketing/`, `Web/`), y va **después** de implementar el rediseño.
+
+**Orden de implementación** (cada paso es un ticket y cabe en una sesión autónoma; las flechas son
+dependencias reales, no preferencias):
+1. `wrangler-prod-onboarding-choice-percent-drift` — antes de cualquier deploy del gateway.
+2. `backend-account-kind-complete-or-groups-only` → 3. `cloud-sign-in-discovers-account-kind` ([I]).
+4. `welcome-private-fresh-start-skips-icloud-check` · 5. `groups-only-second-launch-mounts-icloud-mirror`
+   · 6. `beacon-routes-only-never-blocks` · 7. `onboarding-purpose-drops-groups-card` (independientes).
+8. `full-mode-activation-must-ask-where-personal-data-lives` (necesita 3 y 4).
+9. `session-exits-one-verb-per-session` · 10. `groups-account-association-in-storage-row` (necesitan 3).
+11. `shell-derives-from-two-session-axes` — el barrido de las 19 vistas y la retirada de M1; va último.
+12. `retire-guest-vocabulary-for-session-terms` — puede ir en cualquier momento.
+13. `after-session-redesign-review-widgets-siri-applepay-and-web-copy` — después de todo lo anterior.
+
+**Estado:** Activa.
+
+---
 
 ### [2026-09-09] CI — el aviso de rojos advisory es un check propio, y no calla aunque su canal caiga
 

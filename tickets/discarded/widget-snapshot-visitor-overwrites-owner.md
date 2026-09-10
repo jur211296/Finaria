@@ -1,13 +1,15 @@
 ---
 id: widget-snapshot-visitor-overwrites-owner
-status: qa
+status: discarded
 created: 2026-08-13
-updated: 2026-08-26
+updated: 2026-09-09
 source: YalaWiki/Bugs/qa_widget-snapshot-sin-sello-la-visita-pisa-los-datos-del-dueno.md
 ---
 
 
 # El widget enseña los números de la visita, y se queda con ellos
+
+Why: Discarded 2026-09-09. Superado por el ADR 2026-09-09 «Sesiones — dos ejes» (docs/DECISIONS.md): la sesión de visita (M1) se retira del modelo. El síntoma era de la visita. El hecho de fondo —la caché del widget no sabe de sesiones— se revisa en `after-session-redesign-review-widgets-siri-applepay-and-web-copy`.
 
 ## El síntoma, en lenguaje de usuario
 

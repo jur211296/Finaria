@@ -1,13 +1,15 @@
 ---
 id: secondary-guest-exit-lock-and-outbox
-status: qa
+status: discarded
 created: 2026-08-12
-updated: 2026-09-06
+updated: 2026-09-09
 source: YalaWiki/Bugs/secundaria-salida-de-la-invitada-bloqueo-permanente-y-outbox-de-grupos.md
 ---
 
 
 # Cuando la invitada se va: sus gastos de grupo pueden quedarse sin subir, y el error siempre culpa a la conexión
+
+Why: Discarded 2026-09-09. Superado por el ADR 2026-09-09 «Sesiones — dos ejes» (docs/DECISIONS.md): la sesión de visita (M1) se retira del modelo. El cierre «equipo» y el de solo-grupos suben SIEMPRE los cambios de grupos antes del wipe (ADR §5, ticket `session-exits-one-verb-per-session`); el «un momento más» es parte de ese ticket.
 
 ## El síntoma, en lenguaje de usuario
 

@@ -1,13 +1,15 @@
 ---
 id: welcome-privacy-branch-has-no-secondary-door
-status: qa
+status: discarded
 priority: medium
 area: modo-nube
 created: 2026-09-05
-updated: 2026-09-07
+updated: 2026-09-09
 ---
 
 # «Es mi primera vez → privacidad total» no dice nada a quien está de visita
+
+Why: Discarded 2026-09-09. Superado por el ADR 2026-09-09 «Sesiones — dos ejes» (docs/DECISIONS.md): la sesión de visita (M1) se retira del modelo. La rama privada ya no puede recorrerse «de visita».
 
 ## El síntoma, en lenguaje de usuario
 

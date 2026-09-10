@@ -1,13 +1,15 @@
 ---
 id: secondary-visit-data-lost-on-signout-unannounced
-status: backlog
+status: discarded
 priority: medium
 area: modo-nube
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-09
 ---
 
 # La visita apunta sus gastos en un móvil prestado, y al salir se los lleva el wipe
+
+Why: Discarded 2026-09-09. Superado por el ADR 2026-09-09 «Sesiones — dos ejes» (docs/DECISIONS.md): la sesión de visita (M1) se retira del modelo. La «visita» que crea una sesión privada en un móvil ajeno deja de ser un recorrido: la sesión privada es del Apple ID del teléfono.
 
 ## El síntoma, en lenguaje de usuario
 

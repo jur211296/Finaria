@@ -1,13 +1,15 @@
 ---
 id: welcome-private-card-promises-icloud-in-visit
-status: backlog
+status: discarded
 priority: low
 area: modo-nube
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-09
 ---
 
 # La card «privacidad total» promete tu iCloud, y en visita no hay ninguno
+
+Why: Discarded 2026-09-09. Superado por el ADR 2026-09-09 «Sesiones — dos ejes» (docs/DECISIONS.md): la sesión de visita (M1) se retira del modelo. La card se lee siempre en un móvil cuyo iCloud es el de quien elige.
 
 ## El síntoma, en lenguaje de usuario
 
