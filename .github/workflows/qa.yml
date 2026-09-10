@@ -52,6 +52,13 @@ jobs:
         run: python3 qa/validate-coverage.py
       - name: Aislamiento de tests (makeTestContext( ⇒ .serialized)
         run: bash qa/check-test-isolation.sh
+      # El candado que impide que un commit diga que lo escribió una IA vive en
+      # `.githooks/commit-msg` (ADR-013; aquí es propio porque `core.hooksPath` local
+      # sustituye al global, no se suma). Un candado sin banco de pruebas se relaja sin
+      # que nadie lo note, así que sus 17 casos corren en cada push. La comparación con
+      # el hook global se salta sola aquí: en el runner no hay ~/.claude.
+      - name: Candado anti-atribución (.githooks/commit-msg)
+        run: bash qa/scripts/commit-msg-test.sh
 
   # Decide si el job `tests` (macos-26, ~1,5 h de reloj) tiene algo que probar. Un
   # cambio de solo docs/tickets no puede romper el build ni la suite y hasta ahora

@@ -1,0 +1,79 @@
+#!/bin/bash
+# Rechaza cualquier commit de Yala que atribuya el trabajo a Claude o a una IA.
+#
+# Por qué existe una copia aquí y no se usa la global: `core.hooksPath` NO es
+# acumulativo. Yala lo pone en local (`.githooks`) para su `pre-commit` del gate, y
+# con eso el directorio global queda fuera ENTERO, incluido el `commit-msg` de
+# ADR-013. Medido el 2026-09-05 y re-medido el 2026-09-09: en este repo ese candado
+# nunca corrió, y lo único que mantuvo el historial limpio desde el 2026-09-02 fue
+# que las sesiones se acordaban. El 2026-09-08 una se olvidó.
+#
+# Qué bloquea: ATRIBUCIÓN. Trailers y firmas que digan que esto lo escribió una IA.
+#
+# Qué NO bloquea, y es deliberado (decisión de Jürgen, 2026-09-09): la MENCIÓN a
+# secas de «Claude» o «Anthropic». El hook global sí la prohíbe fuera de los repos
+# del sistema, y aplicarlo aquí tal cual rechazaría 222 de los 3348 commits de este
+# repo — todos legítimos: citan rutas del propio árbol (`CLAUDE.md`,
+# `.claude/rules/testing.md`, `.claude/agent-memory/`). En Yala el sistema de Claude
+# también es objeto de trabajo, como en `casa`, `~/.claude` y `tim`.
+#
+# Enlaza con la confidencialidad del CLAUDE.md global: no se revela el uso de IA al
+# cliente ni al equipo, tampoco en el historial. Un trailer es permanente y viaja en
+# cualquier clon — hoy ya viajan 768 (23 %), el más antiguo del 2026-01-13.
+#
+# Su banco de pruebas es `qa/scripts/commit-msg-test.sh`, y lo corre el CI en cada
+# push (job `coverage-index`). Si tocas los patrones de aquí, tiene que seguir en
+# verde: incluye los casos que impiden "arreglarlo" a base de dejar de mirar cosas.
+#
+# Si algún día hace falta saltárselo, es `git commit --no-verify`. Que exista la
+# salida no la hace normal: si se usa a menudo, la regla está mal puesta.
+
+MSG_FILE="$1"
+[ -f "$MSG_FILE" ] || exit 0
+
+# El texto del commit sin las líneas de comentario que git añade. Importa: un merge
+# lista los ficheros del conflicto como comentarios, y ahí sí aparecen rutas
+# `.claude/…` que no son atribución (2 casos reales en la historia).
+CUERPO=$(grep -v '^#' "$MSG_FILE" 2>/dev/null)
+
+fallo() {
+  echo "" >&2
+  echo "COMMIT RECHAZADO — $1" >&2
+  echo "" >&2
+  echo "  Los commits de este repo no dicen que los escribió una IA." >&2
+  echo "  Regla dura del 2026-09-04 (ADR-013 de casa); el porqué, en el" >&2
+  echo "  CLAUDE.md global — Confidencialidad: no se revela el uso de IA," >&2
+  echo "  tampoco en el historial de git." >&2
+  echo "" >&2
+  echo "  Nombrar CLAUDE.md o .claude/rules/… SÍ está permitido aquí." >&2
+  echo "  Lo que no pasa es la firma. Quita esa línea y vuelve a commitear." >&2
+  echo "" >&2
+  exit 1
+}
+
+# 1 · Un trailer cuyo NOMBRE menciona a Claude o Anthropic.
+#     Caza `Claude-Session:`, que ya se colo 7 veces y que el hook global NO ve:
+#     no es un co-authored-by y `claude.ai` no casa con su patron `claude.com/…`.
+printf '%s' "$CUERPO" | grep -qiE '^[[:space:]]*[A-Za-z-]*(claude|anthropic)[A-Za-z-]*[[:space:]]*:' \
+  && fallo "lleva un trailer que nombra a Claude o Anthropic como autor."
+
+# 2 · Un trailer de coautoria o firma cuyo VALOR menciona a Claude o Anthropic.
+#     Coautoria HUMANA no se toca: `Co-Authored-By: Jürgen <…>` pasa.
+printf '%s' "$CUERPO" | grep -qiE '^[[:space:]]*(co-authored-by|assisted-by|signed-off-by|reviewed-by|helped-by|generated-by|committed-by)[[:space:]]*:.*(claude|anthropic)' \
+  && fallo "lleva un trailer que atribuye el commit a Claude."
+
+# 3 · Dominios y correos de Anthropic. Medido sobre los 3348 commits del repo: los
+#     13 que citan `claude.ai` y los 768 que citan `anthropic.com` son TODOS firma de
+#     IA — cero usos legitimos. `CLAUDE.md` no casa con esto.
+printf '%s' "$CUERPO" | grep -qiE '(claude|anthropic)\.(ai|com)' \
+  && fallo "cita un dominio de Anthropic (claude.ai / claude.com / anthropic.com)."
+
+# 4 · La firma generada, en cualquiera de sus formas.
+printf '%s' "$CUERPO" | grep -qiE 'generated (with|by) .{0,30}(claude|anthropic)' \
+  && fallo "menciona a Claude como generador del commit."
+
+# 5 · El emoji de robot que acompaña a esa firma.
+printf '%s' "$CUERPO" | grep -q '🤖' \
+  && fallo "lleva el emoji de robot que acompaña a la firma generada."
+
+exit 0
