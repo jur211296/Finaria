@@ -73,3 +73,57 @@ y el cliente lo lee en el bloque [I] para rutear (ticket `cloud-sign-in-discover
 ## Fuera de alcance
 
 El ruteo del cliente con ese dato (ticket siguiente). La UI.
+
+## Decisiones de Jürgen (2026-09-09, pasada de desbloqueo)
+
+Preguntadas una a una antes de soltar la cola autónoma. **Mandan sobre lo escrito arriba.**
+
+### Lo medido en producción antes de decidir (2026-09-09, MCP Supabase, proyecto `kefvaiymtgytemwbltlz`)
+
+Producción **son dos cuentas y ninguna más, las dos de Jürgen**; cero datos de terceros:
+
+| `profiles.id` | provider | tx | accounts | categories | budgets | grupos | `personal_claimed_at` | tipo |
+|---|---|---|---|---|---|---|---|---|
+| `1487d06a-1605-4afd-9412-434ac97c9f3e` | — | 0 | 0 | 0 | 0 | 2 | no | `groups_only` |
+| `27751374-1225-482c-9e42-fedae5e02f98` | apple | 31 | 11 | 13 | 4 | 2 | **sí** | `complete` |
+
+Totales: `split_groups` 2 · `group_members` 4 (los dos grupos tienen exactamente esas dos cuentas)
+· `split_expenses` 9 · `split_shares` 22 · `split_settlements` 4 · `group_invites` 2 · `push_tokens` 3
+· `auth.users` 2 (último `last_sign_in_at`: **2026-09-09**, o sea la sesión de device-QA viva).
+Ninguna de las dos tiene `migrated_at`: **lo personal nació en la nube y no tiene copia en CloudKit**.
+
+**`personal_claimed_at` clasifica correctamente las dos**, así que el «medir en staging qué tabla/contador
+lo prueba» del alcance §1 ya está contestado, y medido contra prod: esa es la señal.
+
+### Las decisiones
+
+- **Se añade columna `kind` explícita** (`text not null default 'groups_only'`, check
+  `in ('complete','groups_only')`), aunque `personal_claimed_at` ya dé la misma señal. Queda sabido y
+  aceptado el riesgo de dos verdades sobre lo mismo: **quien toque una ruta que cambie el tipo de cuenta
+  tiene que mantener las dos coherentes**, y los tests deben cubrir esa coherencia.
+- **El campo del wire se llama `kind`** (`GET /account/exists` → `{ exists, kind? }`). Sin cambios en el
+  ADR ni en los tickets 3, 8, 9 y 10.
+- **`kind` ausente ⇒ `groups_only`, PERO con corrección al refrescar.** El cliente no bloquea el sign-in
+  (un gateway caído dejaría a la gente fuera) y no se queda en el modo equivocado: en cuanto una llamada
+  posterior devuelva `kind`, la sesión se corrige sola y lo personal aparece. Hay que implementar esa
+  corrección, no solo el default.
+- **El backfill se escribe igual** (`complete` si `personal_claimed_at is not null`), aunque tras el
+  borrado no vaya a tocar ninguna fila en prod: sirve para staging y para cuando haya usuarios reales.
+
+### FRESH START de producción — decisión explícita de Jürgen
+
+**Antes de aplicar el esquema, la sesión que implemente este ticket borra producción entera**, incluidas
+las **identidades de `auth.users`**. Es un borrado irreversible aprobado con los conteos de arriba
+delante; no vuelvas a preguntar, pero tampoco lo amplíes.
+
+- **Alcance:** todas las tablas de datos + `profiles` + las 2 filas de `auth.users`. Fresh start real: el
+  siguiente sign-in con Apple/Google crea una cuenta nueva y ejercita el alta completa.
+- **Se pierden a propósito:** 31 transacciones, 11 cuentas, 13 categorías, 4 presupuestos, los 2 grupos
+  con sus 9 gastos / 22 shares / 4 liquidaciones, y las 2 invitaciones. **No hay copia en CloudKit.**
+- **Orden:** respetar las FKs (hijos antes que padres; `profiles` antes que `auth.users`). Anotar en el PR
+  los conteos **antes y después**, medidos, no estimados.
+- **Consecuencia para Jürgen, avísasela en el PR:** su iPhone queda con una sesión apuntando a una cuenta
+  que ya no existe. Tendrá que cerrar sesión o reinstalar, y **volver a crear los grupos de prueba** antes
+  del device-QA de los tickets 5, 8, 9 y 10.
+- **Staging NO se toca**: su corpus y sus usuarios de test sostienen los goldens del gateway, que son
+  justo lo que valida esta migración.

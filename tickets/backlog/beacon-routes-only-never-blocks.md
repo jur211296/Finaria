@@ -69,3 +69,22 @@ tras el primer alta en nube) y una cuenta Google nueva.
 ## Depende de
 
 `cloud-sign-in-discovers-account-kind` (para que «crear con Google» pase por [I]).
+
+## Decisiones de Jürgen (2026-09-09, pasada de desbloqueo)
+
+Preguntadas una a una antes de soltar la cola autónoma. **Mandan sobre lo escrito arriba.**
+
+- **«Crear otra cuenta» muestra la pantalla de elegir ENTERA** —«Elige dónde quieres guardar tus datos»
+  con sus dos tarjetas (`welcome.new.privateTitle` / `welcome.new.cloudTitle`)— y **sí se puede elegir
+  iCloud privado**. El alcance §1 decía «con la card nube activa»: eso queda **derogado**, no se
+  preselecciona ni se recorta nada.
+  **Consecuencia aceptada a sabiendas:** vuelve a ser posible que alguien nacido en la nube arranque en su
+  segundo móvil unos datos privados en iCloud que nunca se juntarán con los de su cuenta. Es exactamente
+  lo que A26 (2026-08-09) evitaba, y el ADR §10 pesa más: el faro **solo encamina**. No lo «protejas» por
+  tu cuenta con avisos que nadie pidió.
+- **El faro huérfano se cubre AQUÍ.** Tras el fresh start del ticket 2 el faro de iCloud-KV apuntará a una
+  cuenta borrada, así que este ticket añade: **un faro que apunta a una cuenta inexistente se limpia solo
+  —o al menos no bloquea— en cuanto [I] lo descubre**. Con eso se cierra de paso
+  `restore-beacon-outlives-account-deletion`; márcalo como resuelto por éste cuando lo esté.
+- **El copy nombra el proveedor y nada más**: «Este Apple ID ya tiene una cuenta de Yala creada con
+  Apple». Sin correo, ni enmascarado.

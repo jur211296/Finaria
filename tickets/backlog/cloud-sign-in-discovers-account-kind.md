@@ -78,3 +78,21 @@ Unit (lógica pura + `CloudWelcomeSignInFlowTests`), XCUITest del chooser con el
 ## Depende de
 
 `backend-account-kind-complete-or-groups-only`.
+
+## Decisiones de Jürgen (2026-09-09, pasada de desbloqueo)
+
+Preguntadas una a una antes de soltar la cola autónoma. **Mandan sobre lo escrito arriba.**
+
+- **La adopción de una cuenta completa entrando por «Vengo por un grupo» es SILENCIOSA.** Sin aviso, sin
+  banner y sin preguntar: entra completa y aterriza en Grupos, tal cual dice el ADR §7. No añadas
+  ceremonia «por prudencia» — es una decisión tomada con el riesgo delante (alguien que solo quería ver
+  un grupo se encuentra sus finanzas en ese móvil); el guard cross-cuenta sigue siendo la única red.
+- **`.notFound` en «Ya tengo cuenta» lleva DIRECTO AL CONSENTIMIENTO** de nube con el proveedor ya
+  firmado; no repite el chooser de proveedor. El consentimiento **no se salta** (es el único paso que no
+  se recorta). Si el usuario quiere otro proveedor, retrocede.
+- **`GroupsSignInView` cambia de motor, no de aspecto.** Por dentro usa el componente [I]; por fuera la
+  puerta de Grupos se sigue viendo como hoy, con su tono de mini-app. Si algún día debe unificarse
+  visualmente, eso es del ticket 12, no de éste.
+- **Tests: las 15 celdas de la tabla + los bordes donde «hay sesión privada» cambia el destino**
+  (asociar, migrar a la nube, los dos bloqueos). No hace falta escribir las 30 combinaciones ni afirmar
+  las imposibles; sí hace falta que el eje «sesión privada sí/no» quede cubierto donde decide algo.
