@@ -81,6 +81,27 @@ este camino. `URLSession.shared` trae 60 s de request pero **7 días** de recurs
 **Alternativa que hay que descartar antes**: que la fase no sea `.adopting` sino otra transicional, en
 cuyo caso el poll ni mira. Se distingue por el `accessibilityIdentifier` de la pantalla.
 
+## El contraste que acota el bug: en Ajustes SÍ sale el botón (2026-09-09)
+
+El owner reintentó por la otra puerta —*Ajustes → «Dónde viven tus datos» → «Migrar a la nube»*— y la
+migración volvió a quedarse a medias («Activando la nube…», barra ~50 %). **Pero esta vez la pantalla
+sí ofrecía «Retomar»** (`storage.progress.resume`), con captura.
+
+⇒ La red de auto-resume **existe y funciona** en `StorageSettingsView`, que tiene su propio poll
+(`StorageSettingsView.swift:93`, `if tick % 30 == 0 { await controller?.rekickIfParked() }`). Lo que
+falla es **la pantalla del Welcome**, donde el mismo estado aparcado no produjo botón en varios
+minutos.
+
+Eso reduce mucho el espacio de búsqueda: **no es la máquina de migración la que no avisa, es
+`WelcomeCloudSignInView`**. Comparar los dos polls —el de `StorageSettingsView` y el de
+`WelcomeAdoptAutoResume`— sobre el mismo estado aparcado debería dar la respuesta sin instrumentar
+nada en el servidor.
+
+**Segundo dato del mismo reintento**: que la migración se aparque *también* por la vía de Ajustes
+sugiere que el aparcamiento en sí no lo causa la carrera con el import de iCloud (aquí el import ya
+había asentado). Es decir: **aparcarse es una cosa y no avisar es otra**, y este ticket es sobre la
+segunda. Si el aparcamiento resulta reproducible por sí solo, merece ticket propio.
+
 ## Qué haría falta
 
 1. **Instrumentar antes de arreglar**: un log de `isAdopting` / `isWorking` / fase journaleada por tick
