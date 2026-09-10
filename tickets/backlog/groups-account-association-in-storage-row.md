@@ -79,3 +79,23 @@ en Panel.
 ## Depende de
 
 `cloud-sign-in-discovers-account-kind` · `backend-account-kind-complete-or-groups-only`.
+
+## Decisiones de Jürgen (2026-09-09, pasada de desbloqueo)
+
+Preguntadas una a una antes de soltar la cola autónoma. **Mandan sobre lo escrito arriba**, incluido el
+bloque «Frank propuso, Jürgen no objetó», que queda **ratificado con matices**: lo que sigue es lo que
+Jürgen contestó cuando se le preguntó de frente.
+
+- **Al desasociar se le PREGUNTA qué hacer con las filas puenteadas del Panel.** La confirmación ofrece
+  **conservarlas** (como movimientos personales normales, con el `splitExpenseID` **dormido** para poder
+  re-enlazar si vuelve la misma cuenta) o **quitarlas**. O sea: **dos comportamientos**, los dos
+  implementados y los dos probados. El «se quedan siempre» del bloque anterior **no** es lo decidido.
+  El camino «detach sin borrar» sigue haciendo falta, y el de borrado es el `unbridge*` de hoy.
+- **Se guarda la IDENTIDAD COMPLETA de la cuenta asociada** (correo tal cual, además de proveedor y
+  `kind`), no un hash. La fila tiene que ser inequívoca cuando el usuario tiene varias cuentas. Queda
+  sabido que eso es identidad legible en el iCloud-KV del Apple ID; el alcance §1 («hash del `sub`»)
+  queda **derogado** en esa parte.
+- **Desasociar con deudas pendientes: se permite y no se menciona.** Desasociar no borra el grupo ni
+  salda nada, así que no hay aviso especial ni bloqueo. Copy sin caso particular.
+- **Para cambiar de cuenta hay que desasociar primero.** Mientras haya una asociada, la fila solo ofrece
+  «Desasociar»; no existe un «Cambiar cuenta» que haga las dos cosas de un gesto.

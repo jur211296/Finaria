@@ -97,3 +97,25 @@ cero» encima de un histórico intacto que nadie me dijo que existía.
 
 - La elección nube (rama `.cloudAccount`) no cambia.
 - Cambiar qué borra «Vaciar datos» (ADR §6) es de `session-exits-one-verb-per-session`.
+
+## Decisiones de Jürgen (2026-09-09, pasada de desbloqueo)
+
+Preguntadas una a una antes de soltar la cola autónoma. **Mandan sobre lo escrito arriba**, incluida la
+disyuntiva que el alcance dejaba abierta.
+
+- **La validación pregunta a CloudKit ANTES de relanzar**, con una consulta directa al contenedor y
+  **sin adjuntar el espejo al store**. Queda descartado el camino «reabrir para comprobar»: el alert sale
+  en el mismo gesto en que se elige *privado*, así que no hay pantalla de reinicio ciega ni datos bajando
+  por debajo mientras el usuario decide. Es la opción con más código nuevo y se asume.
+- **Copy propio, y tiene que nombrar iCloud.** No se reusa «Detectamos datos previos en tu dispositivo»:
+  el texto debe decir que los datos están en **tu iCloud** y que borrarlos **los quita de iCloud**, no
+  solo de este móvil. Es irreversible y el copy tiene que decirlo. Va a los 7 idiomas; leer `BRAND-VOICE.md`.
+- **El alert enseña CIFRAS y ofrece restaurar.** Muestra qué hay («encontramos N movimientos desde
+  <fecha>», del resumen que ya devuelve la búsqueda de «Restaurar») y añade una **tercera salida**:
+  «esto es mío, restauralo» → «Restaurar desde iCloud». O sea, el alert tiene tres caminos: borrar (con
+  segunda confirmación), restaurar, cancelar. Ese tercer camino hay que probarlo como los otros.
+- **El caso «sin iCloud» se cubre AQUÍ, no en un ticket aparte.** Hueco encontrado en esta pasada: hoy,
+  si no hay iCloud se sigue en local sin validar, y cuando el usuario activa iCloud más tarde el espejo
+  se adjunta y **los datos viejos caen encima del onboarding recién hecho** — el mismo bug por la puerta
+  de atrás. Decisión: **cuando el espejo se adjunte tarde y traiga datos previos, correr la misma
+  validación y el mismo alert en ese momento**. Añádelo a los criterios de aceptación y a la matriz.

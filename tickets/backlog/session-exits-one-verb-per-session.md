@@ -99,3 +99,22 @@ borra y qué queda (el `DestructiveScopeSheet` ya sabe pintar eso por ubicación
 
 `cloud-sign-in-discovers-account-kind` (el `kind` de la sesión activa). Se coordina con
 `groups-account-association-in-storage-row` (la asociación es el estado que distingue «equipo»).
+
+## Decisiones de Jürgen (2026-09-09, pasada de desbloqueo)
+
+Preguntadas una a una antes de soltar la cola autónoma. **Mandan sobre lo escrito arriba.**
+
+- **Export atascado → salida de emergencia AVISADA.** No se deja al usuario atrapado ni se le borra en
+  silencio: tras la espera normal («un momento más»), aparece una salida que dice **cuántos cambios
+  siguen sin subir** y pide confirmación explícita. Es decir, hay que **contar lo pendiente**, no solo
+  saber que lo hay. Nunca se borra sin haberlo dicho, y nunca se bloquea para siempre.
+- **«Vaciar datos» en privada avisa de que borra en TODOS sus dispositivos.** La confirmación tiene que
+  nombrar que los datos desaparecerán también del iPad y de cualquier aparato con ese Apple ID, no solo
+  de este móvil. No basta con «local e iCloud». No hace falta listar los dispositivos.
+- **Cerrar sesión privada sin iCloud activo: se avisa de que NO hay copia.** Se le dice claramente que en
+  este móvil no hay iCloud, que no existe copia en ninguna parte y que cerrar sesión borra sus datos para
+  siempre, con confirmación reforzada. **No se bloquea el cierre** y **no** hay que construir un export
+  previo.
+- **El verbo sigue siendo «Cerrar sesión» en las cuatro celdas**, sin subtítulo por fila. La coherencia
+  es lo que arregla la confusión medida; el detalle de qué se borra y qué queda vive en el **texto de
+  confirmación**, que ya sabe pintarse por ubicación. No reintroduzcas verbos por celda.

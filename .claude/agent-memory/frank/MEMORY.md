@@ -11,6 +11,7 @@
 - [Alcance mínimo, salvo incoherencia](feedback_alcance_minimo_salvo_incoherencia.md) — completar el objeto que su decisión nombra es lo esperado (ratificado 5-sep); ampliar a OTRO objeto, no. En un helper, el corte lo da la FIRMA.
 - [Autónomo es hasta el final](feedback_autonomo_hasta_el_final.md) — decide en bloque y suelta la ejecución; los rojos y el entorno también son míos.
 - [Prefiere lo limpio a lo defensivo](feedback_prefiere_lo_limpio_a_lo_defensivo.md) — retira el mecanismo que falla en vez de apuntalarlo; nombra siempre qué se pierde al limpiar.
+- [Cuándo la app pregunta al usuario](feedback_cuando_la_app_pregunta_al_usuario.md) — pregunta si la decisión mueve DATOS suyos; si solo cambia el recorrido, informa o calla.
 
 ## Cómo mido y cómo entrego
 - [La premisa del ENCARGO también se mide](feedback_la_premisa_del_encargo_tambien_se_mide.md) — hereda los errores del ticket; la peor es «no es simulable»: 3 falsas el 8-sep, inflaban la cola de Jürgen.

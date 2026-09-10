@@ -78,3 +78,31 @@ cubierta por un test o un device-QA.
 
 Todos los tickets anteriores del ADR (orden de implementación en `docs/DECISIONS.md`, entrada
 2026-09-09 «Sesiones — dos ejes»). Va último.
+
+## Decisiones de Jürgen (2026-09-09, pasada de desbloqueo)
+
+Preguntadas una a una antes de soltar la cola autónoma. **Mandan sobre lo escrito arriba.**
+
+- **NO se escribe la migración de estados legacy del dispositivo.** El punto 7 del alcance queda
+  **derogado**: quien tenga un estado viejo reinstala. Motivo: producción queda vacía tras el fresh start
+  del ticket 2 y el parque real es el iPhone de Jürgen más los testers de TestFlight. Riesgo aceptado:
+  un tester con la app puesta puede encontrarse un estado raro al actualizar.
+- **Un solo PR**, como el resto de la cola, aunque toque 19 vistas y 14 servicios. La app nunca queda
+  medio migrada. Asume que la review adversarial de este PR es la más dura de las trece.
+- **`YalaModel-Secondary` se borra del disco al actualizar.** M1 está al 0 % en producción, así que ahí
+  no debería haber datos de nadie — **compruébalo, no lo des por hecho** antes de borrar. (Ojo: en
+  `[env.staging.vars]` el percent está en **100**, así que un dispositivo de pruebas contra staging sí
+  puede tener datos ahí.)
+- **El grep de los flags retirados tiene que dar CERO de verdad, comentarios y docblocks incluidos.** Si
+  el flag no existe, nombrarlo confunde a quien llegue después. Se acepta perder ese rastro histórico en
+  los docblocks; lo que merezca sobrevivir va a `.claude/rules/` o a `docs/aprendizajes-tecnicos.md`, que
+  es donde vive la memoria durable — no en un comentario que cita un símbolo inexistente.
+
+### Hallazgos de esta pasada que aterrizan aquí
+
+- **`GroupsRetentionView` escribe `UsageFocus.groupsOnly`** (`GroupsRetentionView.swift:64`), uno de los
+  tres flags que este ticket retira. Viene del ticket 7, que lo dejó explícitamente para este barrido.
+  (El ticket 9 además retira esa vista entera; comprueba cuál llega antes.)
+- **El docblock de `OnboardingGroupsPurposeGateLogic:15` es falso**: dice que `GroupsRetentionView:64`
+  escribe `OnboardingUsageMode`, y lo que escribe es `UsageFocus` — otro enum con un case homónimo. Si
+  ese fichero sigue vivo cuando llegues aquí, corrígelo.

@@ -43,3 +43,21 @@ Nada de aquí se ha medido todavía; cada punto empieza por medir.
 
 Después de que `shell-derives-from-two-session-axes` esté en `2.1`. No antes: cualquier medición
 anterior describiría una app que va a cambiar.
+
+## Decisiones de Jürgen (2026-09-09, pasada de desbloqueo)
+
+Preguntadas una a una antes de soltar la cola autónoma. **Mandan sobre lo escrito arriba.**
+
+- **Este ticket se PARTE EN DOS.** Aquí se queda la mitad de Frank (widgets, Siri, Apple Pay,
+  notificaciones, exportación, `coverage-index`). La mitad de Lola —web, FAQ, política, términos, ficha
+  de la App Store y etiquetas de privacidad— vive ahora en
+  **`tickets/backlog/session-redesign-web-and-store-copy.md`**. Cada uno se cierra por su cuenta y el
+  runbook deja de esperar a un territorio que no es de Frank.
+- **La corrección legal BLOQUEA la publicación.** La política de privacidad y los términos dicen que los
+  datos de Grupos viajan «por iCloud, no por servidores nuestros»; con el rediseño eso es falso. **No se
+  publica el rediseño en la App Store hasta que esos documentos estén corregidos.** Es una afirmación
+  sobre dónde viven los datos de la gente y no puede ser falsa ni un día. Está en el ticket de Lola,
+  pero el bloqueo es del release, así que también se anota aquí.
+- **El widget en «solo grupos» invita a activar Yala completo.** No se queda vacío ni se convierte en un
+  widget de grupos: dice que aún no hay finanzas personales y lleva a activarlas. El hueco se usa como
+  puerta de entrada.

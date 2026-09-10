@@ -53,3 +53,21 @@ que describía prod al revés; aquí es el fichero que **se despliega**). Y los 
 ## Fuera de alcance
 
 Decidir el rollout. Este ticket alinea el repo con lo que Jürgen ya decidió y desplegó.
+
+## Decisiones de Jürgen (2026-09-09, pasada de desbloqueo)
+
+Preguntadas una a una antes de soltar la cola autónoma. **Mandan sobre cualquier interpretación del ADR
+o de este ticket**; si algo de arriba las contradice, ganan éstas.
+
+- **El test fija solo los TRES percents vivos**: `cloudModeRolloutPercent`,
+  `cloudOnboardingChoiceRolloutPercent` y `groupsBackendRolloutPercent`.
+  `secondarySessionRolloutPercent` se deja **fuera** a propósito: el ticket 12 retira M1 entera y no
+  queremos tocar este test dos veces. Coste aceptado: durante los pasos 1-11 nadie vigila ese percent.
+- **El test NO toca la red.** Parsea `gateway/wrangler.toml` y compara contra los valores esperados.
+  Determinista y sin credenciales en CI. Queda sabido que así no se detecta un cambio hecho a mano
+  desde el dashboard de Cloudflare.
+- **Staging no se toca.** `SECONDARY_SESSION_ROLLOUT_PERCENT = "100"` en `[env.staging.vars]`
+  (línea 56 al 2026-09-09) **se queda como está**: es objeto del ticket 12, no de éste.
+- **Sí se despliega tras mergear**: `wrangler deploy --env production` y `curl` de confirmación al
+  `/config`, para dejar repo y producción idénticos y comprobados. El valor medido antes y después va
+  anotado en el PR.

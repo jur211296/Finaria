@@ -108,3 +108,23 @@ cancela la señal antes de la vuelta al neutro: iCloud queda intacto, así que n
   secondarySessionActive:freshInstall:neutralDurable:)`), con tests en `YalaTests`.
 - Device-QA (CloudKit): iPhone con datos en el iCloud del Apple ID → reinstalar → solo-grupos → reabrir.
   En simulador no hay iCloud: solo se puede verificar la DECISIÓN de mount, no la importación.
+
+## Decisiones de Jürgen (2026-09-09, pasada de desbloqueo)
+
+Preguntadas una a una antes de soltar la cola autónoma. **Mandan sobre lo escrito arriba.**
+
+- **La vuelta al neutro ESPERA AL EXPORT antes de borrar lo local.** Es la misma regla que la matriz
+  exigió para la salida privada, y aquí aplica igual: «iCloud lo conserva» solo es cierto para lo que ya
+  subió. Antes de borrar, esperar a que CloudKit termine de subir lo pendiente. Lo que un usuario
+  escribió en este móvil y no llegó a subir **no se pierde**.
+- **Se avisa, pero no se pide confirmación.** La vuelta al neutro no frena la entrada a Grupos —es la
+  puerta de captación— pero el usuario no se queda a oscuras: se le informa de que sus datos personales
+  siguen a salvo en iCloud. Informar, no preguntar.
+- **El relanzamiento hay que EVITARLO**: se busca desmontar el espejo en caliente para que el alta de
+  Grupos no se interrumpa nunca con una pantalla de «reabre Yala». Es la decisión con más riesgo técnico
+  del ticket, en la capa que menos perdona. **Si el [spec] mide que no es viable, no caigas al
+  relanzamiento por tu cuenta: avisa a Jürgen con lo medido y espera.**
+- **La marca de neutro duradero dura hasta que el usuario elija lo personal.** No caduca con
+  `hasShownWelcomeChooser`; solo la levanta «Activar Yala completo» al elegir privado o nube. Es la
+  lectura literal del ADR §2 (el mount se deriva de si hay sesión privada). Lee igualmente el docblock
+  de `CloudSyncFlags.armNeutralMount:160-180` antes de tocar la caducidad: explica por qué existía.

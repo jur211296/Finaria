@@ -75,3 +75,22 @@ entra por «Primera vez» (las dos cards: «Tu cuenta en tu iCloud privado» / �
 
 `welcome-private-fresh-start-skips-icloud-check` · `backend-account-kind-complete-or-groups-only` ·
 `cloud-sign-in-discovers-account-kind`.
+
+## Decisiones de Jürgen (2026-09-09, pasada de desbloqueo)
+
+Preguntadas una a una antes de soltar la cola autónoma. **Mandan sobre lo escrito arriba.**
+
+- **El historial de grupos al Panel se PREGUNTA.** Al terminar el onboarding se le ofrece traer al Panel
+  los gastos de grupo que ya existían. No se vuelca solo ni se ignora: son **dos caminos** y los dos se
+  prueban. Cuida los duplicados en el que sí vuelca (el bridge SplitExpense ↔ TransactionItem es de los
+  sitios donde un bug sale caro: review adversarial obligatoria).
+- **Al restaurar de iCloud, gana lo restaurado.** El prefill de nombre y moneda que venía de Grupos **se
+  descarta**: los datos de iCloud son la vida anterior del usuario en Yala y vuelven como estaban,
+  preferencias incluidas. Sin mezclas.
+- **La promoción a `complete` en el servidor es el ÚLTIMO paso.** El backend no se toca hasta que el
+  onboarding personal termina; si el usuario abandona a mitad, sigue siendo solo-grupos y no queda una
+  cuenta marcada «completa» sin datos personales detrás. Ordena el flujo para que sea así — no guardes
+  un punto intermedio ni deshagas nada después.
+- **La tarjeta de nube dice que es LA MISMA cuenta.** En este contexto el copy tiene que dejar claro que
+  se usará la cuenta que ya tiene para grupos, no una segunda cuenta nueva. Es una variante de texto del
+  chooser, en los 7 idiomas.

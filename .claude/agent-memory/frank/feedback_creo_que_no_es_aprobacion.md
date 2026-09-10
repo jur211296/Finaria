@@ -31,3 +31,10 @@ lo que sí se hace es CONTARLE las decisiones tomadas y su porqué al resumir. E
 cambiaron dos cosas sobre la marcha (un fixture pasó a estar tras un seam para no
 alterar un test verde; y no se tocó `lastVerified` de un área que no se había
 verificado) y ninguna necesitaba una pregunta, pero las dos necesitaban decirse.
+
+**Lo que desbloquea cuando no reconoce un término: enseñarle la pantalla, no definirla.** El 2026-09-09
+respondió «necesito más explicación, no sé qué es con la card nube activa» a una pregunta que usaba jerga
+de un ticket. Lo que funcionó fue **medir el copy real de esa pantalla en los `.strings`** y repreguntar
+con un `preview` ASCII de los dos recorridos, nombrando los botones tal y como los lee él («Elige dónde
+quieres guardar tus datos»). Contestó a la primera. La jerga de los tickets —«card nube activa», «[I]»,
+«neutro duradero»— no es vocabulario suyo: **tradúcela al copy de la app antes de preguntar**, no después.

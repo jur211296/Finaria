@@ -42,3 +42,19 @@ Google/Apple, completa o solo grupos)— y retira los otros tres.
 ## Fuera de alcance
 
 Renombrar identificadores de código por su cuenta: van con el código que los usa.
+
+## Decisiones de Jürgen (2026-09-09, pasada de desbloqueo)
+
+Preguntadas una a una antes de soltar la cola autónoma. **Mandan sobre lo escrito arriba.**
+
+- **Este ticket SE ADELANTA: pasa a ser el paso 0 del runbook**, antes que ningún otro. Motivo: los
+  tickets 4-10 escriben copy nuevo y con el orden viejo lo habrían escrito con el glosario sin fijar,
+  cada uno inventando su palabra. Es documentación pura, así que va directo a `2.1` sin gate y no
+  bloquea a nadie. El runbook queda actualizado con este cambio.
+- **Conviven dos vocabularios a propósito, y el glosario lo deja escrito.** Dentro (documentación,
+  código, tickets) se dice **«sesión privada»** y **«sesión en la nube»**; al usuario se le sigue
+  hablando de **dónde viven sus datos** («Tu cuenta en tu iCloud privado» / «Tu cuenta en la nube»).
+  El glosario tiene que registrar esa correspondencia explícitamente, para que ninguna sesión futura
+  «corrija» el copy de producto hacia la jerga interna. No reescribas copy que ya funciona.
+- **[I], [P] y [G] entran al glosario**, con su nombre largo y su letra: identidad en la nube,
+  onboarding personal, alta de grupos. Son jerga viva del ADR y de los 13 tickets.
