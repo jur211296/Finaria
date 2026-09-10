@@ -34,10 +34,12 @@
 //  sesión secundaria se monta con `cloudKitDatabase: .none` (`SwiftDataConfiguration.swift:1188`), así que
 //  no se espeja a ninguna CloudKit: ni a la del dueño ni a la de la visita. Eso importa aquí más que en
 //  ninguna otra pantalla, porque la card que la visita acaba de tocar promete lo contrario —«se sincronizan
-//  por tu iCloud privado» (`welcome.new.privateBody`)— y en visita esa promesa no se cumple. Hoy la card
-//  casi nunca se lee (en producción el sub-chooser no se muestra: el percent remoto de la elección nube
-//  está en 0 y `handleNewBranch` hace bypass), y corregirla es de su propio ticket; esta pantalla dice el
-//  hecho verdadero en el sitio por el que sí pasa todo el mundo.
+//  por tu iCloud privado» (`welcome.new.privateBody`)— y en visita esa promesa no se cumple. **Esa card
+//  SÍ se lee**: el percent remoto de la elección nube está EN 100 en producción (medido el 2026-09-09),
+//  así que el sub-chooser se muestra y `handleNewBranch` ya no hace bypass. Aquí ponía que «casi nunca se
+//  lee» porque en prod el sub-chooser no salía, y con eso se aplazaba corregirla; corregirla sigue siendo
+//  de su propio ticket, pero ya no es un caso raro. Esta pantalla dice el hecho verdadero en el sitio por
+//  el que sí pasa todo el mundo.
 //
 //  Es un STEP del `WelcomeFlowContainer` por las mismas tres razones que `.groupsGate` y `.mirrorRelaunch`:
 //  `leaveWelcome` es el único punto de salida del cover, una presentación nueva del anchor de `ContentView`

@@ -30,10 +30,11 @@
 //  ⚠️ Corolario para el yo-futuro: reordenar el array de `visibleNewOptions` NO cambia nada
 //  de lo que se ve — cámbialo aquí.
 //
-//  Solo se monta con MÁS de una opción visible: con una sola (producción con el
-//  percent remoto en 0, backend no configurado, o uitest sin el opt-in) el
-//  container hace bypass directo (`WelcomeAccountChoiceLogic.bypass`) y este
-//  screen ni se construye — el recorrido "Soy nuevo" queda byte-idéntico al de hoy.
+//  Solo se monta con MÁS de una opción visible: con una sola (percent remoto en 0 o aún sin snapshot,
+//  backend no configurado, o uitest sin el opt-in) el container hace bypass directo
+//  (`WelcomeAccountChoiceLogic.bypass`) y este screen ni se construye. **En producción SÍ se monta**:
+//  el percent de la elección nube está en 100 (medido el 2026-09-09). Esta lista decía «producción con
+//  el percent remoto en 0», y con ese 0 prod nunca llegaba hasta aquí.
 //
 
 import SwiftUI

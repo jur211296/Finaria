@@ -191,9 +191,12 @@ struct WelcomeNewBranchRouteTests {
             options: bothOptions) == .chooser)
     }
 
-    /// LA NO-REGRESIÓN que importa: con la card apagada (producción, percent remoto en 0) el
-    /// recorrido "Soy nuevo" es byte-idéntico al de hoy — ni pantalla intermedia ni encaminamiento.
-    @Test("card apagada ⇒ bypass a `.privateAccount`, el recorrido de producción de hoy")
+    /// LA NO-REGRESIÓN que importa: con la card apagada el recorrido "Soy nuevo" no cambia — ni
+    /// pantalla intermedia ni encaminamiento. **Ya no es «el recorrido de producción»**: prod sirve el
+    /// percent en 100 (medido el 2026-09-09; se desplegó antes, sin fecha conocida). Sigue siendo el
+    /// camino del kill-switch (devolver el percent
+    /// a 0) y el de todo device que aún no tenga snapshot de `/config`, así que el caso no caduca.
+    @Test("card apagada ⇒ bypass a `.privateAccount` (kill-switch y device sin snapshot)")
     func cardOff_bypassesToPrivate_endToEnd() {
         let options = WelcomeAccountChoiceLogic.visibleNewOptions(
             isConfigured: true, isUITest: false, bornCloudEnabled: true,

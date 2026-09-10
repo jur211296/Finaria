@@ -330,9 +330,11 @@ struct WelcomeFlowContainer: View {
                 goTo(.privateSecondaryNotice)
                 return
             }
-            // R2: **es el bypass de producción** (percent remoto de la elección nube en 0 ⇒ el sub-chooser
-            // ni se muestra), así que este es el camino por el que pasa hoy todo usuario nuevo — y el que
-            // paga el relanzamiento que el alta nube deja de pagar. Es el reparto que la Opción C aprueba.
+            // R2: es «Soy nuevo» sin nube, y el que paga el relanzamiento que el alta nube deja de pagar
+            // — el reparto que la Opción C aprueba. **Dejó de ser el bypass de producción**: con el percent
+            // de la elección nube EN 100 (medido el 2026-09-09) el sub-chooser SÍ se muestra en prod y esta
+            // rama es una de sus dos salidas, no la única. Sigue siendo camino ÚNICO donde el percent no
+            // llega: device sin snapshot fetcheado (fail-closed), bajo UITest, y si se vuelve el percent a 0.
             leaveWelcome(to: .privateOnboarding) { onSelectPrivateAccount() }
         case .cloudAccount:
             // A5: el alta born-cloud. El stub explícito de A4 (`showBornCloudPendingAlert`) queda

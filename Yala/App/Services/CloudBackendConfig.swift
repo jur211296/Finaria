@@ -19,7 +19,9 @@
 //  `groupsBackendCompiledDefault = true` y el paso 3 subió `GROUPS_BACKEND_ROLLOUT_PERCENT` a 100 —
 //  el canal de Grupos corre contra el backend en producción (e2e device-verified 2026-08-02).
 //  `CLOUD_MODE_ROLLOUT_PERCENT = 100` es permanente (migración opt-in silenciosa desde Ajustes) y
-//  `CLOUD_ONBOARDING_CHOICE_ROLLOUT_PERCENT = 0` mantiene apagada la card born-cloud del onboarding.
+//  `CLOUD_ONBOARDING_CHOICE_ROLLOUT_PERCENT` está EN 100 (Jürgen lo subió en un PR que después se borró;
+//  medido el 2026-09-09, y el `.toml` lo arrastró en 0 hasta el 2026-09-10) ⇒ la card born-cloud del
+//  onboarding SÍ se ofrece en producción.
 //  Por qué un usuario de 2.x no nota nada en su store personal: el modo persistido es `.icloud`,
 //  así que el gate de dominio corta el runtime antes de red o mutación; `CloudRemoteFlags` sigue
 //  fail-closed (`absentDefault == false` en producción) para todo snapshot ausente.

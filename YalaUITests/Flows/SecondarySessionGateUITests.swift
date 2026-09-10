@@ -294,8 +294,10 @@ final class SecondarySessionGateUITests: XCTestCase {
 
     /// **El control positivo, y el que impide que el anterior pase por casualidad**: el mismo recorrido,
     /// el mismo build y la misma card, con la ÚNICA diferencia del seam. Sin sesión secundaria el aviso
-    /// no existe y el usuario cae directo en el onboarding — que es el recorrido de producción de hoy y
-    /// no puede haber cambiado ni un paso.
+    /// no existe y el usuario cae directo en el onboarding — el recorrido que este build ejercita bajo
+    /// `-uitest` (la card born-cloud queda apagada por el seam, no por el percent) y que no puede haber
+    /// cambiado ni un paso. Ojo: ya NO es el recorrido de producción — prod sirve el percent de la
+    /// elección nube en 100 (medido el 2026-09-09) y muestra el sub-chooser.
     func test_privateBranch_withoutSecondarySession_goesStraightToOnboarding() {
         let app = walkToPrivateBranch(secondarySession: false)
 
