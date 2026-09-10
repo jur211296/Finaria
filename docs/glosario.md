@@ -46,10 +46,29 @@
 - **[I] · [P] · [G]** — los tres bloques de onboarding del ADR: identidad en la nube (Apple/Google
   → ¿existe? → nueva / completa / solo grupos), onboarding personal (los 8 pasos) y alta de
   grupos (consentimiento + nombre + moneda). Todo flujo del Welcome es una combinación de ellos.
+- **los dos vocabularios: dentro ≠ al usuario** — conviven a propósito, y ninguna sesión
+  «corrige» uno hacia el otro (decisión de Jürgen, 2026-09-09). **Dentro** —ADR, tickets, código,
+  estas reglas— se dice *sesión privada* y *sesión en la nube*. **Al usuario** se le habla de
+  **dónde viven sus datos**, y ese copy ya existe y funciona: «Dónde viven tus datos»
+  (`storage.title`), «Tu cuenta en tu iCloud privado» (`welcome.new.privateTitle`), «Tu cuenta en
+  la nube» (`welcome.new.cloudTitle`, `settings.dataLocationSubtitleCloud`). Medido el 2026-09-10
+  sobre los 4.074 strings ES: **ninguno dice «sesión privada», «sesión en la nube», «solo grupos»
+  ni «sesión secundaria»**, y así se queda. ⇒ el copy nuevo del rediseño se escribe en el
+  vocabulario del usuario y se revisa contra `docs/planning/BRAND-VOICE.md` §7; **el término
+  interno no sale a pantalla**.
+- **«Yala completo» ≠ «nube completa»** — *Yala completo* es copy vivo (5 strings ES:
+  `groups.activate.title`, tres nudges y el upsell del puente) y significa **personal + grupos**;
+  lo personal puede estar en privado o en la nube. *Nube completa* es jerga interna: la sesión en
+  la nube que además absorbe lo personal. Quien usa solo grupos y activa Yala completo **elige**
+  entre las dos (ADR 2026-09-09 «Sesiones — dos ejes», punto 8).
 - **visita · sesión secundaria · cuenta invitada** — *(retirado el 2026-09-09)* tres nombres para
-  «una sesión en la nube en un móvil cuya sesión privada es de otra persona». El ADR de sesiones
-  lo saca del modelo: el dueño cierra sesión (lo local se borra) y la otra persona entra con su
-  cuenta. Sigue apareciendo en decisiones y tickets anteriores, y ahí es histórico.
+  «una sesión en la nube en un móvil cuya sesión privada es de otra persona». El ADR 2026-09-09
+  «Sesiones — dos ejes» lo saca del modelo: el dueño cierra sesión (lo local se borra) y la otra
+  persona entra con su cuenta. Sigue apareciendo en decisiones y tickets anteriores, y ahí es
+  histórico; el código que lo implementa (M1) sigue vivo hasta el ticket
+  `shell-derives-from-two-session-axes`. Las dos keys que aún lo dicen
+  (`welcome.groups.secondaryTitle` y `…Body`, en los 16 locales) se retiran con ese mismo barrido,
+  no antes.
 <!-- GLOSARIO:manual:fin -->
 
 <!-- GLOSARIO:generado:inicio - no editar a mano -->
