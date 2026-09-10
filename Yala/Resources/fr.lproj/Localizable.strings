@@ -5498,12 +5498,6 @@
 /* Body of the alert shown when the fresh-start wipe throws */
 "welcome.freshStart.failedMessage" = "Tes données sont toujours là, alors on s'est arrêtés. Ferme Yala et rouvre-la ; si ça se reproduit, écris-nous.";
 
-/* Organizer gate: the device already holds data, so creating a group here would sign an account on top of it */
-"welcome.groups.existingDataTitle" = "Il y a déjà des données sur cet appareil";
-
-/* Organizer gate body for existing data */
-"welcome.groups.existingDataBody" = "Créer un groupe depuis ici connecterait un compte par-dessus, et on préfère ne pas les mélanger. Reviens en arrière : tout est intact. Si ce sont tes données, crée le groupe depuis l'app que tu utilises déjà.";
-
 /* Título del aviso cuando Restaurar compras no encuentra Yala Pro */
 "subscription.restoreEmptyTitle" = "Aucun abonnement";
 
@@ -5811,3 +5805,45 @@
 
 /* Private branch iCloud gate: secondary button on the wipe-failed screen, gives up the deletion */
 "welcome.privateICloud.wipeFailedBack" = "Laisser pour l'instant";
+
+/* Groups gate · returning the device to neutral before entering Groups (title) */
+"welcome.groups.neutralReturnTitle" = "Je prépare ce téléphone";
+
+/* Groups gate · returning to neutral (body). Promise: personal data stays in iCloud */
+"welcome.groups.neutralReturnBody" = "Tout ce qui est personnel reste enregistré dans ton iCloud. Sur ce téléphone, je ne laisse que tes groupes.";
+
+/* Groups gate · waiting for the last upload to iCloud before wiping (title) */
+"welcome.groups.neutralReturnWaitTitle" = "Encore un instant";
+
+/* Groups gate · waiting for upload (body). Nothing is deleted until it is safely in iCloud */
+"welcome.groups.neutralReturnWaitBody" = "J'enregistre encore les dernières données de ce téléphone dans iCloud. Rien n'est supprimé ici tant que ce n'est pas à l'abri.";
+
+/* Groups gate · local data with no iCloud backup (title) */
+"welcome.groups.noBackupTitle" = "Certaines données n'existent que sur ce téléphone";
+
+/* Groups gate · local data with no iCloud backup (body) */
+"welcome.groups.noBackupBody" = "iCloud est désactivé : il n'y a de copie nulle part ailleurs. Pour utiliser Groupes avec ton compte, ce téléphone doit repartir de zéro.";
+
+/* Groups gate · CTA to wipe unbacked local data and continue into Groups */
+"welcome.groups.noBackupWipe" = "Supprimer et aller aux Groupes";
+
+/* Groups gate · second gesture before an irreversible local wipe (title) */
+"welcome.groups.noBackupConfirmTitle" = "Elles seront supprimées de ce téléphone";
+
+/* Groups gate · second gesture (body). Says what is lost and offers the iCloud way out */
+"welcome.groups.noBackupConfirmBody" = "Les comptes, catégories et opérations enregistrés ici disparaîtront pour de bon. Si tu préfères les garder, reviens en arrière et active d'abord iCloud.";
+
+/* Groups gate · second gesture confirm button */
+"welcome.groups.noBackupConfirmCta" = "Oui, supprimer et continuer";
+
+/* Groups gate · the armed boot cleanup did not run (title) */
+"welcome.groups.cleanupFailedTitle" = "Je n'ai pas réussi à nettoyer ce téléphone";
+
+/* Groups gate · the armed boot cleanup did not run (body) */
+"welcome.groups.cleanupFailedBody" = "J'ai essayé à l'ouverture de Yala, sans succès. Ferme complètement l'app et réessaie.";
+
+/* Relaunch terminal · variant for the Groups path (title) */
+"welcome.mirrorRelaunch.cleanTitle" = "Une dernière étape : rouvre Yala";
+
+/* Relaunch terminal · variant for the Groups path (body). The cleanup happens on next launch */
+"welcome.mirrorRelaunch.cleanBody" = "Va sur ton écran d'accueil et reviens. À ton retour, ce téléphone sera prêt pour tes groupes.";

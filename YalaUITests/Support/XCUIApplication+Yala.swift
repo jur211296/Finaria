@@ -32,6 +32,7 @@ extension XCUIApplication {
         groupsConsent: Bool = false,
         groupsEducativo: Bool = false,
         secondarySession: Bool = false,
+        groupsGateMirrorLive: Bool = false,
         inviteOnboarding: Bool = false,
         icloudIdentity: Bool = false,
         joinPhase: String? = nil,
@@ -80,6 +81,10 @@ extension XCUIApplication {
         // modo efectivo del proceso entero, así que un typo que lo dejara fuera no da un rojo — da un
         // VERDE que prueba la rama del dueño creyendo probar la de la invitada.
         if secondarySession { args.append("-uitest-secondary-session") }
+        // Paso 5-b · le dice a la puerta de Grupos que este proceso ESPEJA a iCloud. Nombrado y no por
+        // `extraArguments:` por la misma razón que el de arriba: un typo en un string suelto no da un
+        // rojo, da un verde que prueba la otra rama de la puerta creyendo probar ésta.
+        if groupsGateMirrorLive { args.append("-uitest-groups-gate-mirror-live") }
         if inviteOnboarding { args.append("-uitest-invite-onboarding") }
         // Siembra la identidad iCloud de Grupos. Va NOMBRADO, no por `extraArguments:`, por la
         // misma razón que sus vecinos y con una de propina: este seam decide QUIÉN ERES, así que un

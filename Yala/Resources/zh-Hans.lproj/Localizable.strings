@@ -5509,12 +5509,6 @@
 /* Body of the alert shown when the fresh-start wipe throws */
 "welcome.freshStart.failedMessage" = "你的数据还在，所以我们没有继续。请关闭 Yala 再重新打开；如果还是这样，请联系我们。";
 
-/* Organizer gate: the device already holds data, so creating a group here would sign an account on top of it */
-"welcome.groups.existingDataTitle" = "这台设备上已经有数据了";
-
-/* Organizer gate body for existing data */
-"welcome.groups.existingDataBody" = "从这里创建群组会在这些数据之上连接一个账户，我们不想把它们混在一起。返回上一步，数据都还在。如果这些数据是你的，就从你平时用的 Yala 里创建群组。";
-
 /* Título del aviso cuando Restaurar compras no encuentra Yala Pro */
 "subscription.restoreEmptyTitle" = "未找到订阅";
 
@@ -5822,3 +5816,45 @@
 
 /* Private branch iCloud gate: secondary button on the wipe-failed screen, gives up the deletion */
 "welcome.privateICloud.wipeFailedBack" = "暂时先这样";
+
+/* Groups gate · returning the device to neutral before entering Groups (title) */
+"welcome.groups.neutralReturnTitle" = "正在准备这台手机";
+
+/* Groups gate · returning to neutral (body). Promise: personal data stays in iCloud */
+"welcome.groups.neutralReturnBody" = "个人数据仍保存在你的 iCloud 中。这台手机上只会留下你的群组。";
+
+/* Groups gate · waiting for the last upload to iCloud before wiping (title) */
+"welcome.groups.neutralReturnWaitTitle" = "请再稍等一下";
+
+/* Groups gate · waiting for upload (body). Nothing is deleted until it is safely in iCloud */
+"welcome.groups.neutralReturnWaitBody" = "我还在把这台手机上的最新数据保存到 iCloud。在数据安全之前，不会删除这里的任何内容。";
+
+/* Groups gate · local data with no iCloud backup (title) */
+"welcome.groups.noBackupTitle" = "这里有些数据只存在于这台手机上";
+
+/* Groups gate · local data with no iCloud backup (body) */
+"welcome.groups.noBackupBody" = "iCloud 已关闭，其他地方没有副本。要用你的账户使用群组，这台手机需要清空后重新开始。";
+
+/* Groups gate · CTA to wipe unbacked local data and continue into Groups */
+"welcome.groups.noBackupWipe" = "删除并进入群组";
+
+/* Groups gate · second gesture before an irreversible local wipe (title) */
+"welcome.groups.noBackupConfirmTitle" = "这些数据会从这台手机上删除";
+
+/* Groups gate · second gesture (body). Says what is lost and offers the iCloud way out */
+"welcome.groups.noBackupConfirmBody" = "这里保存的账户、分类和记录将永久消失。如果想保留，请先返回并开启 iCloud。";
+
+/* Groups gate · second gesture confirm button */
+"welcome.groups.noBackupConfirmCta" = "确认删除并继续";
+
+/* Groups gate · the armed boot cleanup did not run (title) */
+"welcome.groups.cleanupFailedTitle" = "没能清空这台手机";
+
+/* Groups gate · the armed boot cleanup did not run (body) */
+"welcome.groups.cleanupFailedBody" = "打开 Yala 时试过了，但没有成功。请彻底关闭应用后再试一次。";
+
+/* Relaunch terminal · variant for the Groups path (title) */
+"welcome.mirrorRelaunch.cleanTitle" = "还差一步：请重新打开 Yala";
+
+/* Relaunch terminal · variant for the Groups path (body). The cleanup happens on next launch */
+"welcome.mirrorRelaunch.cleanBody" = "回到主屏幕，然后重新进入。再打开时，这台手机就为你的群组准备好了。";

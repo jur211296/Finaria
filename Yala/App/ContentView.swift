@@ -348,6 +348,10 @@ struct ContentView: View {
             groupsOrganizerFlowActive: $groupsOrganizerFlowActive,
             hasExistingData: hasExistingData,
             hasLocalDataNow: { checkHasExistingData() },
+            // Paso 5-b · el detector ESTRECHO, y no el de arriba: la puerta de Grupos no puede
+            // dispararse con grupos ni con filas puenteadas, que el borrado de arranque no se lleva.
+            hasPersonalDataNow: { checkHasPersonalData() },
+            attemptPersonalUpload: { await attemptPersonalUpload() },
             performICloudCorpusWipe: { await performICloudCorpusWipe() },
             showGroupInviteOnboarding: showGroupInviteOnboarding
         ))
@@ -1499,6 +1503,46 @@ struct ContentView: View {
         return nil
     }
 
+    /// **Paso 5-b · sube a iCloud lo que quede pendiente ANTES de que la puerta de Grupos arme nada.**
+    /// Vive aquí, y no en la puerta, por lo mismo que `performICloudCorpusWipe`: necesita el
+    /// `modelContext` (`forceSync` hace `save()` de lo local antes de despertar el motor).
+    ///
+    /// **Lo que hace `forceSync` es justo lo que aquí hace falta, y por eso no se inventa nada nuevo:**
+    /// llama a `allRecordZones()` —o sea, prueba la red DE VERDAD, y sin ella devuelve `.unreachable`—,
+    /// guarda lo local y despierta el motor de exportación. Lo que este método añade es esperar a que la
+    /// exportación se asiente y mirar el resultado, porque `forceSync` vuelve en cuanto arranca.
+    ///
+    /// **El tope es de 30 s y no cuelga aunque no haya nada que exportar**: en ese caso el container no
+    /// emite ningún evento y sería el `.syncing(.exporting)` que el propio `forceSync` puso el que se
+    /// quedaría colgado — para eso está su watchdog de 8 s, que lo devuelve a `.idle`. O sea que el peor
+    /// caso de «no había nada pendiente» son 8 segundos de «un momento», no un cuelgue.
+    ///
+    /// El veredicto lo da `GroupsNeutralReturnLogic.verdict`, que falla CERRADO: cualquier duda es
+    /// `.waitForUpload`, y con eso la puerta no arma ni borra nada.
+    @MainActor
+    private func attemptPersonalUpload() async -> GroupsNeutralReturnLogic.Verdict {
+        let sync = iCloudSyncService.shared
+        let attempt: GroupsNeutralReturnLogic.UploadAttempt
+        switch await sync.forceSync(modelContext: modelContext) {
+        case .ok: attempt = .reachedICloud
+        case .unreachable: attempt = .unreachable
+        case .failed: attempt = .failed
+        }
+
+        let deadline = Date.now.addingTimeInterval(30)
+        while Date.now < deadline, sync.status.isSyncing {
+            if Task.isCancelled { break }
+            try? await Task.sleep(for: .milliseconds(500))
+        }
+
+        return GroupsNeutralReturnLogic.verdict(
+            attempt: attempt,
+            // Leído DESPUÉS de la espera: un export que falla a mitad es exactamente el caso en el que
+            // la app creería que subió y no subió.
+            exportFailed: sync.lastExportError != nil,
+            stillSyncing: sync.status.isSyncing)
+    }
+
     /// Post-checks de returning user: trial pendiente, What's New, language, app update.
     /// Extraído para SSOT — antes vivía inline en `checkInitialSyncState`.
     private func runReturningUserPostChecks() {
@@ -1600,10 +1644,19 @@ struct ContentView: View {
             case .inviteRecovery:
                 showInviteRecovery = true
             case .cloudAccount, .cloudSignIn, .groupsOrganizer:
-                // Inalcanzables: `requiresMirror` es `false` para las tres, así que el portal del Welcome
-                // nunca las persiste. Si aparecen, la respuesta segura es el recorrido normal — jamás
-                // saltar al cover de nube con una sesión que este proceso no ha visto, ni retomar una rama
-                // organizador a mitad en un proceso que no ha visto su puerta.
+                // Las dos de nube siguen siendo INALCANZABLES: `requiresMirror` es `false` para ellas, así
+                // que el portal del Welcome nunca las persiste, y si aparecieran la respuesta segura es el
+                // recorrido normal — jamás saltar al cover de nube con una sesión que este proceso no ha
+                // visto.
+                //
+                // **`.groupsOrganizer` SÍ es alcanzable desde el paso 5-b** (2026-09-10): la vuelta al
+                // neutro lo persiste para heredar el auto-exit en background, que lee «hay destino» y no
+                // el motivo. Aterriza en el CHOOSER a propósito, que es lo que este `case` ya hacía y
+                // sigue siendo lo correcto: retomar la rama organizador a mitad en un proceso que no ha
+                // visto su puerta es justamente lo que la puerta existe para impedir — y ahora, además,
+                // ese proceso tiene que volver a pasar por ella para comprobar que el borrado de arranque
+                // hizo su trabajo. Un toque más para la persona; el ticket de hacerlo durable
+                // (`groups-organizer-intent-is-lost-on-relaunch`) depende del paso 12.
                 welcomeFlowInitialStep = .chooser
                 showWelcomeFlow = true
             }
@@ -1660,6 +1713,14 @@ private struct WelcomeFlowModifier: ViewModifier {
     /// momento de la decisión (fetch vivo), no el snapshot `hasExistingData` — el
     /// mirror de iCloud puede estar re-importando en background durante el Welcome.
     let hasLocalDataNow: @MainActor @Sendable () -> Bool
+    /// Paso 5-b: el detector ESTRECHO (`checkHasPersonalData`), solo para la puerta de Grupos. **No
+    /// sustituye al de arriba**: el guard cross-cuenta del sign-in de nube sigue queriendo el ancho
+    /// —allí «hay datos de otro humano» incluye sus grupos— y son dos preguntas distintas sobre el mismo
+    /// dispositivo.
+    let hasPersonalDataNow: @MainActor @Sendable () -> Bool
+    /// Paso 5-b: sube lo pendiente a iCloud antes de que la puerta arme un borrado. Vive en `ContentView`
+    /// por el `modelContext`.
+    let attemptPersonalUpload: @MainActor () async -> GroupsNeutralReturnLogic.Verdict
     /// Paso 4: el borrado del corpus de iCloud, que vive en `ContentView` porque necesita el
     /// `modelContext`. Este modifier solo lo reenvía al container, y el container a la puerta.
     let performICloudCorpusWipe: @MainActor () async -> String?
@@ -1782,7 +1843,23 @@ private struct WelcomeFlowModifier: ViewModifier {
                         }
                         WelcomePendingDestinationStore.set(destination)
                     },
-                    hasLocalDataNow: hasLocalDataNow,
+                    onNeedsNeutralReturn: {
+                        // **El ÚNICO efecto durable de la vuelta al neutro, y sus dos mitades van
+                        // juntas.** El arm es lo que hace el trabajo —`performSignOutWipeIfArmed` borra
+                        // los ARCHIVOS del store personal ANTES de montar, en el arranque siguiente, así
+                        // que nada se exporta como delete y el contenedor de iCloud queda intacto—; el
+                        // destino pendiente es lo que hace que el proceso se muera al irse al fondo
+                        // (`RelaunchNetLogic.shouldExitOnBackground` lo lee como «hay relanzamiento
+                        // armado») y que al reabrir se aterrice en el chooser y no en el Panel.
+                        //
+                        // **`signOutWipeIncludesGroups` NO se marca**: el store de Grupos sobrevive
+                        // (ADR §6). Y `hasShownWelcomeChooser` tampoco se toca: el propio wipe lo borra,
+                        // que es lo que deja el arranque siguiente en `freshInstall` ⇒ mount neutro.
+                        StorageModePersistence.armSignOutWipe()
+                        WelcomePendingDestinationStore.set(.groupsOrganizer)
+                    },
+                    hasPersonalDataNow: hasPersonalDataNow,
+                    attemptPersonalUpload: attemptPersonalUpload,
                     // Paso 4: el borrado vive aquí porque necesita el `modelContext`. La puerta solo
                     // decide y enseña.
                     performICloudCorpusWipe: { await performICloudCorpusWipe() }

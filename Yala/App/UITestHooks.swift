@@ -129,6 +129,18 @@ final class UITestHooks {
     /// `hasArg`).
     nonisolated static var secondarySession: Bool { hasArg("-uitest-secondary-session") }
 
+    /// `-uitest-groups-gate-mirror-live`: le dice a la puerta de «Vengo por un grupo» que el store de
+    /// este proceso ESPEJA hacia iCloud. Existe porque el testigo del mount **miente en el host de
+    /// UITest** —`personalConfiguration` retorna antes de capturarlo, así que se queda con su default
+    /// `.iCloudMirror`— y un simulador no tiene cuenta de iCloud: sin este hook, el seam
+    /// `ICloudPersonalCorpusProbe.mirrorsToICloudNow` devuelve `false` bajo uitest (que es la verdad
+    /// física del simulador) y con él devuelve `true`, que es lo que permite recorrer en sim la rama
+    /// «vuelta al neutro» sin fingir CloudKit.
+    ///
+    /// Es ORTOGONAL a `-uitest-fake-icloud`: aquél finge que HAY cuenta disponible para los guards de
+    /// `iCloudSyncService`; éste dice qué montó este proceso. Solo DEBUG (inerte en release vía `hasArg`).
+    nonisolated static var groupsGateMirrorLive: Bool { hasArg("-uitest-groups-gate-mirror-live") }
+
     /// `-uitest-groups-consent`: da por aceptado el consent de Grupos (§C5) sembrando sus dos keys de
     /// `UserDefaults` desde `AppBootstrapper`, SIN pasar por `GroupsConsentState.register()` —ese camino
     /// escribe por `PreferenceSyncService` (iKV en `.icloud`, outbox en `.cloud`) y un XCUITest no debe

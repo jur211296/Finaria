@@ -197,6 +197,20 @@ enum UITestEphemeralDefaults {
         setMountWitness(true)
     }
 
+    /// **Purga el arm del borrado de arranque, y va INCONDICIONAL por la misma razón que el descriptor
+    /// secundario: nadie más lo borra.** `cloudSync.signOutWipeArmed` es la llave que la vuelta al neutro
+    /// de la puerta de Grupos escribe (paso 5-b) — y `performSignOutWipeIfArmed` **no corre bajo
+    /// `isUITesting`**, así que un XCUITest que llegue a armarla la deja PEGADA en el simulador: el
+    /// bloque de `-uitest-reset` no toca `cloudSync.*` y `DataWipeService` las excluye a propósito.
+    ///
+    /// Lo que costaría no purgarla: a partir de ese arranque, TODA suite que pase por la puerta de Grupos
+    /// vería `cleanupAlreadyArmed == true` y recibiría `.blockedCleanupFailed` — un rojo que no tiene nada
+    /// que ver con el test que lo sufre, y que sobrevive a los `-uitest-reset` siguientes. Es la clase
+    /// exacta del sello heredado que ya describe `applySecondarySession`.
+    static func purgeSignOutWipeArm(from defaults: UserDefaults = .standard) {
+        defaults.removeObject(forKey: StorageModePersistence.signOutWipeArmedKey)
+    }
+
     /// Purga el centinela del seed de categorías **de PRODUCCIÓN**. No registra nada: bajo
     /// `-uitest` el centinela vivo es otro (`CategorySeedSentinel.uiTestKey`), porque el store
     /// también es otro.

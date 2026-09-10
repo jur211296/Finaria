@@ -174,12 +174,40 @@ enum ICloudPersonalCorpusProbe {
         SwiftDataConfiguration.personalStoreMountedDecision.attachesCloudKitMirror
     }
 
+    /// **¿El store de este proceso espeja hacia el iCloud del Apple ID?** El hermano ESTRECHO de
+    /// `mirrorWillSync`, y la diferencia entre los dos es justo el caso que separa las dos ramas nuevas
+    /// de la puerta de Grupos (paso 5-b): `attachesCloudKitMirror` es `true` también en `.localNoMirror`
+    /// —el mount sin cuenta iCloud, que adjunta el espejo igual por caer en `.automatic`— y ahí **no hay
+    /// iCloud que respalde nada**, así que borrar lo local sería pérdida definitiva y no una vuelta al
+    /// neutro. `mirrorsToICloud` es `true` solo en `.iCloudMirror`.
+    ///
+    /// **Es un seam y no una lectura directa porque el testigo MIENTE en los hosts de test.**
+    /// `personalConfiguration` retorna antes de capturarlo bajo `isRunningTests` / `isUITesting`, así que
+    /// el testigo se queda con su default `.iCloudMirror` — o sea, «espejo vivo» en un simulador que no
+    /// tiene cuenta de iCloud. Leerlo crudo mandaría **todos** los XCUITest de la rama organizador a la
+    /// vuelta al neutro. Por eso el default de producción excluye el host de UITest, y el hook
+    /// `-uitest-groups-gate-mirror-live` es lo que permite recorrer esa rama en simulador a propósito.
+    static var mirrorsToICloudNow: @MainActor () -> Bool = { productionMirrorsToICloudNow() }
+
+    /// El cuerpo del seam, con nombre, para que `_testReset` no lo duplique — dos copias de un default
+    /// divergen en cuanto alguien toca una.
+    static func productionMirrorsToICloudNow() -> Bool {
+        guard !SwiftDataConfiguration.isUITesting else { return UITestHooks.groupsGateMirrorLive }
+        // **Y el host de unit tests miente igual**, por la misma razón: `personalConfiguration` retorna
+        // antes de capturar el testigo bajo `isRunningTests`, así que el default `.iCloudMirror` gana.
+        // Sin este término, un test que olvide inyectar el seam mide la rama del espejo vivo creyendo
+        // medir la otra — y ésa es la que borra.
+        guard !SwiftDataConfiguration.isRunningTests else { return false }
+        return SwiftDataConfiguration.personalStoreMountedDecision.mirrorsToICloud
+    }
+
     #if DEBUG
-    /// Repone los tres seams. Lo llaman los tests entre casos.
+    /// Repone los cuatro seams. Lo llaman los tests entre casos.
     static func _testReset() {
         probe = { await measureFromCloudKit() }
         wipe = { await deleteMirrorZonesFromCloudKit() }
         mirrorWillSync = { SwiftDataConfiguration.personalStoreMountedDecision.attachesCloudKitMirror }
+        mirrorsToICloudNow = { productionMirrorsToICloudNow() }
     }
     #endif
 

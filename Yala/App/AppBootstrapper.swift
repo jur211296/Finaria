@@ -817,6 +817,10 @@ final class AppBootstrapper {
         // es otro (`YalaModel-UITest`) y `UserDefaults.standard` no. Sin esto, un arranque manual
         // con el store personal VACÍO hacía early-return y se quedaba sin categorías.
         UITestEphemeralDefaults.purgeCategorySeedSentinel()
+        // Paso 5-b · el arm del borrado de arranque. Incondicional y por el mismo motivo que sus vecinos:
+        // el hook pre-mount que lo consume está apagado bajo `-uitest`, así que sin esto una corrida que
+        // lo arme contamina todas las siguientes.
+        UITestEphemeralDefaults.purgeSignOutWipeArm()
 
         // `-uitest-fake-icloud`: simula cuenta iCloud disponible (+ import asentado) para
         // ejercitar en sim los flujos gated por `isAccountAvailable` (onboarding "Solo

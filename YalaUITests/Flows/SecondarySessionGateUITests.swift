@@ -44,7 +44,8 @@ final class SecondarySessionGateUITests: XCTestCase {
     /// `WelcomeChooserUITests.testGroupsOrganizer_createCardWalksToTheGroupForm`, que es el CONTROL
     /// POSITIVO de este fichero: con los mismos args y sin `secondarySession` la puerta abre y aparece
     /// el educativo.
-    private func walkToOrganizerGate(seed: String?, secondarySession: Bool) -> XCUIApplication {
+    private func walkToOrganizerGate(seed: String?, secondarySession: Bool,
+                                     mirrorLive: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchForUITest(
             reset: true,
@@ -53,7 +54,8 @@ final class SecondarySessionGateUITests: XCTestCase {
             cloudSession: true,
             groupsConsent: true,
             groupsEducativo: true,
-            secondarySession: secondarySession
+            secondarySession: secondarySession,
+            groupsGateMirrorLive: mirrorLive
         )
 
         // `uitest_ready` vive en el root de ContentView, que queda CUBIERTO por el fullScreenCover del
@@ -110,30 +112,76 @@ final class SecondarySessionGateUITests: XCTestCase {
         )
     }
 
-    /// La celda GEMELA, y el control que impide que la anterior pase por casualidad: **el mismo recorrido,
-    /// el mismo build y la misma puerta, con la ÚNICA diferencia del seam**, bloquean por motivos
-    /// distintos y lo dicen con pantallas distintas. Aquí hay corpus de otro humano en el dispositivo
-    /// (`checkHasExistingData` cuenta cuentas y categorías no-system, que el perfil de seed crea) pero
-    /// nadie está de visita ⇒ `.blockedForeignData`.
+    /// **La celda GEMELA, y el control que impide que la anterior pase por casualidad: el mismo
+    /// recorrido, el mismo build y la misma puerta, con la ÚNICA diferencia del seam.** Hay corpus en el
+    /// dispositivo pero nadie está de visita.
     ///
-    /// Es además el único sitio del repo donde se ejercita en sim el copy de `welcome.cloud.blocked*`: su
-    /// otra superficie, la fase `.blockedForeignData` del sign-in de nube, exige un SIWA real.
-    func test_organizerGate_withForeignCorpus_blocksAsForeignData() {
+    /// **Cambió de veredicto el 2026-09-10 (paso 5-b).** Hasta entonces salía la pantalla de «datos
+    /// ajenos», que le decía a la dueña de esos datos que creara el grupo «desde la app que ya usas» —
+    /// que es ésta. Ahora, en un simulador **sin cuenta de iCloud**, ese corpus no está respaldado en
+    /// ninguna parte: la puerta pregunta antes de borrar nada, con segundo gesto.
+    func test_organizerGate_withUnbackedCorpus_asksBeforeWiping() {
         let app = walkToOrganizerGate(seed: "minimal", secondarySession: false)
 
-        let blocked = gateScreen(app, "welcome_groups_gate_foreign_data")
+        let aviso = gateScreen(app, "welcome_groups_gate_no_backup")
         XCTAssertTrue(
-            blocked.waitForExistence(timeout: 20),
+            aviso.waitForExistence(timeout: 20),
             """
-            Con datos de otro humano en el dispositivo la puerta tiene que bloquear como «datos ajenos». \
-            Si en su lugar salió el educativo, `hasExistingData` dejó de contar el corpus (ojo: \
-            `checkHasExistingData` excluye lo `isSystem`).
+            Con corpus local y sin iCloud que lo respalde, la puerta tiene que PREGUNTAR antes de borrar. \
+            Si en su lugar salió el educativo, el detector dejó de contar el corpus (ojo: \
+            `checkHasPersonalData` excluye lo `isSystem`); si salió «reabre Yala», el seam del espejo \
+            está devolviendo `true` en un simulador que no tiene cuenta de iCloud.
             """
         )
         XCTAssertFalse(
             app.descendants(matching: .any).matching(identifier: "welcome_groups_gate_secondary_session")
                 .firstMatch.exists,
             "Sin descriptor secundario, la pantalla de «estás de visita» no puede aparecer: el veredicto es otro."
+        )
+
+        // El SEGUNDO gesto: el primer botón no borra, lleva a la confirmación que dice qué se pierde.
+        //
+        // **El botón se tapea por el id del CONTENEDOR, y está MEDIDO.** Un `accessibilityIdentifier`
+        // en el botón no existiría en runtime: el del VStack pisa el de sus hijos, así que el árbol real
+        // muestra `button|Borrar y entrar a Grupos||welcome_groups_gate_no_backup` (snapshot del
+        // 2026-09-10). La primera versión de este caso caía a `element(boundBy: 0)` —un botón cualquiera,
+        // con el chevron de volver como candidato—; lo cazó la review adversarial.
+        let cta = app.buttons["welcome_groups_gate_no_backup"]
+        XCTAssertTrue(cta.waitForExistence(timeout: 5), "No apareció el CTA de la pantalla sin respaldo.")
+        cta.tap()
+        XCTAssertTrue(
+            app.buttons["welcome_groups_gate_no_backup_confirm"].waitForExistence(timeout: 10),
+            """
+            El primer botón tiene que llevar a la confirmación, no borrar. Un borrado irreversible con un \
+            solo gesto es exactamente lo que el ADR §9 no admite.
+            """
+        )
+    }
+
+    /// **La rama del espejo vivo, y lo que este caso fija es el guard MÁS CARO del chip: sin subida
+    /// confirmada NO se arma ningún borrado.**
+    ///
+    /// El simulador no tiene cuenta de iCloud, así que `forceSync` no puede llegar a ninguna parte y el
+    /// veredicto de `GroupsNeutralReturnLogic` es `.waitForUpload`. Es decir: este recorrido **no puede**
+    /// enseñar la pantalla de «reabre Yala» — y que se quede en «un momento más» es justamente la
+    /// promesa de Jürgen del 2026-09-09 («nunca borra sin subir») verificada de punta a punta.
+    ///
+    /// El camino feliz (subida real + relanzamiento) es **device-only**: sin CloudKit no hay export que
+    /// confirmar. Vive en el guion de `tickets/qa/`.
+    func test_organizerGate_withLiveMirror_neverArmsAWipeItCannotBack() {
+        let app = walkToOrganizerGate(seed: "minimal", secondarySession: false, mirrorLive: true)
+
+        XCTAssertTrue(
+            gateScreen(app, "welcome_groups_gate_upload_wait").waitForExistence(timeout: 60),
+            """
+            Con espejo vivo y sin poder subir nada, la puerta tiene que quedarse esperando. Si salió \
+            «reabre Yala», se armó un borrado sin confirmar que lo pendiente esté en iCloud — el daño \
+            que el veredicto de la subida existe para impedir.
+            """
+        )
+        XCTAssertFalse(
+            gateScreen(app, "welcome_mirror_relaunch").exists,
+            "El terminal de relanzamiento no puede aparecer sin subida confirmada."
         )
     }
 

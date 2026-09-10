@@ -470,7 +470,10 @@ struct NeutralMountWiringTests {
                 "y su input es el testigo de lo que ESTE proceso montó")
         #expect(portal.contains("onNeedsMirrorRelaunch(destination)"),
                 "el destino tiene que persistirse ANTES de pedir que se reabra la app")
-        #expect(portal.contains("goTo(.mirrorRelaunch)"))
+        // El step lleva MOTIVO desde el paso 5-b, así que el literal se corta antes del paréntesis:
+        // `goTo(.mirrorRelaunch(.attachMirror))`. Lo que este test fija sigue siendo lo mismo —que el
+        // portal monte el terminal— y `.attachMirror` es justamente el motivo de R2.
+        #expect(portal.contains("goTo(.mirrorRelaunch(.attachMirror))"))
     }
 
     @Test("R2 (e): el arranque consume el destino pendiente ANTES de decidir la pantalla inicial")

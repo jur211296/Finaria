@@ -2,8 +2,14 @@
 //  WelcomeMirrorRelaunchView.swift
 //  Yala
 //
-//  R2 · el terminal del Welcome cuando el destino elegido necesita el mirror de CloudKit y este proceso
-//  montó el store personal NEUTRO. Quién decide es `WelcomeMirrorRelaunchLogic`; esta vista solo lo cuenta.
+//  R2 · el terminal del Welcome cuando hay que reabrir la app. Quién decide es
+//  `WelcomeMirrorRelaunchLogic` (motivo `.attachMirror`: el destino elegido necesita el mirror y este
+//  proceso montó NEUTRO) o la puerta de Grupos (motivo `.cleanForGroups`, paso 5-b: el espejo está vivo y
+//  la entrada por Grupos exige lo contrario). Esta vista solo lo cuenta.
+//
+//  **Los dos motivos comparten pantalla y no copy**, porque las promesas son opuestas: allí se enciende
+//  algo, aquí se limpia. Lo que NO cambia entre ellos es la instrucción —ve al inicio y vuelve— ni el
+//  hecho de que el trabajo real ocurre en el arranque siguiente.
 //
 //  COPY PROPIO, y no el `Storage.Relaunch.*` de la migración, porque el hecho que describe es otro: allí el
 //  usuario está migrando un corpus que ya existe y la app se lo dice a mitad de una operación larga; aquí
@@ -23,6 +29,24 @@
 import SwiftUI
 
 struct WelcomeMirrorRelaunchView: View {
+
+    /// Por qué se le pide reabrir. **Sin valor por defecto a propósito**: es la única diferencia entre las
+    /// dos pantallas, y un default lo elegiría por quien navegue sin pensarlo.
+    let reason: WelcomeRelaunchReason
+
+    private var title: String {
+        switch reason {
+        case .attachMirror: return L10n.Welcome.MirrorRelaunch.title
+        case .cleanForGroups: return L10n.Welcome.MirrorRelaunch.cleanTitle
+        }
+    }
+
+    private var bodyText: String {
+        switch reason {
+        case .attachMirror: return L10n.Welcome.MirrorRelaunch.body
+        case .cleanForGroups: return L10n.Welcome.MirrorRelaunch.cleanBody
+        }
+    }
 
     var body: some View {
         WelcomeFlowScreen { logoTopSpacing in
@@ -44,13 +68,13 @@ struct WelcomeMirrorRelaunchView: View {
                         .foregroundStyle(.white.opacity(0.8))
                         .accessibilityHidden(true)
 
-                    Text(L10n.Welcome.MirrorRelaunch.title)
+                    Text(title)
                         .font(DS.Typography.title2)
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, DS.Spacing.lg)
 
-                    Text(L10n.Welcome.MirrorRelaunch.body)
+                    Text(bodyText)
                         .font(DS.Typography.subheadline)
                         .foregroundStyle(.white.opacity(0.7))
                         .multilineTextAlignment(.center)

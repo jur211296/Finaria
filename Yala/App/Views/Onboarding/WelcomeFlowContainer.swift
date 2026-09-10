@@ -16,7 +16,10 @@
 
 import SwiftUI
 
-enum WelcomeFlowStep {
+/// `Equatable` explícito desde que `.mirrorRelaunch` lleva payload: hasta entonces el `==` de `goTo`
+/// venía de la síntesis automática de los enums sin valores asociados, que deja de aplicar en cuanto uno
+/// los tiene.
+enum WelcomeFlowStep: Equatable {
     case hero
     case chooser
     /// 2º nivel de "Ya tengo una cuenta" (H4): Restaurar iCloud | Sign in with Apple.
@@ -42,11 +45,25 @@ enum WelcomeFlowStep {
     /// nadie vea una pantalla de reinicio** (ADR §9). Es un step y no un alert por las mismas razones que
     /// `.groupsGate`, más una medida: un `.alert` del anchor de `ContentView` desmonta este cover entero.
     case privateICloudGate
-    /// R2 · TERMINAL: este proceso montó el store NEUTRO y el destino elegido necesita el mirror de
-    /// CloudKit ⇒ hay que reabrir la app. Vive DENTRO de este cover a propósito: un cover propio sería una
-    /// presentación nueva colgando del anchor de `ContentView` (matriz de readiness, regla (3) de
+    /// R2 · TERMINAL: hay que reabrir la app. Vive DENTRO de este cover a propósito: un cover propio sería
+    /// una presentación nueva colgando del anchor de `ContentView` (matriz de readiness, regla (3) de
     /// Presentaciones) para enseñar dos párrafos; aquí es un step más del contenedor que ya está montado.
-    case mirrorRelaunch
+    ///
+    /// **Lleva el motivo desde el paso 5-b (2026-09-10)**, y no un `@State` paralelo: son DOS terminales
+    /// con la misma forma y promesas distintas —encender el espejo para el destino elegido, o dejar el
+    /// teléfono limpio para Grupos— y un estado suelto al lado del step se desincroniza en cuanto alguien
+    /// navegue desde un tercer sitio. Con el motivo dentro, el compilador obliga a nombrarlo al navegar.
+    case mirrorRelaunch(WelcomeRelaunchReason)
+}
+
+/// Por qué se le pide a la persona que reabra Yala. El copy del terminal es lo único que cambia.
+enum WelcomeRelaunchReason: Equatable {
+    /// R2 · el destino elegido necesita el espejo de CloudKit y este proceso montó neutro.
+    case attachMirror
+    /// Paso 5-b · el espejo está vivo (o hay corpus local sin respaldo) y la entrada por Grupos exige un
+    /// store neutro: el borrado de arranque ya está armado y corre ANTES de montar, en el arranque
+    /// siguiente.
+    case cleanForGroups
 }
 
 struct WelcomeFlowContainer: View {
@@ -74,9 +91,17 @@ struct WelcomeFlowContainer: View {
     /// terminal y ContentView PERSISTE el destino para retomarlo tras el relanzamiento. Se separa en dos
     /// responsabilidades porque el container no debe tocar `UserDefaults` ni los flags de onboarding.
     var onNeedsMirrorRelaunch: (WelcomeMirrorRelaunchLogic.Destination) -> Void
-    /// G3: fetch VIVO del corpus local para la puerta (mismo closure que alimenta el guard cross-cuenta
-    /// del sign-in de nube — un snapshot no vale, el mirror puede estar re-importando).
-    var hasLocalDataNow: @MainActor @Sendable () -> Bool
+    /// G3: fetch VIVO del corpus PERSONAL para la puerta (cuentas y categorías no-`isSystem`; un
+    /// snapshot no vale, el mirror puede estar re-importando). **Estrecho a propósito desde el paso 5-b**:
+    /// el detector ancho cuenta grupos y filas puenteadas, que el borrado de arranque no se lleva, y con
+    /// él la puerta pediría reabrir la app en bucle a quien tenga grupos locales.
+    var hasPersonalDataNow: @MainActor @Sendable () -> Bool
+    /// Paso 5-b: sube a iCloud lo pendiente antes de que la puerta arme ningún borrado, y devuelve si ya
+    /// es seguro. Vive en `ContentView` porque necesita el `modelContext`, igual que el wipe del paso 4.
+    var attemptPersonalUpload: @MainActor () async -> GroupsNeutralReturnLogic.Verdict
+    /// Paso 5-b: la puerta autorizó la vuelta al neutro ⇒ `ContentView` arma el borrado de arranque y
+    /// persiste el destino. El container solo navega al terminal.
+    var onNeedsNeutralReturn: () -> Void
     /// Paso 4: el borrado del corpus de iCloud. Vive en `ContentView` —es quien tiene el `modelContext`,
     /// y el borrado tiene que llevarse también las filas que el espejo hubiera bajado ya—; el container
     /// solo lo reenvía a la puerta.
@@ -95,7 +120,9 @@ struct WelcomeFlowContainer: View {
         onSelectGroupsOrganizer: @escaping () -> Void,
         onBeaconRoutesToCloudSignIn: @escaping (CloudSignInProvider) -> Void,
         onNeedsMirrorRelaunch: @escaping (WelcomeMirrorRelaunchLogic.Destination) -> Void,
-        hasLocalDataNow: @escaping @MainActor @Sendable () -> Bool,
+        onNeedsNeutralReturn: @escaping () -> Void,
+        hasPersonalDataNow: @escaping @MainActor @Sendable () -> Bool,
+        attemptPersonalUpload: @escaping @MainActor () async -> GroupsNeutralReturnLogic.Verdict,
         performICloudCorpusWipe: @escaping @MainActor () async -> String?
     ) {
         self.initialStep = initialStep
@@ -106,7 +133,9 @@ struct WelcomeFlowContainer: View {
         self.onBeaconRoutesToCloudSignIn = onBeaconRoutesToCloudSignIn
         self.onSelectGroupsOrganizer = onSelectGroupsOrganizer
         self.onNeedsMirrorRelaunch = onNeedsMirrorRelaunch
-        self.hasLocalDataNow = hasLocalDataNow
+        self.onNeedsNeutralReturn = onNeedsNeutralReturn
+        self.hasPersonalDataNow = hasPersonalDataNow
+        self.attemptPersonalUpload = attemptPersonalUpload
         self.performICloudCorpusWipe = performICloudCorpusWipe
         self._step = State(initialValue: initialStep)
     }
@@ -184,9 +213,17 @@ struct WelcomeFlowContainer: View {
                     // Re-envuelto en vez de reenviado: pasar la property directa convierte un valor de
                     // función no-Sendable y avisa (`may introduce data races`). El closure nuevo nace ya en
                     // este contexto y no cruza ninguna frontera.
-                    hasLocalDataNow: { hasLocalDataNow() },
+                    hasPersonalDataNow: { hasPersonalDataNow() },
+                    attemptPersonalUpload: attemptPersonalUpload,
                     onProceed: {
                         leaveWelcome(to: .groupsOrganizer) { onSelectGroupsOrganizer() }
+                    },
+                    onNeedsNeutralReturn: {
+                        // Dos responsabilidades separadas por la misma razón que en `leaveWelcome`: el
+                        // container navega, `ContentView` es quien toca `UserDefaults` (armar el borrado
+                        // de arranque y persistir el destino).
+                        onNeedsNeutralReturn()
+                        goTo(.mirrorRelaunch(.cleanForGroups))
                     },
                     onBack: { goTo(.groupsChooser) }
                 )
@@ -235,8 +272,8 @@ struct WelcomeFlowContainer: View {
                     performWipe: performICloudCorpusWipe
                 )
                 .transition(.opacity)
-            case .mirrorRelaunch:
-                WelcomeMirrorRelaunchView()
+            case .mirrorRelaunch(let reason):
+                WelcomeMirrorRelaunchView(reason: reason)
                     .transition(.opacity)
             }
         }
@@ -280,7 +317,7 @@ struct WelcomeFlowContainer: View {
             return
         }
         onNeedsMirrorRelaunch(destination)
-        goTo(.mirrorRelaunch)
+        goTo(.mirrorRelaunch(.attachMirror))
     }
 
     /// "Ya tengo una cuenta": con una sola opción visible (prod DARK / uitest) hace
@@ -350,7 +387,7 @@ struct WelcomeFlowContainer: View {
             // llevaba a la visita al onboarding privado sin decirle que estaba en el móvil de otra persona,
             // mientras la rama de al lado sí se lo decía: la app se contradecía según por dónde entraras.
             // El descriptor es el predicado canónico —el MISMO que consulta la puerta de la rama
-            // organizador— y no el corpus: `hasLocalDataNow` mide el store de la INVITADA, que en una
+            // organizador— y no el corpus: el detector mide el store de la INVITADA, que en una
             // sesión recién montada está VACÍO y daría vía libre justo en el caso que hay que atender.
             // Informa y no bloquea: el step sale por este mismo portal en cuanto la visita continúa.
             if SecondarySessionStore.isActive() {

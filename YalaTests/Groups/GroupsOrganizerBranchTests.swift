@@ -72,94 +72,102 @@ private final class SpyPreferenceWriter: GroupsOrganizerPreferenceWriting {
 @Suite("G3 · la puerta de la rama organizador")
 struct GroupsOrganizerGateTests {
 
-    @Test("la tabla completa: canal × secundaria × datos ajenos")
+    /// **La tabla, con los CINCO términos.** Los tres primeros deciden si se puede seguir; los dos
+    /// últimos, qué hay que limpiar antes.
+    @Test("la tabla completa: canal × secundaria × espejo × corpus × arm")
     func fullTable() {
-        #expect(Gate.decide(channelEnabled: true, isSecondarySession: false, hasExistingData: false, restoreInProgress: false) == .proceed)
-        #expect(Gate.decide(channelEnabled: false, isSecondarySession: false, hasExistingData: false, restoreInProgress: false) == .blockedChannelOff)
-        #expect(Gate.decide(channelEnabled: true, isSecondarySession: true, hasExistingData: false, restoreInProgress: false) == .blockedSecondarySession)
-        #expect(Gate.decide(channelEnabled: true, isSecondarySession: false, hasExistingData: true, restoreInProgress: false) == .blockedForeignData)
+        // Nada que limpiar: el camino de casi todo el mundo.
+        #expect(gate() == .proceed)
+        #expect(gate(channel: false) == .blockedChannelOff)
+        #expect(gate(secondary: true) == .blockedSecondarySession)
+        // Espejo vivo ⇒ vuelta al neutro, TENGA O NO filas: lo que la sesión de grupos escriba subiría al
+        // iCloud del Apple ID de este teléfono.
+        #expect(gate(mirror: true) == .returnToNeutral)
+        #expect(gate(mirror: true, data: true) == .returnToNeutral)
+        // Corpus local SIN espejo que lo respalde ⇒ se pregunta, porque ahí borrar no tiene vuelta.
+        #expect(gate(data: true) == .askBeforeWiping)
+        // El arm superviviente: se pidió limpiar, el arranque no lo hizo.
+        #expect(gate(mirror: true, armed: true) == .blockedCleanupFailed)
+        #expect(gate(data: true, armed: true) == .blockedCleanupFailed)
     }
 
-    @Test("con el canal APAGADO gana el canal, aunque además haya datos de otro humano")
-    func channelWinsOverForeignData() {
+    /// **El arm solo habla cuando hay algo que limpiar**, y esta celda es la que lo fija: un dispositivo
+    /// con un `signOutWipeArmed` de otro camino —un cierre de sesión de nube que aún no reabrió— no puede
+    /// quedarse sin entrar a Grupos si su store ya está neutro. Sin este orden, `.blockedCleanupFailed`
+    /// sería un bloqueo por un hecho que no le afecta.
+    @Test("con el store ya neutro, un arm de otro camino NO bloquea")
+    func armAloneDoesNotBlock() {
+        #expect(gate(armed: true) == .proceed)
+    }
+
+    @Test("con el canal APAGADO gana el canal, aunque además haya que limpiar")
+    func channelWinsOverEverything() {
         // El orden no es estético. El canal acaba de re-medirse con `force`, así que su veredicto es el más
-        // fresco, y su copy describe algo TRANSITORIO («vuelve a intentarlo en un momento»). El de datos
-        // ajenos describe un estado del DISPOSITIVO, que no se arregla esperando: dárselo a alguien cuyo
-        // problema real es el canal le manda a buscar una causa que no existe.
-        #expect(Gate.decide(channelEnabled: false, isSecondarySession: false, hasExistingData: true, restoreInProgress: false) == .blockedChannelOff)
-        #expect(Gate.decide(channelEnabled: false, isSecondarySession: true, hasExistingData: true, restoreInProgress: false) == .blockedChannelOff)
+        // fresco, y su copy describe algo TRANSITORIO («vuelve a intentarlo en un momento»). Lo demás
+        // describe estados del DISPOSITIVO, que no se arreglan esperando: dárselo a alguien cuyo problema
+        // real es el canal le manda a buscar una causa que no existe. Y hay una razón más dura: sin canal
+        // no hay grupo que crear, así que limpiarle el teléfono sería un borrado a cambio de nada.
+        #expect(gate(channel: false, mirror: true) == .blockedChannelOff)
+        #expect(gate(channel: false, data: true) == .blockedChannelOff)
+        #expect(gate(channel: false, secondary: true, mirror: true, data: true, armed: true) == .blockedChannelOff)
     }
 
-    /// **C3 · la celda que carga el peso, y la razón por la que no basta con `hasExistingData`.**
+    /// **C3 · la celda que carga el peso, y la razón por la que no basta con el corpus.**
     ///
-    /// En sesión secundaria el detector de corpus mide el store de la INVITADA (`YalaModel-Secondary`),
-    /// que en una sesión recién montada está VACÍO ⇒ `hasExistingData` da `false`. Sin el término propio la
+    /// En sesión secundaria el detector mide el store de la INVITADA (`YalaModel-Secondary`), que en una
+    /// sesión recién montada está VACÍO ⇒ el término del corpus da `false`. Sin el término propio la
     /// puerta abría justo ahí, y detrás el alta escribe SEIS preferencias que en `.localOnly` caen en el
     /// `UserDefaults.standard` del DUEÑO — incluida `groupsBetaUnlocked`, que **nadie repone al salir**.
-    @Test("secundaria con el store de la invitada VACÍO: la celda que `hasExistingData` no ve")
+    @Test("secundaria con el store de la invitada VACÍO: la celda que el corpus no ve")
     func secondarySessionBlocksEvenWithAnEmptyGuestStore() {
-        #expect(Gate.decide(channelEnabled: true, isSecondarySession: true, hasExistingData: false, restoreInProgress: false)
-                == .blockedSecondarySession)
-        // Y va DELANTE de los datos ajenos: si además hay corpus, el hecho que hay que contarle al usuario
-        // sigue siendo «estás de visita» — ese sí tiene salida (cerrar la sesión de invitado), y el copy de
-        // datos ajenos («su dueño puede volver a entrar cuando quiera») le mandaría a esperar algo que no
-        // va a pasar.
-        #expect(Gate.decide(channelEnabled: true, isSecondarySession: true, hasExistingData: true, restoreInProgress: false)
-                == .blockedSecondarySession)
+        #expect(gate(secondary: true) == .blockedSecondarySession)
+        // Y va DELANTE de la limpieza, que es lo que impide el daño peor de todos: en secundaria, «volver
+        // al neutro» borraría el store del DUEÑO desde la sesión de la invitada.
+        #expect(gate(secondary: true, mirror: true, data: true) == .blockedSecondarySession)
     }
 
-    /// **D2 · la celda de la dueña restaurando (decisión del owner, 2026-09-02).**
-    ///
-    /// Cambias de móvil, restauras desde iCloud y mientras tus datos están bajando intentas crear tu
-    /// primer grupo. El detector cuenta filas y no puede saber que las estás bajando tú, así que la
-    /// puerta te clasificaba como «hay datos de otro humano» y te mandaba a crear el grupo «desde la app
-    /// que ya usas» — que es ÉSTA, montándose delante de ti. La salida que ofrecía era imposible de
-    /// seguir.
-    ///
-    /// Es el mismo hecho mal clasificado que ya corrigió `CrossAccountEntryGuardLogic` con esta misma
-    /// señal, y por eso las dos puertas la consumen igual: comparten el detector.
-    @Test("D2 · restaurando de iCloud, el corpus propio NO es corpus ajeno")
-    func ownRestoreIsNotForeignData() {
-        // La celda nueva: con datos y restaurando, se pasa.
-        #expect(Gate.decide(channelEnabled: true, isSecondarySession: false,
-                            hasExistingData: true, restoreInProgress: true) == .proceed)
-        // Y su control negativo, que es lo que impide que esto se convierta en un pase libre: sin
-        // restauración en curso, los mismos datos siguen bloqueando.
-        #expect(Gate.decide(channelEnabled: true, isSecondarySession: false,
-                            hasExistingData: true, restoreInProgress: false) == .blockedForeignData)
-    }
+    // **La celda de la dueña restaurando NO tiene test propio, y es deliberado.** Hasta el 2026-09-10
+    // `restoreInProgress` existía para no acusarla de tener «datos de otro humano» mientras bajaba los
+    // suyos; sin bloqueo no hay nada que corregir, así que el veredicto con espejo vivo es el mismo
+    // restaure o no — y eso ya lo fijan `fullTable` y las 32 celdas de `proceedNeedsEveryTerm`. Un test
+    // que repitiera esos mismos inputs no mataría ningún mutante propio: sería una tercera copia de la
+    // misma aserción con un nombre que habla de un término que ya no está en la firma. Lo que sí tiene
+    // test es la ACCIÓN, en `GroupsNeutralReturnWiringTests.restoreSignalIsClearedBeforeArming`.
 
-    /// La señal corrige el TÉRMINO de los datos, no el veredicto: no es una llave maestra.
-    @Test("D2 · restaurar no desarma los otros dos términos")
-    func restoreDoesNotUnlockTheOtherGuards() {
-        // Canal apagado: sigue mandando el canal, restaure o no.
-        #expect(Gate.decide(channelEnabled: false, isSecondarySession: false,
-                            hasExistingData: true, restoreInProgress: true) == .blockedChannelOff)
-        // Sesión secundaria: sigue siendo «estás de visita». Que la invitada esté restaurando SU iCloud
-        // no la autoriza a escribir las seis preferencias en el `UserDefaults` del dueño.
-        #expect(Gate.decide(channelEnabled: true, isSecondarySession: true,
-                            hasExistingData: true, restoreInProgress: true) == .blockedSecondarySession)
-        #expect(Gate.decide(channelEnabled: true, isSecondarySession: true,
-                            hasExistingData: false, restoreInProgress: true) == .blockedSecondarySession)
-    }
-
-    @Test("`proceed` exige las CUATRO condiciones — es la única celda que deja escribir")
-    func proceedNeedsAllFourTerms() {
+    @Test("`proceed` exige los TRES primeros términos y que no haya nada que limpiar")
+    func proceedNeedsEveryTerm() {
         for channel in [true, false] {
             for secondary in [true, false] {
-                for data in [true, false] {
-                    for restoring in [true, false] {
-                        let decision = Gate.decide(
-                            channelEnabled: channel, isSecondarySession: secondary,
-                            hasExistingData: data, restoreInProgress: restoring)
-                        // El corpus solo cuenta como AJENO si no lo está bajando esta misma sesión.
-                        let dataIsForeign = data && !restoring
-                        #expect((decision == .proceed) == (channel && !secondary && !dataIsForeign),
-                                "canal=\(channel) secundaria=\(secondary) datos=\(data) restaurando=\(restoring) ⇒ \(decision)")
+                for mirror in [true, false] {
+                    for data in [true, false] {
+                        for armed in [true, false] {
+                            let decision = gate(channel: channel, secondary: secondary,
+                                                mirror: mirror, data: data, armed: armed)
+                            let needsCleanup = mirror || data
+                            #expect((decision == .proceed) == (channel && !secondary && !needsCleanup),
+                                    "canal=\(channel) secundaria=\(secondary) espejo=\(mirror) datos=\(data) armado=\(armed) ⇒ \(decision)")
+                            // Y la otra mitad de la exhaustividad, la que un `== .proceed` solo no cubre:
+                            // ninguna celda con algo que limpiar puede acabar en un bloqueo de los otros
+                            // dos si el canal está encendido y no hay visita.
+                            if channel && !secondary && needsCleanup {
+                                #expect(decision == (armed ? .blockedCleanupFailed
+                                                           : (mirror ? .returnToNeutral : .askBeforeWiping)),
+                                        "espejo=\(mirror) datos=\(data) armado=\(armed) ⇒ \(decision)")
+                            }
+                        }
                     }
                 }
             }
         }
+    }
+
+    /// Azúcar con TODOS los defaults en «nada que hacer», para que cada caso nombre solo lo que cambia y
+    /// las 32 celdas se lean de un vistazo.
+    private func gate(channel: Bool = true, secondary: Bool = false,
+                      mirror: Bool = false, data: Bool = false,
+                      armed: Bool = false) -> Gate.Decision {
+        Gate.decide(channelEnabled: channel, isSecondarySession: secondary,
+                    mirrorsToICloud: mirror, hasPersonalData: data, cleanupAlreadyArmed: armed)
     }
 }
 
@@ -181,7 +189,8 @@ struct GroupsOrganizerNoWriteTests {
         let defaults = makeIsolatedDefaults(prefix: "g3.gate.off")
         let writer = SpyPreferenceWriter(defaults: defaults)
 
-        let decision = Gate.decide(channelEnabled: false, isSecondarySession: false, hasExistingData: false, restoreInProgress: false)
+        let decision = Gate.decide(channelEnabled: false, isSecondarySession: false,
+                                   mirrorsToICloud: false, hasPersonalData: false, cleanupAlreadyArmed: false)
         #expect(decision == .blockedChannelOff)
 
         // La aserción que carga el peso: `onboardingMode` es never-downgrade cross-device, así que una
@@ -199,18 +208,30 @@ struct GroupsOrganizerNoWriteTests {
         #expect(writtenKeysPresent(in: defaults).count == GroupsOrganizerOnboarding.writtenKeys.count)
     }
 
-    @Test("datos de otro humano ⇒ decisión de bloqueo Y el store sigue intacto (la ENMIENDA del punto de control)")
-    func foreignData_writesNothing() {
-        // La ventana M1: Welcome visible tras un `.privateReset` con el corpus del dueño vivo. La rama reusa
-        // `GroupsSignInView`, que NO consulta el guard cross-cuenta (regla dura de su docblock) ⇒ sin esta
-        // celda, la invitada firmaría SOBRE el store personal del dueño: su bridge metería los gastos de
-        // ella en el Panel de él, y el trío viajaría al iKV del Apple ID del dueño.
-        let defaults = makeIsolatedDefaults(prefix: "g3.gate.foreign")
-        let writer = SpyPreferenceWriter(defaults: defaults)
-
-        #expect(Gate.decide(channelEnabled: true, isSecondarySession: false, hasExistingData: true, restoreInProgress: false) == .blockedForeignData)
-        #expect(writer.writes.isEmpty)
-        #expect(writtenKeysPresent(in: defaults).isEmpty)
+    /// **Esta celda ya NO afirma «no se escribió nada», porque eso era una tautología.** `Gate.decide` es
+    /// una función pura de un `nonisolated enum`: no tiene acceso a ningún store, así que aserjar que un
+    /// writer espía siguió vacío se cumple porque nada podía escribir. Lo cazó la review adversarial del
+    /// 2026-09-10, y el riesgo real se mudó de sitio: quien escribe en la vuelta al neutro es
+    /// `ContentView` (`armSignOutWipe` + el destino pendiente), y su red es el source-scan de
+    /// `GroupsNeutralReturnWiringTests.armAndDestinationAreWrittenTogether`.
+    ///
+    /// Lo que sí queda aquí, y sí puede fallar, es el VEREDICTO: con espejo vivo y corpus, la puerta
+    /// manda a la vuelta al neutro y no a ninguno de los tres bloqueos.
+    @Test("con espejo vivo y corpus, el veredicto es la vuelta al neutro y no un bloqueo")
+    func mirrorWithCorpusReturnsToNeutral() {
+        let decision = Gate.decide(channelEnabled: true, isSecondarySession: false,
+                                   mirrorsToICloud: true, hasPersonalData: true,
+                                   cleanupAlreadyArmed: false)
+        #expect(decision == .returnToNeutral)
+        // Y el control que impide que esto pase por casualidad: los tres bloqueos siguen siendo
+        // alcanzables con sus propios inputs, así que `.returnToNeutral` no es un valor que se devuelva
+        // siempre.
+        #expect(Gate.decide(channelEnabled: false, isSecondarySession: false, mirrorsToICloud: true,
+                            hasPersonalData: true, cleanupAlreadyArmed: false) == .blockedChannelOff)
+        #expect(Gate.decide(channelEnabled: true, isSecondarySession: true, mirrorsToICloud: true,
+                            hasPersonalData: true, cleanupAlreadyArmed: false) == .blockedSecondarySession)
+        #expect(Gate.decide(channelEnabled: true, isSecondarySession: false, mirrorsToICloud: true,
+                            hasPersonalData: true, cleanupAlreadyArmed: true) == .blockedCleanupFailed)
     }
 
     /// **C3 · la mitad que el escáner de M1 no cubría, y la más cara de las seis.**
@@ -448,23 +469,36 @@ struct GroupsOrganizerWiringTests {
                 "un `refreshIfDue()` sin argumentos aquí es el no-op que el chip prohíbe")
     }
 
-    /// **D2 · el escáner que caza el mutante que la tabla NO ve.**
+    /// **El escáner que caza los dos mutantes que la tabla NO ve.**
     ///
-    /// La tabla de arriba prueba que `decide` clasifica bien las cuatro celdas, pero pasaría igual de
-    /// verde si el call-site le pasara `restoreInProgress: false` a pelo, o leyera la señal en el sitio
-    /// equivocado. Ese es exactamente el mutante que en la pieza 1 de este ticket cayó SOLO en el
-    /// source-scan, con los ocho tests del guard en verde — la demostración de por qué este escáner
-    /// existe. El parámetro sin default obliga a poner ALGO; esto obliga a poner lo correcto.
-    @Test("MUTACIÓN (e): el call-site pasa la señal VIVA de restauración, no un literal")
-    func gatePassesTheLiveRestoreSignal() throws {
+    /// La tabla prueba que `decide` clasifica bien las 32 celdas, pero pasaría igual de verde si el
+    /// call-site le pasara los hechos equivocados. Y los dos que importan tienen un gemelo que compila:
+    ///
+    ///  1. **El testigo del mount, leído CRUDO.** `SwiftDataConfiguration.personalStoreMountedDecision`
+    ///     devuelve su default `.iCloudMirror` en el host de UITest —`personalConfiguration` retorna antes
+    ///     de capturarlo— así que leerlo directo manda a la vuelta al neutro a TODOS los XCUITest de la
+    ///     rama, sobre un simulador que no tiene cuenta de iCloud. El seam es lo que lo evita.
+    ///  2. **El detector ANCHO.** `checkHasExistingData` cuenta grupos y filas puenteadas, que el borrado
+    ///     de arranque no se lleva (ADR §6) ⇒ quien tenga grupos locales vuelve a esta puerta tras
+    ///     reabrir y la app le pide reabrir otra vez, para siempre. El estrecho no tiene ese ciclo.
+    ///
+    /// Es el molde del escáner que en la pieza 1 de este ticket cazó un mutante con los ocho tests del
+    /// guard en verde: el compilador no puede ver ninguno de los dos, porque el tipo casa.
+    @Test("MUTACIÓN (e): el call-site lee el testigo por el SEAM y el corpus por el detector estrecho")
+    func gateReadsTheMountThroughTheSeam() throws {
         let code = try Self.code(Self.gateView)
-        #expect(code.contains("restoreInProgress: ICloudRestoreSessionSignal.isRestoringNow"), """
-            la puerta tiene que leer el latch VIVO. Con `restoreInProgress: false` cableado a mano, la
-            dueña que está restaurando vuelve a recibir «este dispositivo tiene datos de otra cuenta» y
-            una salida imposible de seguir («crea el grupo desde la app que ya usas» — es ésta).
+        #expect(code.contains("ICloudPersonalCorpusProbe.mirrorsToICloudNow()"), """
+            la puerta tiene que leer el testigo del mount por el SEAM. Crudo, el host de UITest devuelve
+            `.iCloudMirror` y todos los XCUITest de la rama organizador acaban pidiendo reabrir la app.
             """)
-        #expect(!code.contains("restoreInProgress: false"),
-                "un literal aquí es el bug de vuelta, y el compilador no puede cazarlo: el tipo casa")
+        #expect(!code.contains("personalStoreMountedDecision.mirrorsToICloud"),
+                "el testigo crudo aquí es el mutante: el tipo casa y el compilador no lo ve")
+        #expect(code.contains("hasPersonalData: hasPersonalDataNow()"), """
+            el corpus se mide con el detector ESTRECHO. Con el ancho, quien tenga grupos locales entra en
+            bucle de «reabre la app»: el borrado de arranque no toca el store de Grupos.
+            """)
+        #expect(!code.contains("hasLocalDataNow"),
+                "el detector ancho en esta puerta es el bucle de relanzamiento")
     }
 
     @Test("la puerta decide con la lógica pura y lee el flag DESPUÉS del refresh")
@@ -530,15 +564,15 @@ struct GroupsOrganizerWiringTests {
 
     /// **Cada razón de la puerta con SU copy, y ninguna prestada.**
     ///
-    /// `.blockedForeignData` pintaba `welcome.cloud.blocked*`, el copy del guard cross-cuenta del
-    /// sign-in: «Este dispositivo tiene datos de otra cuenta … no podemos conectar una cuenta distinta
-    /// aquí». Dicho a la DUEÑA de esos datos, que no está conectando ninguna cuenta sino intentando
-    /// crear un grupo, es una acusación falsa por partida doble. El bloqueo es correcto; lo que estaba
-    /// mal era lo que se decía al bloquear.
+    /// La pantalla de «datos ajenos» pedía prestado `welcome.cloud.blocked*`, el copy del guard
+    /// cross-cuenta del sign-in: «Este dispositivo tiene datos de otra cuenta … no podemos conectar una
+    /// cuenta distinta aquí». Dicho a la DUEÑA de esos datos, que no estaba conectando ninguna cuenta
+    /// sino intentando crear un grupo, era una acusación falsa por partida doble. El 2026-09-10 se fue la
+    /// pantalla entera; lo que queda es la regla que dejó: **cada rama, su copy**.
     ///
     /// El escáner es por CONTENIDO y no por conteo de casos: lo que hay que impedir es que dos ramas
     /// compartan key, no que existan tres ramas (eso ya lo cubre la tabla de `Gate.decide`).
-    @Test("las TRES razones de la puerta tienen copy propio, sin préstamos entre ellas")
+    @Test("las tres razones de BLOQUEO tienen copy propio, sin préstamos entre ellas")
     func eachBlockReasonHasItsOwnCopy() throws {
         let view = try Self.code(Self.gateView)
 
@@ -554,7 +588,7 @@ struct GroupsOrganizerWiringTests {
         let porRazon: [(String, String)] = [
             ("blockedChannelOff", "L10n.Welcome.Groups.channelOff"),
             ("blockedSecondarySession", "L10n.Welcome.Groups.secondary"),
-            ("blockedForeignData", "L10n.Welcome.Groups.existingData"),
+            ("blockedCleanupFailed", "L10n.Welcome.Groups.cleanupFailed"),
         ]
         // Una rama de `switch` no abre llaves, así que `bodyOf` no vale aquí: se corta desde el `case`
         // hasta el siguiente `case .`, que es el límite real de lo que pinta cada razón.

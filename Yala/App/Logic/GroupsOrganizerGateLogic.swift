@@ -46,18 +46,19 @@
 //  es distinto —«estás de visita», no «hay datos de otro humano»— y la salida también, porque aquí sí
 //  la hay (cerrar la sesión de invitado y volver desde su propio dispositivo).
 //
-//  **El CUARTO término (D2, 2026-09-02) no es una razón más para bloquear: es la que impide bloquear
-//  mal.** El detector de corpus cuenta filas y no puede saber QUIÉN las está escribiendo, así que a la
-//  dueña que acaba de cambiar de móvil y está restaurando de SU iCloud la clasificaba como «datos de
-//  otro humano» — y el copy le ofrecía crear el grupo «desde la app que ya usas», que es ÉSTA,
-//  montándose delante de ella. Una salida imposible de seguir, que es la definición de camino muerto.
-//  La señal (`ICloudRestoreSessionSignal.isRestoringNow`) corrige el TÉRMINO de los datos, no el
-//  veredicto: por eso va DENTRO de la condición de `hasExistingData` y no como una cuarta rama, y por
-//  eso el canal y la sesión secundaria siguen bloqueando igual mientras se restaura. Es la misma
-//  enmienda, con la misma señal y sobre el mismo detector, que `CrossAccountEntryGuardLogic` ya
-//  aplicaba desde el 2026-08-13: eran dos consumidores del mismo hecho y sólo uno lo clasificaba bien.
-//  Decisión del owner; el contra que se aceptó es que cada puerta que hereda la señal es una
-//  superficie más donde un fallo de la señal sale caro.
+//  **El término de los datos DEJÓ DE BLOQUEAR el 2026-09-10 (paso 5-b del rediseño de sesiones).** Hasta
+//  entonces era un camino muerto medido en device: al propio dueño del teléfono, que ya había bajado su
+//  iCloud por otra rama, la puerta le decía «aquí ya hay datos guardados… crea el grupo desde la app que
+//  ya usas» — y la app que ya usa **es ésta**, con un único botón «Volver». El ADR §2-3 no admite bloquear
+//  ahí: si se ve el Welcome no hay sesión privada, y lo que haya en el store es una importación que nadie
+//  pidió. Ahora ese término manda a la **vuelta al neutro** (esperar el export, armar el borrado de
+//  arranque, avisar sin preguntar, reabrir) y el contenedor de iCloud no se toca.
+//
+//  Con eso, la enmienda D2 del 2026-09-02 —`restoreInProgress` corrigiendo el término de los datos para
+//  no acusar a la dueña que restauraba de SU iCloud— **se retira por innecesaria**: existía para no
+//  bloquear mal, y ya no se bloquea. La señal sigue viva como ACCIÓN (la vuelta al neutro la apaga), no
+//  como veredicto. Su gemela de `CrossAccountEntryGuardLogic`, que consume el mismo detector, NO se
+//  toca: aquella sí sigue bloqueando.
 //
 
 import Foundation
@@ -66,7 +67,7 @@ import Foundation
 nonisolated enum GroupsOrganizerGateLogic {
 
     enum Decision: Equatable {
-        /// Canal encendido y device sin corpus ajeno → seguir al sign-in.
+        /// Canal encendido y device ya neutro → seguir al sign-in.
         case proceed
         /// El canal de Grupos sigue apagado DESPUÉS del refresh forzado. Copy honesto, vuelta al step y
         /// **cero escrituras** — ni `onboardingMode`, ni `groupsBetaUnlocked`, ni `hasCompletedOnboarding`.
@@ -74,42 +75,62 @@ nonisolated enum GroupsOrganizerGateLogic {
         /// C3 · sesión secundaria M1 viva: estás de visita en el móvil de otra persona. Copy propio y
         /// **cero escrituras** — las seis del alta caerían en el `UserDefaults` del DUEÑO.
         case blockedSecondarySession
-        /// Hay datos de otro humano en este dispositivo. Se bloquea con el copy que ya existe para ese
-        /// hecho (`welcome.cloud.blocked*`), también sin escribir nada.
-        case blockedForeignData
+        /// **El espejo de iCloud está VIVO sobre el store personal de este proceso** ⇒ vuelta al neutro:
+        /// esperar a que suba lo pendiente, armar el borrado de arranque, avisar SIN preguntar y pedir
+        /// que reabra. Lo que hubiera en el store se queda en iCloud, que no se toca.
+        case returnToNeutral
+        /// **Hay corpus personal local y NINGÚN espejo que lo respalde** (mount sin iCloud). Aquí
+        /// «tus datos siguen a salvo en iCloud» sería MENTIRA: ese histórico solo vive en este teléfono.
+        /// Se le pregunta, con segundo gesto, antes de borrar nada. Decisión de Jürgen, 2026-09-10.
+        case askBeforeWiping
+        /// El borrado de arranque ya estaba armado y este proceso montó igualmente ⇒ **no corrió**
+        /// (`performSignOutWipeIfArmed` aborta sin desarmar si no puede borrar los archivos base, guard
+        /// S3). Repetir el ciclo sería pedir «reabre la app» en bucle, que es el fallo grave de este
+        /// camino según el device-QA del ticket padre.
+        case blockedCleanupFailed
     }
 
     /// - Parameters:
     ///   - channelEnabled: `CloudSyncFlags.groupsBackendEnabled` **leído después** del
     ///     `refreshIfDue(force: true)`. Leerlo antes es el no-op que el bug describe.
-    ///   - isSecondarySession: `SecondarySessionStore.isActive()`. C3 · va ANTES de `hasExistingData`
-    ///     porque el detector mide el store de la INVITADA, que puede estar vacío: sin este término la
-    ///     puerta abre justo en el caso que más caro sale.
-    ///   - hasExistingData: el detector del guard cross-cuenta (`ContentView.checkHasExistingData`),
-    ///     que cuenta también grupos y filas bridgeadas — un dueño anterior que venía de «Solo Grupos»
-    ///     no tiene cuentas ni categorías propias y daría `false` con el detector estrecho.
-    ///   - restoreInProgress: ESTA sesión pidió restaurar de iCloud y ese import no ha terminado
-    ///     (`ICloudRestoreSessionSignal.isRestoringNow`). **SIN valor por defecto a propósito**, igual
-    ///     que en `CrossAccountEntryGuardLogic.decide`: un default sería `false` y cualquier call-site
-    ///     nuevo heredaría el bug en silencio. Sin él, añadir una puerta obliga a decidir, y lo
-    ///     comprueba el compilador y no un escáner.
+    ///   - isSecondarySession: `SecondarySessionStore.isActive()`. C3 · va ANTES de los términos del
+    ///     store porque el detector mide el store de la INVITADA, que puede estar vacío: sin este
+    ///     término la puerta abre justo en el caso que más caro sale.
+    ///   - mirrorsToICloud: el TESTIGO del mount de este proceso
+    ///     (`personalStoreMountedDecision.mirrorsToICloud`, leído por el seam
+    ///     `ICloudPersonalCorpusProbe.mirrorsToICloudNow` — crudo MIENTE bajo UITest, ver su docblock).
+    ///     **No es «¿hay filas?»**: mientras el espejo esté adjunto, lo que la sesión de grupos escriba
+    ///     —las filas puenteadas del bridge, que corre por defecto— SUBE al iCloud del Apple ID de este
+    ///     teléfono. Por eso dispara también con el store vacío: el daño no es lo que hay, es lo que
+    ///     va a subir.
+    ///   - hasPersonalData: el detector ESTRECHO (`ContentView.checkHasPersonalData`: cuentas y
+    ///     categorías no-`isSystem`), **y no el ancho**. El ancho (`checkHasExistingData`) cuenta grupos
+    ///     y filas puenteadas, que el borrado de arranque NO se lleva por diseño (ADR §6: grupos,
+    ///     nunca) — con él, quien tenga grupos locales vuelve a esta puerta tras reabrir y la app le
+    ///     pide reabrir otra vez, para siempre.
+    ///   - cleanupAlreadyArmed: `StorageModePersistence.isSignOutWipeArmed()`. Ver `.blockedCleanupFailed`.
+    ///
+    /// **`restoreInProgress` ya no es un término, y no es un descuido.** Existía para corregir el
+    /// bloqueo: a la dueña que estaba bajando SU iCloud, el detector de filas la clasificaba como «datos
+    /// de otro humano» y la puerta la acusaba a ella. Sin bloqueo no hay nada que corregir — y con el
+    /// espejo vivo la respuesta es la misma esté restaurando o no: volver al neutro. La señal sigue
+    /// importando, pero como ACCIÓN y no como veredicto: la vuelta al neutro la apaga
+    /// (`ICloudRestoreSessionSignal.noteRestoreFinished()`) antes de armar nada, porque un restore vivo
+    /// que nadie apaga deja a las otras puertas creyendo que este device está restaurando.
     static func decide(channelEnabled: Bool,
                        isSecondarySession: Bool,
-                       hasExistingData: Bool,
-                       restoreInProgress: Bool) -> Decision {
+                       mirrorsToICloud: Bool,
+                       hasPersonalData: Bool,
+                       cleanupAlreadyArmed: Bool) -> Decision {
         guard channelEnabled else { return .blockedChannelOff }
         guard !isSecondarySession else { return .blockedSecondarySession }
-        // Las filas que la propia dueña está bajando de SU iCloud ahora mismo no son «datos de otro
-        // humano»: son el resultado, a medias, de lo que ella acaba de pedir. El detector cuenta filas y
-        // no puede saber quién las está escribiendo, así que sin este término la puerta la acusa a ella
-        // — y la salida que le ofrece el copy («crea el grupo desde la app que ya usas») es literalmente
-        // esta app, montándose delante de ella. Imposible de seguir.
-        //
-        // Corrige el TÉRMINO de los datos, no el veredicto: es la misma forma que ya tiene el guard
-        // gemelo (`CrossAccountEntryGuardLogic`, que consume el mismo detector), y por eso va DENTRO de
-        // esta condición y no como una cuarta rama. Todo lo demás de la puerta sigue mandando: con el
-        // canal apagado o en sesión secundaria se bloquea igual, esté restaurando o no.
-        guard !(hasExistingData && !restoreInProgress) else { return .blockedForeignData }
-        return .proceed
+        // Nada que limpiar: ni espejo vivo ni corpus personal. Es el camino de la instalación fresca y
+        // el del device que ya volvió al neutro — o sea, el de casi todo el que entra por aquí.
+        guard mirrorsToICloud || hasPersonalData else { return .proceed }
+        guard !cleanupAlreadyArmed else { return .blockedCleanupFailed }
+        // El orden de estas dos ramas es load-bearing: con espejo vivo el corpus está —o estará— en
+        // iCloud, así que borrar lo local es reversible y avisar basta. Sin espejo no lo es, y ahí se
+        // pregunta.
+        return mirrorsToICloud ? .returnToNeutral : .askBeforeWiping
     }
 }

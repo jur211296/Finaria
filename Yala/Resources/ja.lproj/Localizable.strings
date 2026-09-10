@@ -5509,12 +5509,6 @@
 /* Body of the alert shown when the fresh-start wipe throws */
 "welcome.freshStart.failedMessage" = "データはそのまま残っているので、ここで止めました。Yalaを一度閉じてから開き直してください。それでも同じなら、ご連絡ください。";
 
-/* Organizer gate: the device already holds data, so creating a group here would sign an account on top of it */
-"welcome.groups.existingDataTitle" = "この端末にはすでにデータがあります";
-
-/* Organizer gate body for existing data */
-"welcome.groups.existingDataBody" = "ここからグループを作ると、そのデータの上にアカウントをつなぐことになるので、混ざらないようにしています。前の画面に戻ってください。データはそのままです。あなたのデータなら、いつも使っているアプリからグループを作れます。";
-
 /* Título del aviso cuando Restaurar compras no encuentra Yala Pro */
 "subscription.restoreEmptyTitle" = "サブスクリプションがありません";
 
@@ -5822,3 +5816,45 @@
 
 /* Private branch iCloud gate: secondary button on the wipe-failed screen, gives up the deletion */
 "welcome.privateICloud.wipeFailedBack" = "今はやめておく";
+
+/* Groups gate · returning the device to neutral before entering Groups (title) */
+"welcome.groups.neutralReturnTitle" = "この iPhone を準備しています";
+
+/* Groups gate · returning to neutral (body). Promise: personal data stays in iCloud */
+"welcome.groups.neutralReturnBody" = "個人のデータは iCloud に保存されたままです。この iPhone にはグループだけを残します。";
+
+/* Groups gate · waiting for the last upload to iCloud before wiping (title) */
+"welcome.groups.neutralReturnWaitTitle" = "もう少しお待ちください";
+
+/* Groups gate · waiting for upload (body). Nothing is deleted until it is safely in iCloud */
+"welcome.groups.neutralReturnWaitBody" = "この iPhone の最新データを iCloud に保存しています。安全に保存できるまで、ここからは何も削除しません。";
+
+/* Groups gate · local data with no iCloud backup (title) */
+"welcome.groups.noBackupTitle" = "この iPhone にしかないデータがあります";
+
+/* Groups gate · local data with no iCloud backup (body) */
+"welcome.groups.noBackupBody" = "iCloud がオフなので、ほかに控えがありません。あなたのアカウントでグループを使うには、この iPhone を空にする必要があります。";
+
+/* Groups gate · CTA to wipe unbacked local data and continue into Groups */
+"welcome.groups.noBackupWipe" = "削除してグループへ";
+
+/* Groups gate · second gesture before an irreversible local wipe (title) */
+"welcome.groups.noBackupConfirmTitle" = "この iPhone から削除されます";
+
+/* Groups gate · second gesture (body). Says what is lost and offers the iCloud way out */
+"welcome.groups.noBackupConfirmBody" = "ここに保存されている口座・カテゴリ・記録は完全になくなります。残したい場合は、戻って先に iCloud をオンにしてください。";
+
+/* Groups gate · second gesture confirm button */
+"welcome.groups.noBackupConfirmCta" = "削除して続ける";
+
+/* Groups gate · the armed boot cleanup did not run (title) */
+"welcome.groups.cleanupFailedTitle" = "この iPhone を空にできませんでした";
+
+/* Groups gate · the armed boot cleanup did not run (body) */
+"welcome.groups.cleanupFailedBody" = "Yala を開いたときに試しましたが、うまくいきませんでした。アプリを完全に閉じて、もう一度お試しください。";
+
+/* Relaunch terminal · variant for the Groups path (title) */
+"welcome.mirrorRelaunch.cleanTitle" = "あと一歩：Yala を開き直してください";
+
+/* Relaunch terminal · variant for the Groups path (body). The cleanup happens on next launch */
+"welcome.mirrorRelaunch.cleanBody" = "ホーム画面に戻ってから、もう一度開いてください。次に開いたときには、この iPhone はグループの準備が整っています。";

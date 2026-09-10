@@ -5223,15 +5223,34 @@ enum L10n {
             /// invitado y volver desde el dispositivo propio.
             static var secondaryTitle: String { ls("welcome.groups.secondaryTitle", comment: "") }
             static var secondaryBody: String { ls("welcome.groups.secondaryBody", comment: "") }
-            /// El dispositivo ya tiene datos. Copy PROPIO desde el 2026-08-12: antes se pedía prestado el
-            /// del guard cross-cuenta del sign-in (`welcome.cloud.blocked*`), que dice «este dispositivo
-            /// tiene datos de otra cuenta … no podemos conectar una cuenta distinta aquí» — dicho a la
-            /// DUEÑA de esos datos, que no está conectando ninguna cuenta sino intentando crear un grupo.
-            /// El detector (`checkHasExistingData`) cuenta filas y **no puede saber de quién son**, así que
-            /// el copy nombra el hecho que sí es cierto: aquí ya hay datos, y crear un grupo desde esta
-            /// pantalla conectaría una cuenta encima.
-            static var existingDataTitle: String { ls("welcome.groups.existingDataTitle", comment: "") }
-            static var existingDataBody: String { ls("welcome.groups.existingDataBody", comment: "") }
+            /// Paso 5-b · **la vuelta al neutro con el espejo vivo: se informa, no se pregunta**
+            /// (decisión de Jürgen). El copy nombra la promesa que hace verdad al borrado —lo personal
+            /// sigue en iCloud— y no menciona ni el espejo ni el store: el usuario no sabe qué es
+            /// ninguno de los dos, y aquí no ha hecho nada mal.
+            ///
+            /// **Sustituyen a `existingDataTitle`/`existingDataBody`**, retiradas el 2026-09-10 con la
+            /// pantalla de «datos ajenos»: aquel copy le decía a la dueña de los datos que creara el
+            /// grupo «desde la app que ya usas», que es ÉSTA. Camino muerto medido en device.
+            static var neutralReturnTitle: String { ls("welcome.groups.neutralReturnTitle", comment: "") }
+            static var neutralReturnBody: String { ls("welcome.groups.neutralReturnBody", comment: "") }
+            /// Paso 5-b · no se pudo confirmar que lo pendiente subiera a iCloud. Tono de espera y no de
+            /// error: no ha fallado nada del usuario, y lo suyo sigue intacto en el teléfono.
+            static var neutralReturnWaitTitle: String { ls("welcome.groups.neutralReturnWaitTitle", comment: "") }
+            static var neutralReturnWaitBody: String { ls("welcome.groups.neutralReturnWaitBody", comment: "") }
+            /// Paso 5-b · hay corpus local y **ningún iCloud que lo respalde**. Es el único caso en que
+            /// «sigue a salvo en iCloud» sería mentira, así que aquí sí se pregunta, y con segundo gesto.
+            static var noBackupTitle: String { ls("welcome.groups.noBackupTitle", comment: "") }
+            static var noBackupBody: String { ls("welcome.groups.noBackupBody", comment: "") }
+            static var noBackupWipe: String { ls("welcome.groups.noBackupWipe", comment: "") }
+            /// El SEGUNDO gesto. Dice qué se pierde y que no hay vuelta, que es lo que un primer botón
+            /// solo no puede sostener.
+            static var noBackupConfirmTitle: String { ls("welcome.groups.noBackupConfirmTitle", comment: "") }
+            static var noBackupConfirmBody: String { ls("welcome.groups.noBackupConfirmBody", comment: "") }
+            static var noBackupConfirmCta: String { ls("welcome.groups.noBackupConfirmCta", comment: "") }
+            /// Paso 5-b · el borrado de arranque estaba armado y no corrió. Se dice y se para: pedir
+            /// «reabre la app» otra vez sería el bucle que el device-QA marca como fallo grave.
+            static var cleanupFailedTitle: String { ls("welcome.groups.cleanupFailedTitle", comment: "") }
+            static var cleanupFailedBody: String { ls("welcome.groups.cleanupFailedBody", comment: "") }
             /// CTA de las TRES pantallas de bloqueo: vuelta al step con las otras vías intactas.
             static var gateBack: String { ls("welcome.groups.gateBack", comment: "") }
             /// G3 · el único dato que el alta del organizador pide (decisión del owner: solo nombre).
@@ -5273,6 +5292,14 @@ enum L10n {
             /// consumidores repartidos entre auto-exit y manual, y este terminal tiene UNO solo. Una key
             /// con un valor vivo y otro muerto es residuo, no cobertura.
             static var body: String { ls("welcome.mirrorRelaunch.body", comment: "") }
+            /// Paso 5-b · el MISMO terminal con la promesa contraria: aquí no se enciende el espejo, se
+            /// deja el teléfono limpio para Grupos. Dos keys y no un valor compartido porque las dos
+            /// pantallas prometen cosas opuestas, y un copy que valga para ambas no dice ninguna.
+            ///
+            /// El cuerpo **no promete que ya esté hecho**: el borrado corre en el arranque siguiente, así
+            /// que decir «ya quedó listo» sería falso mientras se lee.
+            static var cleanTitle: String { ls("welcome.mirrorRelaunch.cleanTitle", comment: "") }
+            static var cleanBody: String { ls("welcome.mirrorRelaunch.cleanBody", comment: "") }
         }
 
         /// Pantalla de sign-in a cuenta del Modo Nube (H4).
