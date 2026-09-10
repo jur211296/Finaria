@@ -29,6 +29,8 @@
 - [El mecanismo que existe se probó con OTRO corpus](feedback_el_mecanismo_existente_se_probo_con_otro_corpus.md) — reusar un barrido sobre un corpus nuevo puede destruir datos buenos; el AC dice QUÉ, no CÓMO.
 - [Mi fix hereda la forma del bug](feedback_mi_fix_hereda_la_forma_del_bug.md) — el arreglo repite el error del bug; enuncia el bug en una frase y aplícasela al arreglo.
 - [El alert de SwiftUI compite con su propio botón](feedback_el_alert_de_swiftui_compite_con_su_propio_boton.md) — el `set` del binding corre al pulsar CUALQUIER botón; si la acción es async, pierde.
+- [Un gate derivado de una AUSENCIA falla abierto](feedback_un_gate_derivado_de_una_ausencia_falla_abierto.md) — la marca va POSITIVA; y la puerta que nadie usa puede ser el camino del 2.º device.
+- [Un timeout no distingue lento de colgado](feedback_un_timeout_no_distingue_lento_de_colgado.md) — 5010 ms clavados no son un cuelgue: súbelo y mide. Refutó un ticket entero.
 - [Un gate falla ABIERTO por su entrada](feedback_un_gate_falla_abierto_por_su_entrada.md) — lista vacía por error = «no hay»; y el snapshot se congela durante el `await`.
 - [El avisador que se rescata no vigila](feedback_el_avisador_que_se_rescata_no_vigila.md) — el respaldo ciega al vigilante; y `always()` en un job de aviso dispara al cancelar el run A MANO.
 - [La review adversarial caza lo MÍO](feedback_review_adversarial_caza_lo_mio.md) — 8 el 7-sep, 7 el 8-sep; puede refutar la PREMISA del ticket, y un camino muerto que revives trae sus bugs intactos.
@@ -51,6 +53,7 @@
 - [El fixture hereda la anatomía de producción](feedback_el_fixture_hereda_la_anatomia_de_produccion.md) — no la deduzcas del ticket; el error se ve en el TOTAL, y el fixture tiene que ser DISCRIMINANTE.
 
 ## Estado del trabajo
+- [«Volver a iCloud» ya está abierta a quien nació en la nube](project_reversa_abierta_a_born_cloud.md) — PR #132; la review cazó DOS defectos graves MÍOS; falta el device-QA de CloudKit y NO es simulable.
 - [Todo sign-in en la nube ya descubre el tipo de cuenta y rutea](project_bloque_identidad_nube_rutea.md) — bloque [I]; el Worker NO sirve `kind` todavía, así que 3 de los 4 device-QA no se distinguen hasta desplegarlo.
 - [La elección nube ya no se apaga sola en un deploy](project_percent_eleccion_nube_alineado_con_prod.md) — PR #128 desplegado y verificado; la card born-cloud SÍ se ve en prod, y deja una ventana abierta hasta el paso 12.
 - [Rediseño de sesiones: dos ejes](project_rediseno_sesiones_dos_ejes.md) — ADR 9-sep + 13 tickets con orden; M1 retirada y «en la nube» RATIFICADOS; la puerta «datos ajenos» bloqueó a Jürgen en device.
