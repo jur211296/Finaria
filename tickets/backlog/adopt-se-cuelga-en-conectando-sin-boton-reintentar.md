@@ -66,6 +66,21 @@ cuyo caso el poll ni mira. Se distingue por el `accessibilityIdentifier` de la p
 Matar la app y reabrirla: `rekickIfParked()` corre en el arranque
 (`AppBootstrapper.swift:1645-1647`) y retoma la máquina.
 
+**Confirmado en device el 2026-09-09**: el owner mató la app, volvió a entrar y **cargaron todos sus
+datos**. O sea, el estado era **recuperable** y el cuelgue estaba en la conducción, no en los datos —
+nada se corrompió ni se perdió.
+
+Eso refuerza la hipótesis principal y **acota el arreglo**: si el estado journaleado bastaba para
+retomar al siguiente arranque, entonces la máquina no estaba rota, solo sin quien la condujera desde
+la pantalla. Es decir, un tope de tiempo en fase transicional que ofrezca «Reintentar» habría bastado
+para resolverlo **sin matar la app** — que es exactamente lo que el usuario no puede saber que tiene
+que hacer.
+
+⚠️ **Pendiente de determinar**: si tras ese arranque quedó en `iCloud privado` (el adopt **no**
+completó y solo se recuperó el estado anterior) o en `Tu cuenta en la nube` (el adopt **sí** completó
+en el rekick). Se lee en *Ajustes → «Dónde viven tus datos»*, y cambia el diagnóstico: en el primer
+caso el adopt falló entero y hay que mirar por qué; en el segundo, solo faltó la salida en pantalla.
+
 ## Relacionados
 
 - [[fresh-start-privado-no-ve-los-datos-de-icloud]] — mismo recorrido de Welcome, otra rama.
