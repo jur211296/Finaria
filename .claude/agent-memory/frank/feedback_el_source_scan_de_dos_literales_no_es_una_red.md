@@ -40,3 +40,17 @@ escribir «lo fija X»: `project.pbxproj` → `fileSystemSynchronizedGroups`. Es
 deben filtrar comentarios (`codeOnly`, en `WidgetSessionSealTests`). Sin él, documentar el invariante
 que el test cuenta lo pone en rojo sin que producción cambie — la forma más tonta de que una red deje
 de usarse.
+
+**El reverso, medido el 10-sep: un cambio de SOLO COMENTARIOS puede tumbar un source-scan.** Si el
+scan no filtra comentarios, tu docblock nuevo entra en lo que cuenta. Así que cuando edites
+comentarios de un fichero de `Yala/`, la pregunta no es «¿compila?» sino **«¿quién lee este fichero
+del disco?»**:
+
+    grep -rln '<Fichero>.swift' YalaTests/ YalaUITests/
+
+Ese día salieron **siete suites-fichero** que ningún mapeo por convención (`<Clase>Tests.swift`)
+habría encontrado —`WelcomeHeroReentryTests`, `WelcomeSecondaryNoticeTests`,
+`BornCloudSignUpFlowTests`, `GroupsOrganizerBranchTests`, `WelcomeNewChooserOrderTests`,
+`GroupCreateRoutingLogicTests`, `OnboardingGroupsPurposeGateLogicTests`— con 17 suites y 91 tests
+detrás. Salieron verdes, pero el gate no lo sabía: nadie las había corrido.
+

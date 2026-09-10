@@ -19,6 +19,15 @@ salieron 16 tests en 5 suites. Un nombre de suite mal escrito ahí pasa por verd
 (`grep -oE "^Test Suite '[A-Za-z]+UITests'" | sort -u`) y compáralos uno a uno con los que pediste.
 Si no cuadran, no está verde: está vacío.
 
+**Y en el paso 2 el número que engaña es el OTRO: la M de `in M suites`.** El 10-sep pedí **11**
+suites con `-only-testing` y la línea dijo `Test run with 65 tests in 8 suites passed`, exit 0,
+`TEST SUCCEEDED`. Las tres que faltaban eran nombres de **FICHERO** (`RelaunchNetLogicTests`,
+`PersonalSwapReleaseTests`, `NeutralMountRelaunchZeroTests`) y no de tipo: un fichero de este repo
+suele declarar **cuatro `struct` con nombres distintos del suyo**, y `xcodebuild` no protesta por un
+`-only-testing` que no existe — simplemente no corre nada. ⇒ **cuenta las suites que pediste y
+compáralas con la M antes de leer el «passed»**; si no cuadra, saca los nombres reales
+(`grep -oE '^(nonisolated )?(final class|struct) [A-Za-z0-9_]+' <fichero>`) y vuelve a correr.
+
 Y el corolario general, que es el mismo de siempre:
 [[feedback_mis_mediciones_fallan_por_el_filtro]] — un «cero» casi nunca es el código, es el filtro.
 Aquí el filtro no daba cero: daba **verde**, que es peor.

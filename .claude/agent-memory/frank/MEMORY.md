@@ -25,6 +25,7 @@
 - [La aserción que no puede fallar](feedback_la_asercion_que_no_puede_fallar.md) — el mutante valida el CASO, no cada `#expect`; ensucia la columna que no cambia; y la que depende de la MÁQUINA no la caza ningún mutante.
 - [El pre-filtro tapa al criterio](feedback_el_prefiltro_tapa_al_criterio.md) — misma condición en el fetch y en la lógica: el mutante de la lógica sale VERDE. Me pasó dos veces el 8-sep.
 - [La tabla del ticket nombra un sitio por pantalla](feedback_la_tabla_del_ticket_nombra_un_sitio_por_pantalla.md) — 7 superficies eran 21; el mismo número marcado y exacto en la misma vista; los punteros a tickets en docblocks caducan.
+- [Ticket nuevo: busca el duplicado primero](feedback_ticket_nuevo_busca_el_duplicado_primero.md) — dos de tres ya existían el 10-sep, y el que existía era MEJOR; leer el motivo del descarte antes de reabrir.
 - [El mecanismo que existe se probó con OTRO corpus](feedback_el_mecanismo_existente_se_probo_con_otro_corpus.md) — reusar un barrido sobre un corpus nuevo puede destruir datos buenos; el AC dice QUÉ, no CÓMO.
 - [Mi fix hereda la forma del bug](feedback_mi_fix_hereda_la_forma_del_bug.md) — el arreglo repite el error del bug; enuncia el bug en una frase y aplícasela al arreglo.
 - [El alert de SwiftUI compite con su propio botón](feedback_el_alert_de_swiftui_compite_con_su_propio_boton.md) — el `set` del binding corre al pulsar CUALQUIER botón; si la acción es async, pierde.
@@ -50,6 +51,7 @@
 - [El fixture hereda la anatomía de producción](feedback_el_fixture_hereda_la_anatomia_de_produccion.md) — no la deduzcas del ticket; el error se ve en el TOTAL, y el fixture tiene que ser DISCRIMINANTE.
 
 ## Estado del trabajo
+- [La elección nube ya no se apaga sola en un deploy](project_percent_eleccion_nube_alineado_con_prod.md) — PR #128 desplegado y verificado; la card born-cloud SÍ se ve en prod, y deja una ventana abierta hasta el paso 12.
 - [Rediseño de sesiones: dos ejes](project_rediseno_sesiones_dos_ejes.md) — ADR 9-sep + 13 tickets con orden; M1 retirada y «en la nube» RATIFICADOS; la puerta «datos ajenos» bloqueó a Jürgen en device.
 - [Cambiar la divisa de una cuenta ya no deja su histórico atrás](project_divisa_de_una_cuenta_con_historico.md) — PR #118; la review cazó SEIS defectos del ARREGLO; deja 5 tickets y un device-QA con trampa.
 - [La familia FX, recorrida entera en simulador](project_seam_cuenta_divisa_ausente.md) — PR #114 y #115: 5 PASS, 2 parciales por red/seam; los dos fixtures que faltaban ya existen y dejan 4 tickets.
