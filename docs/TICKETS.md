@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (238)
+## Index (239)
 
 | cerrar-total-para-ante-un-check-rojo-que-no-bloquea | backlog | tickets/backlog/cerrar-total-para-ante-un-check-rojo-que-no-bloquea.md |
 | id | status | path |
@@ -203,6 +203,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | qa-cloud-readme-sin-entradas-g13-04-y-g13-05 | backlog | tickets/backlog/qa-cloud-readme-sin-entradas-g13-04-y-g13-05.md |
 | qa-guion-tanda-no-cubre-17-tickets | backlog | tickets/backlog/qa-guion-tanda-no-cubre-17-tickets.md |
 | qa-no-puede-crear-cuenta-en-otra-divisa | done | tickets/done/qa-no-puede-crear-cuenta-en-otra-divisa.md |
+| qa-yml-no-cancela-la-corrida-anterior-de-la-misma-rama | backlog | tickets/backlog/qa-yml-no-cancela-la-corrida-anterior-de-la-misma-rama.md |
 | records-standalone-amount-discrepancy | backlog | tickets/backlog/records-standalone-amount-discrepancy.md |
 | records-summary-chips-hide-their-amount-from-voiceover | backlog | tickets/backlog/records-summary-chips-hide-their-amount-from-voiceover.md |
 | records-summary-mixes-preferred-currencies | backlog | tickets/backlog/records-summary-mixes-preferred-currencies.md |
