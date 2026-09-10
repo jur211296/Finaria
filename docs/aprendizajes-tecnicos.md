@@ -16,9 +16,9 @@
 
 <!-- INDICE:inicio — generado por scripts/indexar_doc.py, no editar a mano -->
 
-## Índice (24 entradas)
+## Índice (26 entradas)
 
-> **No hace falta leer este fichero entero** — son 197 KB. Localiza la entrada
+> **No hace falta leer este fichero entero** — son 199 KB. Localiza la entrada
 > aquí y salta a ella.
 
 - `—` [Sync de Grupos (CKSyncEngine) NO debe arrancar/`save()` sobre el `mainContext` compartido antes](#sync-de-grupos-cksyncengine-no-debe-arrancarsave-sobre-el-maincontext-compartido-antes)
@@ -32,6 +32,8 @@
 - `—` [CARGAR una preferencia no puede ESCRIBIRLA — y el eco de eso convertía al receptor en autor LWW](#cargar-una-preferencia-no-puede-escribirla--y-el-eco-de-eso-converta-al-receptor-en-autor-lww)
 - `—` [Un pipe de observación puede FABRICAR la ausencia de una señal, y si imita un modo de fallo](#un-pipe-de-observacin-puede-fabricar-la-ausencia-de-una-seal-y-si-imita-un-modo-de-fallo)
 - `—` [Una medida de disco recién liberado NO es fiable: APFS tarda en reclamar, y el número intermedio pue](#una-medida-de-disco-recin-liberado-no-es-fiable-apfs-tarda-en-reclamar-y-el-nmero-intermedio-puede-parar-una-sesin)
+- `—` [Un guard puesto en una mitad hace más daño que ninguno: parece cerrado](#un-guard-puesto-en-una-mitad-hace-ms-dao-que-ninguno-parece-cerrado)
+- `—` [`actionlint` no mira `.github/actions/`: su verde sobre una composite action es un verde sobre cero ](#actionlint-no-mira-githubactions-su-verde-sobre-una-composite-action-es-un-verde-sobre-cero-ficheros)
 - `—` [Un borrado tiene DOS mitades y el camino remoto solo copió una: la fila del grupo se borra, el](#un-borrado-tiene-dos-mitades-y-el-camino-remoto-solo-copi-una-la-fila-del-grupo-se-borra-el)
 - `—` [El dominio Grupos pertenece al Apple ID, no al humano: toda frontera de «otro usuario en este d](#el-dominio-grupos-pertenece-al-apple-id-no-al-humano-toda-frontera-de-otro-usuario-en-este-d)
 - `—` [`exists` NO implica alcanzable: con un sheet presentado, la vista de fondo sigue ENTERA en el á](#exists-no-implica-alcanzable-con-un-sheet-presentado-la-vista-de-fondo-sigue-entera-en-el)
@@ -399,7 +401,7 @@ falsa.
 
 ---
 
-## Un guard puesto en una mitad hace más daño que ninguno: parece cerrado
+### Un guard puesto en una mitad hace más daño que ninguno: parece cerrado
 
 **2026-09-07.** `OnboardingResetHelper.clearResidualPreferencesForFreshStart` borra `userName` y
 `defaultCurrencyCode` en **dos** sitios: el iCloud key-value y el `UserDefaults` local. Cuando se
@@ -486,3 +488,43 @@ workflow, desde siempre.
 
 - Pin: `.github/workflows/nocturna-vigilante.yml` (dos relojes que fallan distinto — `schedule`, que
   es el mismo mecanismo que vigila, y `push` a la rama por defecto, que no depende de él).
+
+---
+
+### `actionlint` no mira `.github/actions/`: su verde sobre una composite action es un verde sobre cero ficheros
+
+**2026-09-09.** Al sacar el envío del aviso del CI a una composite action
+(`.github/actions/avisar/action.yml`), `actionlint` devolvió `rc=0` a la primera. El fichero tenía
+el YAML **roto**: una `description:` sin comillas que llevaba dentro un `issues: write` entre
+comillas invertidas, y esos dos puntos partían el mapping.
+
+`actionlint -verbose` lo dice sin ambigüedad:
+
+```
+verbose: Linting 3 files
+verbose: Linting .github/workflows/{avisar-grok-push-principal,nocturna-vigilante,qa}.yml
+```
+
+Tres ficheros, los tres de `workflows/`. **Linta workflows, no actions.** El `rc=0` no era «esto
+está bien», era «no he mirado nada» — la familia exacta del «SUCCEEDED con cero tests» que ya está
+recogida en `.claude/rules/testing.md`, y la razón por la que un control negativo no es opcional:
+meter un error deliberado y comprobar que la herramienta lo canta es lo único que distingue una red
+de un adorno.
+
+**Lo que sí cubre**, y conviene saberlo para no montar red de más: actionlint **valida los `with:`
+de un `uses: ./.github/actions/<x>` contra los `inputs:` declarados en esa action**. Un input
+inexistente sale con su lista de válidos. Cubre la interfaz; no el cuerpo.
+
+**La red que faltaba**, y que cazó el YAML roto en el primer intento: extraer los `run:` del
+`action.yml` con `yaml.safe_load` y pasarles `shellcheck` (con `-e SC2154`, porque las variables
+llegan del `env:` del paso y shellcheck no las ve). Cargar el YAML **es** la comprobación de
+sintaxis; el shellcheck es el segundo piso.
+
+Corolario que vale para todo `run:` del CI, esté donde esté: **la lógica se verifica en local
+extrayendo el script del YAML y corriéndolo con una matriz de escenarios**, con env distintas por
+caso, y con mutantes que confirmen que la matriz puede ponerse roja. Nueve escenarios y dos
+mutantes cuestan minutos; descubrir en el incendio que la rama que distingue «la UI se saltó a
+propósito» de «la UI no llegó a correr» estaba invertida cuesta el incendio entero.
+
+- Pin: `.github/actions/avisar/action.yml` (el único `action.yml` del repo; si se añade otro,
+  hereda este agujero).

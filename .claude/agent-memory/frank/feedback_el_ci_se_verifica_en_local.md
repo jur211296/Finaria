@@ -64,3 +64,28 @@ envejece peor: queda ahí como documentación para el siguiente.** Cuando el por
 apoya en «así se comporta la plataforma», eso es una afirmación que hay que medir o marcar como
 inferida — sobre todo cuando es *mi* diseño el que se beneficia de que sea cierta, que es cuando
 menos ganas tengo de comprobarla.
+
+
+## Y la herramienta puede no estar mirando el fichero: actionlint NO linta `.github/actions/`
+
+**2026-09-09.** Saqué el envío de los avisos a una composite action y `actionlint` dio `rc=0` a la
+primera. El YAML estaba **roto** (un `description:` sin comillas con un `: ` dentro). `actionlint
+-verbose` lo dice: `Linting 3 files`, los tres de `workflows/`. **El verde era sobre cero
+ficheros** — la familia exacta del «SUCCEEDED con cero tests».
+
+**How to apply:**
+
+- Control negativo **de la herramienta, no solo del código**: mete un error en el fichero que crees
+  que está lintando y comprueba que lo canta. Si no lo canta, no lo está mirando.
+- Cuenta los ficheros que dice mirar. Y ojo con el grep que usas para contarlos: el mío
+  (`grep -c "^verbose: Linting \."`) dio 3 cuando eran 4, porque actionlint entremezcla las líneas
+  y algunas salen como `verbose: verbose: Linting …`. Dos filtros mal en la misma sesión.
+- La red que sí funciona para un `action.yml`: cargarlo con `yaml.safe_load` —eso **es** la
+  comprobación de sintaxis— y pasar sus `run:` por `shellcheck -e SC2154`. Cazó el YAML roto al
+  primer intento.
+- Lo que actionlint **sí** cubre: valida los `with:` de un `uses: ./.github/actions/<x>` contra los
+  `inputs:` declarados. Cubre la interfaz, no el cuerpo.
+
+**Y `!` dentro de comillas dobles en zsh se come el grep.** `grep -n "if: \${{ !cancelled"` no
+encontró una línea que estaba ahí. Comillas simples, o `grep -n 'cancelled()'`. Familia de
+[[zsh-no-divide-variables]].

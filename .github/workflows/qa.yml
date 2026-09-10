@@ -248,16 +248,36 @@ jobs:
     # ejecutando CERO tests: cuatro commits de codigo entraron en 2.1 sin una sola corrida.
     # Va a nivel de JOB, no de paso, para que un paso de test nuevo lo herede — olvidarse de
     # aplicarlo es exactamente el modo de fallo que este bloque arregla.
+    # Lo que el job del aviso necesita para leer que paso de verdad. `outcome` guarda lo
+    # que devolvio el comando; `conclusion` es el que `continue-on-error` pinta de verde.
+    outputs:
+      unit_pure: ${{ steps.unit_pure.outcome }}
+      unit_context: ${{ steps.unit_context.outcome }}
+      ui: ${{ steps.ui.outcome }}
+      ui_tocaba: ${{ steps.contexto.outputs.ui_tocaba }}
     env:
       TEST_RUNNER_TZ: America/Lima
       # Unica fuente de «esta corrida lleva UI». La gobierna el paso de UI (`if:`) y la
-      # lee el paso de aviso para no confundir «saltado a proposito» con «no llego a
-      # correr» — dos cosas que en `steps.<id>.outcome` se llaman IGUAL: `skipped`.
+      # lee el JOB `aviso` de mas abajo para no confundir «saltado a proposito» con «no
+      # llego a correr» — dos cosas que en `steps.<id>.outcome` se llaman IGUAL: `skipped`.
       # La condicion aparece dos veces en el fichero (aqui y en `timeout-minutes` del
       # job) porque el tope del job se evalua antes de que exista `env`. Si cambia una,
       # cambia la otra.
       UI_TOCABA: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     steps:
+      # `UI_TOCABA` sale por un paso, y no como `outputs: ui_tocaba: ${{ env.UI_TOCABA }}`,
+      # porque el output de un paso es el camino sin ambiguedad: `steps.<id>.outputs` esta
+      # disponible en `jobs.<id>.outputs` sin discusion. Lo medido con actionlint 1.7.12 es
+      # que `env` SI se rechaza en `jobs.<id>.env` («context "env" is not allowed here») y
+      # NO se queja en `jobs.<id>.outputs` — que no es lo mismo que saber que funciona en
+      # ejecucion, y aqui un vacio haria que el aviso gritara «la suite no corrio» en cada
+      # PR. Una linea de mas cuesta menos que averiguarlo en produccion.
+      #
+      # Lo que evita: que la condicion de UI_TOCABA se escriba una TERCERA vez en el fichero
+      # (ya esta en el `env:` de este job y en su `timeout-minutes`).
+      - name: Exponer si a la UI le tocaba correr
+        id: contexto
+        run: echo "ui_tocaba=$UI_TOCABA" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
       - name: Seleccionar Xcode (latest-stable 26.x)
         uses: maxim-lobanov/setup-xcode@v1
@@ -348,27 +368,69 @@ jobs:
             -parallel-testing-enabled NO \
             -retry-tests-on-failure
 
-      # ------------------------------------------------------------------------------
-      # El paso que faltaba: los tres de arriba llevan `continue-on-error` a proposito
-      # —el EXC_BREAKPOINT de SwiftData in-memory haria rojos aleatorios, y volver a
-      # bloqueante exige resolver ESE crash primero—, pero GitHub pinta de `success` un
-      # paso asi aunque `xcodebuild` salga con 65. Resultado medido el 2026-09-02: el CI
-      # llevaba SEMANAS en verde con ocho tests en rojo, y el rojo mas viejo databa del
-      # 17 de agosto. La red funcionaba; estaba amordazada.
-      #
-      # Esto NO promueve nada a bloqueante (el job sigue pudiendo terminar en verde y el
-      # repo sigue mergeando). Lo que hace es que el fallo DEJE RASTRO: `outcome` guarda
-      # lo que de verdad devolvio el comando, mientras `conclusion` es el que
-      # `continue-on-error` pinta de verde. Se lee `outcome`.
-      - name: Avisar a Grok si algun paso advisory fallo
-        if: ${{ always() }}
+  # --------------------------------------------------------------------------------
+  # EL AVISO, EN SU PROPIO CHECK  (2026-09-09, decision del owner)
+  #
+  # POR QUE EXISTE EL AVISO. Los tres pasos de test llevan `continue-on-error` a
+  # proposito —el EXC_BREAKPOINT de SwiftData in-memory haria rojos aleatorios, y volver
+  # a bloqueante exige resolver ESE crash primero—, pero GitHub pinta de `success` un
+  # paso asi aunque `xcodebuild` salga con 65. Medido el 2026-09-02: el CI llevaba
+  # SEMANAS en verde con ocho tests en rojo, y el mas viejo databa del 17 de agosto. La
+  # red funcionaba; estaba amordazada. Esto no promueve nada a bloqueante: hace que el
+  # fallo DEJE RASTRO. Se lee `outcome`, no `conclusion`.
+  #
+  # POR QUE SALIO DEL JOB `tests`. Cuando el aviso vivia ahi dentro, su `exit 1` tumbaba
+  # el job entero, y entonces un `tests: fail` mezclaba dos señales opuestas: «los tests
+  # fallaron» y «los tests fueron bien pero el canal de avisos esta roto». Medido el
+  # 2026-09-09 sobre las 40 ultimas corridas: los TRES rojos de `qa.yml` eran del
+  # avisador, y dos tapaban señal real —la nocturna con la suite de UI en rojo, y un
+  # `Build for testing` roto en `2.1`—. Quien mira un rojo asi puede concluir «es el
+  # avisador otra vez» y mergear encima de un test que si fallaba, que es exactamente lo
+  # que este mecanismo existe para impedir. Separado, cada check dice UNA cosa.
+  #
+  # Y ya no hace falta romper para no callar: si el webhook no responde, la accion deja
+  # el aviso escrito en un issue del repo (etiqueta `aviso-ci`). Solo cuando no queda
+  # ningun canal se pone en rojo — ahi si, porque entonces nadie se ha enterado.
+  aviso:
+    name: ¿Se ha enterado alguien de los rojos advisory?
+    needs: tests
+    # `!cancelled()` y NO `always()`, y la diferencia importa mucho: `always()` corre tambien
+    # cuando el RUN ENTERO se cancela a mano. Este workflow no declara `concurrency`, asi que
+    # los runs no se auto-cancelan y las cancelaciones son manuales — con un job de hasta 90
+    # min en `macos-26`, cancelar al ver un typo es lo normal. Con `always()`, cada una de esas
+    # veces `tests` acaba en `cancelled`, sus outputs llegan vacios, y esto entregaba a Grok
+    # «la suite NO llego a correr — el job murio antes de los tests». No murio: lo cancelaste tu.
+    #
+    # `!cancelled()` mira si se cancelo el RUN, no si se cancelo `tests`. Asi que sigue
+    # cubriendo el caso que si hay que avisar: el tope del job `tests` agotado, que es una
+    # cancelacion DE ESE JOB con el run vivo. Ahi los outputs tambien llegan vacios y se leen
+    # abajo como «no llego a correr», que es lo que se quiere. Es ademas el mismo operador que
+    # ya usa el `if:` del job `tests`.
+    #
+    # Se excluye `skipped` a proposito: si `changes` decidio que el diff es solo docs, no
+    # hay suite de la que informar y un aviso ahi seria ruido en cada PR de documentacion
+    # — y un canal que grita cuando no pasa nada se acaba silenciando, que es el mismo
+    # final que el canal mudo, por el otro extremo.
+    if: ${{ !cancelled() && needs.tests.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      # El canal de respaldo escribe un issue. El permiso por defecto de Actions en este
+      # repo es `read`, asi que sin esta linea el respaldo no puede entregar nada.
+      issues: write
+    steps:
+      # Hace falta para poder usar la action local `.github/actions/avisar`.
+      - uses: actions/checkout@v4
+
+      - name: ¿Hay algo que avisar?
+        id: componer
         env:
-          WEBHOOK_URL: ${{ secrets.GROK_WEBHOOK_URL }}
-          SENDER_KEY: ${{ secrets.GROK_WEBHOOK_SENDER_KEY }}
-          R_UNIT_PURE: ${{ steps.unit_pure.outcome }}
-          R_UNIT_CONTEXT: ${{ steps.unit_context.outcome }}
-          R_UI: ${{ steps.ui.outcome }}
-          UI_TOCABA: ${{ env.UI_TOCABA }}
+          R_UNIT_PURE: ${{ needs.tests.outputs.unit_pure }}
+          R_UNIT_CONTEXT: ${{ needs.tests.outputs.unit_context }}
+          R_UI: ${{ needs.tests.outputs.ui }}
+          UI_TOCABA: ${{ needs.tests.outputs.ui_tocaba }}
+          RESULTADO_JOB: ${{ needs.tests.result }}
           REPO: ${{ github.repository }}
           RAMA: ${{ github.ref_name }}
           SHA: ${{ github.sha }}
@@ -388,12 +450,14 @@ jobs:
           # mas arriba: comprobar el resultado de los tests sin comprobar antes que llegaran a
           # correr. Medido el 2026-09-03: seis runs seguidos en 2.1 asi, y el aviso callado.
           #
+          # Desde que el aviso es un job aparte hay una tercera forma de no correr: que el job
+          # `tests` fuera CANCELADO (tope de job agotado). Ahi sus outputs llegan VACIOS, que
+          # tampoco es `success` ni `failure`, asi que cae en la misma rama. Es lo que se quiere.
+          #
           # OJO (2026-09-07): desde que la UI corre SOLO en la nocturna, `skipped` significa
           # DOS cosas distintas y opuestas — "se salto a proposito" (todo bien) y "no llego a
           # correr" (nada bien). Distinguirlas exige mirar si a la UI le TOCABA correr, no su
-          # `outcome`. Sin esto el aviso gritaria "la suite NO llego a correr" en CADA PR, y un
-          # canal que grita cuando no pasa nada se acaba silenciando — que es el mismo final
-          # que el canal mudo que este bloque vino a arreglar, por el otro extremo.
+          # `outcome`. Sin esto el aviso gritaria "la suite NO llego a correr" en CADA PR.
           sin_correr=""
           for r in "$R_UNIT_PURE" "$R_UNIT_CONTEXT"; do
             case "$r" in
@@ -413,8 +477,10 @@ jobs:
             detalle=$(printf '%s\n' \
               "CI de $REPO ($RAMA): el job murio antes de los tests y la suite NO llego a correr." \
               "" \
-              "Los pasos de test quedaron sin ejecutar (pure-logic: $R_UNIT_PURE, context-based:" \
-              "$R_UNIT_CONTEXT, UI: $R_UI — a la UI le tocaba correr: $UI_TOCABA)." \
+              "Los pasos de test quedaron sin ejecutar (pure-logic: '$R_UNIT_PURE', context-based:" \
+              "'$R_UNIT_CONTEXT', UI: '$R_UI' — a la UI le tocaba correr: '$UI_TOCABA'; el job" \
+              "\`tests\` acabo en '$RESULTADO_JOB'). Un valor vacio significa que el job fue" \
+              "CANCELADO y no llego a dejar resultado — casi siempre, su tope de tiempo." \
               "Esto NO es un verde: es un run que no probo nada." \
               "La causa esta en un paso ANTERIOR del job — mira el log.")
           elif [ -n "$fallidos" ]; then
@@ -432,15 +498,8 @@ jobs:
             else
               echo "::notice title=Suite en verde::Los dos pasos de unit corrieron y ninguno fallo. La UI corre en la nocturna."
             fi
+            echo "hay_aviso=no" >> "$GITHUB_OUTPUT"
             exit 0
-          fi
-
-          # Sin secrets no se puede avisar. Se deja MUY visible en el resumen del run en vez
-          # de morir en silencio: un canal de avisos que nadie mira se muere sin ruido, y en
-          # este repo ya paso —el webhook de bug-triage estuvo un mes devolviendo 404—.
-          if [ -z "${WEBHOOK_URL:-}" ] || [ -z "${SENDER_KEY:-}" ]; then
-            echo "::error title=No se pudo avisar de que $asunto::Faltan GROK_WEBHOOK_URL o GROK_WEBHOOK_SENDER_KEY."
-            exit 1
           fi
 
           texto=$(printf '%s\n' \
@@ -449,28 +508,22 @@ jobs:
             "HEAD: $SHA" \
             "Log completo: $RUN_URL")
 
-          jq -n --arg context "$texto" '{context: $context}' > "$RUNNER_TEMP/payload-rojo.json"
-          printf '%s\n' "$texto" | sed 's/^/  /'
+          # Un texto de varias lineas necesita delimitador; sin el, `$GITHUB_OUTPUT` se
+          # queda con la primera linea y el aviso viaja decapitado.
+          {
+            echo "hay_aviso=si"
+            echo "asunto=$asunto"
+            echo "texto<<FIN_DEL_AVISO"
+            printf '%s\n' "$texto"
+            echo "FIN_DEL_AVISO"
+          } >> "$GITHUB_OUTPUT"
 
-          # Un curl que no mira el codigo HTTP no es una entrega, es una esperanza.
-          set +e
-          codigo=$(curl -sS -X POST "$WEBHOOK_URL" \
-            -H "Authorization: Bearer $SENDER_KEY" \
-            -H "Content-Type: application/json" \
-            --data-binary "@$RUNNER_TEMP/payload-rojo.json" \
-            --retry 3 --retry-delay 5 --retry-connrefused \
-            --max-time 30 \
-            -o "$RUNNER_TEMP/respuesta-rojo.txt" -w '%{http_code}')
-          rc=$?
-          set -e
-
-          if [ "$rc" -ne 0 ]; then
-            echo "::error title=El webhook no respondio::curl salio con $rc tras los reintentos. Sin avisar: $asunto."
-            exit 1
-          fi
-          case "$codigo" in
-            2??) echo "::warning title=Aviso entregado::Grok recibio el aviso (HTTP $codigo): $asunto." ;;
-            *)   echo "::error title=El webhook fallo (HTTP $codigo)::Nadie se ha enterado de que $asunto."
-                 head -c 500 "$RUNNER_TEMP/respuesta-rojo.txt" || true
-                 exit 1 ;;
-          esac
+      - name: Entregar el aviso
+        if: ${{ steps.componer.outputs.hay_aviso == 'si' }}
+        uses: ./.github/actions/avisar
+        with:
+          webhook-url: ${{ secrets.GROK_WEBHOOK_URL }}
+          sender-key: ${{ secrets.GROK_WEBHOOK_SENDER_KEY }}
+          github-token: ${{ github.token }}
+          asunto: ${{ steps.componer.outputs.asunto }}
+          texto: ${{ steps.componer.outputs.texto }}

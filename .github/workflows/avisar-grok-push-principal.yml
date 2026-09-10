@@ -8,15 +8,21 @@ name: Avisar a Grok (push a principal)
 # ---------------------------------------------------------------------------------
 # QUE TIENE QUE ESTAR PUESTO PARA QUE ESTO FUNCIONE  (Settings > Secrets and variables
 # > Actions > New repository secret). Los dos valores salen del panel de la routine de
-# Grok «Yala push a principal», abriendo su tarjeta de disparador:
+# Grok VIVA HOY —«Avisos CI Yala» desde el 2026-09-09; antes «Yala push a principal»,
+# que se borro—, abriendo su tarjeta de disparador:
 #
 #   GROK_WEBHOOK_URL         La URL de POST de la routine.
 #                            Es secreta: lleva el identificador de la routine.
 #   GROK_WEBHOOK_SENDER_KEY  El «sender key» de la routine (empieza por `crsr_`).
 #                            Va SOLO el valor de la clave, sin el prefijo `Bearer `.
 #
-# Ninguno de los dos vive en el repositorio: aqui solo se referencian.
-# Si falta cualquiera de los dos, este workflow falla a proposito y lo dice — ver abajo.
+# Ninguno de los dos vive en el repositorio: aqui solo se referencian. LOS COMPARTEN LOS
+# TRES workflows que avisan (este, `qa.yml` y `nocturna-vigilante.yml`) mas el ping, asi
+# que rehacer la routine los rompe A LOS CUATRO a la vez: es lo que paso el 2026-09-08 y
+# este workflow encadeno 37 runs en rojo hasta el dia siguiente sin que nadie lo mirara.
+#
+# Por eso el envio ya no vive aqui sino en `.github/actions/avisar`, que si el webhook no
+# responde deja el aviso escrito en un issue (etiqueta `aviso-ci`) en vez de morir en rojo.
 # ---------------------------------------------------------------------------------
 
 on:
@@ -26,10 +32,13 @@ on:
     # convertiria el canal en ruido, que es como muere un canal de avisos.
     branches: ["2.1"]
 
-# Minimo indispensable. No se hace checkout: todo lo que se envia viene del payload del
-# evento, asi que el job no necesita el arbol y termina en segundos.
+# Minimo indispensable. Lo que se ENVIA sigue viniendo entero del payload del evento; el
+# checkout de abajo solo trae la action local que hace la entrega.
 permissions:
   contents: read
+  # El canal de respaldo escribe un issue. El permiso por defecto de Actions en este repo
+  # es `read`, asi que sin esta linea el respaldo no puede entregar nada.
+  issues: write
 
 # NO se declara `concurrency` con `cancel-in-progress` a proposito. Cada push es un evento
 # que Grok debe conocer; cancelar el aviso de un push porque llego otro detras perderia
@@ -37,32 +46,24 @@ permissions:
 
 jobs:
   avisar:
-    name: POST al webhook de la routine
+    name: Avisar del push a principal
     runs-on: ubuntu-latest
     # Un borrado de rama tambien llega como `push`, y ahi no hay commit que anunciar.
     if: ${{ !github.event.deleted }}
     steps:
-      - name: Comprobar que los secrets estan puestos
-        env:
-          WEBHOOK_URL: ${{ secrets.GROK_WEBHOOK_URL }}
-          SENDER_KEY: ${{ secrets.GROK_WEBHOOK_SENDER_KEY }}
-        run: |
-          set -euo pipefail
-          faltan=""
-          [ -n "$WEBHOOK_URL" ] || faltan="$faltan GROK_WEBHOOK_URL"
-          [ -n "$SENDER_KEY" ] || faltan="$faltan GROK_WEBHOOK_SENDER_KEY"
-          if [ -n "$faltan" ]; then
-            echo "::error title=Faltan secrets::No estan configurados:$faltan — Settings > Secrets and variables > Actions. Los valores salen del panel de la routine «Yala push a principal»."
-            exit 1
-          fi
+      # Hace falta para poder usar la action local `.github/actions/avisar`. Antes este job
+      # no hacia checkout a proposito (todo lo que envia viene del payload del evento); el
+      # coste son unos segundos y a cambio el envio deja de estar duplicado.
+      - uses: actions/checkout@v4
 
       # El mensaje de commit, el nombre del autor y el de la rama son TEXTO ARBITRARIO
       # escrito por quien commitea. Por eso NO se interpolan con ${{ }} dentro de `run:`
       # —eso seria inyeccion de shell: un mensaje con `$(...)` se ejecutaria en el runner—
-      # sino que entran por `env:` y se leen como variables. Por lo mismo el JSON se arma
-      # con `jq --arg` y no concatenando: un mensaje con comillas o saltos de linea
-      # rompería un JSON hecho a mano.
+      # sino que entran por `env:` y se leen como variables. (El JSON lo arma la action con
+      # `jq --arg`, por lo mismo: un mensaje con comillas o saltos de linea rompería un JSON
+      # concatenado a mano.)
       - name: Componer el aviso
+        id: componer
         env:
           REPO: ${{ github.repository }}
           RAMA: ${{ github.ref_name }}
@@ -102,60 +103,31 @@ jobs:
             "Commits:" \
             "$lista")
 
-          # El endpoint acepta un unico campo `context` con el texto del aviso. No se
-          # añaden campos extra: no estan verificados y un cuerpo inesperado podria dar 400.
-          jq -n --arg context "$texto" '{context: $context}' > "$RUNNER_TEMP/payload.json"
           echo "Aviso compuesto ($total commit(s)):"
           printf '%s\n' "$texto" | sed 's/^/  /'
 
-      # LA parte que no es opcional. Un `curl` que no mira el codigo HTTP no es una entrega,
-      # es una esperanza: el webhook de `bug-triage` de este mismo repo estuvo UN MES
-      # devolviendo 404 sin que nadie se enterara, porque «no hay nada que avisar» y «el
-      # canal esta muerto» se ven igual desde fuera. Aqui un no-2xx pone el job en rojo.
-      - name: Enviar al webhook y verificar la respuesta
-        env:
-          WEBHOOK_URL: ${{ secrets.GROK_WEBHOOK_URL }}
-          SENDER_KEY: ${{ secrets.GROK_WEBHOOK_SENDER_KEY }}
-        run: |
-          set -euo pipefail
-          resp="$RUNNER_TEMP/respuesta.txt"
+          # Un texto de varias lineas necesita delimitador; sin el, `$GITHUB_OUTPUT` se
+          # queda con la primera linea y el aviso viaja decapitado.
+          #
+          # Y el delimitador es ALEATORIO, no una constante, porque este es el unico de los
+          # tres avisadores cuyo texto lleva contenido escrito por terceros: los mensajes de
+          # commit. Con un delimitador fijo y publico, un commit cuya primera linea fuera
+          # exactamente esa palabra cerraria el bloque antes de tiempo y lo que viniera detras
+          # se leeria como claves nuevas de `$GITHUB_OUTPUT`. Hoy no puede pasar porque el
+          # `map(...)` de arriba antepone `- <sha> ` a cada linea, pero eso es una proteccion
+          # de rebote: depende de un prefijo que alguien puede quitar sin ver la relacion.
+          FIN="FIN_$(openssl rand -hex 12)"
+          {
+            echo "texto<<$FIN"
+            printf '%s\n' "$texto"
+            echo "$FIN"
+          } >> "$GITHUB_OUTPUT"
 
-          # `--retry` de curl reintenta SOLO errores transitorios (conexion, timeout, 408,
-          # 429, 5xx). Un 401/403/404 no se reintenta: una clave mala o una URL muerta no
-          # se arreglan insistiendo, y reintentarlas solo retrasa el rojo.
-          set +e
-          codigo=$(curl -sS -X POST "$WEBHOOK_URL" \
-            -H "Authorization: Bearer $SENDER_KEY" \
-            -H "Content-Type: application/json" \
-            --data-binary "@$RUNNER_TEMP/payload.json" \
-            --retry 3 --retry-delay 5 --retry-connrefused \
-            --max-time 30 \
-            -o "$resp" -w '%{http_code}')
-          rc=$?
-          set -e
-
-          if [ "$rc" -ne 0 ]; then
-            echo "::error title=El webhook no respondio::curl salio con codigo $rc tras los reintentos. Grok NO se ha enterado de este push."
-            exit 1
-          fi
-
-          case "$codigo" in
-            2??)
-              echo "::notice title=Grok avisado::El webhook respondio HTTP $codigo."
-              ;;
-            401|403)
-              echo "::error title=El webhook rechazo la clave (HTTP $codigo)::Revisa GROK_WEBHOOK_SENDER_KEY: debe ser el sender key del panel de la routine, SIN el prefijo 'Bearer '. Grok NO se ha enterado de este push."
-              head -c 500 "$resp" || true
-              exit 1
-              ;;
-            404)
-              echo "::error title=El webhook no existe (HTTP 404)::La routine pudo borrarse o rehacerse; su URL cambia con ella. Actualiza GROK_WEBHOOK_URL desde el panel. Grok NO se ha enterado de este push."
-              head -c 500 "$resp" || true
-              exit 1
-              ;;
-            *)
-              echo "::error title=Respuesta inesperada del webhook (HTTP $codigo)::Grok NO se ha enterado de este push."
-              head -c 500 "$resp" || true
-              exit 1
-              ;;
-          esac
+      - name: Enviar al webhook, y al respaldo si no responde
+        uses: ./.github/actions/avisar
+        with:
+          webhook-url: ${{ secrets.GROK_WEBHOOK_URL }}
+          sender-key: ${{ secrets.GROK_WEBHOOK_SENDER_KEY }}
+          github-token: ${{ github.token }}
+          asunto: push directo a ${{ github.ref_name }} (entrega sin PR)
+          texto: ${{ steps.componer.outputs.texto }}
