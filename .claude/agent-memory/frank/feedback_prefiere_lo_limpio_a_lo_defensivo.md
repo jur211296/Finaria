@@ -53,3 +53,15 @@ y deja la app diciendo dos cosas distintas según la pantalla.
   eso es exactamente donde la review adversarial dejó de ser un trámite —cazó una auto-expulsión
   que yo habría commiteado— y donde el alcance mínimo no la habría necesitado. Si elige la grande,
   la review adversarial deja de ser opcional.
+
+**El caso extremo, y llegó solo: prefiere VACIAR a migrar.** El 2026-09-09, preguntado por cómo escribir
+la migración del campo `kind` sobre las cuentas existentes de producción, contestó «quiero eliminar todo
+lo que exista en producción, fresh start» — y al ver los conteos amplió el borrado a las identidades de
+`auth.users`, para que el siguiente acceso ejercitase el alta desde cero. Aceptó perder 31 movimientos
+sin copia en CloudKit y sus dos grupos de prueba.
+
+**El matiz que hace útil este patrón: la medición va ANTES, y él la usa.** No dijo «borra» a ciegas —
+midió que producción eran dos cuentas suyas y cero datos de terceros. Cuando pida algo destructivo,
+lo que espera no es que le frenes: es que le pongas delante **qué se destruye exactamente**, y entonces
+decide (aquí, con el dato delante, amplió el alcance en vez de reducirlo). Ver
+[[la-premisa-del-encargo-tambien-se-mide]].
