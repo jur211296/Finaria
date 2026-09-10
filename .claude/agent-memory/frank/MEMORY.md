@@ -33,11 +33,13 @@
 - [Un timeout no distingue lento de colgado](feedback_un_timeout_no_distingue_lento_de_colgado.md) — 5010 ms clavados no son un cuelgue: súbelo y mide. Refutó un ticket entero.
 - [Un gate falla ABIERTO por su entrada](feedback_un_gate_falla_abierto_por_su_entrada.md) — lista vacía por error = «no hay»; y el snapshot se congela durante el `await`.
 - [El avisador que se rescata no vigila](feedback_el_avisador_que_se_rescata_no_vigila.md) — el respaldo ciega al vigilante; y `always()` en un job de aviso dispara al cancelar el run A MANO.
+- [La corrección de la lente reintroduce el bug](feedback_la_correccion_de_la_lente_reintroduce_el_bug.md) — el 10-sep, dos veces en el mismo predicado; lo que escribes DESPUÉS de la review no está revisado.
 - [La review adversarial caza lo MÍO](feedback_review_adversarial_caza_lo_mio.md) — 8 el 7-sep, 7 el 8-sep; puede refutar la PREMISA del ticket, y un camino muerto que revives trae sus bugs intactos.
 - [La rule de área es una lente más](feedback_la_rule_de_area_es_una_lente_mas.md) — leerla CONTRA el diff: cazó lo que las tres lentes no vieron el 8-sep y otras dos cosas el 10-sep.
 - [Las lentes se contradicen entre sí](feedback_lentes_adversariales_se_contradicen.md) — cuando dos discrepan, mídelo; y la CORRECCIÓN de una lente también puede venir incompleta.
 - [El árbol base contesta «¿es mío?»](feedback_el_arbol_base_contesta_si_es_mio.md) — worktree desde HEAD zanja un rojo ajeno en 90 s; y devuelve el disco que se come.
 - [Un «rojo conocido» no exime de bisecar](feedback_rojo_conocido_no_exime_de_bisecar.md) — dos rojos idénticos en el log, causas opuestas: uno era mío y rompía guardar una transacción.
+- [XCUITest completo: por lotes](reference_xcuitest_completo_por_lotes.md) — `BUILD INTERRUPTED` no es veredicto; cuenta la cobertura por CLASE (61) y nunca en background.
 - [Dos corridas, un simulador](feedback_dos_corridas_un_simulador.md) — el runner no muere de memoria: lo pisa otra sesión; clasifica el rojo por si trae línea de fallo.
 - [Bisecar un flaky miente](feedback_bisect_de_un_flaky_miente.md) — la correlación es azar; lo que zanja es la muestra IMPOSIBLE, y el rojo que se muda de test.
 - [El generador regenera lo que edito](feedback_el_generador_regenera_lo_que_edito.md) — re-corre el script DESPUÉS de editar a mano; dos locales se quedaron con el texto viejo.
@@ -53,6 +55,7 @@
 - [El fixture hereda la anatomía de producción](feedback_el_fixture_hereda_la_anatomia_de_produccion.md) — no la deduzcas del ticket; el error se ve en el TOTAL, y el fixture tiene que ser DISCRIMINANTE.
 
 ## Estado del trabajo
+- [«Primera vez → privado» ya valida iCloud antes de reiniciar](project_puerta_icloud_rama_privada.md) — PR #133; la review cazó 19 defectos MÍOS y el peor dejaba el bug vivo; falta device-QA y NO es simulable.
 - [«Volver a iCloud» ya está abierta a quien nació en la nube](project_reversa_abierta_a_born_cloud.md) — PR #132; la review cazó DOS defectos graves MÍOS; falta el device-QA de CloudKit y NO es simulable.
 - [Todo sign-in en la nube ya descubre el tipo de cuenta y rutea](project_bloque_identidad_nube_rutea.md) — bloque [I]; el Worker NO sirve `kind` todavía, así que 3 de los 4 device-QA no se distinguen hasta desplegarlo.
 - [La elección nube ya no se apaga sola en un deploy](project_percent_eleccion_nube_alineado_con_prod.md) — PR #128 desplegado y verificado; la card born-cloud SÍ se ve en prod, y deja una ventana abierta hasta el paso 12.
