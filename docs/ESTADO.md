@@ -5,29 +5,25 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-10 (Lima)
 
-**Rama** `2.1` — Merge #132: **«Volver a iCloud» abierta a quien nació en la nube.** TestFlight build
-**13** (CPV 13). **Subida Yala (TF/store) = solo Mini.**
+**Rama** `2.1` — Merge #133: **«Primera vez → privado» ya le pregunta a iCloud antes de pedir reinicio.**
+TestFlight build **13** (CPV 13). **Subida Yala (TF/store) = solo Mini.**
 
-## Esta sesión (la reversa se abre a born-cloud, y la review cazó dos defectos graves)
+## Esta sesión (el paso 4, y la review cazó diecinueve cosas mías)
 
-**Creas tu cuenta con Google, la usas meses, y ya puedes pasar tus finanzas a tu iCloud privado.** Hasta
-hoy no había salida: el backend rechazaba la operación y la única forma de dejar la nube era borrar la
-cuenta. No era un caso raro — tras el fresh start, esa puerta estaba cerrada para **todo el mundo**.
+**Reinstalas Yala, eliges «Tu cuenta en tu iCloud privado», y ahora la app mira primero qué tienes
+guardado ahí**: te lo dice con cifras y eliges — traerlo, empezar de cero con doble confirmación, o
+volver. Hasta hoy te pedía reiniciar y al reabrir te metía en el onboarding **como si fueras nuevo**,
+con iCloud bajando tu histórico por debajo. Y se cierra la puerta de atrás: si eliges privado sin poder
+validar, el aviso llega el día que iCloud aparece.
 
-**Eran dos gates que abrir, no un camino que construir.** La premisa del ticket era falsa: la reversa
-nunca subió nada a mano — monta el mirror y `NSPersistentCloudKitContainer` exporta solo. `g15_02` está
-**aplicada en staging y producción** (md5 idéntico, cero filas afectadas), y el orden es el sano: la base
-antes que el cliente, porque al revés el botón aparecería y el servidor lo rechazaría.
+**Mandó el criterio de aceptación sobre la premisa del ticket**: reusar `wipeAllUserData` no borra nada
+de iCloud con el store local vacío, así que se borra la **zona del mirror en CloudKit** — el primer
+lector y escritor de registros de CloudKit del repo.
 
-**La review adversarial (4 lentes) cazó siete cosas y las dos graves eran de diseño mío.** El gate del
-cliente **fallaba abierto** —derivaba «nació en la nube» de la *ausencia* de un marcador que también falta
-en un 2.º teléfono de una cuenta **migrada**, o sea que habría abierto el guardarraíl justo para la
-población que protege— y el guard del backend **rompía multi-device**: dejaba al segundo teléfono con la
-barra clavada al 15 %, para siempre. Los dos corregidos, re-aplicados y verificados con 5/5 escenarios
-contra la función viva.
-
-**De paso quedó refutado un ticket que llevaba una semana en pie:** el golden 20 no se cuelga, **tarda
-9,3 s** contra un presupuesto de 5 s y pasa en verde con más tiempo.
+**La review (4 lentes) encontró diecinueve defectos y los diecinueve eran míos**, con 32 tests verdes y
+tres mutantes cayendo. El peor dejaba **el bug vivo**: el gate medía iCloud **Drive**
+(`ubiquityIdentityToken`) y `.localNoMirror` adjunta el espejo igual. Y su corrección falló por el otro
+lado —apagaba la puerta en toda instalación fresca—; eso lo encontré releyendo el flujo, no las lentes.
 
 ## Tu cola
 
@@ -36,11 +32,15 @@ contra la función viva.
 2. **Device-QA del paso 3** — los cuatro recorridos del ticket. Sal del bloqueo **por swipe y por
    «Entendido»**, no solo por el botón; y en el recorrido 1 **fuerza el cierre de la app** antes de darlo
    por bueno. Más los device-QA de los pasos 4, 5, 8, 9 y 10.
-2-bis. **Device-QA de la reversa born-cloud → iCloud**, que es lo único de hoy que no es simulable
-   (`reverse-cutover-cerrado-para-cuentas-born-cloud`, guion dentro). Dos cosas: el **contador de testigos
-   con `ckRecordName`** del panel DEBUG tiene que pasar de 0 a cubrir tus filas vivas —ése es el único
-   testigo real de que la subida ocurrió, la pantalla no vale—, y **borra 2-3 transacciones antes de
-   empezar**: lo que no debe pasar es que reaparezcan.
+2-bis. **Device-QA del paso 4, y empieza por su punto BLOQUEANTE** (`welcome-private-fresh-start-skips-icloud-check`,
+   guion dentro): comprobar que la sonda de CloudKit **no lanza**. Baja una lista de `desiredKeys` única
+   sobre una zona multi-tipo, y si el servidor la validara contra el schema de cada tipo, la rama privada
+   quedaría en «reintentar» para siempre. El plan B está escrito. Después, los cinco recorridos —y el
+   feo: **mata la app a mitad del borrado** y comprueba que al reabrir vuelve a preguntar.
+2-ter. **Device-QA de la reversa born-cloud → iCloud** (`reverse-cutover-cerrado-para-cuentas-born-cloud`).
+   Dos cosas: el **contador de testigos con `ckRecordName`** del panel DEBUG tiene que pasar de 0 a cubrir
+   tus filas vivas —ése es el único testigo real de que la subida ocurrió—, y **borra 2-3 transacciones
+   antes de empezar**: lo que no debe pasar es que reaparezcan.
 3. **Física, la de siempre**: push APNs real (4), RPC de producción (3), sign-in real SIWA/Google (6),
    Apple Pay y carreras de red (4).
 4. **De FX quedan cuatro** · **tres veredictos de QA caducos** · **el build 13 no llega al grupo externo**
@@ -49,8 +49,9 @@ contra la función viva.
 
 ## Siguiente
 
-**El paso 4** (`welcome-private-fresh-start-skips-icloud-check`). Pasos 0-3 cerrados; el 11 sigue vacante
-a propósito. **El board: 164 en backlog, 49 en qa** (271 = 271 contra disco).
+**El paso 5** (`groups-only-second-launch-mounts-icloud-mirror`, **[adv]**), que retira además la puerta
+«datos ajenos». Pasos 0-4 cerrados; el 11 sigue vacante a propósito. **El board: 166 en backlog, 50 en
+qa** (274 = 274 contra disco).
 
 ## Bloqueo
 
@@ -67,6 +68,11 @@ Re-medir antes de perseguirlo.
 introdujo la sesión de hoy): `reverse-upload-has-no-ceiling-and-no-exit` —la subida a iCloud no tiene tope
 ni salida, y ahí el backend ya está congelado— y `reverse-claim-rejection-has-no-way-out-in-the-client`.
 Los dos son la misma forma: una fase de la reversa sin salida.
+
+**Un residual del paso 4, con ticket** (`late-icloud-wipe-can-re-export-between-its-two-halves`,
+**medium**): matar la app entre las dos mitades del borrado tardío puede devolver los datos viejos. Es
+reaparición, no pérdida, y su arreglo natural es del paso 9 — necesita pedir relanzamiento sin entrar en
+la máquina de `CloudSessionSignOut`.
 
 **Y una decisión tuya, pequeña** (`revert-card-copy-says-datos-regresan-a-quien-nunca-estuvo`): el texto
 dice «tus datos **regresan** a tu iCloud» a quien nunca estuvo ahí. Son 16 locales y es voz de producto,
