@@ -765,8 +765,10 @@ struct MigrationWorkExecutorTests {
         stub.migrationBody = Data("{\"ok\":false,\"reason\":\"other_leader\"}".utf8)
         #expect(await executor.performReverseClaim() == .otherLeader)
 
-        stub.migrationBody = Data("{\"ok\":false,\"reason\":\"not_migrated\"}".utf8)
-        #expect(await executor.performReverseClaim() == .rejected(reason: "not_migrated"))
+        // g15_02: el rechazo por tipo de cuenta ya no es `not_migrated` sino `not_complete` (solo-grupos,
+        // o una cuenta que YA volvió a iCloud). El executor lo propaga OPACO — no hay `switch` por motivo.
+        stub.migrationBody = Data("{\"ok\":false,\"reason\":\"not_complete\"}".utf8)
+        #expect(await executor.performReverseClaim() == .rejected(reason: "not_complete"))
 
         stub.migrationBody = Data("{\"ok\":false,\"reason\":\"migration_in_progress\"}".utf8)
         #expect(await executor.performReverseClaim() == .rejected(reason: "migration_in_progress"))
@@ -888,13 +890,100 @@ struct MigrationWorkExecutorTests {
 
     // MARK: - ReverseEligibility (guardarraíl §h.6-A1, obligación 1 del review)
 
-    @Test("ReverseEligibility: notCloudMode / reverseAlreadyTerminal / degradedNoMap / eligible")
+    @Test("ReverseEligibility: notCloudMode / reverseAlreadyTerminal / eligible")
     func reverseEligibility_decisions() {
-        #expect(ReverseEligibility.decide(storageMode: .icloud, hasCKMap: true, journaledPhase: .done) == .notCloudMode)
-        #expect(ReverseEligibility.decide(storageMode: .cloud, hasCKMap: true, journaledPhase: .icloudActive) == .reverseAlreadyTerminal)
-        #expect(ReverseEligibility.decide(storageMode: .cloud, hasCKMap: true, journaledPhase: .reverseFailedRollback) == .reverseAlreadyTerminal)
-        #expect(ReverseEligibility.decide(storageMode: .cloud, hasCKMap: false, journaledPhase: .done) == .degradedNoMap)
-        #expect(ReverseEligibility.decide(storageMode: .cloud, hasCKMap: true, journaledPhase: .done) == .eligible)
+        #expect(ReverseEligibility.decide(
+            storageMode: .icloud, hasCKMap: true, isBornCloud: false, journaledPhase: .done) == .notCloudMode)
+        #expect(ReverseEligibility.decide(
+            storageMode: .cloud, hasCKMap: true, isBornCloud: false, journaledPhase: .icloudActive) == .reverseAlreadyTerminal)
+        #expect(ReverseEligibility.decide(
+            storageMode: .cloud, hasCKMap: true, isBornCloud: false, journaledPhase: .reverseFailedRollback) == .reverseAlreadyTerminal)
+        #expect(ReverseEligibility.decide(
+            storageMode: .cloud, hasCKMap: true, isBornCloud: false, journaledPhase: .done) == .eligible)
+    }
+
+    /// El eje que g15_02 abre: el mapa CloudKit solo se le exige a quien NO consta como born-cloud. Los dos
+    /// casos de `hasCKMap: false` son los que discriminan — si alguien retira `|| isBornCloud` cae el
+    /// born-cloud; si retira `hasCKMap ||` cae el sin-mapa-sin-marca, que sigue excluido a propósito.
+    @Test("ReverseEligibility: sin mapa CloudKit, born-cloud entra y el resto NO (resurrección de borrados)")
+    func reverseEligibility_mapOnlyRequiredWithoutBornCloudMark() {
+        // Sin mapa y sin marca: puede ser un MIGRADO que perdió el mapa, y su zona CloudKit sigue ahí con
+        // los records que borró durante la época nube. Remontar el mirror los resucitaría → sigue fuera.
+        #expect(ReverseEligibility.decide(
+            storageMode: .cloud, hasCKMap: false, isBornCloud: false, journaledPhase: .done) == .degradedNoMap)
+
+        // Born-cloud: nunca hubo zona con borrados de la época nube, así que no hay nada que resucitar.
+        // Hasta el 2026-09-10 caía en `degradedNoMap` por arrastre, y tras el fresh start de ese día eso
+        // era TODA la población.
+        #expect(ReverseEligibility.decide(
+            storageMode: .cloud, hasCKMap: false, isBornCloud: true, journaledPhase: .done) == .eligible)
+
+        // Born-cloud que ya pobló el mapa en una reversa anterior (`reverseUploadStatus` captura las
+        // coordenadas conforme el mirror exporta): elegible por las dos vías.
+        #expect(ReverseEligibility.decide(
+            storageMode: .cloud, hasCKMap: true, isBornCloud: true, journaledPhase: .done) == .eligible)
+    }
+
+    /// La PRECEDENCIA de los guards, que sin este test es decorado: los casos de arriba se pueden reordenar
+    /// sin que ninguno caiga. El que carga el peso es el primero — sin-mapa-sin-marca **ya en un terminal**
+    /// tiene que decir `reverseAlreadyTerminal`, no `degradedNoMap`. Un mutante que suba el guard del mapa
+    /// por encima del `switch` de fase lo tumba, y no tumba nada más.
+    @Test("ReverseEligibility: el terminal y el modo GANAN al guard del mapa (precedencia, no solo salida)")
+    func reverseEligibility_guardPrecedence() {
+        #expect(ReverseEligibility.decide(
+            storageMode: .cloud, hasCKMap: false, isBornCloud: false, journaledPhase: .icloudActive) == .reverseAlreadyTerminal)
+        #expect(ReverseEligibility.decide(
+            storageMode: .cloud, hasCKMap: false, isBornCloud: false, journaledPhase: .reverseFailedRollback) == .reverseAlreadyTerminal)
+        #expect(ReverseEligibility.decide(
+            storageMode: .icloud, hasCKMap: false, isBornCloud: false, journaledPhase: .done) == .notCloudMode)
+        // Y el terminal también gana a un born-cloud que por lo demás sería elegible.
+        #expect(ReverseEligibility.decide(
+            storageMode: .cloud, hasCKMap: false, isBornCloud: true, journaledPhase: .icloudActive) == .reverseAlreadyTerminal)
+    }
+
+    /// El CABLEADO de la marca, que es donde vive el riesgo real: `decide` es pura y recibe un `Bool`, así
+    /// que toda la tabla de verdad de arriba puede estar verde con ese `Bool` mal calculado en producción.
+    /// Aquí se prueba el mapeo población → `Bool` contra `UserDefaults` de verdad.
+    ///
+    /// Lo que fija, y por qué importa: la marca es POSITIVA y **ausente ⇒ false**. La primera versión de
+    /// este cambio la derivaba de la AUSENCIA del `CloudMigrationMarker` y fallaba ABIERTO — un 2.º device
+    /// adoptado cuyo marcador no llegó por el mirror (su propio belt dice «ausente = no bloquea»), o
+    /// cualquiera que hubiese usado el botón DEBUG de «borrar marcador stale», pasaba por born-cloud y se
+    /// llevaba por delante el guardarraíl de la resurrección de borrados.
+    @Test("StorageModePersistence: la marca born-cloud es positiva, la escribe el alta y ausente es false")
+    func bornCloudMark_isPositiveAndDefaultsToFalse() {
+        let defaults = makeIsolatedDefaults(prefix: "reverse.bornCloud")
+        defer { defaults.removeObject(forKey: StorageModePersistence.bornCloudKey) }
+
+        // Un dominio limpio es un device del que no sabemos nada ⇒ NO se le abre la puerta.
+        #expect(StorageModePersistence.isBornCloud(defaults) == false)
+        #expect(ReverseEligibility.decide(
+            storageMode: .cloud, hasCKMap: false,
+            isBornCloud: StorageModePersistence.isBornCloud(defaults),
+            journaledPhase: .done) == .degradedNoMap)
+
+        // El alta born-cloud la escribe, y con ella la reversa se abre sin exigir mapa.
+        StorageModePersistence.markBornCloud(defaults: defaults)
+        #expect(StorageModePersistence.isBornCloud(defaults) == true)
+        #expect(ReverseEligibility.decide(
+            storageMode: .cloud, hasCKMap: false,
+            isBornCloud: StorageModePersistence.isBornCloud(defaults),
+            journaledPhase: .done) == .eligible)
+
+        // Idempotente: el alta puede reentrar (su propio docblock lo declara) sin cambiar nada.
+        StorageModePersistence.markBornCloud(defaults: defaults)
+        #expect(StorageModePersistence.isBornCloud(defaults) == true)
+
+        // Y NO la escribe `writeCloudArmed`, que es el escritor del par y lo llama TAMBIÉN el adopt de un
+        // 2.º device. Si alguien la mueve ahí, un migrado adoptado se volvería elegible sin mapa: es el
+        // fallo exacto que este diseño evita.
+        let armado = makeIsolatedDefaults(prefix: "reverse.armado")
+        defer { armado.removeObject(forKey: StorageModePersistence.mirrorOffArmedKey) }
+        StorageModePersistence.writeCloudArmed(defaults: armado)
+        #expect(StorageModePersistence.read(armado) == .cloud)
+        #expect(StorageModePersistence.isMirrorOffArmed(armado) == true)
+        #expect(StorageModePersistence.isBornCloud(armado) == false,
+                "writeCloudArmed NO puede marcar born-cloud: el adopt lo llama y no es un alta")
     }
 
     // MARK: - Heartbeat del lease (I14-pre, residual pendiente #3)

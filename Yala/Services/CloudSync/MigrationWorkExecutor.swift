@@ -72,22 +72,52 @@ extension SyncPullClient: ReverseTombstoneSource {
 // MARK: - ReverseEligibility (guardarraíl §h.6-A1, obligación 1 del review)
 
 /// Guardarraíl PURO que el panel (I11-5) consulta ANTES de emitir `reverseActivated`. `nonisolated`: lógica
-/// pura sin `ModelContext`/red/`Date`. `hasCKMap` = existe ≥1 `SyncIdentity` con `ckRecordName != nil` (el
-/// mapa de coordenadas CloudKit que la reversa NECESITA para borrar los records — un born-cloud §h.6 con
-/// map-nil-por-diseño queda EXCLUIDO en v1; el panel targetea al migrado). `degradedNoMap` dispara el canario
-/// `cloudReverseDegradedNoMap`.
+/// pura sin `ModelContext`/red/`Date`.
+///
+/// `hasCKMap` = existe ≥1 `SyncIdentity` con `ckRecordName != nil`. **De qué protege, medido el 2026-09-10:**
+/// de la RESURRECCIÓN de borrados. Durante la época nube el mirror está apagado, así que lo que el usuario
+/// borra desaparece del SQLite local pero NO de su zona CloudKit; al remontar el mirror, esos records
+/// re-importan filas muertas. El mapa es la señal de que el corpus fue capturado con el mirror vivo, o sea
+/// de que esta cuenta **tuvo** copia en CloudKit.
+///
+/// `isBornCloud` es lo que faltaba, y es lo que separa dos poblaciones que `hasCKMap` metía en el mismo
+/// saco: el **migrado sin mapa** (tiene zona CloudKit y no sabe dónde está: sigue excluido, el riesgo es
+/// real) y el **born-cloud** (nunca tuvo zona, así que no hay nada que pueda resucitar). Hasta el
+/// 2026-09-10 el born-cloud quedaba fuera por arrastre — y tras el fresh start de ese día eso era todo el
+/// mundo, con la fila E de la matriz prometiendo un camino que nadie podía recorrer.
+///
+/// **La señal es POSITIVA a propósito, y ese matiz es todo el diseño.** Es
+/// `StorageModePersistence.isBornCloud`, que solo escribe el alta born-cloud de este dispositivo. La
+/// tentación era derivarla de la AUSENCIA del `CloudMigrationMarker` —«no hay marcador ⇒ no migró»—, y
+/// **medido el 2026-09-10 eso falla ABIERTO**: el marcador falta también en un 2.º device adoptado cuyo
+/// marcador no llegó por el mirror (`adoptBackendAccount` lo registra en un breadcrumb y sigue: «ausente =
+/// no bloquea») y lo borra un botón del panel DEBUG pensado para limpiar marcadores stale. En los dos
+/// casos, un migrado habría pasado por born-cloud y el guardarraíl se habría abierto justo para la
+/// población que protege. Con la marca positiva, lo que no se sabe se comporta **como antes**: se exige el
+/// mapa. El precio es un falso negativo conservador —un born-cloud que entra en un SEGUNDO dispositivo no
+/// verá el botón—, con ticket propio.
+///
+/// El canario `cloudReverseDegradedNoMap` que este docblock prometía **no lo emite nadie** (medido: cero
+/// llamadores en `Yala/`, y no es ni un caso de `MetricsCanary`); no se añade aquí para no ampliar el
+/// alcance → anotado en `canarios-y-breadcrumbs-sin-emisor`.
 nonisolated enum ReverseEligibility {
     enum Decision: Equatable {
         case eligible
         /// El device NO está en modo nube (`storageMode != .cloud`) → la reversa no aplica.
         case notCloudMode
-        /// Modo nube PERO sin mapa de coordenadas CloudKit (born-cloud sin captura) → NO elegible en v1.
+        /// Modo nube, sin mapa de coordenadas CloudKit y sin constancia de haber nacido en la nube aquí →
+        /// NO elegible (resurrección de borrados). Un born-cloud **de este dispositivo** no cae aquí.
         case degradedNoMap
         /// Ya en un terminal de la reversa (`icloudActive`/`reverseFailedRollback`) → nada que revertir.
         case reverseAlreadyTerminal
     }
 
-    static func decide(storageMode: StorageMode, hasCKMap: Bool, journaledPhase: MigrationPhase) -> Decision {
+    static func decide(
+        storageMode: StorageMode,
+        hasCKMap: Bool,
+        isBornCloud: Bool,
+        journaledPhase: MigrationPhase
+    ) -> Decision {
         guard storageMode == .cloud else { return .notCloudMode }
         switch journaledPhase {
         case .icloudActive, .reverseFailedRollback:
@@ -95,7 +125,9 @@ nonisolated enum ReverseEligibility {
         default:
             break
         }
-        guard hasCKMap else { return .degradedNoMap }
+        // El mapa se exige salvo que sepamos que la cuenta nació en la nube AQUÍ. Sin zona CloudKit previa
+        // no hay resurrección posible: el mirror que se monta al revertir SUBE, no baja.
+        guard hasCKMap || isBornCloud else { return .degradedNoMap }
         return .eligible
     }
 }
@@ -750,8 +782,11 @@ final class MigrationWorkExecutor: MigrationWorkExecuting {
     // MARK: - Reversa (§h, I11-2)
 
     /// `reverse_claim` (§h, I11-3): reserva del liderazgo de la REVERSA server-side (RPC
-    /// `migration_progress`, action `reverse_claim`). Guards server-side: `migrated_at` set (born-cloud v1
-    /// → `rejected("not_migrated")`), takeover de migración ABANDONADA o reversa ajena con lease expirado
+    /// `migration_progress`, action `reverse_claim`). Guards server-side: `kind = 'complete'` **o**
+    /// `reverted_at` no nulo (si ninguna, `rejected("not_complete")` — g15_02: born-cloud SÍ entra; la
+    /// cuenta de solo grupos que nunca revirtió no, porque no tiene nada personal que devolver; y la ya
+    /// revertida SÍ, porque su 2.º dispositivo necesita recorrer su propia vuelta), takeover de migración
+    /// ABANDONADA o reversa ajena con lease expirado
     /// >60min, re-claim idempotente del MISMO líder sin chequear edad. Sin JWT → `.sessionExpired`
     /// (patrón `performClaim`: el runner corta SIN evento, retomable). NUNCA lanza — los breadcrumbs de
     /// outcome los emite el runner (`driveReverseClaim`).

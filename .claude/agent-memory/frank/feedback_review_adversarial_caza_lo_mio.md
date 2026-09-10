@@ -273,3 +273,18 @@ hay pregunta que hacer.
 escrito** antes de decidir si es tuyo o de Jürgen. Y rehaz los tests: los nueve que tenía pasaban con
 las dos implementaciones — el caso que las distingue casi nunca es el del ticket, hay que construirlo
 (aquí, dos: parte pequeña y parte grande).
+
+**2026-09-10 (reversa a born-cloud): 4 lentes, 7 hallazgos, y los DOS graves eran defectos de diseño
+míos** — no despistes. Uno abría el guardarraíl justo para la población que protege; el otro dejaba
+colgado al segundo dispositivo del usuario, para siempre. Ninguno de los dos lo habrían visto mis tests:
+los dos vivían en el caso en que la señal falla, y yo había razonado el caso normal.
+
+Dos cosas que funcionaron y repito: **una lente por lado del sistema** (gate del cliente · SQL y backend ·
+tests y goldens · las rules leídas contra el diff) en vez de cuatro genéricas, y **pedirles que refuten
+MIS afirmaciones del prompt**, no solo el código — la lente del backend refutó la premisa con la que yo
+justificaba media decisión, y la del cliente me corrigió una frase del docblock que era falsa en general.
+
+Y un aviso de método: **la lente de tests dijo que dos de mis aserciones nuevas eran decorado, y tenía
+razón** (sobrevivían a reordenar los guards, y el cableado no tenía NINGÚN test). La forma de zanjarlo no
+fue discutirlo: fue escribir el mutante y verlo caer. Tres mutantes, uno por aserción, cada uno cayendo
+solo en su test.

@@ -123,10 +123,11 @@ export async function handleAccountClaim(c: Ctx): Promise<Response> {
  * Passthrough al RPC `migration_progress` — TODA la lógica (guards de líder/lease, idempotencia)
  * vive en el RPC; aquí solo se valida el set de actions. Ida: `cutover` (`migrated_at=now()`,
  * guard líder, idempotente) y `complete` (`migration_in_progress=false`, guard líder). Reversa:
- * `reverse_claim` (guard `migrated_at` set; takeover de migración ABANDONADA con lease expirado
- * >60min; idempotente para el mismo líder), `reverse_freeze` (`reverse_frozen_at=now()`, guard
+ * `reverse_claim` (guard `kind='complete'` O `reverted_at` no nulo — el 2.º device de una cuenta ya
+ * revertida tiene que poder seguirla; si ninguna, `not_complete`; takeover de migración ABANDONADA
+ * con lease expirado >60min; idempotente para el mismo líder), `reverse_freeze` (`reverse_frozen_at=now()`, guard
  * líder SIN edad de lease, idempotente), `reverse_complete` (`reverse_in_progress=false` +
- * `reverted_at=now()`; `migrated_at` NO se toca — §h.4) y `reverse_abort` (des-congela; acepta
+ * `reverted_at=now()` + `kind='groups_only'`; `migrated_at` NO se toca — §h.4) y `reverse_abort` (des-congela; acepta
  * lease expirado — abort de emergencia post-crash). `heartbeat` (I14-pre) refresca SOLO
  * `migration_updated_at` (lease de 60 min) MIENTRAS un paso largo progresa (upload/drain del líder),
  * sirviendo a la ida Y a la reversa por `migration_in_progress OR reverse_in_progress` con guard líder

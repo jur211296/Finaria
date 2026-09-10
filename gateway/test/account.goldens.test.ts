@@ -11,6 +11,11 @@
  * (SQL editor / MCP) ANTES de correr — ver qa/cloud/README. Los tests que necesitan estado in-progress lo
  * fijan por un PATCH directo a PostgREST con el JWT del propio dueño (RLS UPDATE lo permite; sin service_role).
  *
+ * Y UNA PRECONDICIÓN MÁS, desde g15_02 (2026-09-10): el bloque de la reversa (11-22) exige que sub B llegue
+ * con `kind = 'complete'`, porque ésa es la puerta de `reverse_claim`. `kind` es la ÚNICA columna que el
+ * PATCH del dueño no puede fijar (la veta el trigger `profiles_kind_guard`), así que la garantiza el
+ * `beforeAll` de ese describe con `ensureCompleteKind`. Sub A no necesita nada: nace `complete` del claim.
+ *
  * EXCLUSIÓN DOCUMENTADA — `delete_personal_account` (G5-D1) NO tiene golden network-ON aquí (mismo criterio
  * que `groups_forget_user` en groups.goldens.test.ts): es DESTRUCTIVO e IRREVERSIBLE (hard delete de TODO
  * el corpus + la fila profiles del caller). No es escribible sobre los users COMPARTIDOS de la suite:
@@ -134,15 +139,47 @@ interface ProfileRow {
   reverse_in_progress: boolean;
   reverse_frozen_at: string | null;
   reverted_at: string | null;
+  kind: string;
 }
 async function readProfile(jwt: string): Promise<ProfileRow | null> {
   const sub = decodeSub(jwt);
   const res = await fetch(
-    `${URL}/rest/v1/profiles?id=eq.${sub}&select=migrated_at,migration_in_progress,leader_device_id,reverse_in_progress,reverse_frozen_at,reverted_at`,
+    `${URL}/rest/v1/profiles?id=eq.${sub}&select=migrated_at,migration_in_progress,leader_device_id,reverse_in_progress,reverse_frozen_at,reverted_at,kind`,
     { headers: { apikey: ANON, Authorization: `Bearer ${jwt}` } },
   );
   const rows = (await res.json()) as ProfileRow[];
   return rows[0] ?? null;
+}
+
+/**
+ * Devuelve la cuenta a `kind='complete'` tras un `reverse_complete`, que la degrada a `groups_only`
+ * (g15_01) — desde g15_02 esa degradación CIERRA la reversa, así que sin esto todo golden que reclame
+ * la reversa después del 16 recibiría `not_complete`.
+ *
+ * NO es un truco de test: es la ruta real de la fila F de la matriz de escenarios, «solo-grupos activa
+ * Yala completo». `kind` NO se puede PATCHear (lo veta el trigger `profiles_kind_guard`); la única vía
+ * es la PROMOCIÓN de `claim_account`, que exige `personal_claimed_at is null` — y ESA columna sí es del
+ * dueño. Medido en staging: la promoción deja `kind='complete'`, `state='created'`, y **no toca**
+ * `reverted_at` ni `reverse_frozen_at`, que es justo lo que el golden 17 necesita encontrar puesto.
+ */
+async function repromoteToComplete(jwt: string, deviceId: string, provider: string): Promise<void> {
+  expect(await patchProfile(jwt, { personal_claimed_at: null, migration_in_progress: false })).toBeLessThan(300);
+  const r = await claim(jwt, { device_id: deviceId, provider, kind: "complete" });
+  expect(r.body.state).toBe("created");
+  expect((await readProfile(jwt))?.kind).toBe("complete");
+}
+
+/**
+ * Igual que el anterior pero IDEMPOTENTE, para usarlo como red de arranque. Existe porque la
+ * degradación de `reverse_complete` es **durable**: si una corrida muere entre el golden 16 y el
+ * repromote del 16-bis, sub B se queda `groups_only` y en la corrida siguiente los goldens 13-16
+ * salen rojos con `not_complete` — un rojo del ANDAMIO que se lee como un bug del RPC y cuesta una
+ * vuelta de diagnóstico. Con esto la corrida N+1 se auto-cura sola.
+ */
+async function ensureCompleteKind(jwt: string, deviceId: string, provider: string): Promise<void> {
+  if ((await readProfile(jwt))?.kind === "complete") return;
+  console.warn("[account.goldens] sub B llegó como groups_only (corrida anterior interrumpida tras el 16): repromoviendo");
+  await repromoteToComplete(jwt, deviceId, provider);
 }
 /** Lee `migration_updated_at` (el timestamp del lease) — usado por los goldens del heartbeat (I14-pre). */
 async function readMigrationUpdatedAt(jwt: string): Promise<string | null> {
@@ -339,19 +376,56 @@ describe("I10 goldens · /account/migration + lease (staging real)", () => {
 });
 
 // I11-3 — reversa server-side (§h): las 4 acciones reverse_* del RPC. Usan sub B (ya migrado por los
-// goldens 6-7) salvo el 11 (sub A, jamás migrado). Corren en orden y dejan la fila de B estable
+// goldens 6-7) salvo el 11 (sub A, born-cloud: jamás migró). Corren en orden y dejan la fila de B estable
 // (rip=false) — la limpieza pre-run de la suite la resetea igual. Ver header.
+//
+// ORDEN Y `kind` (desde g15_02): la reversa la abre `kind='complete'`, y `reverse_complete` degrada a
+// `groups_only`. O sea que el golden 16 CIERRA la puerta para todo lo que venga detrás, y `kind` no se
+// puede PATCHear. Por eso el 16-bis —que prueba justo ese cierre— termina devolviendo sub B a `complete`
+// por la ruta real de promoción (`repromoteToComplete`). Si mueves un golden de sitio, comprueba qué
+// `kind` tiene sub B cuando llegue: un `not_complete` inesperado es andamio roto, no RPC roto.
 const DEV_REV = "device-B-rev-leader";
 const DEV_REV_OTHER = "device-rev-usurper";
 
 describe("I11-3 goldens · /account/migration reverse_* (staging real)", () => {
-  it("11. reverse_claim sobre cuenta NO migrada → 'not_migrated' (born-cloud v1 excluido)", async () => {
-    // Sub A tiene fila (test 1) pero jamás migró → migrated_at null.
-    expect((await readProfile(jwtA))?.migrated_at).toBeNull();
+  // Red de arranque: la degradación del 16 es durable y `kind` no se puede PATCHear. Ver `ensureCompleteKind`.
+  beforeAll(async () => {
+    await ensureCompleteKind(jwtB, DEV_REV, "google");
+  });
+
+  it("11. reverse_claim de una cuenta BORN-CLOUD (jamás migró) → ok:true (g15_02: la puerta la abre `kind`)", async () => {
+    // Este golden pinneaba lo contrario hasta el 2026-09-10: `not_migrated`, «born-cloud v1 excluido».
+    // Jürgen abrió la reversa a quien nació en la nube, y `migrated_at` dejó de ser la puerta — tras el
+    // fresh start del 2026-09-10 TODA cuenta nueva es born-cloud, así que ese guard cerraba la fila E de
+    // la matriz para la población entera. Manda `kind`.
+    //
+    // Sub A tiene fila (test 1) y jamás migró → migrated_at null, kind complete (default del claim).
+    const before = await readProfile(jwtA);
+    expect(before?.migrated_at).toBeNull();
+    expect(before?.kind).toBe("complete");
+
     const r = await migrationProgress(jwtA, { device_id: DEV_A, action: "reverse_claim" });
+    const p = await readProfile(jwtA);
+
+    // El desarme va ANTES de las aserciones, no después: si una de ellas falla, un `expect` corta el
+    // `it` y sub A se quedaría con `rip=true` + `leader=DEV_A` LATCHEADO — este archivo no tiene
+    // `afterEach`, su único reset es un DELETE manual en contexto service, y una fila con
+    // `reverse_in_progress` colgado hace que el backfill de `g15_01` la salte para siempre.
+    const abort = await migrationProgress(jwtA, { device_id: DEV_A, action: "reverse_abort" });
+    const after = await readProfile(jwtA);
+    await patchProfile(jwtA, { leader_device_id: null });
+
     expect(r.status).toBe(200);
-    expect(r.body.ok).toBe(false);
-    expect(r.body.reason).toBe("not_migrated");
+    expect(r.body.ok).toBe(true);
+    expect(p?.reverse_in_progress).toBe(true);
+    expect(p?.leader_device_id).toBe(DEV_A);
+    expect(p?.migrated_at).toBeNull(); // el claim NO inventa una migración que no hubo
+
+    // Sub A vuelve a estado estable: `sync.goldens.test.ts` pushea como A en PARALELO (vitest corre los
+    // archivos a la vez) y el header de este archivo exige `profiles[subA]` estable.
+    expect(abort.body.ok).toBe(true);
+    expect(after?.reverse_in_progress).toBe(false);
+    expect(after?.reverted_at).toBeNull(); // abortada: la reversa NO ocurrió
   });
 
   it("12. takeover reverse-sobre-migración-ABANDONADA: lease vigente → 'migration_in_progress'; vencida → ok + mip=false + rip=true", async () => {
@@ -362,7 +436,7 @@ describe("I11-3 goldens · /account/migration reverse_* (staging real)", () => {
         migration_in_progress: true,
         leader_device_id: "device-stale-leader",
         migration_updated_at: new Date().toISOString(), // lease VIGENTE
-        migrated_at: "2026-01-01T00:00:00Z", // cutover ya ocurrió (autocontenido)
+        migrated_at: "2026-01-01T00:00:00Z", // cutover ya ocurrió (el resto del estado, autocontenido)
         reverse_in_progress: false,
       }),
     ).toBeLessThan(300);
@@ -449,15 +523,63 @@ describe("I11-3 goldens · /account/migration reverse_* (staging real)", () => {
     expect(p?.reverse_in_progress).toBe(false);
     expect(p?.reverted_at).not.toBeNull();
     expect(p?.migrated_at).toBe(before?.migrated_at); // §h.4: el backend congelado sigue marcando "migró una vez"
+    expect(p?.kind).toBe("groups_only"); // g15_01: la ÚNICA degradación complete → groups_only del sistema
 
     // Idempotente tras el flip (resume del complete): rip ya false + reverted_at set → ok.
     expect((await migrationProgress(jwtB, { device_id: DEV_REV, action: "reverse_complete" })).body.ok).toBe(true);
     expect((await readProfile(jwtB))?.reverted_at).toBe(p?.reverted_at);
   });
 
+  it("16-bis. tras revertir: el 2.º device SÍ puede reclamar; una cuenta de solo grupos NO ('not_complete')", async () => {
+    // Las DOS mitades del guard de g15_02, sobre el estado REAL que deja el golden 16, no sobre uno
+    // fabricado. La primera mitad es la que una review adversarial rescató: `reverse_complete` degrada a
+    // `groups_only`, así que rechazar por `kind` a secas dejaba tirado al SEGUNDO dispositivo de una
+    // cuenta que ya volvió a iCloud —el suyo sigue en modo nube, con el backend congelado y /sync/push
+    // en 409— y el cliente no tiene desatascador para un rechazo: barra clavada en 15 % para siempre.
+    const antes = await readProfile(jwtB);
+    expect(antes?.kind).toBe("groups_only");
+    expect(antes?.reverted_at).not.toBeNull(); // ya volvió: quien llega detrás tiene derecho a seguirla
+
+    const segundo = await migrationProgress(jwtB, { device_id: DEV_REV_OTHER, action: "reverse_claim" });
+    // Desarmar ANTES de aserjar: un `expect` que falle aquí dejaría a sub B con rip=true latcheado.
+    const tras = await readProfile(jwtB);
+    expect((await migrationProgress(jwtB, { device_id: DEV_REV_OTHER, action: "reverse_abort" })).body.ok).toBe(true);
+    expect(segundo.status).toBe(200);
+    expect(segundo.body.ok).toBe(true);
+    expect(tras?.reverse_in_progress).toBe(true);
+    expect(tras?.leader_device_id).toBe(DEV_REV_OTHER);
+
+    // Segunda mitad: la cuenta de solo grupos que NUNCA revirtió sí queda fuera — no tiene nada personal
+    // en la nube que devolver. Con el guard viejo esta fila daba `not_migrated`, o sea acertaba por el
+    // motivo equivocado; y con `migrated_at` a null lo daba igual, que es lo que prueba la 2.ª llamada:
+    // la puerta ya no la gobierna esa columna en NINGUNA dirección.
+    expect(await patchProfile(jwtB, { reverted_at: null, reverse_frozen_at: null, leader_device_id: DEV_REV })).toBeLessThan(300);
+    const pura = await migrationProgress(jwtB, { device_id: DEV_REV, action: "reverse_claim" });
+    expect(pura.body.ok).toBe(false);
+    expect(pura.body.reason).toBe("not_complete");
+    expect((await readProfile(jwtB))?.reverse_in_progress).toBe(false); // el rechazo no escribe nada
+
+    expect(await patchProfile(jwtB, { migrated_at: null })).toBeLessThan(300);
+    const sinMigrated = await migrationProgress(jwtB, { device_id: DEV_REV, action: "reverse_claim" });
+    expect(sinMigrated.body.reason).toBe("not_complete");
+
+    // Restaurar el estado que esperan los goldens 17 y 22: `complete` (sin eso recibirían `not_complete`
+    // y el rojo sería del ANDAMIO, no del RPC — ver `repromoteToComplete`) con `migrated_at` puesto, y
+    // los dos marcadores del run anterior que el 17 necesita encontrar para probar que el claim los limpia.
+    expect(await patchProfile(jwtB, {
+      migrated_at: "2026-01-01T00:00:00Z",
+      reverted_at: "2026-02-01T00:00:00Z",
+      reverse_frozen_at: "2026-02-01T00:00:00Z",
+    })).toBeLessThan(300);
+    await repromoteToComplete(jwtB, DEV_REV, "google");
+  });
+
   it("17. reverse_abort desde claim fresco + freeze → rip=false + reverse_frozen_at=null + reverted_at=null (DES-congela)", async () => {
-    // Claim FRESCO sobre la cuenta ya revertida (2ª reversa = variante migrado, §h.6): debe resetear
-    // reverse_frozen_at Y reverted_at del run anterior (test 16 los dejó set).
+    // Claim FRESCO con marcadores de un run anterior vivos: debe resetear reverse_frozen_at Y
+    // reverted_at. Los repone el 16-bis por PATCH antes de re-promover, porque desde g15_02 el camino
+    // natural hasta aquí (revertir y volver a reclamar) ya no pasa por una cuenta `complete`: una cuenta
+    // revertida se queda `groups_only`, y su claim entra por la mitad `reverted_at` del guard, no por
+    // `kind`. La promoción de `claim_account` no limpia esos marcadores — medido.
     const rc = await migrationProgress(jwtB, { device_id: DEV_REV, action: "reverse_claim" });
     expect(rc.body.ok).toBe(true);
     const pc = await readProfile(jwtB);
@@ -496,7 +618,10 @@ describe("I11-3 goldens · /account/migration reverse_* (staging real)", () => {
         migration_in_progress: false,
         reverse_in_progress: false,
         leader_device_id: null,
-        migrated_at: "2026-01-01T00:00:00Z", // cuenta migrada (autocontenido)
+        // Autocontenido SALVO `kind`, que el trigger `profiles_kind_guard` no deja PATCHear: desde g15_02
+        // la puerta de la reversa es `kind='complete'`, y quien lo garantiza es el `beforeAll` del
+        // describe + el repromote del 16-bis. Un `not_complete` aquí sería andamio, no un fallo del CAS.
+        migrated_at: "2026-01-01T00:00:00Z", // cuenta migrada
         reverse_frozen_at: null,
         reverted_at: null,
       }),

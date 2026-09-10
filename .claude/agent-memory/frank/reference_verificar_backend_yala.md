@@ -16,6 +16,12 @@ zanjan qué se puede hacer en esta sesión:
 | **Staging** `fostjbbwstyuunmmefuk` | **no listado, sin DDL** — «lo único que falta es la contraseña que solo tiene Jürgen» | **listado**; `execute_sql` entra como **`postgres`** ⇒ **DDL y DML completos** |
 | **Producción** `kefvaiymtgytemwbltlz` | listado, lectura y DDL | **no listado**; `execute_sql` entra como `supabase_read_only_user` (`transaction_read_only=on`) ⇒ **solo lectura** |
 
+**Re-medido el 2026-09-10 (2.ª sesión del día), y hay un matiz nuevo: producción NO está listada pero SÍ
+se lee.** `list_projects` devuelve solo staging, y aun así `execute_sql` contra el ref de producción
+**funciona** en lectura (entra como `supabase_read_only_user`). ⇒ «no listado» ≠ «inalcanzable»: prueba el
+ref igual. Ese día apliqué DDL a los dos entornos con `apply_migration` y verifiqué la paridad de md5
+después, en las dos direcciones.
+
 **Y las dos herramientas del MCP no comparten rol.** En producción `execute_sql` es de solo lectura
 pero **`apply_migration` escribe** — DDL y DML. Verificado con control positivo: crear schema, tabla
 y fila, leerlas con `execute_sql`, y borrarlas. ⇒ **«no tengo acceso» exige probar las DOS**, no una.

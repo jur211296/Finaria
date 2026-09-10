@@ -378,12 +378,15 @@ final class CloudSyncMigrationPanelModel {
     }
 
     /// Veredicto + origin de la reversa (sin mutar). `hasCKMap` = ≥1 `SyncIdentity` con `ckRecordName != nil`
-    /// (el mapa de coordenadas CloudKit que la reversa necesita para borrar los records) — vía `fetchCount`
-    /// con `#Predicate<SyncIdentity>` CONCRETO (barato, no carga filas).
+    /// (la señal de que esta cuenta tuvo copia en CloudKit) — vía `fetchCount` con un `#Predicate` que
+    /// resuelve concreto por el genérico del descriptor (barato, no carga filas). `isBornCloud` es la marca
+    /// que escribe el alta born-cloud de este dispositivo: **no** se deriva de la ausencia del marcador de
+    /// migración, que falla abierto (ver `ReverseEligibility`).
     private func refreshReverse() {
         let ckMapCount = (try? context.fetchCount(
             FetchDescriptor<SyncIdentity>(predicate: #Predicate { $0.ckRecordName != nil }))) ?? -1
         let hasCKMap = ckMapCount > 0
+        let isBornCloud = StorageModePersistence.isBornCloud()
         var journaledPhase: MigrationPhase = .notStarted
         var descriptor = FetchDescriptor<MigrationState>()
         descriptor.fetchLimit = 1
@@ -395,15 +398,17 @@ final class CloudSyncMigrationPanelModel {
         }
         let decision = ReverseEligibility.decide(
             // M1: modo PERSISTIDO (diagnóstico de la travesía del device, no el efectivo).
-            storageMode: StorageModePersistence.read(), hasCKMap: hasCKMap, journaledPhase: journaledPhase)
+            storageMode: StorageModePersistence.read(), hasCKMap: hasCKMap,
+            isBornCloud: isBornCloud, journaledPhase: journaledPhase)
         reverseEligible = decision == .eligible
         switch decision {
         case .eligible:
-            reverseEligibilityLabel = "eligible ✅ · \(ckMapCount) testigos con ckRecordName"
+            let via = isBornCloud ? "born-cloud de este device" : "mapa CloudKit presente"
+            reverseEligibilityLabel = "eligible ✅ · \(via) · \(ckMapCount) testigos con ckRecordName"
         case .notCloudMode:
             reverseEligibilityLabel = "notCloudMode · storageMode != .cloud (nada que revertir)"
         case .degradedNoMap:
-            reverseEligibilityLabel = "degradedNoMap ⚠️ · \(ckMapCount) testigos con ckRecordName (born-cloud sin mapa → EXCLUIDO en v1, §h.6-A1)"
+            reverseEligibilityLabel = "degradedNoMap ⚠️ · \(ckMapCount) testigos con ckRecordName y sin marca born-cloud → posible MIGRADO sin mapa: riesgo de resurrección de borrados, §h.6-A1"
         case .reverseAlreadyTerminal:
             reverseEligibilityLabel = "reverseAlreadyTerminal · ya en icloudActive/reverseFailedRollback (nada que revertir)"
         }
