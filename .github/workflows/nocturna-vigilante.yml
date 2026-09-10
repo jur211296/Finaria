@@ -79,6 +79,15 @@ jobs:
       # probado. Con `horas: 1` se fuerza y se comprueba entero.
       HORAS: ${{ github.event.inputs.horas || 26 }}
     steps:
+      # Primero y sin condicion, aunque casi siempre no haga falta: la entrega de abajo lleva
+      # `always()` —tiene que avisar aunque el paso de lanzar la nocturna falle—, y `always()`
+      # tambien corre cuando el paso anterior FALLO. Con el checkout condicionado detras, un
+      # blip de red en `actions/checkout` dejaba al paso de entrega buscando una action que no
+      # esta en el workspace: muere con un error de runner que no dice ni el asunto ni el
+      # motivo, y el aviso de «hoy no hay cobertura de UI» se pierde. Unos segundos de clon
+      # cuestan menos que eso.
+      - uses: actions/checkout@v4
+
       - name: ¿Corrió la suite de UI dentro de la ventana?
         id: comprobar
         run: |
@@ -136,6 +145,9 @@ jobs:
       - name: Lanzar la nocturna si falta
         id: lanzar
         if: ${{ steps.comprobar.outputs.corridas_ui == '0' }}
+        env:
+          # Por `env:` y no interpolado dentro del `run:`: ver la nota de `RAMA` mas abajo.
+          RAMA: ${{ steps.comprobar.outputs.rama }}
         run: |
           set -euo pipefail
           # Un `workflow_dispatch` corre EXACTAMENTE lo mismo que la nocturna, UI incluida:
@@ -151,22 +163,25 @@ jobs:
           # confundiria un dispatch ajeno reciente con el suyo y cantaria victoria sin
           # haber creado nada.
           echo "antes=$(date -u '+%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
-          gh workflow run qa.yml --repo "$REPO" --ref "${{ steps.comprobar.outputs.rama }}"
+          gh workflow run qa.yml --repo "$REPO" --ref "$RAMA"
           echo "Dispatch enviado."
 
       - name: Comprobar que la nocturna nació de verdad
         id: verificar
         if: ${{ steps.lanzar.outcome == 'success' }}
+        env:
+          RAMA: ${{ steps.comprobar.outputs.rama }}
+          ANTES_RUNS: ${{ steps.lanzar.outputs.antes }}
         run: |
           set -euo pipefail
           # «Comando en verde» no es «run creado». El dispatch es asíncrono: se le da un
           # margen y se mira si apareció. Sin esto, el modo de fallo sería un vigilante que
           # informa de que ha lanzado la nocturna todos los días sin lanzarla ninguno.
-          ANTES='${{ steps.lanzar.outputs.antes }}'
+          ANTES="$ANTES_RUNS"
           echo "Buscando un run de qa.yml creado despues de $ANTES."
           for _ in $(seq 1 12); do
             sleep 5
-            n=$(gh api "repos/$REPO/actions/workflows/qa.yml/runs?event=workflow_dispatch&branch=${{ steps.comprobar.outputs.rama }}&per_page=10" \
+            n=$(gh api "repos/$REPO/actions/workflows/qa.yml/runs?event=workflow_dispatch&branch=$RAMA&per_page=10" \
                   --jq "[.workflow_runs[] | select(.created_at >= \"$ANTES\")] | length")
             if [ "$n" -gt 0 ]; then
               echo "nacio=si" >> "$GITHUB_OUTPUT"
@@ -181,6 +196,13 @@ jobs:
         id: componer
         if: ${{ always() && steps.comprobar.outputs.corridas_ui == '0' }}
         env:
+          # `RAMA` viene de `gh api .default_branch` y ANTES se interpolaba con `${{ }}` dentro
+          # del `run:`. Un nombre de rama admite `$`, backticks y `(...)`, y dentro de comillas
+          # dobles de bash eso se ejecuta. Cambiar la rama por defecto exige permiso de escritura
+          # sobre el repo, asi que el riesgo real es bajo — pero la disciplina esta escrita en
+          # `avisar-grok-push-principal.yml` («NO se interpolan con ${{ }} dentro de run:») y
+          # sostenerla en un fichero y romperla en el de al lado es como deja de sostenerse.
+          RAMA: ${{ steps.comprobar.outputs.rama }}
           NACIO: ${{ steps.verificar.outputs.nacio }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
@@ -189,7 +211,7 @@ jobs:
           if [ "${NACIO:-no}" = "si" ]; then
             asunto="la nocturna no habia corrido y se ha lanzado sola"
             detalle=$(printf '%s\n' \
-              "CI de $REPO (${{ steps.comprobar.outputs.rama }}): la suite completa de UI llevaba mas de $HORAS h sin correr." \
+              "CI de $REPO ($RAMA): la suite completa de UI llevaba mas de $HORAS h sin correr." \
               "" \
               "El vigilante la ha lanzado y el run existe, asi que la cobertura de hoy esta cubierta." \
               "Lo que NO esta resuelto es por que no corrio sola: si esto se repite varios dias," \
@@ -197,7 +219,7 @@ jobs:
           else
             asunto="la nocturna no ha corrido y NO se ha podido lanzar"
             detalle=$(printf '%s\n' \
-              "CI de $REPO (${{ steps.comprobar.outputs.rama }}): la suite completa de UI lleva mas de $HORAS h sin correr y el" \
+              "CI de $REPO ($RAMA): la suite completa de UI lleva mas de $HORAS h sin correr y el" \
               "intento de lanzarla desde el vigilante no ha creado ningun run." \
               "" \
               "Es decir: hoy NO hay cobertura de UI, y el mecanismo de respaldo tampoco funciona." \
@@ -215,10 +237,6 @@ jobs:
             printf '%s\n' "$texto"
             echo "FIN_DEL_AVISO"
           } >> "$GITHUB_OUTPUT"
-
-      # Hace falta para poder usar la action local `.github/actions/avisar`.
-      - uses: actions/checkout@v4
-        if: ${{ always() && steps.comprobar.outputs.corridas_ui == '0' }}
 
       - name: Enviar al webhook, y al respaldo si no responde
         if: ${{ always() && steps.comprobar.outputs.corridas_ui == '0' }}

@@ -46,6 +46,13 @@ inputs:
     description: Etiqueta del issue de respaldo. Agrupa los avisos que no se pudieron entregar.
     required: false
     default: aviso-ci
+  respaldo:
+    description: >-
+      `true` (por defecto) usa el issue cuando el webhook no responde. `false` lo desactiva y
+      hace que el paso salga en ROJO — es lo que quiere un vigilante cuyo trabajo ES detectar
+      que el canal esta caido: con respaldo saldria en verde el unico dia que importa.
+    required: false
+    default: "true"
 
 outputs:
   entregado-por:
@@ -64,6 +71,7 @@ runs:
         TEXTO: ${{ inputs.texto }}
         GH_TOKEN: ${{ inputs.github-token }}
         ETIQUETA: ${{ inputs.etiqueta }}
+        RESPALDO: ${{ inputs.respaldo }}
         REPO: ${{ github.repository }}
         RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       run: |
@@ -123,12 +131,19 @@ runs:
         # ---------- Canal de respaldo: un issue en el propio repo ----------
         echo "::warning title=El canal principal no pudo entregar::$motivo — se avisa por el respaldo."
 
+        if [ "${RESPALDO:-true}" != "true" ]; then
+          echo "::error title=El canal de avisos esta caido::$motivo. Este aviso corre SIN respaldo a proposito: su rojo es la señal."
+          exit 1
+        fi
+
         if [ -z "${GH_TOKEN:-}" ]; then
           echo "::error title=Sin ningun canal::$motivo, y no hay token para el respaldo. NADIE se ha enterado de que $ASUNTO."
           exit 1
         fi
 
         cuerpo=$(printf '%s\n' \
+          "**$ASUNTO**" \
+          "" \
           "$TEXTO" \
           "" \
           "---" \
@@ -139,9 +154,15 @@ runs:
           "Mientras el canal principal siga asi, los avisos del CI se acumulan en este issue." \
           "Cerrarlo sin reponer la credencial solo hace que el proximo abra otro.")
 
-        # Un issue por incidencia, no uno por run. Si no, un canal muerto genera un issue por
-        # cada push —37 en dia y medio, medido— y el respaldo se ahoga en su propio ruido:
-        # exactamente el final del canal que vino a sustituir.
+        # UN issue por CAIDA DEL CANAL, no uno por run ni uno por aviso. Si no, un canal muerto
+        # genera un issue por cada push —37 en dia y medio, medido— y el respaldo se ahoga en su
+        # propio ruido: exactamente el final del canal que vino a sustituir.
+        #
+        # Por eso el titulo es FIJO y describe la incidencia, no el asunto del aviso. Ponerle el
+        # asunto lo fijaria al del PRIMER aviso que llegue —casi siempre el mas trivial, porque
+        # los pushes a `2.1` son los mas frecuentes—, y a partir de ahi «hay tests en rojo» y
+        # «hoy no hay cobertura de UI» quedarian de comentarios bajo un titulo que dice «push
+        # directo a 2.1». El titulo es lo unico que se ve en la lista de issues.
         set +e
         encontrado=$(gh issue list --repo "$REPO" --label "$ETIQUETA" --state open --limit 1 \
           --json number --jq '.[0].number // empty' 2>"$RUNNER_TEMP/aviso-gh-list.txt")
@@ -170,11 +191,16 @@ runs:
         gh label create "$ETIQUETA" --repo "$REPO" --color B60205 \
           --description "Avisos del CI que el webhook de la routine no pudo entregar" --force >/dev/null 2>&1 || true
 
-        if url=$(gh issue create --repo "$REPO" --title "[CI] $ASUNTO" --label "$ETIQUETA" --body "$cuerpo"); then
+        titulo="[CI] El canal de avisos no entrega — los avisos se acumulan aqui"
+        if url=$(gh issue create --repo "$REPO" --title "$titulo" --label "$ETIQUETA" --body "$cuerpo"); then
           echo "::error title=Aviso por respaldo ($url)::$ASUNTO. El canal principal esta caido: $motivo"
           echo "entregado-por=issue" >> "$GITHUB_OUTPUT"
           exit 0
         fi
 
-        echo "::error title=Sin ningun canal::$motivo, y el respaldo tampoco pudo escribir el issue (¿le falta 'issues: write'?). NADIE se ha enterado de que $ASUNTO."
+        # El diagnostico no acusa a una sola causa: en un `pull_request` desde un FORK el
+        # `GITHUB_TOKEN` es de solo lectura pase lo que pase, asi que el `permissions:` del
+        # workflow esta bien puesto y aun asi esto falla. Decir solo «¿le falta issues: write?»
+        # mandaria a mirar justo donde no esta el problema.
+        echo "::error title=Sin ningun canal::$motivo, y el respaldo tampoco pudo escribir el issue. Causas: falta 'issues: write' en el workflow, o es un PR desde un fork (ahi el token es de solo lectura y los secrets no llegan). NADIE se ha enterado de que $ASUNTO."
         exit 1

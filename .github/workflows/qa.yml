@@ -394,15 +394,24 @@ jobs:
   aviso:
     name: ¿Se ha enterado alguien de los rojos advisory?
     needs: tests
-    # `always()` para que corra tambien si `tests` murio o fue CANCELADO —el tope de job
-    # agotado es una cancelacion, no un fallo—, que es justo cuando mas hace falta: ahi
-    # los outputs llegan vacios y eso se lee abajo como «la suite no llego a correr».
+    # `!cancelled()` y NO `always()`, y la diferencia importa mucho: `always()` corre tambien
+    # cuando el RUN ENTERO se cancela a mano. Este workflow no declara `concurrency`, asi que
+    # los runs no se auto-cancelan y las cancelaciones son manuales — con un job de hasta 90
+    # min en `macos-26`, cancelar al ver un typo es lo normal. Con `always()`, cada una de esas
+    # veces `tests` acaba en `cancelled`, sus outputs llegan vacios, y esto entregaba a Grok
+    # «la suite NO llego a correr — el job murio antes de los tests». No murio: lo cancelaste tu.
+    #
+    # `!cancelled()` mira si se cancelo el RUN, no si se cancelo `tests`. Asi que sigue
+    # cubriendo el caso que si hay que avisar: el tope del job `tests` agotado, que es una
+    # cancelacion DE ESE JOB con el run vivo. Ahi los outputs tambien llegan vacios y se leen
+    # abajo como «no llego a correr», que es lo que se quiere. Es ademas el mismo operador que
+    # ya usa el `if:` del job `tests`.
     #
     # Se excluye `skipped` a proposito: si `changes` decidio que el diff es solo docs, no
     # hay suite de la que informar y un aviso ahi seria ruido en cada PR de documentacion
     # — y un canal que grita cuando no pasa nada se acaba silenciando, que es el mismo
     # final que el canal mudo, por el otro extremo.
-    if: ${{ always() && needs.tests.result != 'skipped' }}
+    if: ${{ !cancelled() && needs.tests.result != 'skipped' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

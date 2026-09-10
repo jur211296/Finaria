@@ -9,17 +9,24 @@ name: Ping del avisador
 # en el primer incendio, que es el peor momento posible: el run que traia el rojo real es
 # el mismo que se comio el aviso.
 #
-# Este workflow ejercita el camino ENTERO sin esperar a que algo se rompa. Si el canal
-# esta vivo, sale en verde en 20 segundos; si no, falla con su propio nombre —«Ping del
-# avisador»— y deja el aviso escrito en un issue. La diferencia con descubrirlo en el
-# incendio es que aqui el rojo no compite con ninguna otra señal.
+# Este workflow ejercita el camino ENTERO sin esperar a que algo se rompa. Si el canal esta
+# vivo, sale en verde en 20 segundos; si no, sale en ROJO con su propio nombre.
 #
-# POR QUE UN PING DIARIO NO ES RUIDO, aunque «un canal que grita cuando no pasa nada se
-# acaba silenciando». Medido el 2026-09-09 sobre 100 runs de `avisar-grok-push-principal.yml`:
-# por ese mismo webhook ya viajan ~30 avisos al dia (63 verdes en las 46 h del 09-06 al
-# 09-08, 37 rojos en las 28 h siguientes). Un ping diario es un 3 % mas de trafico: el
-# coste real de la alternativa —comprobar antes si el canal se ejercito solo— era mas
-# codigo y un acoplamiento al nombre de otro workflow, y no lo compensa.
+# ESTE ES EL UNICO AVISO DEL REPO QUE CORRE **SIN RESPALDO**, y es deliberado. Los demas,
+# cuando el webhook no responde, dejan el aviso en un issue y siguen en verde: lo que
+# entregan importa mas que el canal por el que salga. Aqui es al reves — el trabajo de este
+# workflow ES detectar que el canal se cayo. Con respaldo saldria en VERDE justo el unico
+# dia que importa, y ademas dejaria un comentario diario «no requiere ninguna accion» en el
+# issue donde se estan acumulando los avisos de verdad. Un vigilante que se rescata a si
+# mismo no vigila nada.
+#
+# QUE APORTA, SI EL CAMINO YA SE RECORRE SOLO. Se recorre: `avisar-grok-push-principal.yml`
+# usa los mismos secretos y el mismo endpoint en cada push a `2.1` —medido el 2026-09-09
+# sobre 100 runs, unos 30 avisos al dia—. Pero eso depende de que HAYA pushes, y su rojo es
+# un check mas entre los muchos de un push. Lo que añade esto son dos cosas que aquello no
+# da: una cadencia garantizada aunque nadie toque el repo, y un check cuyo NOMBRE dice que
+# lo roto es el canal de avisos y no otra cosa. El coste es un 3 % mas de trafico por el
+# mismo webhook.
 #
 # EL CRON NO ES UN RELOJ FIABLE, y aqui da igual. El 2026-09-08 el cron de Actions
 # disparo con 4 h 35 min de retraso. Para «ejercitar el canal» eso no importa —importa
@@ -68,6 +75,12 @@ jobs:
           # positivo del respaldo — sin el, «el respaldo funciona» es una suposicion.
           webhook-url: ${{ inputs.simular_canal_caido && 'https://ping-del-avisador.invalid/canal-caido-a-proposito' || secrets.GROK_WEBHOOK_URL }}
           sender-key: ${{ secrets.GROK_WEBHOOK_SENDER_KEY }}
+          # Sin respaldo en el ping normal (ver arriba); con el, y en su propia etiqueta, en el
+          # simulacro — que es lo que lo hace un control positivo utilizable: ejercita el issue
+          # de verdad sin dejar abierto uno que luego se coma los avisos reales bajo un titulo
+          # que dice «no es una incidencia».
+          respaldo: ${{ inputs.simular_canal_caido && 'true' || 'false' }}
+          etiqueta: ${{ inputs.simular_canal_caido && 'aviso-ci-simulacro' || 'aviso-ci' }}
           github-token: ${{ github.token }}
           asunto: >-
             ${{ inputs.simular_canal_caido

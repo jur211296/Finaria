@@ -59,9 +59,9 @@ jobs:
       # El mensaje de commit, el nombre del autor y el de la rama son TEXTO ARBITRARIO
       # escrito por quien commitea. Por eso NO se interpolan con ${{ }} dentro de `run:`
       # —eso seria inyeccion de shell: un mensaje con `$(...)` se ejecutaria en el runner—
-      # sino que entran por `env:` y se leen como variables. Por lo mismo el JSON se arma
-      # con `jq --arg` y no concatenando: un mensaje con comillas o saltos de linea
-      # rompería un JSON hecho a mano.
+      # sino que entran por `env:` y se leen como variables. (El JSON lo arma la action con
+      # `jq --arg`, por lo mismo: un mensaje con comillas o saltos de linea rompería un JSON
+      # concatenado a mano.)
       - name: Componer el aviso
         id: componer
         env:
@@ -108,10 +108,19 @@ jobs:
 
           # Un texto de varias lineas necesita delimitador; sin el, `$GITHUB_OUTPUT` se
           # queda con la primera linea y el aviso viaja decapitado.
+          #
+          # Y el delimitador es ALEATORIO, no una constante, porque este es el unico de los
+          # tres avisadores cuyo texto lleva contenido escrito por terceros: los mensajes de
+          # commit. Con un delimitador fijo y publico, un commit cuya primera linea fuera
+          # exactamente esa palabra cerraria el bloque antes de tiempo y lo que viniera detras
+          # se leeria como claves nuevas de `$GITHUB_OUTPUT`. Hoy no puede pasar porque el
+          # `map(...)` de arriba antepone `- <sha> ` a cada linea, pero eso es una proteccion
+          # de rebote: depende de un prefijo que alguien puede quitar sin ver la relacion.
+          FIN="FIN_$(openssl rand -hex 12)"
           {
-            echo "texto<<FIN_DEL_AVISO"
+            echo "texto<<$FIN"
             printf '%s\n' "$texto"
-            echo "FIN_DEL_AVISO"
+            echo "$FIN"
           } >> "$GITHUB_OUTPUT"
 
       - name: Enviar al webhook, y al respaldo si no responde
