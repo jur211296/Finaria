@@ -5,104 +5,54 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-09 (Lima)
 
-**Rama** `2.1` — Merge #124: el candado que prohíbe atribuir un commit a una IA ya está puesto
-TestFlight build **13** (CPV 13) — subido el 2026-09-09, `VALID` e `IN_BETA_TESTING`.
-**Subida Yala (TF/store) = solo Mini.**
+**Rama** `2.1` — Merge #125: el modelo de sesiones está decidido y especificado; nada de código todavía.
+TestFlight build **13** (CPV 13) — `VALID` e `IN_BETA_TESTING`. **Subida Yala (TF/store) = solo Mini.**
 
-## Esta sesión (la última: el candado anti-atribución)
+## Esta sesión (la última: el rediseño del modelo de sesiones)
 
-**Un commit de este repo ya no puede decir que lo escribió una IA.** Hasta hoy podía: el hook que
-ADR-013 da por puesto **nunca corrió aquí**, porque `core.hooksPath` local **sustituye** al global
-en vez de sumarse. Yala era el único de los 25 repos del Mac en esa situación.
+**Un device-QA guiado se convirtió en rediseño, y Jürgen lo ratificó.** La confusión del Welcome, los
+onboardings y los cierres no era de pantalla: tres flags de modo + sesión secundaria, 7 verbos de salida
+sobre 11 operaciones. Ahora hay **dos ejes** —¿sesión privada? × sesión en la nube (ninguna / solo grupos /
+completa)—, un verbo por sesión, dos botones en Ajustes, y Grupos como mini-app con su cuenta asociable.
+Todo en `docs/DECISIONS.md` → «[2026-09-09] Sesiones — dos ejes». **La sesión de visita (M1) se retira**,
+ratificado; sus 12 tickets están descartados con el ADR como motivo (13 descartes en total).
 
-**El dato que cambió tu decisión no estaba en el ticket:** el hook global también prohíbe
-*mencionar* «Claude», y aplicado aquí rechazaría **216 commits legítimos** que citan rutas del
-propio árbol. De ahí el camino elegido — hook propio, solo atribución, y aquí se puede seguir
-nombrando `CLAUDE.md` y `.claude/rules/…`.
-
-**774 rechazos sobre los 3348 mensajes de la historia, 0 fugas y 0 falsos positivos.** Cubre
-también el `--author`, que es atribución permanente en la cabecera y no viaja en el mensaje. Banco
-de 32 casos en el CI. Detalle en `tickets/done/` y en el PR #124.
-
-## La sesión anterior (el avisador del CI) — cerrada
-
-Merge #123. El canal de avisos del CI vuelve a entregar y ya no puede morir en silencio: el envío
-vive en `.github/actions/avisar`, con respaldo a un issue. Eran tres workflows compartiendo el
-mismo `curl` triplicado. Lo que sigue vivo está abajo; el resto lo guarda git.
+**Para implementarlo hay 14 tickets y un runbook** (`session-redesign-implementation-order`): Jürgen pedirá
+«implementa el siguiente» y el siguiente es el primero de esa tabla que no esté en `done`. La **matriz de
+escenarios** (`docs/sessions/2026-09-09-matriz-escenarios-sesiones.md`, 45 filas) encontró nueve huecos ya
+añadidos a sus tickets; el grave: la salida privada tiene que esperar al último export a CloudKit antes de
+borrar lo local. **Dos bugs medidos en código y uno confirmado en device** (la puerta «datos ajenos» de
+grupos bloqueó al propio Jürgen tras reinstalar). Y producción sirve la elección nube al 100 % mientras el
+`wrangler.toml` dice 0: **ese ticket va primero**, antes de cualquier deploy del gateway.
 
 ## Abiertos
 
-1. **La cola física de Jürgen**: push APNs real (4 tickets), RPC de producción (3), sign-in real
-   SIWA/Google (6), Apple Pay y carreras de red (4). Nada de eso se simula; lo demás sí.
-2. **De FX quedan cuatro cosas, y ninguna es montaje**: el **widget de inicio** (simulable, no cupo
-   en la tanda), el **asistente** (pide LLM real), la **red** —aquí `ExchangeRateService` falla por
-   AppAttest en todos los arranques— y el seam **`-uitest-preferred-currency`**, que no existe y es
-   lo único que le falta a `fx-partial-rate-rows-silent-1to1`.
-3. **Tres veredictos de QA escritos en sus propios tickets están caducos**:
-   `scheduled-payments-notif-dedup` y `welcome-start-fresh-wipes-before-ask` pedían un seam que **ya
-   existe**, y el callout de `siri-intent-dual-container` lo refuta su ticket hermano.
-4. **La nocturna del 9-sep dejó CUATRO XCUITest en rojo y nadie se enteró**
-   (`nocturna-del-9-sep-dejo-cuatro-xcuitest-en-rojo`, **high**). Es lo que el canal roto no llegó
-   a entregar: `Executed 145 tests, with 12 failures` — cuatro casos con sus reintentos, en
-   caminos centrales (crear transacción, guardar favorito, convertir borrador a gasto de grupo).
-   La suite de UI ya no corre en los PR, así que si se quedan, la nocturna pasa a ser un rojo
-   permanente — y un rojo permanente se deja de mirar.
-5. **El aviso de cierre cita el PR de OTRA sesión** (`el-aviso-de-cierre-cita-el-pr-de-otra-sesion`,
-   **medium**): falla en silencio, con `HTTP 200` y aspecto bueno.
-6. **El build 13 llega al grupo interno, no al externo.** «Test interno» tiene un tester
-   (Jürgen, `INSTALLED`). «Testers Yala» son 3 y su `externalBuildState` es
-   `READY_FOR_BETA_SUBMISSION`: para que les llegue hay que pasar beta review. Si el segundo
-   teléfono del device-QA no usa el Apple ID de Jürgen, no verá el build hasta resolver eso.
-7. **DMARC el 15-sep** · **cobertura de UI el 22-sep**. Esperan al calendario, no a nadie.
+1. **La cola física de Jürgen**: push APNs real (4), RPC de producción (3), sign-in real SIWA/Google (6),
+   Apple Pay y carreras de red (4). Nada de eso se simula.
+2. **De FX quedan cuatro cosas**: el widget de inicio (simulable), el asistente (LLM real), la red
+   (`ExchangeRateService` falla por AppAttest) y el seam `-uitest-preferred-currency`, que no existe.
+3. **Tres veredictos de QA caducos** en sus tickets: `scheduled-payments-notif-dedup`,
+   `welcome-start-fresh-wipes-before-ask` (el seam ya existe) y el callout de `siri-intent-dual-container`.
+4. **La nocturna del 9-sep dejó CUATRO XCUITest en rojo** (`nocturna-del-9-sep-dejo-cuatro-xcuitest-en-rojo`,
+   **high**): caminos centrales, y la suite de UI ya no corre en los PR.
+5. **El aviso de cierre cita el PR de OTRA sesión** (medium): falla en silencio con `HTTP 200`.
+6. **El build 13 llega al grupo interno, no al externo** (`READY_FOR_BETA_SUBMISSION`): un segundo
+   teléfono sin el Apple ID de Jürgen no lo verá hasta pasar beta review.
+7. **DMARC el 15-sep** · **cobertura de UI el 22-sep**. Esperan al calendario.
 
 ## Siguiente
 
-**Device-QA de `changing-an-account-currency-orphans-its-whole-history`**, ya en `tickets/qa/` con
-guion. Sí es simulable, pero **dos de los cuatro pasos van a mano**: el selector de Moneda es un
-`NavigationLink` y no responde a taps sintéticos (medido el 8-sep con cuatro técnicas).
+**El primer ticket del runbook:** `wrangler-prod-onboarding-choice-percent-drift` (alinear el repo con lo
+que producción ya sirve). Después, en orden, los otros doce. El device-QA de
+`changing-an-account-currency-orphans-its-whole-history` sigue en `tickets/qa/` con guion.
 
-**El backlog está en 244.** Los cuatro nuevos son del candado:
-`adr-013-does-not-know-yala-has-its-own-commit-msg` (el hook global no sabe que Yala tiene el suyo),
-`rebase-and-cherry-pick-skip-the-attribution-hook` (git no invoca el hook al replayar commits, ni en
-los merges de la web), `open-worktrees-lack-the-attribution-hook` y `two-qa-benches-nobody-runs`
-(dos bancos de `qa/scripts/` que no ejecuta nadie, y los dos nacieron de un fallo real).
-
-**Los cuatro del avisador**, además de los cinco de la sesión de la divisa: `nocturna-del-9-sep-dejo-cuatro-xcuitest-en-rojo` (**high**),
-`cerrar-total-para-ante-un-check-rojo-que-no-bloquea`,
-`vigilante-calla-si-no-puede-comprobar-la-nocturna` y
-`qa-yml-no-cancela-la-corrida-anterior-de-la-misma-rama`.
-
-**Los cinco de la sesión de la divisa:** El que más pesa:
-`account-currency-change-leaves-scheduled-and-favorites-stale` — tras convertir la cuenta, un
-alquiler programado de 3.500 soles nace como 3.500 dólares, y se repite cada mes. Los otros:
-`cloudsync-account-currency-orphans-receiver-history`,
-`account-currency-conversion-overlay-has-no-ceiling`,
-`save-error-alert-lies-when-the-context-autosaves`,
-`bridge-virtual-only-currency-mismatch-is-silent`.
-
-Siguen en pie los dos `high` de la tanda anterior —`chat-assistant-is-down` (capturado, sin
-investigar) y `siri-ai-integration-ios-27`—, los cuatro de FX del 9-sep
-(`live-anchor-breakdown-doubles-the-approximate-glyph`, `pie-header-total-unmarked`,
-`weekday-bar-daily-average-unmarked`, `uitest-seed-reseeds-the-corpus-without-reset`) y del board
-previo `preferred-currency-has-three-different-defaults`, `financial-report-amounts-unmarked`,
-`widget-fallback-summary-uses-ten-rows`, `bridge-synthesis-trusts-a-zero-converted-amount`,
-`fx-historical-balance-curve-unmarked` y `records-summary-mixes-preferred-currencies`.
+**El board: 156 en backlog, 46 en qa.** El inventario vive en `docs/TICKETS.md`; los `high` fuera del
+rediseño siguen siendo `nocturna-del-9-sep-…`, `chat-assistant-is-down` y `siri-ai-integration-ios-27`.
 
 ## Bloqueo
 
-**Dos decisiones tuyas** (eran tres: el candado anti-atribución se decidió y se cerró hoy):
-`corpus-de-test-de-staging-crece-sin-limite` y el filtro de naturaleza.
-
-**Y una nueva, corta, del candado:** los worktrees abiertos antes de hoy **no lo tienen** —el hook
-vive en el árbol de trabajo, así que una rama sin el fichero no ejecuta nada y git no avisa—. Había
-**11 vivos** al medirlo. `open-worktrees-lack-the-attribution-hook` trae las tres opciones.
-
-**Y dos cortas de la tanda del 9-sep, sin contestar:**
-
-- **¿Se ataca ya el chat caído?** Es `high` y es función de pago; está sólo capturado.
-- **`fab-appears-without-animation` quedó en `low`**: es polish y no corrige nada incorrecto. Una
-  línea del frontmatter si prefieres subirla.
-
-**Un efecto de hoy que ninguna pantalla avisa, y que puede merecer decisión:** un CSV exportado
-**antes** de convertir una cuenta deja de poder importarse a ella, y el fallo aborta el fichero
-entero. Medido, no arreglado, sin ticket propio: dímelo si quieres uno.
+**Decisiones tuyas, ninguna del rediseño (todas ratificadas):** `corpus-de-test-de-staging-crece-sin-limite`,
+el filtro de naturaleza, los worktrees abiertos sin el candado anti-atribución
+(`open-worktrees-lack-the-attribution-hook`, había 11 vivos), ¿se ataca ya el chat caído?, y si
+`fab-appears-without-animation` sube de `low`. **Sin ticket y medido el 9-sep:** un CSV exportado antes de
+convertir una cuenta ya no se importa a ella y aborta el fichero entero — dímelo si quieres uno.
