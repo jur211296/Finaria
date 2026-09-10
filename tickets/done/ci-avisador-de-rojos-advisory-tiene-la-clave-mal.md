@@ -1,6 +1,6 @@
 ---
 id: ci-avisador-de-rojos-advisory-tiene-la-clave-mal
-status: in-progress
+status: done
 priority: high
 area: "ci, observabilidad"
 created: 2026-09-08
@@ -102,7 +102,12 @@ impedir.
 
 ---
 
-## Cerrado el 2026-09-09 — PR #123
+## Cerrado el 2026-09-09 — PR #123 (mergeado, `ab158328`)
+
+**La verificación que solo el merge podía dar:** `avisar-grok-push-principal.yml` solo dispara en
+push a `2.1`, así que su primer run tras el merge es su prueba. Run `34422048896`, commit del propio
+merge: **`success`, HTTP 200** — verde por primera vez tras **37 rojos consecutivos**. Y ningún
+issue de respaldo abierto, que es como debe quedar cuando el canal principal entrega.
 
 ### Lo que apareció al medir, y que el ticket no sabía
 

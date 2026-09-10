@@ -5,38 +5,45 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-09 (Lima)
 
-**Rama** `2.1` — Merge #118: cambiar la divisa de una cuenta ya no deja su histórico atrás
+**Rama** `2.1` — Merge #123: el avisador de rojos del CI ya entrega, y dejó de tumbar la suite
 TestFlight build **13** (CPV 13) — subido el 2026-09-09, `VALID` e `IN_BETA_TESTING`.
 **Subida Yala (TF/store) = solo Mini.**
 
-## Esta sesión
+## Esta sesión (la última: el avisador del CI)
 
-**Se cerró el hueco grande de la familia FX, y la review adversarial cazó seis defectos del
-ARREGLO.** Decisión de Jürgen: **prohibir, y ofrecer convertir cuando se puede** — no «avisar y
-seguir», que dejaba vivo el desemparejamiento y el round-trip roto de exportación.
+**El canal de avisos del CI vuelve a entregar, y ya no puede morir en silencio.** Verificado desde
+el runner —que era el punto: el secreto que fallaba es el del repo, y probarlo en el Mac no
+demostraba nada—: HTTP **200** contra el webhook real. Y el avisador de push a `2.1` está **verde
+por primera vez tras 37 rojos seguidos**, con el propio commit del merge.
 
-Ahora, con movimientos, Guardar pide confirmación con el número de filas y reexpresa cada importe
-con la tasa **de su fecha**. Si el histórico lo manda otra entidad, el selector ni se abre. Las
-tres clases que bloquean lo hacen porque su conversión **no se sostiene**, medido: el re-bridge
-pisa el `amount` de un gasto de grupo en cada pasada y, en cuanto su divisa deja de casar, **borra
-la transacción** (`GroupTransactionBridge:391`, `:410-422`).
+**Eran tres workflows, no uno.** `qa.yml`, `avisar-grok-push-principal.yml` y
+`nocturna-vigilante.yml` compartían el par de secretos y el mismo `curl` triplicado con tres
+tratamientos de error distintos. El envío vive ahora en `.github/actions/avisar`: si el webhook no
+responde, deja el aviso escrito en un issue (`aviso-ci`) en vez de morir, y solo se pone rojo
+cuando no queda ningún canal.
 
-**Es el primer sitio del repo que reescribe el `amount` crudo de filas ya persistidas** —
-`CurrencyChangeService` barre el corpus entero pero solo toca las derivadas, que tienen reparador.
-Por eso: confirmación explícita, tasas antes, y si falta cobertura no se convierte nada.
+**Decisión de Jürgen: check propio + canal de respaldo.** El aviso salió del job `tests`, así que
+un `tests: fail` vuelve a significar «la suite falló de verdad». De los 3 rojos de `qa.yml` en las
+40 últimas corridas los TRES eran del avisador, y dos tapaban señal real.
 
-**De los seis defectos del arreglo, el peor lo vieron dos lentes por separado:** el `set` del
-binding del alert competía con su propio botón Convertir —en iOS un alert no tiene gesto de
-descarte, así que SwiftUI escribe `false` al pulsar cualquiera— y en el peor orden guardaba la
-divisa **vieja** sobre el histórico ya convertido. El bug del ticket, recreado por su arreglo.
+**Una premisa del ticket queda matizada:** `2.1` no tiene protección de rama ni rulesets, así que
+GitHub nunca bloqueó nada. Lo que paró el #118 fue nuestra propia `/cerrar-total`, que para si
+`mergeStateStatus` no está limpio — y con checks rojos no requeridos ese estado es `UNSTABLE`,
+que significa «mergeable con checks fallando». Ticket propio.
 
-**Y un séptimo lo cazó el CI, no las lentes:** una aserción que dependía de la divisa preferida de
-la máquina. Verde en local (PEN), roja en CI (USD), con 19.569 tests y un solo issue. Nueve
-mutantes y tres lentes pasaron por encima porque **todos corrían en el mismo entorno**.
+**La review adversarial cazó SEIS defectos del arreglo**, y el peor lo anulaba entero: el ping
+salía **verde** el día que el canal muere, porque el respaldo entregaba y el paso salía con 0. Un
+vigilante que se rescata a sí mismo no vigila nada. El segundo se midió en producción en vez de
+razonarlo: con `always()`, cancelar un run **a mano** entregaba «la suite NO llegó a correr»; con
+`!cancelled()`, el mismo gesto no dice nada. Dos runs, mismo gesto, resultado opuesto.
 
-**Dos premisas del ticket eran falsas y se corrigieron en él:** el grupo `money` de `tx_items` tiene
-**cinco** columnas, no cuatro, y `currency_code` no es una; y lo inferido sobre CloudSync apuntaba
-al applier de `tx_items` cuando la rama que propaga el daño es la de `accounts`.
+## La sesión anterior (la divisa de una cuenta) — cerrada
+
+Merge #118. Cambiar la divisa de una cuenta ya no deja su histórico atrás: con movimientos, Guardar
+pide confirmación con el número de filas y reexpresa cada importe con la tasa **de su fecha**. Es el
+primer sitio del repo que reescribe el `amount` crudo de filas ya persistidas, y por eso la
+confirmación es explícita y sin cobertura no se convierte nada. Lo que sigue vivo de esa sesión está
+en «Abiertos» y en sus cinco tickets; el resto lo guarda git.
 
 ## Abiertos
 
@@ -49,12 +56,12 @@ al applier de `tx_items` cuando la rama que propaga el daño es la de `accounts`
 3. **Tres veredictos de QA escritos en sus propios tickets están caducos**:
    `scheduled-payments-notif-dedup` y `welcome-start-fresh-wipes-before-ask` pedían un seam que **ya
    existe**, y el callout de `siri-intent-dual-container` lo refuta su ticket hermano.
-4. **El avisador de rojos del CI no solo no avisa: BLOQUEA EL MERGE**
-   (`ci-avisador-de-rojos-advisory-tiene-la-clave-mal`, **high**). Medido hoy en dos corridas del
-   mismo PR: con un paso advisory en rojo, el avisador sale `exit 1` por `Invalid API key` y pone
-   el job entero en rojo; sin rojos advisory, pasa. **Anula el `continue-on-error` de sus propios
-   pasos** justo cuando se quería lo contrario. Ojo al arreglarlo: el `exit 1` está bien puesto — lo
-   que falla es la credencial.
+4. **La nocturna del 9-sep dejó CUATRO XCUITest en rojo y nadie se enteró**
+   (`nocturna-del-9-sep-dejo-cuatro-xcuitest-en-rojo`, **high**). Es lo que el canal roto no llegó
+   a entregar: `Executed 145 tests, with 12 failures` — cuatro casos con sus reintentos, en
+   caminos centrales (crear transacción, guardar favorito, convertir borrador a gasto de grupo).
+   La suite de UI ya no corre en los PR, así que si se quedan, la nocturna pasa a ser un rojo
+   permanente — y un rojo permanente se deja de mirar.
 5. **El aviso de cierre cita el PR de OTRA sesión** (`el-aviso-de-cierre-cita-el-pr-de-otra-sesion`,
    **medium**): falla en silencio, con `HTTP 200` y aspecto bueno.
 6. **El build 13 llega al grupo interno, no al externo.** «Test interno» tiene un tester
@@ -69,7 +76,13 @@ al applier de `tx_items` cuando la rama que propaga el daño es la de `accounts`
 guion. Sí es simulable, pero **dos de los cuatro pasos van a mano**: el selector de Moneda es un
 `NavigationLink` y no responde a taps sintéticos (medido el 8-sep con cuatro técnicas).
 
-**El backlog está en 235 y trae cinco tickets nuevos de esta sesión.** El que más pesa:
+**El backlog está en 239 y trae cuatro tickets nuevos del avisador**, además de los cinco de la
+sesión de la divisa: `nocturna-del-9-sep-dejo-cuatro-xcuitest-en-rojo` (**high**),
+`cerrar-total-para-ante-un-check-rojo-que-no-bloquea`,
+`vigilante-calla-si-no-puede-comprobar-la-nocturna` y
+`qa-yml-no-cancela-la-corrida-anterior-de-la-misma-rama`.
+
+**Los cinco de la sesión de la divisa:** El que más pesa:
 `account-currency-change-leaves-scheduled-and-favorites-stale` — tras convertir la cuenta, un
 alquiler programado de 3.500 soles nace como 3.500 dólares, y se repite cada mes. Los otros:
 `cloudsync-account-currency-orphans-receiver-history`,

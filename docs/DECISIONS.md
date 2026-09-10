@@ -2,11 +2,12 @@
 
 <!-- INDICE:inicio — generado por scripts/indexar_doc.py, no editar a mano -->
 
-## Índice (82 entradas)
+## Índice (83 entradas)
 
-> **No hace falta leer este fichero entero** — son 228 KB. Localiza la entrada
+> **No hace falta leer este fichero entero** — son 233 KB. Localiza la entrada
 > aquí y salta a ella.
 
+- `2026-09-09` [CI — el aviso de rojos advisory es un check propio, y no calla aunque su canal caiga](#2026-09-09-ci--el-aviso-de-rojos-advisory-es-un-check-propio-y-no-calla-aunque-su-canal-caiga)
 - `2026-09-02` [Panel — la jerarquía manda, el color informa y las tarjetas se quedan](#2026-09-02-panel--la-jerarqua-manda-el-color-informa-y-las-tarjetas-se-quedan)
 - `2026-08-31` [El repo recibe /abrir, /higiene y reorg_docs; lo demás del estándar de casa no aplica](#2026-08-31-el-repo-recibe-abrir-higiene-y-reorgdocs-lo-dems-del-estndar-de-casa-no-aplica)
 - `2026-08-30` [Frank es el agente de Yala; el gate pasa a hook de git](#2026-08-30-frank-es-el-agente-de-yala-el-gate-pasa-a-hook-de-git)
@@ -63,8 +64,8 @@
 - `2026-05-05` [A0-Bridge V2.0 — completa items P0+P1 diferidos](#2026-05-05-a0-bridge-v20--completa-items-p0p1-diferidos)
 - `2026-05-05` [Groups Pulido Final — Subset 3 (A6/A7/A8)](#2026-05-05-groups-pulido-final--subset-3-a6a7a8)
 - `2026-05-04` [Groups Pulido Final — Subset 2 (A9/A10/A12/A13)](#2026-05-04-groups-pulido-final--subset-2-a9a10a12a13)
-- `2026-04-28` [Traducciones reales — 4 locales completos (nl, pl, zh-Hans, ja)](#2026-04-28-traducciones-reales--4-locales-completos-nl-pl-zh-hans-ja)
 - `2026-04-28` [3 fixes runtime post-QA chat-registrar-transacciones](#2026-04-28-3-fixes-runtime-post-qa-chat-registrar-transacciones)
+- `2026-04-28` [Traducciones reales — 4 locales completos (nl, pl, zh-Hans, ja)](#2026-04-28-traducciones-reales--4-locales-completos-nl-pl-zh-hans-ja)
 - `2026-04-27` [Sankey con rama Planificados](#2026-04-27-sankey-con-rama-planificados)
 - `2026-04-27` [Chat → Registrar transacciones (Opción C híbrida)](#2026-04-27-chat--registrar-transacciones-opcin-c-hbrida)
 - `2026-04-26` [Yala IA — pivot a context-rich (Opción B)](#2026-04-26-yala-ia--pivot-a-context-rich-opcin-b)
@@ -108,6 +109,40 @@ Cada decisión sigue esta estructura:
 ---
 
 ## Decisiones Activas
+
+### [2026-09-09] CI — el aviso de rojos advisory es un check propio, y no calla aunque su canal caiga
+
+**Contexto.** Los tres pasos de test de `qa.yml` son `continue-on-error` a propósito, así que la
+ÚNICA red que impide que un rojo pase inadvertido es el paso que avisa. Ese paso vivía dentro del
+job `tests` y su `exit 1` —puesto ahí con criterio: preferir romper antes que callar— tumbaba el
+job entero. Resultado medido sobre las 40 últimas corridas: los TRES rojos de `qa.yml` eran del
+avisador, y dos tapaban señal real (la suite de UI en rojo en la nocturna, y un `Build for testing`
+roto en `2.1`). Un `tests: fail` no distinguía «los tests fallaron» de «el canal de avisos está
+roto», y quien mira ese rojo puede concluir «es el avisador otra vez» y mergear encima de un test
+que sí fallaba.
+
+**Decisión (Jürgen).** Dos cosas, no una:
+
+1. **El aviso sale a su propio check** (`needs: tests`, `!cancelled()`), leyendo los `outcome` por
+   outputs del job. Cada check dice UNA cosa.
+2. **Canal de respaldo.** El envío vive en `.github/actions/avisar` (antes triplicado en tres
+   workflows con tres tratamientos de error distintos): si el webhook no responde, el aviso queda
+   escrito en un issue del repo con etiqueta `aviso-ci` — uno por caída, con los siguientes como
+   comentarios. **El `exit 1` NO se quita**: sigue ahí para cuando no queda ningún canal. Lo que
+   cambia es que ahora hay dos formas de no callar antes de tener que romper.
+
+**La excepción, y es deliberada.** `ping-avisador.yml` corre **sin respaldo**. Su trabajo *es*
+detectar que el canal cayó; con respaldo saldría en verde justo el único día que importa. Un
+vigilante que se rescata a sí mismo no vigila nada.
+
+**Lo que NO se decidió aquí.** Que `tests` deje de ser advisory: sigue siéndolo, y sigue esperando
+a que se resuelva el `EXC_BREAKPOINT` de SwiftData in-memory.
+
+**Gotchas medidos, no inferidos.** `always()` en un job de aviso corre también cuando el RUN se
+cancela **a mano** — comprobado cancelando el run `34418566857`, que entregó «la suite NO llegó a
+correr» siendo falso; con `!cancelled()` el mismo gesto no dice nada (`34419946276`). Y `actionlint`
+**no linta** `.github/actions/*/action.yml`, así que su verde sobre una composite action es un verde
+sobre cero ficheros (detalle en `docs/aprendizajes-tecnicos.md`). **Estado:** Activa.
 
 ### [2026-09-02] Panel — la jerarquía manda, el color informa y las tarjetas se quedan
 
