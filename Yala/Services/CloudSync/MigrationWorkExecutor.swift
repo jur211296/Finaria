@@ -618,6 +618,11 @@ final class MigrationWorkExecutor: MigrationWorkExecuting {
             switch await accountClient.migrationProgress(jwt: jwt, deviceID: deviceID, action: "reverse_complete") {
             case .ok:
                 CloudSyncBreadcrumb.reverseCompleteConfirmed()
+                // g15_01: éste es el ÚNICO punto del sistema donde una cuenta se degrada de
+                // `complete` a `groups_only`, y la reversa NO cierra sesión — así que sin este
+                // refresco nada invalidaría el tipo cacheado, y la app seguiría creyendo que lo
+                // personal vive en la nube justo después de devolverlo a iCloud.
+                await AccountKindService.shared.handleReverseCutoverCompleted()
             case .otherLeader:
                 CloudSyncBreadcrumb.reverseCompleteRejected(reason: "otherLeader")
                 throw MigrationExecutorError.notWired(effect: "completeReverseServer: otherLeader")

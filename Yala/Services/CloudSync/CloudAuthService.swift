@@ -458,6 +458,11 @@ final class CloudAuthService: NSObject {
     /// sin este borrado, un usuario B que firme después en el mismo device heredaría el email/nombre
     /// de A (el guard "solo rellenar huecos" vería datos presentes y los reusaría).
     func signOut() async {
+        // ANTES del guard a propósito: el `return` de abajo se dispara cuando el backend no está
+        // configurado (`client == nil`), y entonces todo lo que viene después no corre. El tipo de
+        // cuenta cacheado no depende del backend para ser basura una vez cerrada la sesión, así que
+        // se borra aquí y no se queda a merced de un flag. (g15_01)
+        AccountKindService.shared.handleSignOut()
         guard let client else { return }
         clearCapturedProfile()
         // `keyProvider` es credencial de SESIÓN (no del provider) → muere con el sign-out. Cubre de

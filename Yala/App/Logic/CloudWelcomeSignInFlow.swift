@@ -93,16 +93,24 @@ nonisolated enum CloudWelcomeSignInFlow {
 
     /// Ruteo del resultado de GET /account/exists. `accountFound` NO arranca nada:
     /// el caller debe pasar por `CrossAccountEntryGuardLogic` antes de adoptar.
+    ///
+    /// El `kind` viaja con `accountFound` porque es la misma respuesta: preguntar «¿existe?» y «¿de
+    /// qué tipo es?» en dos viajes abriría una ventana en la que las dos respuestas pueden discrepar.
+    /// **Es `AccountKind?` y no `AccountKind`**: un gateway anterior a g15_01 contesta sin el campo, y
+    /// eso no es un fallo de ruteo — quien decide qué asumir entonces es `AccountKindLogic.resolve`.
+    ///
+    /// Quién USA ese `kind` para elegir pantalla es el ticket `cloud-sign-in-discovers-account-kind`
+    /// (bloque [I] del ADR §7): aquí solo se transporta.
     enum ExistsRoute: Equatable {
-        case accountFound
+        case accountFound(kind: AccountKind?)
         case accountMissing
         case failed(retryable: Bool)
     }
 
     static func route(_ outcome: ExistsOutcome) -> ExistsRoute {
         switch outcome {
-        case .exists(true): .accountFound
-        case .exists(false): .accountMissing
+        case let .exists(true, kind): .accountFound(kind: kind)
+        case .exists(false, _): .accountMissing
         case .sessionExpired: .failed(retryable: true)
         case .transient: .failed(retryable: true)
         }

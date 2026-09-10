@@ -12,13 +12,34 @@ import Testing
 struct CloudWelcomeSignInFlowExistsRouteTests {
 
     @Test
-    func existsTrue_accountFound() {
-        #expect(CloudWelcomeSignInFlow.route(.exists(true)) == .accountFound)
+    func existsTrue_conKindCompleta_accountFoundLoTransporta() {
+        #expect(CloudWelcomeSignInFlow.route(.exists(true, kind: .complete)) == .accountFound(kind: .complete))
+    }
+
+    @Test
+    func existsTrue_conKindSoloGrupos_accountFoundLoTransporta() {
+        #expect(CloudWelcomeSignInFlow.route(.exists(true, kind: .groupsOnly)) == .accountFound(kind: .groupsOnly))
+    }
+
+    /// El caso que sostiene la compatibilidad: un gateway anterior a g15_01 no manda `kind`, y eso
+    /// NO puede convertirse en un error de ruteo — sería un callejón con «reintentar» en el sign-in
+    /// de todos los clientes ya publicados. La cuenta se encuentra igual; qué se asume entonces lo
+    /// decide `AccountKindLogic.resolve`, no este switch.
+    @Test
+    func existsTrue_sinKind_sigueSiendoAccountFound() {
+        #expect(CloudWelcomeSignInFlow.route(.exists(true, kind: nil)) == .accountFound(kind: nil))
     }
 
     @Test
     func existsFalse_accountMissing() {
-        #expect(CloudWelcomeSignInFlow.route(.exists(false)) == .accountMissing)
+        #expect(CloudWelcomeSignInFlow.route(.exists(false, kind: nil)) == .accountMissing)
+    }
+
+    /// Una cuenta que no existe no tiene tipo: si el servidor mandara uno, se ignora. Sin este caso,
+    /// un `kind` colado en un `exists:false` podría rutear a «cuenta encontrada».
+    @Test
+    func existsFalse_conKindDespistado_sigueSiendoAccountMissing() {
+        #expect(CloudWelcomeSignInFlow.route(.exists(false, kind: .complete)) == .accountMissing)
     }
 
     @Test

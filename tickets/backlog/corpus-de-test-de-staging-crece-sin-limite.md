@@ -1,7 +1,7 @@
 ---
 id: corpus-de-test-de-staging-crece-sin-limite
 status: backlog
-priority: medium
+priority: high
 area: "qa, cloud"
 created: 2026-09-08
 source: medido al investigar goldens-de-staging-solo-pasan-a-trozos (2026-09-08)
@@ -71,3 +71,30 @@ una investigación completa.
       vuelven a correr para dejar el número nuevo escrito.
 - [ ] El margen (cuánto del timeout consume el golden más ajustado) queda anotado donde se consulte,
       para que la próxima vez se lea en un minuto y no en un día.
+
+---
+
+## Re-medido el 2026-09-10: la fecha de caducidad ya llegó
+
+Corriendo los goldens del gateway para `backend-account-kind-complete-or-groups-only`:
+
+| | 2026-09-08 | 2026-09-10 |
+|---|---|---|
+| `split_groups` (corpus total) | — | **983 → 1 042 en una sola sesión** (+59) |
+| grupos ACTIVOS del usuario A | 530 | **631** |
+| grupos ACTIVOS del usuario B | 678 | **702** |
+| `groups.goldens.test.ts` | 25/25 (frágil, el más ajustado al 55 % de su timeout) | **15 pasan · 10 fallan** |
+
+**Los 10 rojos son TODOS timeouts** (60 s, 90 s, 120 s, 360 s) y ninguno trae línea de aserción.
+Fallan **igual corriendo el fichero solo**, así que ya no es contención entre ficheros como en
+`goldens-de-staging-solo-pasan-a-trozos`: es el corpus. A ~5 peticiones por grupo y por pull, un solo
+pull del usuario B son unas **3 500 llamadas** contra un timeout de 60 s.
+
+**Descartado que lo causara la migración de ese día** (`g15_01`, que añade un trigger a `profiles`),
+con control negativo: **desactivando el trigger, el test 2 de G2 falla exactamente igual** — mismo
+timeout de 60 000 ms. El trigger corre sobre una tabla de 6 filas; el corpus está en `group_members`
+(1 766) y `split_groups` (1 042).
+
+⇒ **Los goldens de grupos ya no dan señal**, y eso es lo que este ticket venía a evitar. Sube a
+prioridad real: hasta que el corpus se acote, un rojo ahí no distingue «el código está roto» de «el
+corpus creció otra vez».

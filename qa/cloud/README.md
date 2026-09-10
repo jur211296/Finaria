@@ -2,9 +2,9 @@
 
 <!-- INDICE:inicio — generado por scripts/indexar_doc.py, no editar a mano -->
 
-## Índice (28 entradas)
+## Índice (30 entradas)
 
-> **No hace falta leer este fichero entero** — son 113 KB. Localiza la entrada
+> **No hace falta leer este fichero entero** — son 122 KB. Localiza la entrada
 > aquí y salta a ella.
 
 - `—` [Running the RLS gate](#running-the-rls-gate)
@@ -28,6 +28,8 @@
 - `—` [I14 — UI real de migración + consent + claimAction + relaunch asistido + encendido de flags](#i14--ui-real-de-migracin--consent--claimaction--relaunch-asistido--encendido-de-flags)
 - `—` [transfer_group_ownership (G10 / D10) — batch "salir de todos mis grupos" — APLICADA EN AMBOS ENVS ✅](#transfergroupownership-g10--d10--batch-salir-de-todos-mis-grupos--aplicada-en-ambos-envs)
 - `—` [G7 — cifrado pgcrypto de columnas † de grupos (data-at-rest)](#g7--cifrado-pgcrypto-de-columnas--de-grupos-data-at-rest)
+- `2026-09-10` [g15_01 — el tipo de cuenta: `complete` o `groups_only` (2026-09-10)](#g1501--el-tipo-de-cuenta-complete-o-groupsonly-2026-09-10)
+- `2026-09-07` [g14_01 — presupuesto de grupo: UN límite por grupo (2026-09-07)](#g1401--presupuesto-de-grupo-un-lmite-por-grupo-2026-09-07)
 - `2026-07-28` [Addendum 2026-07-28 — `migrate_group` queda INERTE (Fase 1 de simplificación de Grupos)](#addendum-2026-07-28--migrategroup-queda-inerte-fase-1-de-simplificacin-de-grupos)
 - `2026-07-17` [Telemetría propia `POST /metrics` (2026-07-17 — sustituye TelemetryDeck)](#telemetra-propia-post-metrics-2026-07-17--sustituye-telemetrydeck)
 - `2026-07-16` [Google Sign-In (sesión 1 — brief `docs/modo-nube/briefs/BRIEF-GOOGLE-SIGNIN-V1.md`, 2026-07-16)](#google-sign-in-sesin-1--brief-docsmodo-nubebriefsbrief-google-signin-v1md-2026-07-16)
@@ -1593,3 +1595,71 @@ está actualizada):
 4. **El manifest sube a `canon_version: c2`**, y eso es coordinación de despliegue, no SQL: ver la nota
    del PR. Un cliente con el contrato viejo hablando con un gateway nuevo **salta** la verificación
    Merkle (guard de canon) en vez de reportar una divergencia falsa en todos sus grupos.
+
+## g15_01 — el tipo de cuenta: `complete` o `groups_only` (2026-09-10)
+
+**Aplicada en STAGING y en PRODUCCIÓN el 2026-09-10, en ese orden.** Fichero:
+`qa/cloud/g15_01_account_kind.sql`. Ticket: `backend-account-kind-complete-or-groups-only` ·
+ADR 2026-09-09 «Sesiones — dos ejes» §11.
+
+**Y con esto se cierra el bloqueo que arrastraban g13_04, g13_05 y g14_01**: la premisa de que «no hay
+credencial de DDL de staging» **era falsa el 2026-09-10** — el conector MCP lista staging
+(`fostjbbwstyuunmmefuk`) y su `execute_sql` entra como `postgres`. Lo que cambió de lado es producción,
+que ahora responde de solo lectura por `execute_sql` **pero sigue aceptando DDL y DML por
+`apply_migration`** (verificado con control positivo: crear schema + tabla + fila, leerlos y borrarlos).
+⇒ el mapa de acceso **se mide al empezar cada sesión**, no se hereda de un documento.
+
+Qué añade: `profiles.kind` (`text not null default 'groups_only'`, check de dominio) + el trigger
+`profiles_kind_guard` + `claim_account` con `p_kind` + la degradación dentro de `reverse_complete`.
+
+**md5 nuevos** (`md5(prosrc)`, **idénticos en staging y producción — paridad byte a byte verificada**):
+
+```
+--   claim_account(text,text,boolean,text)   8668a13c3d452fd5f192a192dd415bbd
+--   migration_progress(text,text)           6afd2433191c15f7fdb90984636a2f7c
+--   tg_profiles_kind_guard()                06fc964c8bb5490d964788bfaa16bf38
+```
+
+Los de partida, que la migración exige y que también eran idénticos en ambos entornos:
+`claim_account` `41cad9ea61307687981cd9e9f8e99640` · `migration_progress`
+`cfb6e415d0f731639709e8cbd0cfeaf9`.
+
+**Cuatro cosas que hay que saber antes de tocarla:**
+
+1. **`claim_account` cambió de FIRMA, así que hay `drop function`.** `create or replace` con otra lista
+   de parámetros crea una SOBRECARGA, no reemplaza — y con las dos vivas, una llamada de PostgREST con
+   3 argumentos nombrados casa con ambas y devuelve **PGRST203**: el claim entero caído. La migración
+   dropea la de 3 args, re-otorga los cinco grants y **verifica que solo queda una firma**.
+2. **El guard de `kind` es un token de transacción, no un `'on'`.** `set_config(..., is_local => false)`
+   dejaría el GUC pegado al backend del pool de PostgREST y la siguiente petición —de cualquier
+   usuario— heredaría el guard abierto, sin que ningún test lo notara. Con `txid_current()`, un GUC
+   filtrado a otra transacción queda inerte por construcción.
+3. **NO exime a `postgres`, y se intentó.** Con `if session_user = 'postgres' then return new` el guard
+   quedaba ABIERTO en el único banco de pruebas que hay: `set local role authenticated` cambia
+   `current_user` pero **no** `session_user`, así que desde una conexión de administrador —que es como
+   se aplican y se prueban las migraciones— pasaban los cuatro controles negativos. Para reparar `kind`
+   a mano, abre el guard con un `set_config` como hace el backfill, o desactiva el trigger.
+4. **El backfill corre SOLO en la aplicación que crea la columna.** No es un reconciliador, y tratarlo
+   como tal hace daño: medido en staging el 2026-09-10, el usuario B de los goldens quedó
+   `kind='groups_only'` con `reverted_at` NULO —`reverse_complete` lo degradó y un `reverse_claim`
+   posterior reseteó `reverted_at` (§h.6) sin tocar `kind`—, y la fórmula del backfill lee ese estado
+   como `complete`. Re-aplicarla sin el guard le habría devuelto lo personal a la nube deshaciendo una
+   degradación legítima, en silencio. **`kind` es la verdad; la fórmula solo la inicializa.**
+
+**Verificación por el wire** (`gateway/test/account.goldens.test.ts`, goldens 28-32, staging real): el
+ciclo entero —no existe → alta de grupos → promoción— más el **control negativo del trigger**: el dueño
+hace `PATCH /rest/v1/profiles {"kind":"complete"}` con su propio JWT y recibe ≥400. Ese golden es el que
+sostiene «escribible solo por RPC»; sin él, la columna sería auto-servible y el ticket no valdría nada.
+
+**El fixture de la cuenta `groups_only` es el usuario C** (`i5-user-c@test.yala`, credenciales en
+`~/Secrets/yala-supabase-test/test-users.env`), creado el 2026-09-10 porque los cinco perfiles de
+staging eran `complete` y ninguno se puede degradar para fabricar el caso. Nace SIN fila en `profiles`,
+así que recorre el ciclo entero por el wire. El alta por `/auth/v1/signup` **no funciona** en staging
+(«Email address is invalid», con TLD real y sin él): se creó por SQL, como A y B, y hubo que rellenar
+a `''` las cuatro columnas de token que GoTrue no tolera en NULL (`confirmation_token`,
+`recovery_token`, `email_change`, `email_change_token_new`) o el login devuelve **500 «Database error
+querying schema»**. El golden 28 hace `ctx.skip()` si `profiles[subC]` ya existe; para re-armarlo:
+
+```sql
+delete from public.profiles where id = (select id from auth.users where email='i5-user-c@test.yala');
+```
