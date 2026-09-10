@@ -8,33 +8,28 @@
 # nunca corrió, y lo único que mantuvo el historial limpio desde el 2026-09-02 fue
 # que las sesiones se acordaban. El 2026-09-08 una se olvidó.
 #
-# Qué bloquea: ATRIBUCIÓN. Trailers y firmas que digan que esto lo escribió una IA.
+# Qué bloquea: ATRIBUCIÓN. Trailers, firmas, prosa y el autor del commit.
 #
 # Qué NO bloquea, y es deliberado (decisión de Jürgen, 2026-09-09): la MENCIÓN a
 # secas de «Claude» o «Anthropic». El hook global sí la prohíbe fuera de los repos
-# del sistema, y aplicarlo aquí tal cual rechazaría 222 de los 3348 commits de este
+# del sistema, y aplicarlo aquí tal cual rechazaría 216 de los 3348 commits de este
 # repo — todos legítimos: citan rutas del propio árbol (`CLAUDE.md`,
 # `.claude/rules/testing.md`, `.claude/agent-memory/`). En Yala el sistema de Claude
 # también es objeto de trabajo, como en `casa`, `~/.claude` y `tim`.
 #
-# Enlaza con la confidencialidad del CLAUDE.md global: no se revela el uso de IA al
-# cliente ni al equipo, tampoco en el historial. Un trailer es permanente y viaja en
-# cualquier clon — hoy ya viajan 768 (23 %), el más antiguo del 2026-01-13.
+# Tampoco bloquea, y también a propósito:
+#   · «IA» / «AI» a secas — Yala TIENE features de IA (el chat, la categorización) y
+#     sus commits las nombran. Prohibirlo daría falsos positivos todas las semanas.
+#   · Nombres de modelo sueltos sin Claude («Opus», «Sonnet»): palabras comunes.
+#   · Ofuscación deliberada (`claude[.]ai`, `claude . ai`). Esto es un candado contra
+#     el OLVIDO, no contra un adversario: quien quiera saltárselo tiene `--no-verify`.
 #
 # Su banco de pruebas es `qa/scripts/commit-msg-test.sh`, y lo corre el CI en cada
 # push (job `coverage-index`). Si tocas los patrones de aquí, tiene que seguir en
 # verde: incluye los casos que impiden "arreglarlo" a base de dejar de mirar cosas.
-#
-# Si algún día hace falta saltárselo, es `git commit --no-verify`. Que exista la
-# salida no la hace normal: si se usa a menudo, la regla está mal puesta.
 
 MSG_FILE="$1"
 [ -f "$MSG_FILE" ] || exit 0
-
-# El texto del commit sin las líneas de comentario que git añade. Importa: un merge
-# lista los ficheros del conflicto como comentarios, y ahí sí aparecen rutas
-# `.claude/…` que no son atribución (2 casos reales en la historia).
-CUERPO=$(grep -v '^#' "$MSG_FILE" 2>/dev/null)
 
 fallo() {
   echo "" >&2
@@ -51,26 +46,66 @@ fallo() {
   exit 1
 }
 
+# --- El autor del commit, que no viaja en el mensaje ---
+#
+# `git commit --author="Claude <noreply@anthropic.com>"` deja atribución PERMANENTE
+# en la cabecera —más visible que un trailer— y el hook no la vería nunca mirando
+# solo `$1`. Sí la ve preguntándosela a git, medido el 2026-09-09.
+IDENT="$(git var GIT_AUTHOR_IDENT 2>/dev/null)$(git var GIT_COMMITTER_IDENT 2>/dev/null)"
+printf '%s' "$IDENT" | grep -qiE '(claude|anthropic)' \
+  && fallo "el autor o el committer del commit es Claude o Anthropic."
+
+# --- Qué parte del fichero es el mensaje de verdad ---
+#
+# 1 · Todo lo que va tras la línea de tijera lo TIRA git, así que aquí tampoco cuenta.
+#     Importa de verdad: con `git commit -v` el diff se pega ahí SIN comentar, y el
+#     diff de este mismo fichero contiene `claude.ai` y `Co-Authored-By`. Sin este
+#     corte, tocar el candado con `-v` hacía que el candado se rechazara a sí mismo.
+# 2 · Las líneas de comentario que git añade llevan `#` MÁS un espacio (o van vacías,
+#     o son el `#\t<fichero>` de un merge con conflictos). Se quitan. Lo que NO se
+#     quita es `#Co-Authored-By:` pegado: el cleanup por defecto de `git commit -m`
+#     conserva esa línea en el mensaje final —medido con `git stripspace`— así que
+#     esconder ahí la firma funcionaba.
+# 3 · Un trailer puede venir PLEGADO (la continuación empieza por espacio). Git lo
+#     vuelve a unir y `git interpret-trailers` lo materializa como trailer real, así
+#     que aquí se despliega antes de mirar nada.
+CUERPO=$(
+  sed '/^.\{0,2\}[[:space:]]*-\{2,\}[[:space:]]*>8[[:space:]]*-\{2,\}/q' "$MSG_FILE" 2>/dev/null \
+  | grep -vE '^#([[:space:]].*)?$' \
+  | awk '{ if (NR>1 && $0 ~ /^[[:space:]]+[^[:space:]]/) printf " %s", $0; else printf "%s%s", (NR>1 ? "\n" : ""), $0 } END { print "" }'
+)
+
+# Prefijo tolerado al principio de línea: sangría, viñetas y comillas de cita. Sin
+# esto, un `- Co-Authored-By: …` o un `#Co-Authored-By: …` se colaban, y el 37 % de
+# los cuerpos de commit de este repo usan viñetas `- `.
+P='^[[:space:]]*[-*>|#]*[[:space:]]*'
+
 # 1 · Un trailer cuyo NOMBRE menciona a Claude o Anthropic.
-#     Caza `Claude-Session:`, que ya se colo 7 veces y que el hook global NO ve:
-#     no es un co-authored-by y `claude.ai` no casa con su patron `claude.com/…`.
-printf '%s' "$CUERPO" | grep -qiE '^[[:space:]]*[A-Za-z-]*(claude|anthropic)[A-Za-z-]*[[:space:]]*:' \
+#     Caza `Claude-Session:`, que ya se coló 7 veces y que el hook global NO ve: no es
+#     un co-authored-by y `claude.ai` no casa con su patrón `claude.com/…`.
+printf '%s' "$CUERPO" | grep -qiE "$P"'[A-Za-z0-9_-]*(claude|anthropic)[A-Za-z0-9_-]*[[:space:]]*:' \
   && fallo "lleva un trailer que nombra a Claude o Anthropic como autor."
 
-# 2 · Un trailer de coautoria o firma cuyo VALOR menciona a Claude o Anthropic.
-#     Coautoria HUMANA no se toca: `Co-Authored-By: Jürgen <…>` pasa.
-printf '%s' "$CUERPO" | grep -qiE '^[[:space:]]*(co-authored-by|assisted-by|signed-off-by|reviewed-by|helped-by|generated-by|committed-by)[[:space:]]*:.*(claude|anthropic)' \
+# 2 · Un trailer de coautoría, firma o crédito cuyo VALOR menciona a Claude/Anthropic.
+#     Coautoría HUMANA no se toca: `Co-Authored-By: Jürgen <…>` pasa.
+printf '%s' "$CUERPO" | grep -qiE "$P"'(co-?authored-by|assisted-by|signed-off-by|reviewed-by|helped-by|generated-by|generated-with|written-by|authored-by|created-by|made-by|committed-by|thanks-to)[[:space:]]*:.*(claude|anthropic)' \
   && fallo "lleva un trailer que atribuye el commit a Claude."
 
-# 3 · Dominios y correos de Anthropic. Medido sobre los 3348 commits del repo: los
-#     13 que citan `claude.ai` y los 768 que citan `anthropic.com` son TODOS firma de
-#     IA — cero usos legitimos. `CLAUDE.md` no casa con esto.
+# 3 · Dominios y correos de Anthropic. Medido sobre los 3348 commits del repo: los 13
+#     que citan `claude.ai` y los 768 que citan `anthropic.com` son TODOS firma de IA
+#     — cero usos legítimos. `CLAUDE.md` no casa con esto.
 printf '%s' "$CUERPO" | grep -qiE '(claude|anthropic)\.(ai|com)' \
   && fallo "cita un dominio de Anthropic (claude.ai / claude.com / anthropic.com)."
 
-# 4 · La firma generada, en cualquiera de sus formas.
-printf '%s' "$CUERPO" | grep -qiE 'generated (with|by) .{0,30}(claude|anthropic)' \
+# 4 · La firma generada, en inglés y en español, con la ventana ancha: la fórmula
+#     larga («generated with the official command line coding assistant from Claude»)
+#     mide 47 caracteres hasta el nombre.
+printf '%s' "$CUERPO" | grep -qiE '(generated|created|written|authored) (with|by) .{0,60}(claude|anthropic)' \
   && fallo "menciona a Claude como generador del commit."
+printf '%s' "$CUERPO" | grep -qiE '(generad|cread|escrit|redactad)[oa]s? (con|por) .{0,60}(claude|anthropic)' \
+  && fallo "dice que el commit lo escribió Claude."
+printf '%s' "$CUERPO" | grep -qiE '(lo (ha )?(escrito|generado|redactado|creado)|escrito por|generado por) .{0,30}(claude|anthropic)' \
+  && fallo "atribuye el commit a Claude en el texto."
 
 # 5 · El emoji de robot que acompaña a esa firma.
 printf '%s' "$CUERPO" | grep -q '🤖' \

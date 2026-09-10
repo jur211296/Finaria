@@ -54,13 +54,54 @@ Las dos diferencias son deliberadas y están medidas sobre los 3348 commits del 
   árbol. Decisión de Jürgen (2026-09-09): en Yala el sistema de Claude también es objeto
   de trabajo, así que se permite nombrarlo. Lo que no pasa es la **firma**.
 
+## Tres cosas que no son el mensaje, y el hook las mira igual
+
+Las cazó una lente adversarial el 2026-09-09, y las tres estaban abiertas:
+
+- **El AUTOR del commit no viaja en el mensaje.** `git commit --author="Claude
+  <noreply@anthropic.com>"` deja atribución permanente en la cabecera —más visible que
+  un trailer— y `$1` no la contiene. El hook se la pide a git con
+  `git var GIT_AUTHOR_IDENT`, que en un `commit-msg` ya devuelve la identidad efectiva.
+- **Lo que va tras la línea de tijera lo tira git**, así que aquí tampoco cuenta. No es
+  teórico: con `git commit -v` el diff se pega ahí **sin comentar**, y el diff de este
+  mismo fichero contiene `claude.ai` y `Co-Authored-By`. Sin ese corte, tocar el candado
+  con `-v` hacía que **el candado se rechazara a sí mismo**.
+- **`grep -v '^#'` borraba de más.** Los comentarios que git genera llevan `#` **más un
+  espacio** (o son el `#\t<fichero>` de un merge). Una línea `#Co-Authored-By: …` pegada
+  **sobrevive al `git commit -m`** —el cleanup por defecto es `whitespace`, que no quita
+  comentarios; medido con `git stripspace`— así que esconder ahí la firma funcionaba.
+
+Y el prefijo de línea tolera viñetas y comillas de cita: **el 37 % de los cuerpos de
+commit de este repo usan `- `**, y un guion delante desactivaba el ancla `^[[:space:]]*`.
+
+## Aviso: documentar el candado choca con el candado
+
+Pasó en el primer uso. El commit que endurecía este hook explicaba que «el diff de este
+fichero contiene claude.ai» — y salió **RECHAZADO** por el patrón de dominios, que es
+justo el que caza las URLs de sesión.
+
+No es un defecto y no se relaja: el patrón 3 es el que cierra las 13 URLs de sesión del
+historial. **La salida es escribir el mensaje sin el literal** («el dominio de las
+sesiones», «el patrón de dominios»). En el ticket y en esta regla sí se puede citar, que
+son ficheros y no pasan por el hook.
+
+## Lo que NO se bloquea, y es una decisión
+
+No es que se haya olvidado. Cerrar estas tres haría más daño que bien:
+
+| | Por qué se queda fuera |
+|---|---|
+| «IA» / «AI» a secas | Yala **tiene** features de IA (el chat, la categorización) y sus commits las nombran. Sería un falso positivo por semana |
+| «Opus», «Sonnet» sueltos | Palabras comunes; sin «Claude» al lado no distinguen nada |
+| Ofuscación (`claude[.]ai`, `claude . ai`) | Esto es un candado contra el **olvido**, no contra un adversario. Quien quiera saltárselo tiene `--no-verify`, y que exista esa salida es a propósito |
+
 ## Si tocas los patrones, el banco tiene que seguir en verde
 
 ```bash
-bash qa/scripts/commit-msg-test.sh      # 17 casos + divergencia con el global
+bash qa/scripts/commit-msg-test.sh      # 28 casos + divergencia con el global
 ```
 
-Lo corre el CI en cada push (job `coverage-index`). Sus casos 11-17 son los que impiden
+Lo corre el CI en cada push (job `coverage-index`). Sus casos legítimos son los que impiden
 "arreglar" un fallo endureciendo a lo bruto: un `grep -qi claude` los tumba, y con ellos
 el derecho a citar `CLAUDE.md` en un mensaje.
 

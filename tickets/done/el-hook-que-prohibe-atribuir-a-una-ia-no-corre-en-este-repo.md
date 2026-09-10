@@ -157,6 +157,44 @@ Yala los caza por dominio; el global solo los pillaba de rebote, por su nivel 2.
    posición **408**. Medía nada y salía verde. El corpus se elige ahora por contenido, y el
    banco falla si no trae ni un caso de atribución.
 
+## La review adversarial: 28 evasiones, 11 cerradas
+
+Una lente independiente intentó romper el hook y midió **28 falsos negativos**. No se
+cerraron todos: se refutó uno a uno por probabilidad real y por lo que costaría.
+
+**Las tres que importaban de verdad, y ninguna estaba en el mensaje:**
+
+1. **El autor del commit.** `git commit --author="Claude <noreply@anthropic.com>"` deja
+   atribución **permanente en la cabecera** —más visible que un trailer— y el hook no la
+   veía: `$1` solo trae el mensaje. La lente lo dio por incerrable «por construcción».
+   Medido después: `git var GIT_AUTHOR_IDENT` **sí** devuelve la identidad efectiva desde
+   dentro de un `commit-msg`. Cerrado.
+2. **El diff de `git commit -v` se pega en el mensaje SIN comentar**, tras la línea de
+   tijera. Y el diff de este mismo fichero contiene `claude.ai` y `Co-Authored-By`: sin
+   cortar por la tijera, **tocar el candado con `-v` hacía que el candado se rechazara a
+   sí mismo**. Es un falso positivo, no un falso negativo, y lo habría encontrado el
+   primero que editara el hook.
+3. **`grep -v '^#'` borraba de más.** Los comentarios de git llevan `#` **más un
+   espacio**; una línea `#Co-Authored-By: …` pegada **sobrevive al `git commit -m`**
+   (el cleanup por defecto es `whitespace`, medido con `git stripspace`). Esconder la
+   firma ahí funcionaba.
+
+Y una de volumen: el ancla `^[[:space:]]*` se desactivaba con un guion delante, y **el
+37 % de los cuerpos de commit de este repo usan viñetas `- `**.
+
+**Lo que se dejó abierto a propósito**, porque cerrarlo haría más daño:
+
+| | Por qué |
+|---|---|
+| «IA» / «AI» a secas | Yala **tiene** features de IA y sus commits las nombran: falso positivo semanal |
+| «Opus», «Sonnet» sueltos | Palabras comunes; sin «Claude» al lado no distinguen nada |
+| Ofuscación (`claude[.]ai`) | Es un candado contra el olvido, no contra un adversario — quien quiera tiene `--no-verify` |
+
+**Re-medido tras endurecer**, sobre los 3348 mensajes: mismos **774** rechazos, mismas
+**0** fugas y **0** falsos positivos nuevos. El banco pasa de 17 a **28 casos**, dos de
+ellos sobre el autor —que no se pueden montar con un fichero de mensaje y se montan con
+el entorno.
+
 ## Lo que queda abierto
 
 - **El candado vive en el árbol de trabajo**, así que una rama que no traiga

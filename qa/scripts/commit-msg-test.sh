@@ -155,11 +155,102 @@ fix(gate): el hook PreToolUse de Claude Code solo ve los commits de la herramien
 Un commit desde la Terminal se lo saltaba entero.
 EOF
 
+# ---------- lo que cazó la lente adversarial del 2026-09-09 ----------
+#
+# 28 evasiones medidas. Se cierran las plausibles —las que saldrían de reformular el
+# mensaje, no de querer engañar al hook— y se dejan fuera, a propósito, las de la
+# cabecera del hook: «IA»/«AI» a secas, los nombres de modelo sueltos y la ofuscación
+# deliberada. Cerrar las primeras rompería este repo, que tiene features de IA.
+
+caso 18 atribucion RECHAZA "el trailer detrás de una viñeta (37 % de los cuerpos las usan)" <<'EOF'
+docs: al día
+
+- Co-Authored-By: Claude Opus 5 (1M context)
+- Claude-Session: session_01ABCdefGHIjklMNOpqrs
+EOF
+
+caso 19 atribucion RECHAZA "el trailer escondido tras un '#' pegado" <<'EOF'
+docs: al día
+
+#Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+EOF
+
+caso 20 atribucion RECHAZA "el trailer PLEGADO, que git vuelve a unir" <<'EOF'
+docs: al día
+
+Co-Authored-By:
+ Claude Opus 5 (1M context) <opus5@users.noreply.github.com>
+EOF
+
+caso 21 atribucion RECHAZA "Generated-With: con guion (no estaba en la lista)" <<'EOF'
+docs: al día
+
+Generated-With: Claude Opus 5 (1M context)
+EOF
+
+caso 22 atribucion RECHAZA "la firma en español" <<'EOF'
+docs: al día
+
+Generado con Claude Code (Opus 5).
+EOF
+
+caso 23 atribucion RECHAZA "atribución en prosa, en español" <<'EOF'
+docs: al día
+
+Escrito por Claude, revisado por Jürgen.
+EOF
+
+caso 24 atribucion RECHAZA "la fórmula larga: 47 caracteres hasta el nombre" <<'EOF'
+docs: al día
+
+Generated with the official command line coding assistant from Claude.
+EOF
+
+caso 25 legitimo PASA "git commit -v: el diff va tras la tijera y no cuenta" <<'EOF'
+fix(hooks): endurece el candado
+
+# ------------------------ >8 ------------------------
+diff --git a/.githooks/commit-msg b/.githooks/commit-msg
++printf '%s' "$CUERPO" | grep -qiE '(claude|anthropic)\.(ai|com)'
++Co-Authored-By: ejemplo dentro del diff
+EOF
+
+caso 26 legitimo PASA "viñeta con dos puntos que NO es un trailer" <<'EOF'
+fix(qa): dos cosas
+
+- `.claude/rules/testing.md`: la regla, y el criterio que separa
+  las dos familias de test
+- CLAUDE.md: la sección de hooks
+EOF
+
+TOTAL_ESPERADO=27
+
+# --- el autor del commit, que no viaja en el mensaje ---
+# `git commit --author=` no toca `$1`, así que este caso no se puede montar con un
+# fichero: se monta con el entorno, que es de donde `git var` saca la identidad.
+autor_caso() {
+    local n="$1" esperado="$2" desc="$3" nombre="$4" correo="$5"
+    printf 'docs: al día\n' > "$TMP/msg-$n.txt"
+    local rc
+    GIT_AUTHOR_NAME="$nombre" GIT_AUTHOR_EMAIL="$correo" \
+    GIT_COMMITTER_NAME="$nombre" GIT_COMMITTER_EMAIL="$correo" \
+        bash "$HOOK" "$TMP/msg-$n.txt" >/dev/null 2>&1; rc=$?
+    local real="PASA"; [ $rc -ne 0 ] && real="RECHAZA"
+    if [ "$real" = "$esperado" ]; then
+        ok=$((ok+1)); printf '  ok   %-2s %-10s %s\n' "$n" "[autor]" "$desc"
+    else
+        ko=$((ko+1)); printf '  FALLO %-2s %-10s %s (esperaba %s, obtuve %s)\n' "$n" "[autor]" "$desc" "$esperado" "$real"
+    fi
+}
+
+autor_caso 27 RECHAZA "--author falsificado: atribución en la cabecera" "Claude Opus 5" "noreply@anthropic.com"
+autor_caso 28 PASA    "el autor humano de siempre" "Jürgen Schmidt" "jur211296@gmail.com"
+
 TOTAL=$((ok+ko))
 echo
 # Falla CERRADO: una lista de casos vacía no es un banco en verde.
-if [ "$TOTAL" -lt 17 ]; then
-    echo "FALLO: se esperaban 17 casos y solo corrieron $TOTAL."
+if [ "$TOTAL" -lt 28 ]; then
+    echo "FALLO: se esperaban 28 casos y solo corrieron $TOTAL."
     exit 1
 fi
 echo "casos del hook de Yala: $ok/$TOTAL"
