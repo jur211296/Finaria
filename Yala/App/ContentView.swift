@@ -1768,6 +1768,15 @@ private struct WelcomeFlowModifier: ViewModifier {
                         // esa función también monta NO hace falta — el mount neutro exige que no haya
                         // archivo de store, así que en este camino no puede haber datos que confirmar.
                         hasShownWelcomeChooser = true
+                        // **El anti-bucle del neutro solo-grupos** (paso 5 del rediseño), y va JUNTO a la
+                        // línea de arriba porque hace exactamente su mismo trabajo sobre el otro
+                        // predicado de mount. Este callback es el punto ÚNICO donde se decide que un
+                        // destino necesita el espejo (`WelcomeMirrorRelaunchLogic.shouldRelaunch`), y un
+                        // device solo-grupos que pide restaurar giraría para siempre sin esto: marca
+                        // puesta ⇒ mount neutro ⇒ «reabre Yala» ⇒ mount neutro otra vez. Es el bucle que
+                        // la caducidad por `hasShownWelcomeChooser` cierra para la marca hermana y que
+                        // ésta, al no caducar, tiene que cerrar aquí.
+                        StorageModePersistence.clearGroupsOnlyNeutralMountIfPrimary()
                         if destination == .privateOnboarding {
                             OnboardingResetHelper.clearResidualPreferencesForFreshStart()
                         }

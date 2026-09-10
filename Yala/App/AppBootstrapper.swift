@@ -1093,7 +1093,8 @@ final class AppBootstrapper {
         if SwiftDataConfiguration.shouldOfferICloudRestart(
             mountedDecision: SwiftDataConfiguration.personalStoreMountedDecision,
             mountedWithMirroring: SwiftDataConfiguration.containerWasCreatedWithCloudKit(),
-            iCloudAvailableNow: SwiftDataConfiguration.isICloudAvailable()) {
+            iCloudAvailableNow: SwiftDataConfiguration.isICloudAvailable(),
+            groupsOnlySessionArmed: StorageModePersistence.isGroupsOnlyNeutralMountArmed()) {
             iCloudMismatchAlreadyDetected = true
             #if DEBUG
             print("AppBootstrapper: iCloud mismatch — container was local, iCloud now available")

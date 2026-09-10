@@ -89,6 +89,19 @@ struct FullModeActivationView: View {
     /// expandimos el TabBar. Las TX virtuales de gastos pre-existentes ya están
     /// creadas por el bridge automático (modelo M5) — no requiere import.
     private func completeFullActivation() {
+        // **Se levanta el neutro durable de solo-grupos** (paso 5 del rediseño). Activar Yala completo ES
+        // «ya elegí dónde viven mis datos personales» (decisión de Jürgen, 2026-09-09), y a partir de aquí
+        // el store personal vuelve a la tabla de mounts normal: el arranque siguiente adjunta el espejo si
+        // hay iCloud. Sin esta línea el device se quedaría montando neutro para siempre y el usuario que
+        // acaba de activar Yala completo no sincronizaría nada.
+        //
+        // **Gateado por sesión secundaria, igual que los dos sitios que la ARMAN.** En secundaria el
+        // `UserDefaults` es el del DUEÑO: si él es solo-grupos y la invitada activa Yala completo (que en
+        // secundaria ocurre en memoria, ver el guard de arriba), desarmar aquí le devolvería el espejo al
+        // dueño en su próximo arranque — o sea le causaría el bug de este ticket desde la sesión de otra
+        // persona. La simetría es la regla: quien no arma, no desarma.
+        StorageModePersistence.clearGroupsOnlyNeutralMountIfPrimary()
+
         let sync = PreferenceSyncService.shared
         // M1 · frontera de cuenta. Este `set` escribe la key del modo por `PreferenceSyncService`
         // —que en `.localOnly` (sesión secundaria) sigue escribiendo el ESPEJO LOCAL, o sea el
@@ -113,6 +126,7 @@ struct FullModeActivationView: View {
             forKey: TabBarConfiguration.storageKey
         )
         sessionState.selectMainTab(.panel)
+
 
         onComplete()
     }

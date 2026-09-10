@@ -297,7 +297,7 @@ struct SecondaryOwnerDomainWiringTests {
         // El guard está en la CABECERA de `writePreferences`, o sea antes de la primera escritura. Un
         // `if` alrededor de una sola línea vuelve a dejar cinco fuera.
         let write = try Self.body(
-            of: "isSecondarySession: Bool = SecondarySessionStore.isActive()) -> Bool {",
+            of: "defaults: UserDefaults = .standard) -> Bool {",
             in: organizer)
         let guardIdx = try #require(write.range(of: "guard !isSecondarySession"), """
             `writePreferences` perdió su guard de cabecera: las seis escrituras vuelven a caer en el \
@@ -319,7 +319,7 @@ struct SecondaryOwnerDomainWiringTests {
         // El inventario publicado y lo que la función escribe tienen que ser lo MISMO. Sin esto, alguien
         // puede añadir una séptima escritura sin tocar `writtenKeys` y los tests que se alimentan de ese
         // inventario —el control positivo de `GroupsOrganizerNoWriteTests`— no la cubrirían nunca.
-        #expect(GroupsOrganizerOnboarding.writtenKeys.count == 6, """
+        #expect(GroupsOrganizerOnboarding.writtenKeys.count == 7, """
             el inventario del alta cambió de tamaño (\(GroupsOrganizerOnboarding.writtenKeys.count)). \
             Decide explícitamente si la escritura nueva entra, en vez de dejarla aparecer en silencio.
             """)

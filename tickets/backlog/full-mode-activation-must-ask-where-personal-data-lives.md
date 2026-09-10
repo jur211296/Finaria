@@ -32,6 +32,15 @@ entra por «Primera vez» (las dos cards: «Tu cuenta en tu iCloud privado» / �
 - Los datos aterrizan en el store que esté montado. Por `groups-only-second-launch-mounts-icloud-mirror`,
   desde la segunda apertura ese store lleva el espejo de iCloud con lo que hubiera en el Apple ID ⇒ el
   onboarding «completo» corre sobre datos viejos sin el alert de «Detectamos datos previos».
+
+  > **Esa premisa CAMBIÓ el 2026-09-10** (mitad 1 de `groups-only-second-launch-mounts-icloud-mirror`):
+  > una sesión solo-grupos ya monta sin espejo en todos los arranques, así que el onboarding de aquí
+  > **ya no corre sobre datos viejos bajados solos**. Lo que este ticket arregla sigue vivo y sigue
+  > siendo `high`, pero el daño cambia de forma: hoy `completeFullActivation` **levanta** el neutro
+  > (`StorageModePersistence.clearGroupsOnlyNeutralMount()`), así que el espejo se adjunta en el
+  > arranque siguiente **sin preguntar nada** — el histórico del Apple ID le cae encima al reabrir, no
+  > antes. El chooser de este ticket es justo lo que tiene que decidirlo, y quien lo implemente debe
+  > mover ese desarme a la rama «privado» en vez de dejarlo incondicional.
 - 32 strings `groups.nudge.*` en `Yala/Resources/es.lproj/Localizable.strings` (y sus 15 hermanos)
   empujan hacia esta pantalla con el copy «Activar Yala completo».
 

@@ -180,7 +180,8 @@ struct ICloudCorpusWipeArmTests {
 
         #expect(SwiftDataConfiguration.shouldMountNeutralDurable(
             neutralMountArmed: StorageModePersistence.isNeutralMountArmed(d),
-            hasShownWelcomeChooser: false))
+            hasShownWelcomeChooser: false, groupsOnlySessionArmed: false,
+            persistedMode: .icloud, mirrorOffArmed: false))
         #expect(SwiftDataConfiguration.personalStoreDecision(
             storageMode: .icloud, mirrorOffArmed: false, iCloudAvailable: true,
             freshInstall: false,
@@ -199,7 +200,8 @@ struct ICloudCorpusWipeArmTests {
         StorageModePersistence.armICloudCorpusWipe(d)
         #expect(!SwiftDataConfiguration.shouldMountNeutralDurable(
             neutralMountArmed: StorageModePersistence.isNeutralMountArmed(d),
-            hasShownWelcomeChooser: true))
+            hasShownWelcomeChooser: true, groupsOnlySessionArmed: false,
+            persistedMode: .icloud, mirrorOffArmed: false))
     }
 
     @Test("desarmar limpia los DOS: el arm y el neutro que puso")

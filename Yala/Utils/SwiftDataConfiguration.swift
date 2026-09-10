@@ -293,11 +293,43 @@ enum SwiftDataConfiguration {
     /// —lo acaba de crear el remonte del swap— y lo que autoriza el neutro es que este device escribió la
     /// marca al vaciarse. Colapsarlos obligaría a soltar el primer término y con él la promesa de
     /// no-regresión de R2.
+    ///
+    /// **R5 · el TERCER término, y no lleva la caducidad de los otros dos** (paso 5 del rediseño de
+    /// sesiones). Una sesión SOLO-GRUPOS no tiene sesión privada (ADR §2), así que su store personal monta
+    /// neutro en TODOS los arranques hasta que el usuario elija lo personal — no un arranque, como los dos
+    /// términos de arriba. Va en `||` y no como cuarto parámetro de la conjunción por eso mismo: es un
+    /// hecho distinto con su propia evidencia y su propia vida.
+    ///
+    /// **Por qué `hasShownWelcomeChooser` no puede gatearlo.** `onSelectPrivateAccount` marca ese flag en
+    /// el acto, antes de escribir nada, y desde ahí se alcanza el alta solo-grupos sin volver al Welcome:
+    /// el onboarding privado ofrece la card «Solo grupos», que entra por `startGroupsOnlyBranch` a la
+    /// misma cadena del organizador. Ese recorrido llega a `writePreferences` con el flag ya en `true`, y
+    /// gatear aquí dejaría su neutro inerte y el bug del ticket vivo. El anti-bucle que la
+    /// caducidad daba se sustituye por el desarme explícito en `onNeedsMirrorRelaunch` — ver el docblock
+    /// de `StorageModePersistence.groupsOnlyNeutralMountKey`, que lo desarrolla entero.
+    /// **El término nuevo va CONFINADO a `.icloud` sin armar, igual que sus dos hermanos, y no es
+    /// simetría cosmética: sin ese confinamiento abre dos daños medidos.**
+    ///
+    ///  · **La ventana SERIO-1 del cutover.** `.cloud && !mirrorOffArmed` es un estado legítimo y
+    ///    transitorio (el par no se puede escribir atómico), y el contrato dice que ahí el mirror tiene
+    ///    que REMONTAR para que el `CloudMigrationMarker` llegue a exportar. Un término que devuelve
+    ///    `true` incondicional lo impide: saldría `.neutralNoMirror`, el marcador no exportaría jamás y
+    ///    la migración quedaría enclavada.
+    ///  · **La reversa.** «Volver a iCloud» repone `.icloud` y quita `mirrorOffArmed`; sin confinar, una
+    ///    marca superviviente de una etapa solo-grupos anterior reviviría ahí y apagaría el espejo **para
+    ///    siempre**, en un device donde ya no queda Welcome ni activación que lo desarme.
+    ///
+    /// Confinado, la marca es INERTE en cuanto el device sale de `.icloud` virgen, que es exactamente
+    /// cuando deja de ser «no ha elegido nada».
     static func shouldMountNeutralDurable(
         neutralMountArmed: Bool,
-        hasShownWelcomeChooser: Bool
+        hasShownWelcomeChooser: Bool,
+        groupsOnlySessionArmed: Bool,
+        persistedMode: StorageMode,
+        mirrorOffArmed: Bool
     ) -> Bool {
-        neutralMountArmed && !hasShownWelcomeChooser
+        if groupsOnlySessionArmed && persistedMode == .icloud && !mirrorOffArmed { return true }
+        return neutralMountArmed && !hasShownWelcomeChooser
     }
 
     /// SERIO 1 del review adversarial (ciclo C): `storageMode == .cloud` por sí solo NO basta para
@@ -687,6 +719,12 @@ extension SwiftDataConfiguration {
         // volvería a `.iCloudMirror` en el arranque siguiente —el archivo del store YA existe, así que el
         // predicado de R2 no lo cubre— adjuntando el mirror al store vaciado del humano que se fue.
         StorageModePersistence.armNeutralMount(defaults)
+        // El neutro de SOLO-GRUPOS se retira aquí, y no es redundante con la línea de arriba: son dos
+        // marcas con vidas distintas. Ésta no caduca con el chooser, así que sobrevivir a un wipe que
+        // devuelve el device a «recién instalado» la dejaría decidiendo el mount de la vida siguiente —
+        // un estado que sobrevive a su motivo. `removeUserPreferenceKeys` excluye `cloudSync.*` a
+        // propósito, así que este es el único sitio donde puede irse.
+        StorageModePersistence.clearGroupsOnlyNeutralMount(defaults)
 
         // El consent de GRUPOS (§C5) es un registro de la CUENTA y `removeUserPreferenceKeys` no lo
         // nombra (ni en su lista ni en sus exclusiones deliberadas): sin esto sobrevive al wipe y la
@@ -1092,7 +1130,10 @@ extension SwiftDataConfiguration {
     static func shouldMountNeutralDurable(_ defaults: UserDefaults = .standard) -> Bool {
         shouldMountNeutralDurable(
             neutralMountArmed: StorageModePersistence.isNeutralMountArmed(defaults),
-            hasShownWelcomeChooser: defaults.bool(forKey: "hasShownWelcomeChooser"))
+            hasShownWelcomeChooser: defaults.bool(forKey: "hasShownWelcomeChooser"),
+            groupsOnlySessionArmed: StorageModePersistence.isGroupsOnlyNeutralMountArmed(defaults),
+            persistedMode: StorageModePersistence.read(defaults),
+            mirrorOffArmed: StorageModePersistence.isMirrorOffArmed(defaults))
     }
 
     // MARK: - Container CloudKit State
@@ -1145,10 +1186,20 @@ extension SwiftDataConfiguration {
     /// mientras el modo cambia EN CALIENTE sin remontar, que es exactamente lo que hace la reversa; ahí el
     /// modo de ahora dice `.icloud` sobre un proceso montado en modo nube y el aviso saldría de más. Ver
     /// el docblock de `isCloudModeMount`.
+    /// **Y un TERCER término desde el paso 5 del rediseño: una sesión solo-grupos no está «sin iCloud por
+    /// accidente», lo está a propósito.** El aviso nace de asumir que un mount sin espejo dura UN arranque
+    /// (el neutro de R2/R4 caduca), así que ofrecer «reabre la app» tenía sentido: al reabrir se arregla.
+    /// El neutro de solo-grupos no caduca —esa es su razón de ser— de modo que sin este término la persona
+    /// recibe el aviso **en cada arranque en frío** y reabrir no cambia nada: un nag perpetuo que además le
+    /// propone justamente lo que el ADR §2-3 dice que no debe pasarle (bajar el iCloud del Apple ID).
+    /// Se pregunta por la MARCA y no por el mount, porque `.neutralNoMirror` también lo produce una
+    /// instalación fresca, donde el aviso sí es correcto.
     static func shouldOfferICloudRestart(mountedDecision: PersonalStoreDecision,
                                          mountedWithMirroring: Bool,
-                                         iCloudAvailableNow: Bool) -> Bool {
+                                         iCloudAvailableNow: Bool,
+                                         groupsOnlySessionArmed: Bool) -> Bool {
         guard !mountedDecision.isCloudModeMount else { return false }
+        guard !groupsOnlySessionArmed else { return false }
         return !mountedWithMirroring && iCloudAvailableNow
     }
 
