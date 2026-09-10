@@ -41,7 +41,7 @@
 - [El generador regenera lo que edito](feedback_el_generador_regenera_lo_que_edito.md) — re-corre el script DESPUÉS de editar a mano; dos locales se quedaron con el texto viejo.
 - [El mutante compilado zanja hipótesis](feedback_mutante_compilado_zanja_hipotesis.md) — si un ticket dice que no hay dato para elegir, recompila el código anterior y reproduce: ese es el dato.
 - [El orden del enum se ve fuera](feedback_el_orden_del_enum_se_ve_fuera.md) — un case nuevo en medio cambia el número del alert que se usa para diagnosticar; va al final.
-- [Mis mediciones fallan por el filtro](feedback_mis_mediciones_fallan_por_el_filtro.md) — control positivo siempre; y el filtro que falla puede ser el del GATE: si BORRAS código, corre la suite entera.
+- [Mis mediciones fallan por el filtro](feedback_mis_mediciones_fallan_por_el_filtro.md) — control positivo siempre; el negativo va PRIMERO y en transacción fresca; y ojo con la exención que ciega al banco.
 - [zsh no divide variables](feedback_zsh_no_divide_variables.md) — «SUCCEEDED» con cero tests; y el exit del wrapper es del `echo`, no de xcodebuild.
 - [Revertir sin commit destruye](feedback_revertir_sin_commit_destruye.md) — en árbol sucio `git checkout -- <f>` borra el trabajo; los mutantes se revierten con `cp`.
 - [Nunca el trailer Co-Authored-By](feedback_trailer_commit_medido.md) — desde el 9-sep un hook del repo bloquea el COMMIT; el cuerpo del PR sigue desnudo y ahí el grep es lo único que hay.
@@ -83,8 +83,8 @@
 - [Avisar a Frank: lo hace el hook, no tú](reference_avisar_a_frank_webhook.md) — el hook manda PR y rojos solo; «prueba» en el texto lo descarta; `--dry-run` NO enseña tu `--texto` y a los 600 caracteres recorta.
 - [El aviso de cierre necesita el cwd del repo](reference_aviso_cierre_necesita_cwd.md) — tras retirar el worktree va a Dan y se descarta en silencio; lee la línea ENVIADO.
 - [Un campo Codable nuevo apaga los widgets](feedback_campo_codable_nuevo_apaga_el_widget.md) — el DTO del App Group está DUPLICADO y decodifica entero; y el target del widget no puede importar casi nada de `Yala/`.
-- [Verificar el backend: MCP ve solo prod](reference_verificar_backend_yala.md) — no hay DDL de staging, pero los goldens SÍ corren contra él (hay contraseñas, no solo JWT); sandbox transaccional para lo demás.
-- [Runbook de DDL en staging](reference_runbook_staging_ddl.md) — las tres migraciones en un solo sitio; y `wrangler` SÍ está autenticado: lo que falta es la credencial DDL.
+- [El acceso al backend se MIDE cada sesión](reference_verificar_backend_yala.md) — el 10-sep estaba invertido; `execute_sql` y `apply_migration` no comparten rol; sandbox transaccional para lo demás.
+- [Runbook de DDL en staging](reference_runbook_staging_ddl.md) — las tres migraciones en un solo sitio; su «falta la credencial» CADUCÓ el 10-sep; `wrangler` SÍ está autenticado.
 - [El hook de secretos está desactivado](hook_secretos_disparador_substring.md) — retirado del push el 2026-09-01 (ADR-009); nada escanea hoy. Su trampa del substring, si vuelve.
 - [El hook de /cerrar salta con «cerramos»](hook_cerrar_disparador_substring.md) — verifica la premisa contra su mensaje: cerrar un ticket no es cerrar la sesión, y el bloque de disco es irreversible.
 - [DNS de yala-app.pe](reference_dns_yala_app_pe.md) — el correo autentica desde el 8-sep; qué leer en la cabecera además de los tres `pass`; subir la política tiene ticket y fecha.

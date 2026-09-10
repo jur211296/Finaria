@@ -325,7 +325,7 @@ struct CloudAccountClientTests {
     @Test func exists_200true() async {
         let stub = AccountStubHTTP(status: 200, body: Data(#"{"exists":true}"#.utf8))
         let client = CloudAccountClient(baseURL: base, urlSession: stub)
-        #expect(await client.exists(jwt: "j") == .exists(true))
+        #expect(await client.exists(jwt: "j") == .exists(true, kind: nil))
         #expect(stub.lastRequest?.httpMethod == "GET")
     }
 
@@ -336,4 +336,46 @@ struct CloudAccountClientTests {
             Issue.record("esperaba sessionExpired"); return
         }
     }
+
+    // MARK: - GET /account/exists · kind (g15_01)
+
+    /// El contrato que sostiene la compatibilidad hacia atrás: un gateway anterior a g15_01 responde
+    /// `{"exists":true}` a secas. Si `kind` fuera obligatorio en el decode, ese 200 legítimo caería en
+    /// el `try?` y saldría como `.transient` → `.failed(retryable:)` → un callejón con «reintentar» en
+    /// el sign-in de TODOS los clientes publicados. Este test es el que impide ese cambio.
+    @Test func exists_200SinKind_decodificaSinKindYNoEsTransient() async {
+        let stub = AccountStubHTTP(status: 200, body: Data(#"{"exists":true}"#.utf8))
+        let client = CloudAccountClient(baseURL: base, urlSession: stub)
+        #expect(await client.exists(jwt: "j") == .exists(true, kind: nil))
+    }
+
+    @Test func exists_200ConKindComplete_decodificaElTipo() async {
+        let stub = AccountStubHTTP(status: 200, body: Data(#"{"exists":true,"kind":"complete"}"#.utf8))
+        let client = CloudAccountClient(baseURL: base, urlSession: stub)
+        #expect(await client.exists(jwt: "j") == .exists(true, kind: .complete))
+    }
+
+    /// `groups_only` en el wire, `groupsOnly` en Swift: el rawValue del enum es el contrato con el
+    /// servidor, y un renombrado que lo rompiera dejaría de decodificar en silencio (caería a `nil`,
+    /// que es un valor válido) — por eso se comprueba el valor y no solo que decodifique.
+    @Test func exists_200ConKindGroupsOnly_decodificaElTipo() async {
+        let stub = AccountStubHTTP(status: 200, body: Data(#"{"exists":true,"kind":"groups_only"}"#.utf8))
+        let client = CloudAccountClient(baseURL: base, urlSession: stub)
+        #expect(await client.exists(jwt: "j") == .exists(true, kind: .groupsOnly))
+    }
+
+    /// Un `kind` que este build no conoce se lee como AUSENTE, no como error ni como valor: se prefiere
+    /// caer al fail-safe antes que dar por buena una etiqueta que nadie sabe interpretar.
+    @Test func exists_200ConKindDesconocido_seLeeComoAusente() async {
+        let stub = AccountStubHTTP(status: 200, body: Data(#"{"exists":true,"kind":"premium"}"#.utf8))
+        let client = CloudAccountClient(baseURL: base, urlSession: stub)
+        #expect(await client.exists(jwt: "j") == .exists(true, kind: nil))
+    }
+
+    @Test func exists_200false_noTraeKind() async {
+        let stub = AccountStubHTTP(status: 200, body: Data(#"{"exists":false}"#.utf8))
+        let client = CloudAccountClient(baseURL: base, urlSession: stub)
+        #expect(await client.exists(jwt: "j") == .exists(false, kind: nil))
+    }
+
 }

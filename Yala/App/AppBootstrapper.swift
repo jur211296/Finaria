@@ -568,6 +568,16 @@ final class AppBootstrapper {
             await GroupsConsentRegistrar.shared.handleSignIn()
         }
 
+        // g15_01: la CORRECCIÓN del tipo de cuenta. `GET /account/exists` solo se consulta en el
+        // Welcome, antes de que haya sesión, así que sin este refresco una respuesta sin `kind` —un
+        // gateway viejo, o caído en ese instante— dejaría la sesión en el modo equivocado hasta el
+        // próximo sign-in. Es la mitad «con corrección» de la decisión de Jürgen (2026-09-09), y va
+        // aquí por lo mismo que el consent: silencioso, sin bloquear el arranque y sin nada que
+        // esperar.
+        Task { @MainActor in
+            await AccountKindService.shared.refresh()
+        }
+
         // 17. Initialize Group Notification Service (GC-06)
         GroupNotificationService.shared.setContext(context)
 

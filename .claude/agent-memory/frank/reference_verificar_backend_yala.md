@@ -1,19 +1,35 @@
 ---
 name: verificar-backend-yala
-description: Qué acceso real tengo al backend de Yala (MCP ve SOLO producción, no staging) y cómo verificar una migración SQL contra el motor real sin tocar nada — sandbox transaccional.
+description: Qué acceso real tengo al backend de Yala y cómo verificar una migración contra el motor real sin tocar nada. OJO — el mapa de acceso CAMBIÓ el 2026-09-10 y se invirtió: mídelo, no lo heredes.
 metadata:
   type: reference
 ---
 
-**El acceso no es simétrico, y eso decide qué puedo verificar y qué no.** Medido el 2026-09-04.
+## El mapa de acceso CAMBIA. Mídelo al empezar, en dos llamadas.
 
-| Recurso | ¿Tengo? | Por dónde |
+**El 2026-09-10 estaba invertido respecto a lo que decía esta misma ficha**, escrita el 4-sep y
+corregida el 7. Un `list_projects` y un `select current_user` por proyecto cuestan segundos y
+zanjan qué se puede hacer en esta sesión:
+
+| | Lo que decía esta ficha (4-sep → 9-sep) | Medido el 2026-09-10 |
 |---|---|---|
-| **BD de producción** (`kefvaiymtgytemwbltlz`) | **sí**, lectura y DDL | MCP Supabase |
-| **BD de staging** (`fostjbbwstyuunmmefuk`) | **NO** | el conector MCP no la lista |
-| Worker staging y producción | **sí**, deploy | `wrangler`, OAuth `admin@yala-app.pe`, `workers:write` |
-| Usuarios de test de staging | sí, **con CONTRASEÑA** (no solo JWT) | `~/Secrets/yala-supabase-test/test-users.env` — trae `USER_A_PASS`/`USER_B_PASS` |
-| Llaves de cifrado y push | sí | `~/Secrets/yala-groups-enc/` (`staging.key`, `staging-push-role.jwt`, y sus gemelos `prod`) |
+| **Staging** `fostjbbwstyuunmmefuk` | **no listado, sin DDL** — «lo único que falta es la contraseña que solo tiene Jürgen» | **listado**; `execute_sql` entra como **`postgres`** ⇒ **DDL y DML completos** |
+| **Producción** `kefvaiymtgytemwbltlz` | listado, lectura y DDL | **no listado**; `execute_sql` entra como `supabase_read_only_user` (`transaction_read_only=on`) ⇒ **solo lectura** |
+
+**Y las dos herramientas del MCP no comparten rol.** En producción `execute_sql` es de solo lectura
+pero **`apply_migration` escribe** — DDL y DML. Verificado con control positivo: crear schema, tabla
+y fila, leerlas con `execute_sql`, y borrarlas. ⇒ **«no tengo acceso» exige probar las DOS**, no una.
+
+**Dos trampas de `apply_migration` medidas ese día:**
+
+- **Un `success: true` no prueba escritura**: un cuerpo que no escribe (`do $$ raise notice $$`)
+  pasa igual. Lo que lo prueba es leer después lo que la migración dejó.
+- **La fila del historial se inserta DESPUÉS del cuerpo**, así que una migración que borra
+  `supabase_migrations.schema_migrations` no se borra a sí misma. Limpiar rastro de pruebas exige
+  una migración posterior.
+
+⇒ Si un ticket dice «verificar en staging antes de producción», **hoy sí se puede**. Y el orden
+natural vuelve a ser el sano: staging primero.
 
 **CORREGIDO el 2026-09-07: los goldens del gateway contra staging SÍ se pueden correr.** Esta ficha decía
 «sólo JWT de usuario» y por eso ni lo intenté durante tres sesiones. `test-users.env` trae las CONTRASEÑAS
@@ -37,13 +53,8 @@ peticiones por cada grupo del usuario —haya cambios o no— y el corpus de A/B
 TIMEOUT sin línea de aserción probablemente no es código roto: es un test que va justo de tiempo. Ver
 `corpus-de-test-de-staging-crece-sin-limite`.
 
-Lo que sigue sin haber es **DDL de staging**, que es otra cosa: se pueden EJERCITAR los RPCs que ya están
-allí, no APLICAR una migración nueva.
-
-**La consecuencia incómoda: tengo DDL en producción y no en staging** — al revés de lo que pide el
-orden habitual. No hay credencial de admin de staging en `~/Secrets/`, ni en el keychain, ni en el
-entorno. Si un ticket dice «verificar en staging antes de producción», eso hoy **no se puede cumplir
-por esa vía**, y hay que decirlo en vez de inventarlo.
+**Lo de arriba describía el mundo del 4 al 9 de septiembre. El 10-sep ya no era verdad** — ver la
+cabecera de esta ficha. Se conserva porque la receta de goldens y sus trampas siguen valiendo.
 
 ## La vía que sí verifica: sandbox transaccional contra producción
 

@@ -677,3 +677,41 @@ lentes y mi propia lectura. La suite completa es la única que lo ve.
 **How to apply:** cuando una medición diga «falta X» o «esto no está», **búscalo una vez a mano**
 antes de escribirlo. Y cuando diga «pasó», exige el número de casos: un filtro que no casa nada sale
 verde por el mismo camino que uno que casa todo.
+
+## 2026-09-10 — el guard que mi propia prueba dejaba abierto, y por qué el control negativo PURO es otra cosa
+
+Escribí un trigger que debía impedir que el dueño de una cuenta se auto-promoviera escribiendo una
+columna. Lo probé con tres casos —negativo, positivo, regresión— y los tres salieron como esperaba.
+**Y la prueba era inválida**, dos veces seguidas y por motivos distintos:
+
+1. **El positivo contaminó al negativo.** El guard vive en una variable de transacción, y yo corrí los
+   tres casos EN LA MISMA. El negativo, ejecutado después del positivo, veía el guard ya cerrado por
+   el positivo — o sea, medía «el guard se cierra bien», no «el guard estaba cerrado desde el
+   principio». El estado real de producción es que **nunca se ha puesto**, y ese caso no lo probé.
+2. **Luego añadí una exención por rol** (`if session_user = 'postgres' then return new`) que una lente
+   me había sugerido, con buen motivo: que una reparación futura no se bloqueara. Volví a correr las
+   pruebas y **los cuatro casos pasaron, incluido el que debía fallar**. La exención abría el guard
+   ENTERO en el único banco de pruebas que existe: `set local role authenticated` cambia
+   `current_user` pero **NO `session_user`**, y yo me conecto como administrador.
+
+Lo que lo cazó fue rehacer el negativo **en transacción fresca y con el GUC sin tocar**, más dos
+negativos que antes no existían: el guard abierto por OTRA transacción (la fuga del pool) y el literal
+del diseño viejo. Cinco negativos, uno positivo, dos regresiones.
+
+**Why:** un control negativo que corre después del positivo no es un control negativo — es la segunda
+mitad del positivo. Y una salvaguarda con una exención para «el entorno desde el que se administra»
+es exactamente una salvaguarda que no se puede probar desde donde se prueba.
+
+**How to apply:**
+
+- **El negativo va PRIMERO y en su propia transacción**, o con el estado explícitamente al valor que
+  tendrá en producción. Si el mecanismo usa estado de sesión (un GUC, un flag, una caché), el orden de
+  los casos ES parte del experimento.
+- **Antes de aceptar una exención sugerida —por una lente o por mí—, pregunta desde dónde se prueba lo
+  que exime.** Si la exención cubre justo ese camino, el banco se queda ciego. Aquí la retirada costó
+  una línea; descubrirla en producción habría costado la columna entera.
+- **«Un guard que no se puede probar no es un guard»** es la regla, y vale para elegir entre dos
+  diseños igual de correctos sobre el papel: gana el que el banco disponible sabe tumbar.
+
+Relacionado: [[la-asercion-que-no-puede-fallar]] · [[el-prefiltro-tapa-al-criterio]] (la misma familia:
+algo aguas arriba deja la comprobación sin nada que comprobar).

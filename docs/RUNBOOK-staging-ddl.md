@@ -34,10 +34,20 @@ tags: [runbook, staging, ddl, owner]
 
 ## Cómo se hizo (registro)
 
-**Para quién:** Jürgen. **Por qué él:** no hay credencial de DDL de staging en el entorno del agente —
-el conector MCP de Supabase solo lista producción (`kefvaiymtgytemwbltlz`), no staging
-(`fostjbbwstyuunmmefuk`). Todo lo demás de este documento está medido y verificado; lo único que
-falta es la contraseña que solo tienes tú.
+**Para quién:** era para Jürgen. **Ya no.** ⚠️ **La premisa central de este runbook CADUCÓ el
+2026-09-10**, y conviene saberlo antes de reusar cualquier frase de aquí:
+
+> Este documento decía «no hay credencial de DDL de staging en el entorno del agente — el conector MCP
+> de Supabase solo lista producción (`kefvaiymtgytemwbltlz`), no staging (`fostjbbwstyuunmmefuk`)».
+> **Medido el 2026-09-10, era al revés en las dos mitades**: el MCP lista **staging**, y su
+> `execute_sql` entra como `postgres` (DDL y DML completos). Producción ya **no** aparece listada y su
+> `execute_sql` responde como `supabase_read_only_user`… pero **`apply_migration` sí escribe** allí, DDL
+> incluido (verificado con control positivo: crear schema + tabla + fila, leerlos y borrarlos).
+
+⇒ **El mapa de acceso cambia sin avisar: mídelo al empezar la sesión, no lo heredes de un documento.**
+Cuestan dos llamadas — `list_projects` y un `select current_user` por proyecto— y esta premisa llevaba
+cuatro días propagándose entre tickets como si fuera un hecho. Lo demás de este runbook —orden,
+idempotencia, verificación, trampas— sigue medido y vigente.
 
 **Cuánto lleva:** 10-15 minutos las tres, si las pegas seguidas.
 

@@ -784,3 +784,114 @@ describe("g3_02 goldens · claim promociona fila LIGERA de grupos (staging real)
     await patchProfile(jwtA, { leader_device_id: null });
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════════
+// g15_01 · `kind` — la cuenta dice si lleva finanzas personales o solo grupos
+// ═══════════════════════════════════════════════════════════════════════════════════════════════════
+//
+// POR QUÉ UN TERCER USUARIO. El AC pide ver `kind` en las TRES situaciones: cuenta completa, cuenta de
+// solo grupos, y cuenta inexistente. Los 5 perfiles de staging eran `complete` (medido el 2026-09-10),
+// así que dos de los tres casos NO eran observables con A y B, y ninguno de los dos se puede degradar
+// para fabricarlos: el diseño no degrada nunca fuera del reverse cutover, y el trigger `profiles_kind_guard`
+// impide fijar `kind` por PATCH — que es la única palanca de estado que tienen estos goldens.
+//
+// C nace SIN fila en `profiles`, así que recorre el ciclo entero por el WIRE: no existe → alta de grupos
+// → promoción a completa. Se creó por SQL (el alta por `/auth/v1/signup` está cerrada en staging) y sus
+// credenciales viven en `~/Secrets/yala-supabase-test/test-users.env`, como las de A y B.
+//
+// ESTADO PREVIO del ciclo completo: `profiles[subC]` AUSENTE. El golden hace SKIP limpio si ya está
+// —mismo criterio que los goldens 1 y 2— porque termina dejando la cuenta promovida. Reset:
+//   delete from public.profiles where id = (select id from auth.users where email='i5-user-c@test.yala');
+// El golden del guard, en cambio, no depende del estado y corre siempre.
+describe("g15_01 goldens · kind de la cuenta (staging real)", () => {
+  let jwtC = "";
+  let subC = "";
+
+  beforeAll(async () => {
+    const email = process.env.USER_C_EMAIL ?? "i5-user-c@test.yala";
+    const password = process.env.USER_C_PASS ?? "";
+    if (!password) {
+      throw new Error(
+        "Falta USER_C_PASS en el entorno — export USER_C_PASS=<pass de staging> antes de npm test " +
+          "(ver qa/cloud/README.md). C es el fixture de la cuenta groups_only.",
+      );
+    }
+    jwtC = await login(email, password);
+    subC = decodeSub(jwtC);
+  });
+
+  /** `exists` crudo: aquí importa el `kind`, no solo el booleano del helper de arriba. */
+  async function existsFull(jwt: string): Promise<{ exists: boolean; kind?: string }> {
+    const res = await app.fetch(
+      new Request("https://gw.local/account/exists", { method: "GET", headers: { Authorization: `Bearer ${jwt}` } }),
+      env,
+    );
+    return (await res.json()) as { exists: boolean; kind?: string };
+  }
+
+  it("28. el ciclo entero por el wire: no existe → alta de grupos (groups_only) → promoción (complete)", async (ctx) => {
+    if (await exists(jwtC)) {
+      console.warn("[account.goldens] golden 28 SKIP: profiles[subC] existe — resetea con el delete del comentario de arriba");
+      ctx.skip();
+    }
+
+    // (1) Cuenta inexistente: `exists:false` y NINGÚN `kind` — el cliente no tiene nada que cachear.
+    const antes = await existsFull(jwtC);
+    expect(antes.exists).toBe(false);
+    expect(antes.kind).toBeUndefined();
+
+    // (2) Alta de GRUPOS: crea la cuenta sin reclamar lo personal.
+    const alta = await claim(jwtC, { device_id: "g15-c", provider: "google", kind: "groups_only" });
+    expect(alta.status).toBe(200);
+    expect(alta.body.state).toBe("created");
+    expect((alta.body as { kind?: string }).kind).toBe("groups_only");
+
+    const soloGrupos = await existsFull(jwtC);
+    expect(soloGrupos).toEqual({ exists: true, kind: "groups_only" });
+
+    // `personal_claimed_at` sigue NULO: para lo personal esta cuenta todavía no ha nacido. Es lo que
+    // deja intacta la rama de promoción de g3_02, y sin ello la promoción de abajo no ocurriría.
+    const pca = await fetch(`${URL}/rest/v1/profiles?id=eq.${subC}&select=personal_claimed_at`, {
+      headers: { apikey: ANON, Authorization: `Bearer ${jwtC}` },
+    });
+    expect(((await pca.json()) as { personal_claimed_at: string | null }[])[0].personal_claimed_at).toBeNull();
+
+    // (3) «Activar Yala completo → nube»: el MISMO claim con kind=complete promociona. No hay endpoint
+    //     aparte: es la promoción de g3_02, que ahora además mueve `kind`.
+    const promo = await claim(jwtC, { device_id: "g15-c", provider: "google", kind: "complete" });
+    expect(promo.status).toBe(200);
+    expect(promo.body.state).toBe("created"); // para lo personal, la cuenta nace AHORA
+    expect((promo.body as { kind?: string }).kind).toBe("complete");
+    expect(await existsFull(jwtC)).toEqual({ exists: true, kind: "complete" });
+
+    // (4) Idempotente: repetir la promoción no rompe ni re-crea.
+    const otra = await claim(jwtC, { device_id: "g15-c", provider: "google", kind: "complete" });
+    expect(otra.status).toBe(200);
+    expect(otra.body.state).toBe("existing_stable");
+    expect((otra.body as { kind?: string }).kind).toBe("complete");
+  });
+
+  it("29. una cuenta COMPLETA declara kind='complete' (el usuario A, sin tocarle nada)", async () => {
+    expect(await existsFull(jwtA)).toEqual({ exists: true, kind: "complete" });
+  });
+
+  it("30. el dueño NO puede auto-promoverse: `kind` es escribible solo por RPC", async () => {
+    // El control negativo del trigger, por el MISMO camino que estos goldens usan para fijar estado
+    // (PATCH directo con el JWT del dueño, RLS own-row). Si esto devolviera 2xx, la columna sería
+    // auto-servible y toda la premisa del ticket se caería.
+    const status = await patchProfile(jwtA, { kind: "groups_only" });
+    expect(status).toBeGreaterThanOrEqual(400);
+
+    // Y no cambió nada.
+    expect(await existsFull(jwtA)).toEqual({ exists: true, kind: "complete" });
+  });
+
+  it("31. el PATCH de OTRA columna sigue funcionando (el guard no es un candado a la tabla)", async () => {
+    expect(await patchProfile(jwtA, { leader_device_id: null })).toBeLessThan(300);
+  });
+
+  it("32. un claim con kind fuera del dominio → 400, sin llegar al RPC", async () => {
+    const res = await claim(jwtA, { device_id: DEV_A, provider: "apple", kind: "premium" });
+    expect(res.status).toBe(400);
+  });
+});

@@ -1,6 +1,6 @@
 ---
 name: runbook-staging-ddl
-description: Dónde vive el runbook de las migraciones que staging arrastra, y el dato que dos documentos negaban — wrangler SÍ está autenticado aquí, así que el deploy del Worker no lo bloquea una credencial
+description: Dónde vive el runbook de DDL de staging; su premisa «falta la credencial» CADUCÓ el 2026-09-10; y el dato que dos documentos negaban — wrangler SÍ está autenticado aquí
 metadata:
   type: reference
 ---
@@ -15,9 +15,12 @@ uno solo, no.
 
 **How to apply:**
 
-- **Lo que de verdad falta es la credencial de DDL de staging**, y solo eso. El conector MCP de
-  Supabase lista producción (`kefvaiymtgytemwbltlz`) pero **no** staging (`fostjbbwstyuunmmefuk`).
-  Todo lo demás —orden, idempotencia, verificación, trampas— está medido y escrito.
+- **⚠️ CADUCADO el 2026-09-10: ya NO falta la credencial de DDL de staging.** Esta ficha y el
+  runbook decían que el MCP lista producción y no staging. Ese día era **al revés**: el MCP lista
+  staging y `execute_sql` entra ahí como `postgres` (DDL completo), mientras producción solo se
+  escribe por `apply_migration`. El mapa de acceso cambia sin avisar ⇒ **mídelo cada sesión**;
+  está en [[verificar-backend-yala]]. Lo demás del runbook —orden, idempotencia, verificación,
+  trampas— sigue medido y vigente.
 - **`psql -1` no es opcional en `g13_04` y `g13_05`**: medido, no traen `begin;`/`commit;` propios
   (0 ocurrencias). `g14_01` sí los trae y además guardas de md5 que abortan la transacción entera,
   así que **intentarla es seguro**: o entra completa o no entra.

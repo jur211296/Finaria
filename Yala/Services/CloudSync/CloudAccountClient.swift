@@ -35,8 +35,13 @@ enum ClaimOutcome: Equatable {
 }
 
 /// Resultado de `GET /account/exists`.
+///
+/// `kind` es OPCIONAL y su ausencia es información, no un error: un gateway anterior a g15_01 —o uno
+/// que no pudo leer la columna— responde `{ "exists": true }` a secas, y eso tiene que seguir siendo
+/// un 200 bueno. El que lo consuma trata la ausencia como `groupsOnly` (`AccountKindLogic.resolve`) y
+/// se corrige en el refresco siguiente.
 enum ExistsOutcome: Equatable {
-    case exists(Bool)
+    case exists(Bool, kind: AccountKind?)
     case sessionExpired(detail: String)
     case transient(detail: String)
 }
@@ -165,6 +170,12 @@ final class CloudAccountClient {
 
     private struct ExistsResponse: Decodable {
         let exists: Bool
+        /// ADITIVO (g15_01). **Tiene que ser opcional**: el decode de `exists` es un `try?`, así que
+        /// declararlo obligatorio convertiría CUALQUIER respuesta sin el campo en `.transient` — o
+        /// sea, un callejón con «reintentar» en el sign-in de todo cliente anterior al despliegue del
+        /// gateway. Y `String` en vez de `AccountKind`: un valor futuro que este build no conozca
+        /// tampoco debe tumbar el decode.
+        let kind: String?
     }
 
     private struct MigrationResponse: Decodable {
@@ -252,7 +263,9 @@ final class CloudAccountClient {
             guard let decoded = try? JSONDecoder().decode(ExistsResponse.self, from: data) else {
                 return .transient(detail: "HTTP 200 undecodable")
             }
-            return .exists(decoded.exists)
+            // Un `kind` que este build no conozca se lee como AUSENTE, no como error: se prefiere el
+            // fail-safe a `groupsOnly` antes que dar por buena una etiqueta que nadie sabe interpretar.
+            return .exists(decoded.exists, kind: decoded.kind.flatMap(AccountKind.init(rawValue:)))
         case 401:
             return .sessionExpired(detail: "HTTP 401: \(Self.bodyString(data))")
         default:

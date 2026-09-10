@@ -765,7 +765,15 @@ struct WelcomeCloudSignInView: View {
             }
         case .failed(let retryable):
             phase = .error(retryable: retryable)
-        case .accountFound:
+        case .accountFound(let kind):
+            // El tipo de cuenta se CACHEA aquí porque éste es el único punto de la app donde el
+            // backend lo dice antes de que haya sesión. Quién lo usa para elegir pantalla es el
+            // ticket `cloud-sign-in-discovers-account-kind`; hoy el ruteo de abajo no cambia.
+            if let kind {
+                AccountKindStore.shared.write(
+                    AccountKindSnapshot(userID: userID, kind: kind, refreshedAt: Date())
+                )
+            }
             let decision = CrossAccountEntryGuardLogic.decide(
                 hasLocalData: hasLocalDataNow(),
                 sameAccountClaimExists: CloudClaimActionStore.shared.action(forUserID: userID) != nil,

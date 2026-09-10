@@ -55,7 +55,7 @@ export async function requireUser(c: Ctx): Promise<AuthedUser | Response> {
 // ----------------------------------------------------------------------------------- /account/claim
 
 /**
- * Reserva ATÓMICA de la cuenta (§f.1). Body `{device_id, provider, migration?}`. Descarta cualquier
+ * Reserva ATÓMICA de la cuenta (§f.1). Body `{device_id, provider, migration?, kind?}`. Descarta cualquier
  * `sub`/`id`/`user_id` del body (el sub sale del JWT vía `claim_account`→`auth.uid()`). Devuelve el
  * estado de 3 valores tal cual lo emite el RPC: `created` | `existing_stable` | `claiming_in_progress`.
  *
@@ -63,6 +63,13 @@ export async function requireUser(c: Ctx): Promise<AuthedUser | Response> {
  * heartbeat) ATÓMICAMENTE en el propio INSERT del RPC (I10-wiring §g.1): sin él, un kill entre el
  * `created` de la rama migración y un `begin` separado dejaría `mip=false` (el resume re-claimaría →
  * `existing_stable` → adoptaría una cuenta VACÍA). El default preserva el contrato born-cloud.
+ *
+ * `kind` (opcional, `complete` | `groups_only`; default `complete`) dice qué nace: una cuenta con
+ * finanzas personales o una de solo grupos. Con `groups_only` el RPC NO estampa `personal_claimed_at`
+ * —para lo personal esa cuenta todavía no ha nacido— y crea la misma fila ligera que
+ * `create_group`/`join_group`. Un claim `complete` sobre una fila ligera la PROMOCIONA (g3_02), así que
+ * ésta es también la ruta de «Activar Yala completo → nube». La respuesta lleva `kind` en los tres
+ * estados. ADR 2026-09-09 «Sesiones — dos ejes» §11.
  */
 export async function handleAccountClaim(c: Ctx): Promise<Response> {
   const auth = await requireUser(c);
@@ -87,10 +94,20 @@ export async function handleAccountClaim(c: Ctx): Promise<Response> {
     return jsonError("yala_bad_request", "Se espera { device_id, provider }", 400);
   }
 
+  // `kind` (opcional): el alta de grupos manda `groups_only` y entonces la cuenta NO reclama lo
+  // personal. Ausente ⇒ `complete`, que es el contrato de todos los llamadores de hoy (born-cloud y
+  // migración) y el default del RPC. Se valida AQUÍ y no solo en el RPC porque un valor fuera del
+  // dominio tiene que ser un 400 legible, no un 502 envuelto en `yala_unavailable`.
+  const kind = body.kind === undefined ? "complete" : body.kind;
+  if (kind !== "complete" && kind !== "groups_only") {
+    return jsonError("yala_bad_request", "kind debe ser 'complete' o 'groups_only'", 400);
+  }
+
   const { ok, status, body: out } = await callRpc(c.env, auth.userJWT, "claim_account", {
     p_device_id: deviceId,
     p_provider: provider,
     p_migration: migration,
+    p_kind: kind,
   });
   if (!ok) {
     console.log(`[account-claim] claim_account upstream ${status}`);
@@ -256,7 +273,15 @@ export async function handleAccountExists(c: Ctx): Promise<Response> {
   const auth = await requireUser(c);
   if (auth instanceof Response) return auth;
 
-  const { ok, status, rows } = await getRows(c.env, auth.userJWT, "profiles", "select=id&limit=1");
+  const { ok, status, rows } = await getRows(c.env, auth.userJWT, "profiles", "select=id,kind&limit=1");
   if (!ok) return jsonError("yala_unavailable", `exists upstream ${status}`, 502);
-  return c.json({ exists: rows.length > 0 });
+  const row = rows[0] as { kind?: unknown } | undefined;
+  if (!row) return c.json({ exists: false });
+
+  // `kind` se OMITE si el upstream no lo trae, o trae algo fuera del dominio: el cliente lee la
+  // AUSENCIA como `groups_only` (fail-safe hacia lo menos invasivo, decisión de Jürgen 2026-09-09) y
+  // se corrige en el refresco siguiente. Emitir un valor desconocido sería peor que callar — el
+  // cliente lo guardaría en su caché sellada y no tendría de qué corregirse.
+  const kind = row.kind === "complete" || row.kind === "groups_only" ? row.kind : undefined;
+  return c.json(kind ? { exists: true, kind } : { exists: true });
 }
