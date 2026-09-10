@@ -132,3 +132,13 @@ arriba). Y pon lo accionable al principio: **lo que se pierde es siempre el fina
 Dos cosas más que `sanear` hace y conviene saber: en un repo de `REPOS_SIN_TEXTO_LIBRE` devuelve
 vacío y el aviso se niega entero; y su regex de rutas es **sensible a mayúsculas**
 (`Users|Claude|Projects|Documents`), así que una URL con `claude.ai` en minúscula pasa intacta.
+
+**La palabra «prueba» muerde cuando es LEGÍTIMA, y por eso saber que existe el filtro no basta.**
+Medido el 2026-09-10, con esta misma ficha ya escrita: el aviso de cierre salió `DESCARTADO … — prueba`
+porque el resumen decía «volver a crear los grupos **de prueba**». No era un aviso de test: era la frase
+natural para nombrar los datos de device-QA. El filtro mira la palabra, no la intención.
+
+**How to apply:** el riesgo no está en los avisos de test —ésos ya no los mandas— sino en el vocabulario
+de trabajo: «datos de prueba», «cuenta de prueba», «grupos de prueba», «entorno de pruebas». **Repasa el
+`--texto` buscando esa raíz antes de enviar** y sustitúyela («los grupos que usas para el device-QA»). Y
+lee siempre la línea del log: el descarte no sale por stderr con estruendo, sale como una línea más.
