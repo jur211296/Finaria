@@ -387,13 +387,16 @@ nonisolated enum CloudSyncFlags {
     /// PROPIO A4 — no lo flipa A7, y esa es una corrección al plan de julio (`WelcomeAccountChoiceLogic`
     /// decía «queda cableado a `false` en el callsite»).
     ///
-    /// **Por qué nace en `true` sin que eso encienda nada en producción:** `visibleNewOptions` exige
-    /// además los DOS flags remotos (`cloudModeEnabled && cloudOnboardingChoiceEnabled`), y el segundo
-    /// sirve `CLOUD_ONBOARDING_CHOICE_ROLLOUT_PERCENT = "0"` en el bloque de producción de
-    /// `gateway/wrangler.toml` con `absentDefault` fail-closed ⇒ la card nace DARK en prod sin trabajo
-    /// extra. La palanca operativa de release es ese percent (A7), exactamente el patrón de Grupos
-    /// (`groupsBackendCompiledDefault = true` + percent, D-R1). A cambio, A5 puede ejercitar el alta
-    /// entera contra staging/DEV —que sirven el percent al 100— sin recompilar.
+    /// **Por qué PUDO nacer en `true` sin encender nada:** `visibleNewOptions` exige además los DOS
+    /// flags remotos (`cloudModeEnabled && cloudOnboardingChoiceEnabled`), así que mientras el segundo
+    /// valió "0" la card nacía DARK en prod sin trabajo extra. La palanca operativa de release es ese
+    /// percent (A7), exactamente el patrón de Grupos (`groupsBackendCompiledDefault = true` + percent,
+    /// D-R1). A cambio, A5 puede ejercitar el alta entera contra staging/DEV sin recompilar.
+    ///
+    /// **YA NO nace DARK: producción sirve ese percent EN 100** — medido con `curl` al `/config` el
+    /// 2026-09-09; `gateway/wrangler.toml` arrastró un "0" desfasado hasta el 2026-09-10. Con snapshot
+    /// fetcheado, la card born-cloud se ofrece en prod; sin snapshot todavía, `absentDefault`
+    /// fail-closed la sigue ocultando hasta el primer fetch.
     ///
     /// No lleva override de tests a propósito: la lógica que decide recibe el booleano por PARÁMETRO
     /// (`WelcomeAccountChoiceLogic.visibleNewOptions`), así que los tests no necesitan tocar el flag.

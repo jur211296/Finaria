@@ -5,6 +5,7 @@ priority: medium
 area: platform
 created: 2026-09-04
 source: medido al abrir el PR #63 (rejoin-tap-renotifies-admins), 2026-09-04
+updated: 2026-09-10
 ---
 
 # El CI no ejecuta ni un test del gateway — y sí gasta 100 minutos de simulador por tocar el índice
@@ -93,3 +94,18 @@ mal por esto.
 
 Si un job de Ubuntu puede correr los tests que hablan con staging sin exponer credenciales en logs.
 No se ha probado; la propuesta 1 lo esquiva empezando por los offline.
+
+## Tercera instancia (2026-09-10): ahora el hueco cubre dos guards de PRODUCCIÓN
+
+`wrangler-prod-onboarding-choice-percent-drift` añadió a `gateway/test/config.test.ts` un guard que
+fija los TRES percents de rollout de `[env.production.vars]` leyendo el `.toml`. Se suma al que ya
+existía, `test/wrangler.forceupdate.test.ts`, cuyo docblock se declara «la única red que queda»
+contra desplegar un `MIN_SUPPORTED_BUILD` > 0 —que brickea cada instalación—.
+
+⇒ **los dos ficheros del repo cuyo único trabajo es parar un deploy destructivo viven en la suite
+que nadie ejecuta.** Los dos son offline, sin credenciales, y corren en menos de un segundo: caen
+enteros dentro de la propuesta 1 (job de Ubuntu con los tests offline), que sigue sin hacerse.
+
+Re-medido ese día: `grep -rn 'vitest|npm test|npm ci|npm run' .github/workflows/` da **un** acierto
+y es el COMENTARIO de `qa.yml:140` que excluye `gateway/` del build de iOS. Sigue sin haber job.
+

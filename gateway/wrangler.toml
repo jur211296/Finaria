@@ -128,8 +128,15 @@ SIWA_KEY_ID = "PQ53RQ5D3G"
 # runtime. Solo lo ven builds que lleven `3c49278c`: en los anteriores `CloudBackendConfig
 # .isConfigured` es `false` COMPILADO, así que sus gates fallan pase lo que pase con el percent.
 CLOUD_MODE_ROLLOUT_PERCENT = "100"
-# Sigue en 0: es la card born-cloud del onboarding (D-A7), un escalón POSTERIOR y una decisión aparte.
-CLOUD_ONBOARDING_CHOICE_ROLLOUT_PERCENT = "0"
+# EN 100 desde el PR con el que Jürgen subió la elección born-cloud (D-A7) a producción y que después se
+# borró: el gateway se quedó sirviendo 100 y este fichero con el "0" de antes. La deriva se MIDIÓ el
+# 2026-09-09 (`curl` al `/config` de prod) y esta línea la cierra. **No decide el rollout** — lo alinea
+# con lo desplegado. Mientras dijo "0", cualquier `npm run deploy:production` hecho por otro motivo
+# habría apagado la card «Tu cuenta en la nube» del Welcome en todo el parque sin que nadie lo decidiera.
+# Clase de latencia de CLOUD_MODE (hasta 6 h, nadie lo enforza server-side): gatea la ENTRADA al alta
+# born-cloud, nunca el runtime de una cuenta ya creada. `test/config.test.ts` fija los TRES percents
+# vivos leyendo este fichero: moverlos es un diff que rompe un test, no un deploy silencioso.
+CLOUD_ONBOARDING_CHOICE_ROLLOUT_PERCENT = "100"
 # EN 100 desde el 2026-07-31: es el paso 3 de D-R1, la segunda mitad del encendido de Grupos.
 # `CloudSyncFlags.groupsBackendEnabled` es `groupsBackendCompiledDefault && CloudRemoteFlags
 # .groupsBackendEnabled`, así que el flip compilado de `5490544d` era un NO-OP hasta esta línea.

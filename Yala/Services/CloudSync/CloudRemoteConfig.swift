@@ -16,10 +16,15 @@
 //    valor conocido, jamás degrada a un estado distinto del último que el server declaró.
 //
 //  En producción el fetch YA CORRE (D-R1 paso 1 abrió `CloudBackendConfig.isConfigured`) y el server
-//  sirve los tres percents en 0 ⇒ las superficies de entrada siguen ocultas, pero AHORA por el AND
-//  remoto y no por la ausencia de configuración. La ventana previa al primer fetch tampoco destapa
-//  nada: en prod `absentDefault` es `false` (fail-closed). En DEV el default ante cache AUSENTE es ON
-//  (staging sirve 100 ⇒ mismo valor tras el fetch) → QA/uitest byte-idénticos.
+//  sirve los TRES percents vivos EN 100 —CLOUD_MODE desde el 2026-07-30, GROUPS_BACKEND desde el
+//  2026-07-31 y CLOUD_ONBOARDING_CHOICE medido el 2026-09-09—, así que las superficies de entrada que
+//  dependen del AND remoto están ABIERTAS. Este bloque decía «los tres percents en 0» y describía el
+//  estado de julio: `gateway/wrangler.toml` arrastró además un "0" desfasado en la elección nube hasta
+//  el 2026-09-10. El percent de la SESIÓN SECUNDARIA sí sigue en 0, y es lo que mantiene DARK esa
+//  entrada concreta. La ventana previa al primer fetch tampoco destapa nada: en prod `absentDefault` es
+//  `false` (fail-closed), así que hasta que hay snapshot en disco las entradas se comportan como si el
+//  percent fuera 0. En DEV el default ante cache AUSENTE es ON (staging sirve 100 ⇒ mismo valor tras el
+//  fetch) → QA/uitest byte-idénticos.
 //
 
 import Foundation

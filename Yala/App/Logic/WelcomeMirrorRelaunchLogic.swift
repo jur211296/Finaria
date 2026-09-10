@@ -36,8 +36,9 @@ nonisolated enum WelcomeMirrorRelaunchLogic {
     /// relanzamiento, y `allCases` es lo que obliga a que una salida nueva del Welcome declare de qué lado
     /// cae — el mismo mecanismo con el que R1 dejó las tablas del testigo de mount.
     enum Destination: String, CaseIterable, Equatable {
-        /// «Soy nuevo» → privacidad total. **Es el bypass de producción**: con el percent remoto de la
-        /// elección nube en 0, el sub-chooser no se muestra y todo usuario nuevo llega aquí.
+        /// «Soy nuevo» → privacidad total. FUE el bypass de producción mientras el percent remoto de la
+        /// elección nube valió 0; desde que prod lo sirve en 100 (medido el 2026-09-09) el sub-chooser se
+        /// muestra y este es uno de sus dos destinos, no el camino de todos.
         case privateOnboarding
         /// «Ya tengo una cuenta» → restaurar de iCloud, y también «Cargar mis datos» del alert del Hero.
         case restoreICloud

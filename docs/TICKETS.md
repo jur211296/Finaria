@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (260)
+## Index (261)
 
 | id | status | path |
 |----|--------|------|
@@ -259,6 +259,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | storage-row-gate-comment-says-rollout-zero | backlog | tickets/backlog/storage-row-gate-comment-says-rollout-zero.md |
 | storekit-appgroup-siri-pro-gate | qa | tickets/qa/storekit-appgroup-siri-pro-gate.md |
 | subscription-success-without-pro | done | tickets/done/subscription-success-without-pro.md |
+| sync-runtime-safety-note-assumes-every-prod-device-is-icloud | backlog | tickets/backlog/sync-runtime-safety-note-assumes-every-prod-device-is-icloud.md |
 | synced-prefs-outside-prefsynckey | discarded | tickets/discarded/synced-prefs-outside-prefsynckey.md |
 | tests-borran-el-store-sqlite-abierto | backlog | tickets/backlog/tests-borran-el-store-sqlite-abierto.md |
 | transaction-save-helper-flake-one-per-suite | backlog | tickets/backlog/transaction-save-helper-flake-one-per-suite.md |
@@ -289,7 +290,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | widget-period-balance-ignores-group-bridge-adjustment | backlog | tickets/backlog/widget-period-balance-ignores-group-bridge-adjustment.md |
 | widget-snapshot-visitor-overwrites-owner | discarded | tickets/discarded/widget-snapshot-visitor-overwrites-owner.md |
 | wire-decoder-accepts-non-finite-money | backlog | tickets/backlog/wire-decoder-accepts-non-finite-money.md |
-| wrangler-prod-onboarding-choice-percent-drift | backlog | tickets/backlog/wrangler-prod-onboarding-choice-percent-drift.md |
+| wrangler-prod-onboarding-choice-percent-drift | done | tickets/done/wrangler-prod-onboarding-choice-percent-drift.md |
 | yala-android | backlog | tickets/backlog/yala-android.md |
 | zone-decisions-still-per-row | backlog | tickets/backlog/zone-decisions-still-per-row.md |
 

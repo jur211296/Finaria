@@ -6,16 +6,19 @@
 //  qué opciones muestra cada sub-chooser y cuándo hacer bypass (una sola opción
 //  visible → no se muestra pantalla intermedia).
 //
-//  El botón de nube se oculta con backend no configurado (prod DARK hoy) y bajo
-//  UITest (SIWA no funciona en sim; determinismo de los XCUITests existentes).
+//  El botón de nube se oculta con backend no configurado y bajo UITest (SIWA no funciona en sim;
+//  determinismo de los XCUITests existentes). El «prod DARK hoy» que decía aquí caducó con D-R1 paso 1
+//  (2026-07-30): `CloudBackendConfig.isConfigured` es `true` en los DOS schemes.
 //
 //  **A4 de D-A7 (2026-08-09): `visibleNewOptions` GANA SU CONSUMIDOR** — `WelcomeNewChooserView`
 //  vía `WelcomeFlowContainer` — y `bornCloudEnabled` se cablea a la constante COMPILADA
 //  `CloudSyncFlags.bornCloudChoiceEnabled`, hoy `true`. El plan de julio que decía «born-cloud
 //  está DIFERIDO ⇒ `bornCloudEnabled` queda cableado a `false` en el callsite» queda OBSOLETO:
-//  la palanca de release es el PERCENT remoto (`CLOUD_ONBOARDING_CHOICE_ROLLOUT_PERCENT`, hoy
-//  `"0"` en producción y fail-closed), igual que con Grupos — así A5 puede ejercitar el alta en
-//  staging/DEV sin recompilar, y prod sigue sin ver la card.
+//  la palanca de release es el PERCENT remoto (`CLOUD_ONBOARDING_CHOICE_ROLLOUT_PERCENT`, fail-closed
+//  mientras no haya snapshot), igual que con Grupos — así A5 puede ejercitar el alta en staging/DEV sin
+//  recompilar. **En producción está EN 100**, medido con `curl` al `/config` el 2026-09-09: la card
+//  born-cloud SÍ se ve. Esto decía «`"0"` en producción ⇒ prod sigue sin ver la card», que describía un
+//  estado ya vencido — el `.toml` del gateway llevó ese 0 desfasado hasta el 2026-09-10.
 //
 
 import Foundation

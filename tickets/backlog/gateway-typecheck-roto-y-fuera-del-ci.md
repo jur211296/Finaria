@@ -4,7 +4,7 @@ status: backlog
 priority: low
 area: "gateway, ci, tooling"
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-10
 source: hallazgo lateral de groups-budget (2026-09-07)
 ---
 
@@ -65,3 +65,26 @@ Sale de la sesión de `groups-budget`, que lo encontró al validar su propio cam
 comprobó que **no era suyo** antes de abrir el ticket: los dos ficheros con error estaban sin
 modificar respecto a HEAD, y la causa (`@types/node` ausente en `package.json`) es estructural del
 repo, no del entorno de esa sesión.
+
+## Re-medido el 2026-09-10: ahora son CINCO, y el punto 3 de arriba presupone algo que no existe
+
+`wrangler-prod-onboarding-choice-percent-drift` añadió a `test/config.test.ts` un guard que lee
+`wrangler.toml`, copiando el patrón de `wrangler.forceupdate.test.ts` —el precedente aceptado del
+repo—. Con él llegan **dos errores más de la misma familia exacta**, no de una nueva:
+
+```
+test/config.test.ts(1,30):   error TS2307: Cannot find module 'node:fs'
+test/config.test.ts(143,67): error TS2339: Property 'url' does not exist on type 'ImportMeta'
+```
+
+Total: **5 errores** (los 3 de este ticket + 2). Se dejaron a propósito en vez de arreglarlos de
+paso: la salida limpia toca la política de tipos del proyecto —meter `"node"` en `types` mete todas
+las APIs de Node en el ámbito del **Worker**, donde enmascararía un error real de `src/`— y eso es
+esta decisión, no un arreglo de un test. Una alternativa más acotada, para cuando se retome: un
+`tsconfig` separado para `test/` con `types: ["node"]`, que deja `src/` estricto.
+
+**Corrección al punto 3:** dice «meter `npm run typecheck` en el job del gateway del CI». No hay job
+del gateway — no existe ninguno, ni para `typecheck` ni para `npm test`. Crearlo es
+`ci-no-corre-la-suite-del-gateway`, así que este ticket **depende** de aquél y no puede cerrarse
+antes.
+
