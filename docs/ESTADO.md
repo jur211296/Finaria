@@ -5,26 +5,29 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-10 (Lima)
 
-**Rama** `2.1` — Merge #131: el **paso 3** del rediseño de sesiones. TestFlight build **13** (CPV 13).
-**Subida Yala (TF/store) = solo Mini.**
+**Rama** `2.1` — Merge #132: **«Volver a iCloud» abierta a quien nació en la nube.** TestFlight build
+**13** (CPV 13). **Subida Yala (TF/store) = solo Mini.**
 
-## Esta sesión (paso 3: el sign-in ya rutea, y el Worker está desplegado)
+## Esta sesión (la reversa se abre a born-cloud, y la review cazó dos defectos graves)
 
-**Al entrar con Google o Apple, Yala pregunta al backend qué hay detrás de esa cuenta y te lleva donde
-toca.** Ya no adopta como completa a quien solo tiene grupos, ni trata como solo-grupos a quien tiene años
-de finanzas ahí. «No encontramos una cuenta» tiene salida al alta, y asociar a tu Yala privado una cuenta
-que ya lleva Yala completo se **bloquea sin escribir nada**.
+**Creas tu cuenta con Google, la usas meses, y ya puedes pasar tus finanzas a tu iCloud privado.** Hasta
+hoy no había salida: el backend rechazaba la operación y la única forma de dejar la nube era borrar la
+cuenta. No era un caso raro — tras el fresh start, esa puerta estaba cerrada para **todo el mundo**.
 
-**El Worker está desplegado en los dos entornos** (prod `034e1074`, staging `53e181d4`), con la base
-verificada antes en cada uno — el orden importa: sin la columna, cada sign-in da 502. **`kind` ya viaja.**
-Dos datos del deploy: staging llevaba **sin desplegar desde el 12-ago** y subió 12 commits de golpe, entre
-ellos el fix de los goldens de Grupos que nunca se había desplegado; y el deploy de prod **no apagó** la
-elección nube del Welcome, que es la primera prueba real de lo que protegía el paso 1.
+**Eran dos gates que abrir, no un camino que construir.** La premisa del ticket era falsa: la reversa
+nunca subió nada a mano — monta el mirror y `NSPersistentCloudKitContainer` exporta solo. `g15_02` está
+**aplicada en staging y producción** (md5 idéntico, cero filas afectadas), y el orden es el sano: la base
+antes que el cliente, porque al revés el botón aparecería y el servidor lo rechazaría.
 
-**La review adversarial cazó nueve defectos** de la primera versión, dos graves: el bloqueo se deshacía
-solo —tres de sus cuatro salidas dejaban viva la cuenta rechazada— y el eje de sesión confundía «móvil
-limpio» con «ya está en la nube», así que a alguien ya adoptado le montaba la migración de su propia
-cuenta. Los nueve y sus cinco premisas falsas, en el ticket.
+**La review adversarial (4 lentes) cazó siete cosas y las dos graves eran de diseño mío.** El gate del
+cliente **fallaba abierto** —derivaba «nació en la nube» de la *ausencia* de un marcador que también falta
+en un 2.º teléfono de una cuenta **migrada**, o sea que habría abierto el guardarraíl justo para la
+población que protege— y el guard del backend **rompía multi-device**: dejaba al segundo teléfono con la
+barra clavada al 15 %, para siempre. Los dos corregidos, re-aplicados y verificados con 5/5 escenarios
+contra la función viva.
+
+**De paso quedó refutado un ticket que llevaba una semana en pie:** el golden 20 no se cuelga, **tarda
+9,3 s** contra un presupuesto de 5 s y pasa en verde con más tiempo.
 
 ## Tu cola
 
@@ -33,6 +36,11 @@ cuenta. Los nueve y sus cinco premisas falsas, en el ticket.
 2. **Device-QA del paso 3** — los cuatro recorridos del ticket. Sal del bloqueo **por swipe y por
    «Entendido»**, no solo por el botón; y en el recorrido 1 **fuerza el cierre de la app** antes de darlo
    por bueno. Más los device-QA de los pasos 4, 5, 8, 9 y 10.
+2-bis. **Device-QA de la reversa born-cloud → iCloud**, que es lo único de hoy que no es simulable
+   (`reverse-cutover-cerrado-para-cuentas-born-cloud`, guion dentro). Dos cosas: el **contador de testigos
+   con `ckRecordName`** del panel DEBUG tiene que pasar de 0 a cubrir tus filas vivas —ése es el único
+   testigo real de que la subida ocurrió, la pantalla no vale—, y **borra 2-3 transacciones antes de
+   empezar**: lo que no debe pasar es que reaparezcan.
 3. **Física, la de siempre**: push APNs real (4), RPC de producción (3), sign-in real SIWA/Google (6),
    Apple Pay y carreras de red (4).
 4. **De FX quedan cuatro** · **tres veredictos de QA caducos** · **el build 13 no llega al grupo externo**
@@ -42,7 +50,7 @@ cuenta. Los nueve y sus cinco premisas falsas, en el ticket.
 ## Siguiente
 
 **El paso 4** (`welcome-private-fresh-start-skips-icloud-check`). Pasos 0-3 cerrados; el 11 sigue vacante
-a propósito. **El board: 161 en backlog, 48 en qa** (267 = 267 contra disco).
+a propósito. **El board: 164 en backlog, 49 en qa** (271 = 271 contra disco).
 
 ## Bloqueo
 
@@ -55,9 +63,14 @@ por timeout, con 702 grupos de un usuario de test. **Dato nuevo:** el deploy de 
 —el fix del canon viejo, sin desplegar desde el 8-sep— así que **un rojo anterior a hoy puede no valer**.
 Re-medir antes de perseguirlo.
 
-**Una decisión tuya** (`reverse-cutover-cerrado-para-cuentas-born-cloud`, **high**): la degradación a
-solo-grupos funciona, pero su puerta exige `migrated_at` y ninguna cuenta born-cloud lo tiene — tras el
-fresh start, el 100 % de producción.
+**Dos que este cambio agranda de un caso raro a toda la población** (los dos **high**, y ninguno lo
+introdujo la sesión de hoy): `reverse-upload-has-no-ceiling-and-no-exit` —la subida a iCloud no tiene tope
+ni salida, y ahí el backend ya está congelado— y `reverse-claim-rejection-has-no-way-out-in-the-client`.
+Los dos son la misma forma: una fase de la reversa sin salida.
+
+**Y una decisión tuya, pequeña** (`revert-card-copy-says-datos-regresan-a-quien-nunca-estuvo`): el texto
+dice «tus datos **regresan** a tu iCloud» a quien nunca estuvo ahí. Son 16 locales y es voz de producto,
+así que no lo toqué — `.claude/rules/l10n.md` dice «no reescribas copy que ya funciona».
 
 **Sigue en pie:** la política de privacidad y los términos **bloquean la publicación** del rediseño. Y las
 decisiones tuyas de antes: el filtro de naturaleza, los worktrees sin candado anti-atribución, ¿se ataca

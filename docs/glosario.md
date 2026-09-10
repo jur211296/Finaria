@@ -73,7 +73,7 @@
 
 <!-- GLOSARIO:generado:inicio - no editar a mano -->
 
-## Dónde se decide cada término (163)
+## Dónde se decide cada término (166)
 
 > **No leas este bloque entero** — está ordenado alfabéticamente para buscar dentro
 > (`grep -i termino docs/glosario.md`), no para leerse. Sale de las 84 decisiones del
@@ -109,6 +109,7 @@
 - **CloudKitGroupsSchemaParityTests** — [2026-07-02](docs/DECISIONS.md#2026-07-02-incidente-prod--sync-de-grupos-muerto-4-das-por-campo-sin-deploy-de-schema--hardening), [2026-07-24](docs/DECISIONS.md#tanda-2026-07-24-fase-205--36-entradas-2026-07-08--2026-07-22), [2026-07-24](docs/DECISIONS.md#tanda-2026-07-24-cierre-ltimas-5-entradas-de-la-fase-205)
 - **cloudKitUserRecordID** — [2026-05-04](docs/DECISIONS.md#2026-05-04-groups-pulido-final--subset-2-a9a10a12a13), [2026-07-24](docs/DECISIONS.md#tanda-2026-07-24-fase-205--36-entradas-2026-07-08--2026-07-22)
 - **CloudSignOutFlowLogic** — [2026-09-09](docs/DECISIONS.md#2026-09-09-sesiones--dos-ejes-privada--nube-un-verbo-por-sesin-y-grupos-como-mini-app), [2026-07-24](docs/DECISIONS.md#tanda-2026-07-24-fase-205--36-entradas-2026-07-08--2026-07-22)
+- **complete** — [2026-09-09](docs/DECISIONS.md#2026-09-09-sesiones--dos-ejes-privada--nube-un-verbo-por-sesin-y-grupos-como-mini-app), [2026-07-24](docs/DECISIONS.md#tanda-2026-07-24-fase-205--36-entradas-2026-07-08--2026-07-22)
 - **ContentView** — [2026-04-21](docs/DECISIONS.md#2026-04-21-sync-status-banner-global-vs-toolbar-indicator), [2026-04-21](docs/DECISIONS.md#2026-04-21-sync-silencioso-por-defecto--banner-pill-global), [2026-07-24](docs/DECISIONS.md#tanda-2026-07-24-fase-205--36-entradas-2026-07-08--2026-07-22), [2026-07-24](docs/DECISIONS.md#tanda-2026-07-24-cierre-ltimas-5-entradas-de-la-fase-205)
 - **CSV** — [2026-05-25](docs/DECISIONS.md#2026-05-25-csv-mirror-pico--budget-filters--transactioniteminboxdraft-tags-resilientes-a-cloudkit-lazy-hydration), [2026-05-26](docs/DECISIONS.md#2026-05-26-fix-migracin-shortcutidtagid-colapsado-v2), [2026-05-26](docs/DECISIONS.md#2026-05-26-refactor-v3-unificado-del-csv-mirror-ssot-7-commits), [2026-06-04](docs/DECISIONS.md#2026-06-04-fix-subcategoras-duplicadas-por-re-sync-de-cloudkit), [2026-06-19](docs/DECISIONS.md#2026-06-19-fix-identity-uuids-colapsados-tras-restore-lento-de-icloud-tagidaccountshortcutidsubcategoryshortcutid), [2026-07-01](docs/DECISIONS.md#2026-07-01-groups--pagos-planificados-de-grupo-gasto-compartido-recurrente) +2
 - **CSVMirrorCodec** — [2026-05-25](docs/DECISIONS.md#2026-05-25-csv-mirror-pico--budget-filters--transactioniteminboxdraft-tags-resilientes-a-cloudkit-lazy-hydration), [2026-07-01](docs/DECISIONS.md#2026-07-01-groups--pagos-planificados-de-grupo-gasto-compartido-recurrente)
@@ -158,6 +159,7 @@
 - **M2M** — [2026-05-25](docs/DECISIONS.md#2026-05-25-csv-mirror-pico--budget-filters--transactioniteminboxdraft-tags-resilientes-a-cloudkit-lazy-hydration), [2026-05-26](docs/DECISIONS.md#2026-05-26-fix-migracin-shortcutidtagid-colapsado-v2), [2026-06-19](docs/DECISIONS.md#2026-06-19-fix-identity-uuids-colapsados-tras-restore-lento-de-icloud-tagidaccountshortcutidsubcategoryshortcutid), [2026-07-24](docs/DECISIONS.md#tanda-2026-07-24-cierre-ltimas-5-entradas-de-la-fase-205)
 - **MainActor** — [2026-04-27](docs/DECISIONS.md#2026-04-27-sankey-con-rama-planificados), [2026-05-05](docs/DECISIONS.md#2026-05-05-groups-pulido-final--subset-3-a6a7a8), [2026-05-26](docs/DECISIONS.md#2026-05-26-refactor-robusto-del-subsistema-de-routing-f0-f11), [2026-07-05](docs/DECISIONS.md#2026-07-05-siri--migrado-al-mismo-patrn-de-cola-cierra-el-ciclo-de-apple-pay), [2026-07-24](docs/DECISIONS.md#tanda-2026-07-24-fase-205--36-entradas-2026-07-08--2026-07-22)
 - **MainTabView** — [2026-04-21](docs/DECISIONS.md#2026-04-21-sync-status-banner-global-vs-toolbar-indicator), [2026-05-07](docs/DECISIONS.md#2026-05-07-a4-v32--fix-p0-2-nudge-dormant-sin-grupos--6-welcome-hero-residual-tras-reinstall)
+- **migrated_at** — [2026-09-09](docs/DECISIONS.md#2026-09-09-sesiones--dos-ejes-privada--nube-un-verbo-por-sesin-y-grupos-como-mini-app), [2026-07-24](docs/DECISIONS.md#tanda-2026-07-24-fase-205--36-entradas-2026-07-08--2026-07-22)
 - **ModelContainer** — [2026-02-02](docs/DECISIONS.md#2026-02-02-icloud-sync-integracin-nativa-swiftdata--cloudkit), [2026-07-04](docs/DECISIONS.md#2026-07-04-apple-pay--el-intent-deja-de-tocar-swiftdata-patrn-de-cola-app-group)
 - **ModelContext** — [2026-06-19](docs/DECISIONS.md#2026-06-1906-22-groups--saga-del-crash-loop-de-sync-en-restore-de-icloud-5-intentos-cerrada-en-build-32), [2026-07-24](docs/DECISIONS.md#tanda-2026-07-24-fase-205--36-entradas-2026-07-08--2026-07-22)
 - **.month** — [2026-07-06](docs/DECISIONS.md#2026-07-06-stats--comparativa-kpi-perodo-anterior-alineado-a-la-curva-mtd-vs-mtd-p20-15-completo)
@@ -187,6 +189,7 @@
 - **reorg_docs** — [2026-08-31](docs/DECISIONS.md#2026-08-31-el-repo-recibe-abrir-higiene-y-reorgdocs-lo-dems-del-estndar-de-casa-no-aplica)
 - **ReportNotificationService** — [2026-07-05](docs/DECISIONS.md#2026-07-05-stats--clasificacin-incomeexpense-por-categora-fase-2-de-p20-14), [2026-07-24](docs/DECISIONS.md#tanda-2026-07-24-cierre-ltimas-5-entradas-de-la-fase-205)
 - **rescheduleAllNotifications** — [2026-07-24](docs/DECISIONS.md#tanda-2026-07-24-fase-205--36-entradas-2026-07-08--2026-07-22), [2026-07-24](docs/DECISIONS.md#tanda-2026-07-24-cierre-ltimas-5-entradas-de-la-fase-205)
+- **reverted_at** — [2026-09-09](docs/DECISIONS.md#2026-09-09-sesiones--dos-ejes-privada--nube-un-verbo-por-sesin-y-grupos-como-mini-app), [2026-07-24](docs/DECISIONS.md#tanda-2026-07-24-fase-205--36-entradas-2026-07-08--2026-07-22)
 - **RouterEntryGate** — [2026-05-26](docs/DECISIONS.md#2026-05-26-refactor-robusto-del-subsistema-de-routing-f0-f11), [2026-07-05](docs/DECISIONS.md#2026-07-05-cold-launch--share-image-al-share-sheet-no-haca-nada-intent-no-serializable-pre-init)
 - **RouterIntent** — [2026-04-27](docs/DECISIONS.md#2026-04-27-chat--registrar-transacciones-opcin-c-hbrida), [2026-05-26](docs/DECISIONS.md#2026-05-26-refactor-robusto-del-subsistema-de-routing-f0-f11)
 - **save()** — [2026-06-19](docs/DECISIONS.md#2026-06-1906-22-groups--saga-del-crash-loop-de-sync-en-restore-de-icloud-5-intentos-cerrada-en-build-32), [2026-07-24](docs/DECISIONS.md#tanda-2026-07-24-fase-205--36-entradas-2026-07-08--2026-07-22)
