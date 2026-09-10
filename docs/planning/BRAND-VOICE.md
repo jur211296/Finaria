@@ -229,6 +229,12 @@ Cambios guardados: "Cambios guardados"
 | ExchangeRate | "Tipo de cambio" |
 | OCR | "Escaneo de recibo" |
 
+> **Sesiones (ADR 2026-09-09 «Sesiones — dos ejes»).** El par interno *sesión privada* / *sesión en
+> la nube* **no sale a pantalla**: al usuario se le habla de **dónde viven sus datos** («Tu cuenta en
+> tu iCloud privado» / «Tu cuenta en la nube»). Tampoco salen «solo grupos» ni «nube completa». Y ojo:
+> *Yala completo* (copy vivo) significa **personal + grupos**, no «cuenta en la nube». La tabla completa
+> vive en `docs/glosario.md` y aquí no se copia, para que no diverjan.
+
 ---
 
 ## 8. Frases Prohibidas
