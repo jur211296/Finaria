@@ -1,12 +1,14 @@
 ---
 id: welcome-copy-blames-owner
-status: qa
+status: discarded
 created: 2026-08-12
-updated: 2026-09-02
+updated: 2026-09-09
 source: YalaWiki/Bugs/qa_welcome-copy-acusa-al-dueno-de-traer-datos-ajenos.md
 ---
 
 # «Este dispositivo tiene datos de otra cuenta» — dicho a la dueña de los datos
+
+Why: Discarded 2026-09-09. Superado por el ADR 2026-09-09 «Sesiones — dos ejes» (docs/DECISIONS.md): la sesión de visita (M1) se retira del modelo. La pregunta abierta era si la puerta «datos ajenos» de Grupos hereda la señal de restore; esa puerta se retira (si hay sesión privada no se ve el Welcome, y grupos se asocia desde la app). El callejón se reprodujo en device el 2026-09-09 (captura en `groups-only-second-launch-mounts-icloud-mirror`), y es ESE ticket el que retira la puerta.
 
 **El síntoma titular está ARREGLADO** (2026-08-12, `c14fbfc1`). La puerta de «Crear mi primer grupo»
 ya no le dice a la dueña de los datos que son de otra cuenta: tiene copy propio, traducido en los 16

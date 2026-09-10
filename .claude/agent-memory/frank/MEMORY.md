@@ -1,6 +1,7 @@
 # Memoria de Frank — Yala
 
 ## Cómo trabaja Jürgen
+- [Sesión de rediseño](feedback_sesion_de_rediseno.md) — si el QA se vuelve producto, se sigue: acta en docs/sessions, cierre = ADR + tickets + descartes; «asume que lo desplegué» se mide igual.
 - [«Creo que» no es aprobación](feedback_creo_que_no_es_aprobacion.md) — si no reconoce el componente, explicar antes de borrar; sus respuestas firmes sí se ejecutan sin repreguntar.
 - [Push: solo lo de la sesión](feedback_push_solo_lo_de_la_sesion.md) — lo pendiente de otros se deja y lo sube su agente; el aviso del arranque es info, no tarea.
 - [Levanta sus propias reglas](feedback_jurgen_levanta_sus_reglas.md) — si te pide algo que un default tuyo prohíbe, se hace y se dice; y la medición que contradice su propuesta la quiere ANTES.
@@ -48,6 +49,7 @@
 - [El fixture hereda la anatomía de producción](feedback_el_fixture_hereda_la_anatomia_de_produccion.md) — no la deduzcas del ticket; el error se ve en el TOTAL, y el fixture tiene que ser DISCRIMINANTE.
 
 ## Estado del trabajo
+- [Rediseño de sesiones: dos ejes](project_rediseno_sesiones_dos_ejes.md) — ADR 9-sep + 13 tickets con orden; M1 retirada y «en la nube» RATIFICADOS; la puerta «datos ajenos» bloqueó a Jürgen en device.
 - [Cambiar la divisa de una cuenta ya no deja su histórico atrás](project_divisa_de_una_cuenta_con_historico.md) — PR #118; la review cazó SEIS defectos del ARREGLO; deja 5 tickets y un device-QA con trampa.
 - [La familia FX, recorrida entera en simulador](project_seam_cuenta_divisa_ausente.md) — PR #114 y #115: 5 PASS, 2 parciales por red/seam; los dos fixtures que faltaban ya existen y dejan 4 tickets.
 - [El gasto de grupo ya lleva la incertidumbre de sus patas](project_marca_aproximado_gasto_de_grupo.md) — PR #113 cierra la familia del «≈»; falta device-QA y NO es simulable; deja 3 tickets, uno es una pantalla entera sin marca.
@@ -63,7 +65,7 @@
 - [El tope de gasto del grupo ya avisa](project_presupuesto_de_grupo.md) — PR #91 y g14_01 en prod; el ticket ya está en `qa/`, y quedan device-QA, tres migraciones de staging y el Worker.
 - [El recordatorio de deuda ya avisa al deudor](project_recordatorio_liquidacion.md) — PR #89; falta device-QA y una decisión; NO se respeta `simplifyDebts` a propósito.
 - [El Panel ya suma las cuentas filtradas](project_panel_conjunto_de_cuentas.md) — PR #87; falta device-QA y quedan tres preexistentes con ticket propio.
-- [La frontera de la visita](project_la_frontera_de_la_visita.md) — PR #86 cerró la rama privada; faltan device-QA de 2 cuentas y 2 decisiones; el guard que falta suele estar MEDIO puesto.
+- [La frontera de la visita: SUPERADA](project_la_frontera_de_la_visita.md) — el ADR del 9-sep retira M1 y sus 12 tickets están descartados; no reabrir ninguno suelto.
 - [Salir del grupo: cerrado en código, abierto en decisión](project_salir_del_grupo_espera_decision.md) — PR #75; falta device-QA y qué se le ofrece al dueño con deuda.
 - [El archivado ya cierra la puerta](project_archivado_no_acepta_entradas.md) — g13_05 en prod; falta device-QA, y staging arrastra ya DOS migraciones por falta de credencial.
 - [La re-entrada: cerrada en código, abierta en decisión](project_reentrada_piezas_2_y_3.md) — piezas 2 y 3 hechas (PR #68); lo que queda es device-QA y una decisión suya sobre el kill-switch.

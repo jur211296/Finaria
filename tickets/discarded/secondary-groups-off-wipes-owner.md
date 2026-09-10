@@ -1,13 +1,15 @@
 ---
 id: secondary-groups-off-wipes-owner
-status: qa
+status: discarded
 created: 2026-08-13
-updated: 2026-09-03
+updated: 2026-09-09
 source: YalaWiki/Bugs/secundaria-canal-apagado-la-visita-borra-los-grupos-del-dueno.md
 ---
 
 
 # Con el canal de Grupos apagado, la visita monta el archivo del dueño — y puede borrarlo sin vuelta atrás
+
+Why: Discarded 2026-09-09. Superado por el ADR 2026-09-09 «Sesiones — dos ejes» (docs/DECISIONS.md): la sesión de visita (M1) se retira del modelo. No hay sesión secundaria que monte el archivo del dueño; el cierre de la sesión privada borra lo local a propósito y por decisión (ADR §5).
 
 ## El síntoma, en lenguaje de usuario
 

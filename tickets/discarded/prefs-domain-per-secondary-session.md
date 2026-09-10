@@ -1,15 +1,17 @@
 ---
 id: prefs-domain-per-secondary-session
-status: qa
+status: discarded
 priority: high
 area: modo-nube
 created: 2026-08-13
-updated: 2026-08-26
+updated: 2026-09-09
 source: YalaWiki/Backlog/qa_prefs-dominio-por-sesion-secundaria.md
 ---
 
 
 # Un dominio de preferencias por sesión: que la visita escriba en su cajón y no en el del dueño
+
+Why: Discarded 2026-09-09. Superado por el ADR 2026-09-09 «Sesiones — dos ejes» (docs/DECISIONS.md): la sesión de visita (M1) se retira del modelo. Arquitectura al servicio de la visita (decisión del 2026-08-13). Con una sesión en la nube activa por dispositivo y conmutable —cerrar borra lo local, entrar trae las prefs de la cuenta— el dominio por sesión no tiene consumidor. Se retira con el código en `shell-derives-from-two-session-axes`. Ratificado por Jürgen el 2026-09-09.
 
 **Decisión del owner (2026-08-13): opción (a), el fix de raíz.** Se descartaron el guard por escritor
 («acordarse en N sitios», que ya falló tres veces) y el snapshot-y-restaura («deshace el daño, no lo

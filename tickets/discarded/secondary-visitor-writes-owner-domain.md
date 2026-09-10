@@ -1,13 +1,15 @@
 ---
 id: secondary-visitor-writes-owner-domain
-status: qa
+status: discarded
 created: 2026-08-12
-updated: 2026-09-05
+updated: 2026-09-09
 source: YalaWiki/Bugs/secundaria-la-visita-escribe-en-el-dominio-del-dueno.md
 ---
 
 
 # De visita en el móvil de otra persona: seis vías escriben en el dominio del DUEÑO
+
+Why: Discarded 2026-09-09. Superado por el ADR 2026-09-09 «Sesiones — dos ejes» (docs/DECISIONS.md): la sesión de visita (M1) se retira del modelo. Ticket madre de la visita: sin visita no hay frontera de dueño que cruzar. El dominio de prefs por sesión que implementó queda sin consumidor y se retira en `shell-derives-from-two-session-axes`.
 
 ## El síntoma, en lenguaje de usuario
 

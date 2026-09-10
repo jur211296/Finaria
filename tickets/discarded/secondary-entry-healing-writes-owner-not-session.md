@@ -1,13 +1,15 @@
 ---
 id: secondary-entry-healing-writes-owner-not-session
-status: backlog
+status: discarded
 priority: medium
 area: modo-nube
 created: 2026-09-05
-updated: 2026-09-05
+updated: 2026-09-09
 ---
 
 # El kill-recovery de la entrada secundaria repara el cajón equivocado
+
+Why: Discarded 2026-09-09. Superado por el ADR 2026-09-09 «Sesiones — dos ejes» (docs/DECISIONS.md): la sesión de visita (M1) se retira del modelo. El kill-recovery de la ENTRADA secundaria no tiene qué reparar cuando la entrada no existe.
 
 ## El síntoma, en lenguaje de usuario
 

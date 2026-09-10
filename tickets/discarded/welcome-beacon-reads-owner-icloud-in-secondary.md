@@ -1,13 +1,15 @@
 ---
 id: welcome-beacon-reads-owner-icloud-in-secondary
-status: backlog
+status: discarded
 priority: medium
 area: modo-nube
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-09
 ---
 
 # El faro de «Soy nuevo» lee el iCloud del DUEÑO, también cuando quien elige es la visita
+
+Why: Discarded 2026-09-09. Superado por el ADR 2026-09-09 «Sesiones — dos ejes» (docs/DECISIONS.md): la sesión de visita (M1) se retira del modelo. Sin sesión de visita, quien elige en el Welcome es siempre el dueño del Apple ID; y el faro pasa a solo encaminar (`beacon-routes-only-never-blocks`).
 
 ## Qué se midió, y qué NO
 
