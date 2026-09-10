@@ -64,6 +64,12 @@ cero» encima de un histórico intacto que nadie me dijo que existía.
 - Doble confirmación: el alert existente + una segunda («¿Seguro? Esto es definitivo.» ya existe
   para «Vaciar datos»: `settings.wipeDataSecondConfirmTitle`).
 
+- **Sin iCloud disponible (K)**: no se puede validar; se informa (como «Restaurar» con `.iCloudDisabled`)
+  y se sigue en local (`.localNoMirror`). Nunca se bloquea por no poder preguntar.
+- **Kill-safety:** matar la app entre «borrar» y el reinicio no puede dejar datos a medio borrar ni un
+  onboarding encima de ellos: armar el borrado y el destino como hace el boot-wipe del cierre de sesión
+  (`SwiftDataConfiguration.swift:689`), y consumirlos al arrancar.
+
 ## Criterios de aceptación
 
 - [ ] Instalación fresca + iCloud con datos → «Primera vez → privado» muestra el alert ANTES de
@@ -73,6 +79,10 @@ cero» encima de un histórico intacto que nadie me dijo que existía.
       iCloud» en otra instalación: `notFound`).
 - [ ] Cancelar → chooser privado/nube, con los datos de iCloud intactos.
 - [ ] Instalación fresca + iCloud vacío → onboarding directo (con el reinicio que haga falta), sin alert.
+- [ ] Sin iCloud en el dispositivo → aviso + onboarding local; con iCloud activado después, el espejo se
+      adjunta como hoy.
+- [ ] Matar la app justo tras confirmar «borrar» → al reabrir, el borrado se completa y abre el onboarding
+      limpio (breadcrumb del arm consumido).
 - [ ] Los dos tickets del alert (`welcome-start-fresh-wipes-before-ask`,
       `welcome-fresh-start-alert-leaves-blank-screen`) siguen verdes en el recorrido nuevo.
 

@@ -41,10 +41,15 @@ en Panel.
 
 ## Alcance
 
-1. **Estado:** «cuenta de grupos asociada» = hash del `sub` + proveedor + `kind`, persistido en el
-   dominio de la sesión privada (donde vive `storageMode`), escrito al completar [G] o al entrar con una
-   `groups_only` existente desde una sesión privada, y borrado al desasociar. Es la señal que
-   `session-exits-one-verb-per-session` usa para «equipo».
+1. **Estado:** «cuenta de grupos asociada» = hash del `sub` + proveedor + `kind`, escrito al completar
+   [G] o al entrar con una `groups_only` existente desde una sesión privada, y borrado al desasociar. Es la
+   señal que `session-exits-one-verb-per-session` usa para «equipo». **Viaja con la sesión privada**: se
+   persiste en el iCloud-KV del Apple ID (por `OwnerKeyValueStore`, como el faro), no solo en
+   `UserDefaults`, para que un segundo móvil o una restauración sepan que existe.
+   **Tras «Restaurar desde iCloud»** con asociación registrada, la app ofrece entrar con esa cuenta de
+   grupos (la sesión no viaja; la asociación sí).
+   **«Migrar a la nube» desde una sesión privada con asociada:** la cuenta que se promueve a `complete`
+   es **esa**, nunca una segunda (ADR §4: si la personal es nube, grupos es la misma cuenta).
 2. **UI en «¿Dónde viven tus datos?»:** sección «Grupos» con tres estados: *sin cuenta* («Asociar una
    cuenta para grupos» → [I] → [G]), *asociada* (proveedor + nombre, «Desasociar»), y para sesión nube
    completa: «Tus grupos usan esta misma cuenta» sin acción.
@@ -65,6 +70,9 @@ en Panel.
 - [ ] Re-asociar la misma cuenta → 0 duplicados, los 3 vuelven a estar enlazados a su gasto de grupo.
 - [ ] Asociar otra cuenta → los 3 quedan como estaban; los grupos nuevos llegan limpios.
 - [ ] Sesión nube completa → la sección informa y no ofrece desasociar.
+- [ ] Segundo móvil del mismo Apple ID → «Restaurar desde iCloud» → tras restaurar, ofrece entrar con la
+      cuenta de grupos asociada; al entrar, los grupos aparecen y el bridge re-enlaza sin duplicar.
+- [ ] «Migrar a la nube» desde D → la asociada pasa a `complete` (backend), sin segunda cuenta.
 - [ ] Tests: lógica de reconciliación por `splitExpenseID` (unit, con fixture que tenga filas dormidas
       y vivas); XCUITest de la fila en sus tres estados.
 

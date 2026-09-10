@@ -44,7 +44,9 @@ otro usuario**.
    faro, la pantalla informa («Tu cuenta de Yala se creó con Apple») y ofrece las DOS salidas:
    «Entrar con Apple» y «Crear una cuenta con Google» (→ «Primera vez → nube» con Google preelegido,
    que pasa por [I] y crea).
-3. El faro se sigue escribiendo y leyendo igual (`CloudBeacon`); no cambia su semántica ni su wire.
+3. El faro se sigue escribiendo y leyendo igual (`CloudBeacon`); no cambia su semántica ni su wire. Con dos
+   cuentas creadas desde el mismo Apple ID guarda la **última reclamada**: encamina a esa y sigue
+   ofreciendo «crear otra». No se guardan dos.
 4. Ticket relacionado que NO se resuelve aquí: `restore-beacon-outlives-account-deletion` (el faro
    puede sobrevivir al borrado de cuenta; con «solo encamina» su daño baja, pero el mensaje bajo el
    kill-switch sigue afirmando de más).

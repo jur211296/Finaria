@@ -41,7 +41,8 @@ con cada resultado:
 | Primera vez → nube | crear (`kind=complete`) → [P] | = «Ya tengo cuenta» (adopta) | entra solo-grupos y ofrece «Activar Yala completo» |
 | Ya tengo cuenta → Apple/Google | «No hay cuenta» **con botón** a «Primera vez → nube» | adopta y entra | entra solo-grupos |
 | Vengo por un grupo (crear / invitación) | crear (`kind=groups_only`) → [G] → grupo / unirse | entra completa y abre Grupos (y la invitación, si la había) | entra y sigue a [G] o a unirse |
-| Privada + asociar grupos (desde Grupos) | crear (`groups_only`) → [G] → asociada | **bloquea**: «esa cuenta ya tiene Yala completo» + dos salidas: «Ya tengo cuenta» / «asociar otra cuenta» | [G] si falta → asociada |
+| Privada + asociar grupos (desde Grupos **o al llegar una invitación**) | crear (`groups_only`) → [G] → asociada (→ unirme) | **bloquea**: «esa cuenta ya tiene Yala completo» + dos salidas: «Ya tengo cuenta» / «asociar otra cuenta» | [G] si falta → asociada (→ unirme) |
+| Privada → Ajustes «migrar a la nube» | cutover existente → nube completa | **bloquea** (sería una fusión): salidas «Ya tengo cuenta» (reemplaza lo privado) / cancelar | es mi asociada → **promover** + cutover; otra → bloquear (una cuenta a la vez) |
 
 ## Alcance
 
@@ -59,7 +60,9 @@ con cada resultado:
 
 ## Criterios de aceptación
 
-- [ ] Las 12 celdas de la tabla tienen test unitario sobre la lógica pura.
+- [ ] Las 15 celdas de la tabla tienen test unitario sobre la lógica pura.
+- [ ] Invitación (link) con sesión privada y sin cuenta asociada → [I] → asociada → hoja «unirme»; con
+      una cuenta completa → bloqueo, la invitación sigue pendiente en `PendingJoinStore`.
 - [ ] En staging: cuenta completa entrando por «Vengo por un grupo» → app completa, pestaña Grupos.
 - [ ] Cuenta solo-grupos entrando por «Ya tengo cuenta → Google» → solo-grupos (no adopción).
 - [ ] Cuenta inexistente por «Ya tengo cuenta» → pantalla con botón que lleva al alta; el alta crea.

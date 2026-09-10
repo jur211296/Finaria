@@ -48,6 +48,11 @@ entra por «Primera vez» (las dos cards: «Tu cuenta en tu iCloud privado» / �
    y el motor de sync personal arranca (el mismo tramo que el alta born-cloud recorre hoy tras
    `activateBornCloudStorage`). Resultado: celda «nacida en la nube».
 4. Copy: el CTA puede seguir diciendo «Activar Yala completo»; lo que cambia es que ahora pregunta.
+5. **Propuesta de Frank, pendiente de Jürgen:** en la rama *privado*, si iCloud tiene datos, ofrecer
+   **«Restaurar mis datos»** además de borrar/cancelar. Quien llega aquí no es «nuevo» (entró por grupos
+   y puede ser un usuario privado de antes); mandarlo a cerrar sesión → «Ya tengo cuenta → iCloud» →
+   asociar de nuevo para conseguir lo mismo es un rodeo. Si Jürgen dice que no, la rama es idéntica a
+   «Primera vez → privado» (borrar / cancelar).
 
 ## Criterios de aceptación
 

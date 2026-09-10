@@ -46,8 +46,12 @@ y el cliente lo lee en el bloque [I] para rutear (ticket `cloud-sign-in-discover
 2. **Wire:** `GET /account/exists` pasa a devolver `{ exists, kind? }` (campo ausente ⇒ cliente trata
    como `groups_only`, fail-safe hacia la opción menos invasiva). `POST /account/claim` acepta `kind`
    (born-cloud lo manda `complete`; el alta de grupos, `groups_only`). Un endpoint o RPC para
-   **promover** `groups_only → complete` (lo usa «Activar Yala completo → nube»). No hay degradación
-   `complete → groups_only`: se hace con «Vaciar datos» + política aparte, fuera de este ticket.
+   **promover** `groups_only → complete` (lo usa «Activar Yala completo → nube»). **Una sola degradación**
+   `complete → groups_only`, como efecto del **reverse cutover existente** («Volver a iCloud»,
+   `POST /account/migration` `reverse_*`): lo personal vuelve a iCloud y la cuenta queda como cuenta de
+   grupos **asociada** a esa sesión privada si tiene grupos. Ninguna otra ruta degrada. La
+   **promoción** `groups_only → complete` la usan «Activar Yala completo → nube» y «migrar a la nube»
+   desde una sesión privada que ya tiene cuenta asociada (misma cuenta, nunca una segunda).
 3. **Cliente:** `CloudAccountClient.exists` decodifica `kind`; `CloudWelcomeSignInFlow.route` devuelve
    `.accountFound(kind:)`; `YalaAccountLogic.dataLocation` y `RestoreRouter` dejan de inferir y leen el
    `kind` cacheado de la sesión (persistido en el mismo sitio que el provider de la sesión).
@@ -59,7 +63,8 @@ y el cliente lo lee en el bloque [I] para rutear (ticket `cloud-sign-in-discover
 - [ ] `GET /account/exists` en staging devuelve `kind` para una cuenta nacida en la nube (`complete`) y
       para una de solo-grupos (`groups_only`); para una cuenta inexistente, `exists: false` sin `kind`.
 - [ ] El claim born-cloud crea `complete`; el alta de grupos crea `groups_only`.
-- [ ] Promover funciona una vez y es idempotente; jamás degrada.
+- [ ] Promover funciona una vez y es idempotente. Degradar solo ocurre dentro del reverse cutover y deja
+      `groups_only`; un `complete` con corpus personal vivo nunca se degrada por otra vía.
 - [ ] Todas las cuentas de producción tienen `kind` tras la migración, y el conteo por tipo se anota en
       el PR (medido, no estimado).
 - [ ] Tests del gateway (`gateway/test/`) para las tres rutas; `CloudAccountClientTests` para el decode

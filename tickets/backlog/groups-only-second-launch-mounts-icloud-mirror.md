@@ -66,6 +66,11 @@ sign-in. Nunca bloquea: en el modelo, si se ve el Welcome no hay sesión privada
 store es una importación que nadie pidió. Los otros dos términos de la puerta (canal apagado, sesión
 secundaria) siguen hasta que M1 se retire.
 
+La **misma regla vale para la entrada por invitación** (`presentGroupBackendInviteOnboarding` →
+`GroupBackendInviteEntryLogic`): es la otra puerta a solo-grupos y hereda el mismo mount. Y si hay una
+**restauración de iCloud en curso** (`ICloudRestoreSessionSignal.isRestoringNow`) al elegir grupos, se
+cancela la señal antes de la vuelta al neutro: iCloud queda intacto, así que no se pierde nada.
+
 ## Alcance
 
 - Que la decisión de mount deje de inferir «no ha elegido» de la ausencia de archivo y pase a
@@ -88,6 +93,10 @@ secundaria) siguen hasta que M1 se retire.
 - [ ] Store con espejo y datos importados + «Vengo por un grupo» → sin pantalla de bloqueo: vuelta al
       neutro (con relanzamiento si hace falta) y sign-in; el contenedor de iCloud sigue intacto
       («Restaurar desde iCloud» en otra instalación lo encuentra).
+- [ ] Invitación (link) en instalación fresca o en estado B → mismo resultado que «crear»: sin bloqueo, sin
+      espejo, y la hoja «unirme» al terminar.
+- [ ] Restauración en curso + «Vengo por un grupo» → la señal de restore se cancela, vuelta al neutro, y
+      «Restaurar desde iCloud» en otra instalación sigue encontrando todo.
 - [ ] «Restaurar desde iCloud» y «Primera vez → privado» siguen adjuntando el espejo cuando toca.
 - [ ] El cierre de sesión solo-grupos sigue dejando el dispositivo en neutro duradero.
 - [ ] Test unitario sobre `personalStoreDecision` / `shouldMountNeutralDurable` con el escenario

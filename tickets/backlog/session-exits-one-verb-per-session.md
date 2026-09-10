@@ -52,8 +52,14 @@ borra y qué queda (el `DestructiveScopeSheet` ya sabe pintar eso por ubicación
 1. `CloudSignOutFlowLogic.path` pasa a decidir por los dos ejes del ADR (¿sesión privada? × sesión
    nube activa y su `kind`), y `.privateReset` deja de existir: la salida privada **borra lo local**
    (`DataWipeService.wipeAllUserData` + dominio grupos local si no hay asociación) y arma el neutro
-   duradero, como hoy hace `cloudSecureSignOut` en el boot-wipe (`SwiftDataConfiguration.swift:689`).
-   El contenedor de iCloud no se toca: «entrar» vuelve a ser «Restaurar desde iCloud».
+   duradero, como hoy hace `cloudSecureSignOut` en el boot-wipe (`SwiftDataConfiguration.swift:689`).   El contenedor de iCloud no se toca: «entrar» vuelve a ser «Restaurar desde iCloud».
+   **Antes de borrar, esperar al último export a CloudKit.** Medido el 2026-09-09: nadie espera hoy
+   (`iCloudSyncService.startObserving` solo observa `NSPersistentCloudKitContainer.eventChangedNotification`
+   para pintar estado; `.privateReset` no borraba y por eso no lo necesitaba). Con el borrado local, un
+   movimiento guardado hace cinco segundos y aún no exportado **se pierde para siempre**. Regla: el wipe
+   solo corre tras un evento `.export` con éxito posterior al último save (o un `exportPending == false`
+   equivalente); sin red o con el export atascado, «un momento más» como en la nube, y nunca borrar.
+   Kill-safety: reusar el arm del boot-wipe (`SwiftDataConfiguration.swift:689`), que ya es kill-safe.
 2. «Equipo»: con asociación, cerrar sesión = `pushAll` verificado de grupos (el mismo de
    `cloudSecureSignOut`, «jamás descartar») → cerrar la sesión nube → wipe local → Welcome.
    `.groupsOnlySignOut` queda solo para la celda «sin sesión privada + solo grupos».
@@ -64,12 +70,21 @@ borra y qué queda (el `DestructiveScopeSheet` ya sabe pintar eso por ubicación
 5. «Eliminar mi cuenta» se mueve a `YalaAccountView` (ya está ahí como fila) y desaparece de las
    listas principales; sigue cumpliendo el borrado GDPR (`POST /account/delete`).
 6. Copy nuevo en los 16 `.strings`; los strings de las operaciones retiradas se retiran.
+7. **«Vaciar datos» en privada + asociada (D):** borra lo personal (local + iCloud), **la asociación y los
+   grupos siguen**, y la app abre el onboarding [P]; al terminar sigue en D.
+8. **«Eliminar mi cuenta» en D:** vive en «Tu cuenta de Yala» de la cuenta asociada; = desasociar +
+   borrado GDPR de esa cuenta; lo personal privado no se toca.
+9. Cambio de Apple ID en el teléfono con sesión privada: es un cierre de sesión (la sesión es del Apple
+   ID); hoy `AppBootstrapper.checkForICloudMismatch` avisa — alinear en `shell-derives-from-two-session-axes`.
 
 ## Criterios de aceptación
 
 - [ ] Ajustes muestra exactamente «Cerrar sesión» y «Vaciar datos» en las cuatro celdas del ADR.
 - [ ] Privada: cerrar sesión → Welcome con `checkHasExistingData == false`, `personalStoreMountedDecision`
       neutro duradero al reabrir, y «Restaurar desde iCloud» encuentra los datos (device-QA).
+- [ ] Privada: cerrar sesión 2 s después de guardar un movimiento nuevo → el movimiento está en iCloud
+      (restaurar en otra instalación lo trae). Sin red → «un momento más», el store sigue intacto.
+- [ ] D: «Vaciar datos» deja grupos y asociación; «Eliminar mi cuenta» desasocia y borra solo la nube.
 - [ ] Equipo: cerrar sesión con un gasto de grupo sin subir → el gasto llega al backend antes del wipe
       (canario `pushAllVerdict == .drained`); si no puede subir, el cierre se bloquea con el «un momento
       más» existente, nunca descarta.

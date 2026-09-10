@@ -215,6 +215,10 @@ dependencias reales, no preferencias):
 12. `retire-guest-vocabulary-for-session-terms` — puede ir en cualquier momento.
 13. `after-session-redesign-review-widgets-siri-applepay-and-web-copy` — después de todo lo anterior.
 
+**Verificación de cobertura:** `docs/sessions/2026-09-09-matriz-escenarios-sesiones.md` recorre estado del
+móvil × acción y nombra el ticket de cada celda; los huecos que encontró (9) se añadieron a sus tickets el
+mismo día. Toda sesión que implemente un ticket de esta lista la lee antes de empezar.
+
 **Estado:** Activa.
 
 ---

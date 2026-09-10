@@ -50,7 +50,12 @@ mount, `SwiftDataConfiguration.personalStoreDecision`), 2 en `Yala/App/Services`
    están descartados con el ADR como motivo; sus tests se retiran con el código.
 5. Las 19 vistas pasan a leer `SessionShape` (o una derivación). Sin cambios visuales fuera de lo que
    los tickets anteriores ya definieron.
-6. Migración de datos en el dispositivo: un usuario que hoy está en `groupInvite`/`groupsOnly` tiene
+6. **Cambio de Apple ID en el teléfono** con sesión privada = cierre de sesión privada (borrar local,
+   neutro). Hoy `AppBootstrapper.checkForICloudMismatch` (`Yala/App/AppBootstrapper.swift:1046`) y
+   `iCloudSyncService.accountDidChange` reaccionan a `NSUbiquityIdentityDidChange` con un aviso: medir qué
+   hacen exactamente y alinearlos con el verbo único. `RestoreRouter.decide` pierde su rama `.groupsOnly`
+   (dependía de `onboardingMode == .groupInvite`).
+7. Migración de datos en el dispositivo: un usuario que hoy está en `groupInvite`/`groupsOnly` tiene
    que despertar en la celda «sin privada + nube solo grupos» sin perder nada; uno en `.cloud`, en
    «nube completa»; uno en `.icloud` con sesión de grupos viva, en «privada + asociada» (la asociación
    se infiere una vez del `sub` vivo).
@@ -65,6 +70,9 @@ mount, `SwiftDataConfiguration.personalStoreDecision`), 2 en `Yala/App/Services`
 - [ ] La suite entera en verde (`/gate` completo): al borrar código se corre todo, no lo tocado.
 - [ ] `docs/glosario.md` y `.claude/rules/swiftdata-cloudkit.md` sin «secundaria», «visita» ni
       «invitada» como estados vivos (ticket `retire-guest-vocabulary-for-session-terms`).
+
+Antes de empezar: leer `docs/sessions/2026-09-09-matriz-escenarios-sesiones.md` y marcar cada fila como
+cubierta por un test o un device-QA.
 
 ## Depende de
 
