@@ -5753,3 +5753,72 @@
 
 /* Bloque [I]: la otra salida del ADR */
 "groups.accountIsComplete.settingsHint" = "Wil je dat dat account je financiën bijhoudt? Dat kies je in Instellingen, bij ‘Waar je gegevens leven’.";
+
+/* Private branch iCloud gate: spinner while probing CloudKit */
+"welcome.privateICloud.checking" = "We kijken wat er in je iCloud staat…";
+
+/* Private branch iCloud gate: spinner while deleting the iCloud corpus */
+"welcome.privateICloud.wiping" = "We verwijderen wat in iCloud stond…";
+
+/* Private branch iCloud gate: title when previous data is found in iCloud */
+"welcome.privateICloud.foundTitle" = "Je hebt al gegevens in je iCloud";
+
+/* Private branch iCloud gate: body explaining the two ways out */
+"welcome.privateICloud.foundBody" = "Je hebt ze met hetzelfde Apple Account bewaard. Je kunt ze terughalen of opnieuw beginnen — maar opnieuw beginnen verwijdert ze ook uit iCloud, niet alleen van deze telefoon, en dat kun je niet terugdraaien.";
+
+/* Private branch iCloud gate: 'since <month year>' fragment in the counts line */
+"welcome.privateICloud.foundSince" = "sinds %@";
+
+/* Private branch iCloud gate: counts line when the scan hit its cap */
+"welcome.privateICloud.foundAtLeast" = "meer dan %d records";
+
+/* Private branch iCloud gate: primary button, restore from iCloud */
+"welcome.privateICloud.restoreAction" = "Mijn gegevens terughalen";
+
+/* Private branch iCloud gate: destructive button, delete the iCloud data */
+"welcome.privateICloud.wipeAction" = "Opnieuw beginnen";
+
+/* Private branch iCloud gate: body of the second confirmation before deleting */
+"welcome.privateICloud.wipeConfirmBody" = "Je records, rekeningen en budgetten verdwijnen uit iCloud. Er blijft geen kopie over en we kunnen ze daarna niet terughalen.";
+
+/* Private branch iCloud gate: safe button on the second confirmation */
+"welcome.privateICloud.wipeConfirmKeep" = "Toch maar niet";
+
+/* Private branch iCloud gate: title when deleting the iCloud corpus failed */
+"welcome.privateICloud.wipeFailedTitle" = "We konden niet alles verwijderen";
+
+/* Private branch iCloud gate: body when deleting failed */
+"welcome.privateICloud.wipeFailedBody" = "Je gegevens staan nog ongewijzigd in iCloud. Controleer je verbinding en probeer het opnieuw.";
+
+/* Private branch iCloud gate: title when the device has no iCloud account */
+"welcome.privateICloud.noAccountTitle" = "We konden je iCloud niet controleren";
+
+/* Private branch iCloud gate: body when there is no iCloud account */
+"welcome.privateICloud.noAccountBody" = "Op deze telefoon staat iCloud uit, dus we weten niet of je eerder iets hebt bewaard. Je kunt doorgaan: voorlopig blijven je gegevens hier, en als je iCloud aanzet laten we het weten voordat er iets samenkomt.";
+
+/* Private branch iCloud gate: continue button when there is no iCloud account */
+"welcome.privateICloud.noAccountCta" = "Zo doorgaan";
+
+/* Private branch iCloud gate: title when the CloudKit probe failed */
+"welcome.privateICloud.errorTitle" = "We konden iCloud niet bereiken";
+
+/* Private branch iCloud gate: body when the CloudKit probe failed */
+"welcome.privateICloud.errorBody" = "Misschien ligt het aan je verbinding. Probeer het opnieuw voordat je verdergaat — dan duiken er geen oude gegevens onaangekondigd op.";
+
+/* Late mirror notice: title when iCloud is turned on after a local-only onboarding */
+"welcome.privateICloud.lateTitle" = "We hebben gegevens van je in iCloud gevonden";
+
+/* Late mirror notice: body with the counts of the previous corpus */
+"welcome.privateICloud.lateBody" = "Toen je iCloud aanzette, doken gegevens op die je eerder met dit Apple Account hebt bewaard: %@. Die komen samen met wat je nu hebt. Je kunt het zo laten, of opnieuw beginnen en ze uit iCloud verwijderen.";
+
+/* Late mirror notice: safe button, both corpora coexist */
+"welcome.privateICloud.lateKeep" = "Zo laten";
+
+/* Private branch iCloud gate: counts line fragment for user categories */
+"welcome.privateICloud.foundCategories" = "%d categorieën";
+
+/* Private branch iCloud gate: counts line when the scan hit its cap before reaching countable types */
+"welcome.privateICloud.foundUnknownAmount" = "veel bewaarde gegevens";
+
+/* Private branch iCloud gate: secondary button on the wipe-failed screen, gives up the deletion */
+"welcome.privateICloud.wipeFailedBack" = "Laat maar even";

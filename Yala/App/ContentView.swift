@@ -63,6 +63,14 @@ struct ContentView: View {
     /// El wipe de «empiezo de cero» LANZÓ (cualquiera de los dos caminos que borran). Blocker de la
     /// matriz de readiness como sus hermanos: mientras esté puesto, nada del router presenta debajo.
     @State private var showFreshStartWipeFailedAlert: Bool = false
+    /// **Paso 4 · el espejo que se adjunta TARDE.** Corpus previo encontrado en el iCloud de este Apple
+    /// ID después de que la persona eligiera privado sin poder validarlo. `nil` = nada que avisar.
+    ///
+    /// **Una sola presentación y no dos alerts encadenados** (review adversarial, 2026-09-10): dos
+    /// `.alert` del mismo anchor se pisan, y un `.alert` no tiene `onDismiss` con el que encadenarlos como
+    /// hace `UserDataResetView`. La confirmación, el progreso y el fallo son FASES de
+    /// `LateICloudMirrorNoticeView`.
+    @State private var lateICloudCorpus: ICloudPersonalCorpus?
     @State private var showSyncSettingsSheet: Bool = false
     @State private var showProTrialOffer: Bool = false
     @State private var showWhatsNew: Bool = false
@@ -296,6 +304,30 @@ struct ContentView: View {
             welcomeFlowInitialStep: $welcomeFlowInitialStep,
             onCancelWipeGrace: { wipeGraceTask?.cancel(); wipeGraceTask = nil }
         ))
+        // Paso 4 · el aviso del espejo tardío. Sheet y no alert: lleva dos gestos, un progreso y un
+        // fallo, y encadenar presentaciones desde este anchor es la carrera medida del 2026-09-03.
+        .sheet(item: $lateICloudCorpus) { corpus in
+            LateICloudMirrorNoticeView(
+                corpus: corpus,
+                onKeep: {
+                    // «Déjalo así»: los dos corpus conviven, que es lo que ya pasaba — la diferencia es
+                    // que ahora lo eligió la persona. Se retira el testigo: ya decidió, y volver a
+                    // preguntárselo en cada arranque sería no haberla escuchado.
+                    StorageModePersistence.clearPrivateChoseWithoutICloud()
+                },
+                performWipe: { await performICloudCorpusWipe() },
+                onWiped: {
+                    // La gracia del wipe remoto se cancela antes de bajar las señales: este borrado es
+                    // DELIBERADO y sin esto el true→false se lee como «te borraron los datos en otro
+                    // dispositivo».
+                    wipeGraceTask?.cancel()
+                    wipeGraceTask = nil
+                    hasExistingData = false
+                    hasPersonalData = false
+                    hasCompletedOnboarding = false
+                }
+            )
+        }
         .fullScreenCover(isPresented: $showLanguageSelection) { languageSelectionCover }
         .fullScreenCover(isPresented: $showInviteRecovery) { inviteRecoveryCover }
         .fullScreenCover(isPresented: $showWelcomeRestore) { welcomeRestoreCover }
@@ -316,6 +348,7 @@ struct ContentView: View {
             groupsOrganizerFlowActive: $groupsOrganizerFlowActive,
             hasExistingData: hasExistingData,
             hasLocalDataNow: { checkHasExistingData() },
+            performICloudCorpusWipe: { await performICloudCorpusWipe() },
             showGroupInviteOnboarding: showGroupInviteOnboarding
         ))
         .modifier(SignOutRelaunchNetModifier(
@@ -581,6 +614,7 @@ struct ContentView: View {
                 || (SecondarySessionStore.isActive() && !SwiftDataConfiguration.secondaryStoreMounted),
             showFreshStartWipeAlert: showFreshStartWipeAlert,
             showFreshStartWipeFailedAlert: showFreshStartWipeFailedAlert,
+            showLateICloudNotice: lateICloudCorpus != nil,
             showRemoteWipeAlert: showRemoteWipeAlert,
             showICloudRestartAlert: showICloudRestartAlert,
             hasActiveInviteError: activeInviteError != nil,
@@ -828,6 +862,7 @@ struct ContentView: View {
                 || (SecondarySessionStore.isActive() && !SwiftDataConfiguration.secondaryStoreMounted),
             showFreshStartWipeAlert: showFreshStartWipeAlert,
             showFreshStartWipeFailedAlert: showFreshStartWipeFailedAlert,
+            showLateICloudNotice: lateICloudCorpus != nil,
             showRemoteWipeAlert: showRemoteWipeAlert,
             showICloudRestartAlert: showICloudRestartAlert,
             hasActiveInviteError: activeInviteError != nil,
@@ -916,6 +951,8 @@ struct ContentView: View {
         case .presentWhatsNew(let features, let version):
             whatsNewData = (features: features, version: version)
             showWhatsNew = true
+        case .presentLateICloudMirrorNotice(let corpus):
+            lateICloudCorpus = corpus
         case .showInviteError(let detail):
             // El fallback del cuerpo vacío vivía en la vista; se mueve al productor para que la alerta
             // no tenga que saber de qué camino viene el texto.
@@ -1359,6 +1396,109 @@ struct ContentView: View {
         isInitialCheckDone = true
     }
 
+    /// **Paso 4 · la validación de iCloud que se aplazó, ejecutada cuando por fin se puede.**
+    ///
+    /// El hueco lo encontró Jürgen el 2026-09-09: quien elige privado sin poder validar sigue en local
+    /// —correcto, no poder preguntar nunca bloquea— pero el día que el espejo sincroniza le baja el
+    /// histórico viejo encima de lo que acaba de crear, sin decirle nada. Es el bug de este ticket por la
+    /// puerta de atrás, y por eso se cubre aquí y no en un ticket aparte.
+    ///
+    /// Corre en TODO arranque de returning user, y por eso los términos baratos van delante de la sonda.
+    @MainActor
+    private func runLateICloudMirrorCheck() async {
+        // **La sesión secundaria sale antes que nada** (review adversarial, 2026-09-10). Los testigos
+        // viven en `UserDefaults.standard` —el dominio del DUEÑO— mientras `hasCompletedOnboarding`
+        // resuelve por `SessionDefaults`, o sea el de la invitada: sin este guard, la visita recibía el
+        // aviso con las cifras del dueño y podía borrarle su iCloud. Es el mismo guard que
+        // `advanceGroupsOrganizerFlow` tiene, y por la misma frontera.
+        guard !SecondarySessionStore.isActive() else { return }
+        // **Un borrado que quedó a medias manda sobre todo lo demás: no se pregunta otra vez, se termina.**
+        // Aquí sí se reanuda a ciegas —al revés que en la puerta, que vuelve a medir— y la asimetría tiene
+        // motivo: para cuando esto corre, el espejo ya mezcló los dos corpus en el store local, así que
+        // volver a sondear diría «hay datos» sin distinguir los viejos de los nuevos. La persona confirmó
+        // dos veces y lo que falta es acabar.
+        //
+        // **Y el ciclo se cierra aquí, que es lo que faltaba**: `performICloudCorpusWipe` no retira los
+        // testigos —los retiran las vistas al terminar su fase—, así que sin este bloque un borrado
+        // reanudado con éxito dejaba el arm puesto y el arranque siguiente volvía a reanudarlo. Bucle.
+        if StorageModePersistence.isICloudCorpusWipeArmed() {
+            guard await performICloudCorpusWipe() == nil else { return }
+            StorageModePersistence.clearPrivateChoseWithoutICloud()
+            StorageModePersistence.clearICloudCorpusWipeArm()
+            wipeGraceTask?.cancel()
+            wipeGraceTask = nil
+            hasExistingData = false
+            hasPersonalData = false
+            hasCompletedOnboarding = false
+            return
+        }
+        let watching = StorageModePersistence.privateChoseWithoutICloud()
+        // **El pre-filtro es «¿este mount espeja?», no «¿hay iCloud?»**: sin espejo adjunto no hay nada
+        // que pueda caer encima. Preguntarlo con `ubiquityIdentityToken` era el pre-filtro que tapaba al
+        // criterio — mide iCloud Drive, y `.localNoMirror` adjunta el espejo igual.
+        let willSync = ICloudPersonalCorpusProbe.mirrorWillSync()
+        // La sonda solo se paga si los dos términos previos la justifican — `decideLateMirror` acepta
+        // `nil` justamente para poder decidir sin ella.
+        let outcome = (watching && willSync) ? await ICloudPersonalCorpusProbe.probe() : nil
+        guard !Task.isCancelled else { return }
+
+        switch WelcomePrivateICloudGateLogic.decideLateMirror(
+            watching: watching, iCloudAvailable: willSync, outcome: outcome
+        ) {
+        case .idle:
+            return
+        case .standDown:
+            StorageModePersistence.clearPrivateChoseWithoutICloud()
+        case .ask(let corpus):
+            // Por el ROUTER y no encendiendo el `@State`: la sonda contesta desde un `Task` async, y para
+            // entonces el anchor puede estar presentando el cover de idioma o el sheet del trial. La
+            // matriz de readiness retiene la cola hasta que el anchor esté libre.
+            RouterEntryGate.shared.submit(.presentLateICloudMirrorNotice(corpus))
+        }
+    }
+
+    /// **El borrado del corpus de iCloud, y es UNO para los dos caminos.** Lo llaman la puerta del Welcome
+    /// y el aviso tardío, y tiene que hacer lo mismo en los dos: la puerta es alcanzable con el espejo YA
+    /// adjunto —el mount neutro dura un solo arranque, así que quien abre la app, ve el Welcome y la
+    /// cierra sin elegir vuelve en `.iCloudMirror`— y ahí borrar solo la zona dejaría el corpus viejo
+    /// entero en el dispositivo.
+    ///
+    /// **Grupos NO se toca** (ADR §6): vive en otro contenedor de CloudKit, y esto no es un handover de
+    /// dispositivo sino la misma persona limpiando su propio histórico.
+    ///
+    /// Devuelve `nil` si fue bien, o el motivo del fallo — que la vista que lo llamó enseña.
+    @MainActor
+    private func performICloudCorpusWipe() async -> String? {
+        // **Si el import está en vuelo, NO se borra.** Dos motivos y el segundo es duro: un `save()` de
+        // SwiftData durante un import de CloudKit dispara el SIGTRAP que ese gate existe para evitar, y
+        // borrar la zona con el import a medias deja al espejo re-creando filas que acabamos de quitar.
+        //
+        // Y **el resultado de la espera se MIRA**: la primera versión lo descartaba con `_ =` y seguía
+        // igual al agotar el tope, que con un corpus grande es el caso NORMAL — o sea, crash durante el
+        // import, arm superviviente, y el arranque siguiente repitiendo lo mismo. Un borrado aplazado
+        // cuesta un arranque; un crash-loop cuesta la app.
+        if ICloudPersonalCorpusProbe.mirrorWillSync() {
+            guard await iCloudSyncService.shared.waitForImportQuiescence(timeout: 30) else {
+                return "importNotQuiescent"
+            }
+        }
+        guard !Task.isCancelled else { return "cancelled" }
+        if let failure = await ICloudPersonalCorpusProbe.wipe() {
+            MetricsService.canary(.freshStartWipeFailed, detail: "icloudCorpusWipe:\(failure)")
+            return failure
+        }
+        // Las filas locales solo si las hay. En la puerta con mount neutro no puede haberlas —el predicado
+        // de instalación fresca lo garantiza—, así que este paso es el que cubre el otro camino.
+        guard checkHasExistingData() else { return nil }
+        do {
+            try DataWipeService.wipeAllUserData(in: modelContext, broadcastSignal: false)
+        } catch {
+            MetricsService.canary(.freshStartWipeFailed, detail: "icloudCorpusWipeLocal")
+            return "localWipeFailed"
+        }
+        return nil
+    }
+
     /// Post-checks de returning user: trial pendiente, What's New, language, app update.
     /// Extraído para SSOT — antes vivía inline en `checkInitialSyncState`.
     private func runReturningUserPostChecks() {
@@ -1375,6 +1515,9 @@ struct ContentView: View {
             }
         }
         Task { await AppUpdateService.shared.checkForUpdate() }
+        // Paso 4 · el espejo que llega tarde. Va aquí y no en `presentNextOnboardingScreen` porque su
+        // población es exactamente la contraria: quien YA completó el onboarding en este device.
+        Task { await runLateICloudMirrorCheck() }
         if needsLanguageSelection {
             showLanguageSelection = true
         }
@@ -1425,6 +1568,23 @@ struct ContentView: View {
         if needsLanguageSelection {
             showLanguageSelection = true
             return
+        }
+        // **Paso 4 · quedó un borrado del corpus de iCloud sin terminar.** Se vuelve a la puerta, que
+        // MIDE otra vez en vez de reanudar a ciegas: si la zona ya se borró, la sonda la ve vacía y sale
+        // al onboarding limpio; y si no, se le vuelve a preguntar, que es lo honesto cuando no sabemos
+        // qué llegó a pasar.
+        //
+        // **Pero el destino pendiente gana**, y eso es una corrección de la review adversarial: quien
+        // abandonó la puerta y eligió «Restaurar de iCloud» expresó su voluntad DESPUÉS, y hacer ganar al
+        // arm le borraría justo lo que acaba de pedir recuperar. El arm se retira con él: la petición de
+        // borrado ya no está en pie.
+        if StorageModePersistence.isICloudCorpusWipeArmed() {
+            if WelcomePendingDestinationStore.peek() == nil {
+                welcomeFlowInitialStep = .privateICloudGate
+                showWelcomeFlow = true
+                return
+            }
+            StorageModePersistence.clearICloudCorpusWipeArm()
         }
         // R2: destino retenido por el relanzamiento del mount neutro. Va ANTES del chooser y del onboarding
         // porque es más específico que los dos: el usuario YA eligió, y lo que este arranque tiene que hacer
@@ -1500,6 +1660,9 @@ private struct WelcomeFlowModifier: ViewModifier {
     /// momento de la decisión (fetch vivo), no el snapshot `hasExistingData` — el
     /// mirror de iCloud puede estar re-importando en background durante el Welcome.
     let hasLocalDataNow: @MainActor @Sendable () -> Bool
+    /// Paso 4: el borrado del corpus de iCloud, que vive en `ContentView` porque necesita el
+    /// `modelContext`. Este modifier solo lo reenvía al container, y el container a la puerta.
+    let performICloudCorpusWipe: @MainActor () async -> String?
     let showGroupInviteOnboarding: Bool
 
     func body(content: Content) -> some View {
@@ -1610,7 +1773,10 @@ private struct WelcomeFlowModifier: ViewModifier {
                         }
                         WelcomePendingDestinationStore.set(destination)
                     },
-                    hasLocalDataNow: hasLocalDataNow
+                    hasLocalDataNow: hasLocalDataNow,
+                    // Paso 4: el borrado vive aquí porque necesita el `modelContext`. La puerta solo
+                    // decide y enseña.
+                    performICloudCorpusWipe: { await performICloudCorpusWipe() }
                 )
                 .environment(SessionState.shared)
             }

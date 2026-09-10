@@ -5753,3 +5753,72 @@
 
 /* Bloque [I]: la otra salida del ADR */
 "groups.accountIsComplete.settingsHint" = "そのアカウントで家計を管理したいときは、設定の「データの保存先」で切り替えられます。";
+
+/* Private branch iCloud gate: spinner while probing CloudKit */
+"welcome.privateICloud.checking" = "iCloudの中を確認しています…";
+
+/* Private branch iCloud gate: spinner while deleting the iCloud corpus */
+"welcome.privateICloud.wiping" = "iCloudにあったデータを削除しています…";
+
+/* Private branch iCloud gate: title when previous data is found in iCloud */
+"welcome.privateICloud.foundTitle" = "iCloudにすでにデータがあります";
+
+/* Private branch iCloud gate: body explaining the two ways out */
+"welcome.privateICloud.foundBody" = "同じApple アカウントで保存したデータです。取り戻すこともできますし、最初から始めることもできます。ただし最初から始めると、この iPhone だけでなく iCloud からも削除され、元に戻せません。";
+
+/* Private branch iCloud gate: 'since <month year>' fragment in the counts line */
+"welcome.privateICloud.foundSince" = "%@から";
+
+/* Private branch iCloud gate: counts line when the scan hit its cap */
+"welcome.privateICloud.foundAtLeast" = "%d件以上の記録";
+
+/* Private branch iCloud gate: primary button, restore from iCloud */
+"welcome.privateICloud.restoreAction" = "データを取り戻す";
+
+/* Private branch iCloud gate: destructive button, delete the iCloud data */
+"welcome.privateICloud.wipeAction" = "最初から始める";
+
+/* Private branch iCloud gate: body of the second confirmation before deleting */
+"welcome.privateICloud.wipeConfirmBody" = "記録、口座、予算が iCloud から消えます。コピーは残らず、あとから戻すことはできません。";
+
+/* Private branch iCloud gate: safe button on the second confirmation */
+"welcome.privateICloud.wipeConfirmKeep" = "やっぱりやめる";
+
+/* Private branch iCloud gate: title when deleting the iCloud corpus failed */
+"welcome.privateICloud.wipeFailedTitle" = "すべてを削除できませんでした";
+
+/* Private branch iCloud gate: body when deleting failed */
+"welcome.privateICloud.wipeFailedBody" = "データは iCloud にそのまま残っています。接続を確認して、もう一度お試しください。";
+
+/* Private branch iCloud gate: title when the device has no iCloud account */
+"welcome.privateICloud.noAccountTitle" = "iCloudを確認できませんでした";
+
+/* Private branch iCloud gate: body when there is no iCloud account */
+"welcome.privateICloud.noAccountBody" = "この iPhone は iCloud がオフなので、以前に何か保存したかどうかわかりません。このまま進められます。データは当面ここに残り、iCloud をオンにしたら、何かが混ざる前にお知らせします。";
+
+/* Private branch iCloud gate: continue button when there is no iCloud account */
+"welcome.privateICloud.noAccountCta" = "このまま進む";
+
+/* Private branch iCloud gate: title when the CloudKit probe failed */
+"welcome.privateICloud.errorTitle" = "iCloudに接続できませんでした";
+
+/* Private branch iCloud gate: body when the CloudKit probe failed */
+"welcome.privateICloud.errorBody" = "接続の問題かもしれません。先に進む前にもう一度お試しください。古いデータが知らないうちに現れずに済みます。";
+
+/* Late mirror notice: title when iCloud is turned on after a local-only onboarding */
+"welcome.privateICloud.lateTitle" = "iCloudにあなたのデータが見つかりました";
+
+/* Late mirror notice: body with the counts of the previous corpus */
+"welcome.privateICloud.lateBody" = "iCloudをオンにしたら、以前このApple アカウントで保存したデータが見つかりました: %@。いま使っているデータと混ざります。このままにすることも、最初から始めて iCloud から削除することもできます。";
+
+/* Late mirror notice: safe button, both corpora coexist */
+"welcome.privateICloud.lateKeep" = "このままにする";
+
+/* Private branch iCloud gate: counts line fragment for user categories */
+"welcome.privateICloud.foundCategories" = "%d件のカテゴリ";
+
+/* Private branch iCloud gate: counts line when the scan hit its cap before reaching countable types */
+"welcome.privateICloud.foundUnknownAmount" = "大量の保存データ";
+
+/* Private branch iCloud gate: secondary button on the wipe-failed screen, gives up the deletion */
+"welcome.privateICloud.wipeFailedBack" = "今はやめておく";

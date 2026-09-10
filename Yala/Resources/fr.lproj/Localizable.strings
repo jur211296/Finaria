@@ -5742,3 +5742,72 @@
 
 /* Bloque [I]: la otra salida del ADR */
 "groups.accountIsComplete.settingsHint" = "Tu veux que ce compte porte tes finances ? Ça se décide dans Réglages, dans « Où vivent tes données ».";
+
+/* Private branch iCloud gate: spinner while probing CloudKit */
+"welcome.privateICloud.checking" = "On regarde ce qu'il y a dans ton iCloud…";
+
+/* Private branch iCloud gate: spinner while deleting the iCloud corpus */
+"welcome.privateICloud.wiping" = "On supprime ce qu'il y avait dans iCloud…";
+
+/* Private branch iCloud gate: title when previous data is found in iCloud */
+"welcome.privateICloud.foundTitle" = "Tu as déjà des données dans ton iCloud";
+
+/* Private branch iCloud gate: body explaining the two ways out */
+"welcome.privateICloud.foundBody" = "Tu les as enregistrées avec ce même compte Apple. Tu peux les récupérer, ou repartir de zéro — mais repartir de zéro les supprime aussi d'iCloud, pas seulement de ce téléphone, et c'est définitif.";
+
+/* Private branch iCloud gate: 'since <month year>' fragment in the counts line */
+"welcome.privateICloud.foundSince" = "depuis %@";
+
+/* Private branch iCloud gate: counts line when the scan hit its cap */
+"welcome.privateICloud.foundAtLeast" = "plus de %d opérations";
+
+/* Private branch iCloud gate: primary button, restore from iCloud */
+"welcome.privateICloud.restoreAction" = "Récupérer mes données";
+
+/* Private branch iCloud gate: destructive button, delete the iCloud data */
+"welcome.privateICloud.wipeAction" = "Repartir de zéro";
+
+/* Private branch iCloud gate: body of the second confirmation before deleting */
+"welcome.privateICloud.wipeConfirmBody" = "Tes opérations, tes comptes et tes budgets disparaissent d'iCloud. Il ne reste aucune copie et on ne pourra pas les récupérer.";
+
+/* Private branch iCloud gate: safe button on the second confirmation */
+"welcome.privateICloud.wipeConfirmKeep" = "Finalement non";
+
+/* Private branch iCloud gate: title when deleting the iCloud corpus failed */
+"welcome.privateICloud.wipeFailedTitle" = "On n'a pas pu tout supprimer";
+
+/* Private branch iCloud gate: body when deleting failed */
+"welcome.privateICloud.wipeFailedBody" = "Tes données sont toujours dans iCloud, intactes. Vérifie ta connexion et réessaie.";
+
+/* Private branch iCloud gate: title when the device has no iCloud account */
+"welcome.privateICloud.noAccountTitle" = "On n'a pas pu vérifier ton iCloud";
+
+/* Private branch iCloud gate: body when there is no iCloud account */
+"welcome.privateICloud.noAccountBody" = "iCloud n'est pas activé sur ce téléphone, donc on ne sait pas si tu avais déjà enregistré quelque chose. Tu peux continuer : pour l'instant tes données restent ici, et si tu actives iCloud on te préviendra avant de mélanger quoi que ce soit.";
+
+/* Private branch iCloud gate: continue button when there is no iCloud account */
+"welcome.privateICloud.noAccountCta" = "Continuer comme ça";
+
+/* Private branch iCloud gate: title when the CloudKit probe failed */
+"welcome.privateICloud.errorTitle" = "On n'a pas pu joindre iCloud";
+
+/* Private branch iCloud gate: body when the CloudKit probe failed */
+"welcome.privateICloud.errorBody" = "C'est peut-être la connexion. Réessaie avant de continuer — comme ça, pas de vieilles données qui apparaissent sans prévenir.";
+
+/* Late mirror notice: title when iCloud is turned on after a local-only onboarding */
+"welcome.privateICloud.lateTitle" = "On a trouvé des données à toi dans iCloud";
+
+/* Late mirror notice: body with the counts of the previous corpus */
+"welcome.privateICloud.lateBody" = "En activant iCloud, des données que tu avais enregistrées avec ce compte Apple sont réapparues : %@. Elles vont se mélanger à ce que tu as maintenant. Tu peux laisser comme ça, ou repartir de zéro et les supprimer d'iCloud.";
+
+/* Late mirror notice: safe button, both corpora coexist */
+"welcome.privateICloud.lateKeep" = "Laisser comme ça";
+
+/* Private branch iCloud gate: counts line fragment for user categories */
+"welcome.privateICloud.foundCategories" = "%d catégories";
+
+/* Private branch iCloud gate: counts line when the scan hit its cap before reaching countable types */
+"welcome.privateICloud.foundUnknownAmount" = "beaucoup de données enregistrées";
+
+/* Private branch iCloud gate: secondary button on the wipe-failed screen, gives up the deletion */
+"welcome.privateICloud.wipeFailedBack" = "Laisser pour l'instant";

@@ -5136,6 +5136,71 @@ enum L10n {
             static var secondaryCta: String { ls("welcome.private.secondaryCta", comment: "") }
         }
 
+        /// **Paso 4 del rediseño de sesiones · la puerta de iCloud de la rama privada** (ADR §9) y el
+        /// aviso del espejo que se adjunta tarde.
+        ///
+        /// **Copy PROPIO, y tiene que nombrar iCloud** (decisión de Jürgen, 2026-09-09): no se reusa
+        /// «Detectamos datos previos en tu dispositivo» —el alert de `welcome.freshStart.*`— porque ese
+        /// texto describe otro hecho y, sobre todo, promete otra consecuencia. Aquí los datos están en
+        /// **tu iCloud**, borrarlos los quita de iCloud y no solo de este teléfono, y eso es
+        /// irreversible: el copy tiene que decirlo.
+        ///
+        /// Lo que sí se REUSA son las CIFRAS (`welcome.restore.foundTransactions`, `foundAccounts`) y la
+        /// segunda confirmación (`settings.wipeDataSecondConfirmTitle`, `settings.deleteAllDataAction`):
+        /// son el mismo hecho contado en el mismo sitio, y una key gemela para decir «3 cuentas» otra vez
+        /// es exactamente cómo divergen dos pantallas que hablan de lo mismo.
+        enum PrivateICloud {
+            static var checking: String { ls("welcome.privateICloud.checking", comment: "") }
+            static var wiping: String { ls("welcome.privateICloud.wiping", comment: "") }
+            static var foundTitle: String { ls("welcome.privateICloud.foundTitle", comment: "") }
+            static var foundBody: String { ls("welcome.privateICloud.foundBody", comment: "") }
+            /// «desde marzo de 2025» — el mes del movimiento más antiguo del contenedor.
+            static func foundSince(_ monthYear: String) -> String {
+                String(format: ls("welcome.privateICloud.foundSince", comment: ""), monthYear)
+            }
+            /// La sonda alcanzó su tope de registros: la cifra es un MÍNIMO y el copy no puede
+            /// presentarla como un total.
+            static func foundAtLeast(_ count: Int) -> String {
+                String(format: ls("welcome.privateICloud.foundAtLeast", comment: ""), count)
+            }
+            /// El restore no tiene clave propia para categorías (su pantalla no las enseña), así que
+            /// ésta sí es nueva. Va con las otras cifras y no en `Welcome.Restore` porque su única
+            /// consumidora es esta pantalla.
+            static func foundCategories(_ count: Int) -> String {
+                String(format: ls("welcome.privateICloud.foundCategories", comment: ""), count)
+            }
+            /// La sonda agotó su tope antes de llegar a ningún tipo contable: hay datos, pero no sabemos
+            /// cuántos. Un aviso que pide confirmar un borrado irreversible no puede salir en blanco.
+            static var foundUnknownAmount: String {
+                ls("welcome.privateICloud.foundUnknownAmount", comment: "")
+            }
+            static var restoreAction: String { ls("welcome.privateICloud.restoreAction", comment: "") }
+            static var wipeAction: String { ls("welcome.privateICloud.wipeAction", comment: "") }
+            static var wipeConfirmBody: String { ls("welcome.privateICloud.wipeConfirmBody", comment: "") }
+            static var wipeConfirmKeep: String { ls("welcome.privateICloud.wipeConfirmKeep", comment: "") }
+            static var wipeFailedTitle: String { ls("welcome.privateICloud.wipeFailedTitle", comment: "") }
+            static var wipeFailedBody: String { ls("welcome.privateICloud.wipeFailedBody", comment: "") }
+            /// Rendirse tras un fallo. Es el ÚNICO gesto que retira el arm del borrado, así que su copy
+            /// tiene que sonar a decisión y no a «cerrar».
+            static var wipeFailedBack: String { ls("welcome.privateICloud.wipeFailedBack", comment: "") }
+            /// Estado K: no hay iCloud en el dispositivo. Distinto de `errorTitle`, y no es un matiz: allí
+            /// hay un remedio (reintentar) y aquí no.
+            static var noAccountTitle: String { ls("welcome.privateICloud.noAccountTitle", comment: "") }
+            static var noAccountBody: String { ls("welcome.privateICloud.noAccountBody", comment: "") }
+            static var noAccountCta: String { ls("welcome.privateICloud.noAccountCta", comment: "") }
+            static var errorTitle: String { ls("welcome.privateICloud.errorTitle", comment: "") }
+            static var errorBody: String { ls("welcome.privateICloud.errorBody", comment: "") }
+            /// El espejo que llegó tarde: activaste iCloud después de hacer el onboarding sin él.
+            static var lateTitle: String { ls("welcome.privateICloud.lateTitle", comment: "") }
+            /// Lleva las cifras dentro porque es el MENSAJE del alert, no el label de un botón: un label
+            /// dependiente del estado en el `actions` builder de un `.alert` rompe flujos sin relación
+            /// (medido el 2026-09-06, `.claude/rules/swiftui-ds.md`).
+            static func lateBody(_ counts: String) -> String {
+                String(format: ls("welcome.privateICloud.lateBody", comment: ""), counts)
+            }
+            static var lateKeep: String { ls("welcome.privateICloud.lateKeep", comment: "") }
+        }
+
         /// Step de dos caminos de «Vengo por un grupo» (G2 de Grupos-first). La card del chooser dejó de
         /// hablarle solo al invitado con enlace: aquí elige entre organizar su primer grupo o pegar la
         /// invitación que ya tiene.

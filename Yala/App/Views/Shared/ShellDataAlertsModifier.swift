@@ -39,7 +39,6 @@ struct ShellDataAlertsModifier: ViewModifier {
     /// wipes DELIBERADOS tienen que cancelar esa gracia antes de bajar `hasPersonalData`, o el true→false
     /// se lee como wipe REMOTO y apila un alert sobre el onboarding que ellos mismos están abriendo.
     var onCancelWipeGrace: () -> Void
-
     func body(content: Content) -> some View {
         content
             .alert(L10n.iCloud.remoteWipeTitle, isPresented: $showRemoteWipeAlert) {

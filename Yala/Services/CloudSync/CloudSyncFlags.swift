@@ -236,6 +236,73 @@ nonisolated enum StorageModePersistence {
     static func clearGroupsOnlyWipeArm(_ defaults: UserDefaults = .standard) {
         defaults.removeObject(forKey: groupsOnlyWipeArmedKey)
     }
+
+    /// **Marker «el usuario confirmó borrar su corpus del iCloud privado desde el Welcome» (paso 4 del
+    /// rediseño de sesiones).** Lo escribe la puerta `WelcomePrivateICloudGateView` ANTES de la primera
+    /// llamada a CloudKit, y lo limpia ella misma cuando el borrado termina — el orden es el de
+    /// `performSignOutWipeIfArmed`: **desarmar es el último paso**, para que un kill a mitad reintente.
+    ///
+    /// **No lo consume el boot-hook, y no es una omisión.** Los otros cuatro arms de este fichero borran
+    /// ARCHIVOS y por eso caben en `PersonalContainerHost.makeContainer()`, que corre **pre-mount y
+    /// síncrono**. Éste borra una zona de CloudKit: es red, es `async`, y puede tardar. Vive en la puerta
+    /// del Welcome, que es donde el usuario está mirando; el arranque solo lo mira para volver a llevarlo
+    /// ahí (`presentNextOnboardingScreen`).
+    ///
+    /// **Se arma JUNTO a `armNeutralMount`, y sin eso el arreglo tendría el mismo bug que arregla.** El
+    /// mount neutro dura un solo arranque —`isFreshInstallForNeutralMount` exige que el archivo del store
+    /// no exista, y el primer arranque lo crea—, así que un kill durante el borrado dejaría al arranque
+    /// siguiente montando `.iCloudMirror` y el espejo importaría justo el corpus que se estaba borrando.
+    /// El predicado del neutro durable (`armado && !hasShownWelcomeChooser`) encaja exacto aquí: en la
+    /// puerta nadie ha marcado el chooser todavía —lo marcan las SALIDAS, no la puerta— y en cuanto el
+    /// usuario cruza el portal la marca queda inerte sola. El anti-bucle es el término que ya tenía.
+    static let icloudCorpusWipeArmedKey = "cloudSync.icloudCorpusWipeArmed"
+
+    static func armICloudCorpusWipe(_ defaults: UserDefaults = .standard) {
+        defaults.set(true, forKey: icloudCorpusWipeArmedKey)
+        armNeutralMount(defaults)
+    }
+
+    static func isICloudCorpusWipeArmed(_ defaults: UserDefaults = .standard) -> Bool {
+        defaults.bool(forKey: icloudCorpusWipeArmedKey)
+    }
+
+    /// Desarmar — SIEMPRE el ÚLTIMO paso, y limpia también el neutro durable que `arm` puso. Dejarlo
+    /// puesto no cuelga a nadie (`hasShownWelcomeChooser` ya lo inhabilita en cuanto el usuario sale del
+    /// Welcome), pero un estado que sobrevive a su motivo es exactamente lo que hace que la próxima
+    /// lectura de la tabla de mounts signifique otra cosa.
+    static func clearICloudCorpusWipeArm(_ defaults: UserDefaults = .standard) {
+        defaults.removeObject(forKey: icloudCorpusWipeArmedKey)
+        clearNeutralMountArm(defaults)
+    }
+
+    /// **Marker «este device eligió privado SIN poder preguntarle a iCloud» (estado K de la matriz).**
+    ///
+    /// Sin él, el bug de este ticket vuelve por la puerta de atrás y así lo encontró Jürgen el
+    /// 2026-09-09: eliges privado con iCloud apagado, la app te informa y sigue en local, haces tu
+    /// onboarding entero… y el día que activas iCloud en Ajustes el espejo se adjunta y **te baja el
+    /// histórico viejo encima de lo que acabas de crear**, sin decirte nada. La validación no ocurrió
+    /// nunca, solo se aplazó.
+    ///
+    /// Lo escribe la puerta cuando la persona continúa desde el aviso de «sin iCloud», y lo consume el
+    /// primer arranque en que `isICloudAvailable()` diga que sí. **Se limpia en los tres desenlaces** —hay
+    /// datos y la persona decide, o no los hay— porque a partir de ahí no queda nada que vigilar.
+    ///
+    /// **No caduca por tiempo, y es deliberado**: entre elegir privado sin iCloud y activarlo pueden pasar
+    /// meses, y el hecho que describe sigue siendo verdad el día que pase. Un TTL solo lo apagaría justo
+    /// en los casos lentos, que son los que tienen más histórico que perder.
+    static let privateChoseWithoutICloudKey = "cloudSync.privateChoseWithoutICloud"
+
+    static func markPrivateChoseWithoutICloud(_ defaults: UserDefaults = .standard) {
+        defaults.set(true, forKey: privateChoseWithoutICloudKey)
+    }
+
+    static func privateChoseWithoutICloud(_ defaults: UserDefaults = .standard) -> Bool {
+        defaults.bool(forKey: privateChoseWithoutICloudKey)
+    }
+
+    static func clearPrivateChoseWithoutICloud(_ defaults: UserDefaults = .standard) {
+        defaults.removeObject(forKey: privateChoseWithoutICloudKey)
+    }
 }
 
 /// Flags del Modo Nube. DARK por defecto.

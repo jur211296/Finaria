@@ -21,6 +21,7 @@ private struct ReadinessGateObserversModifier: ViewModifier {
     let secondaryEntryRelaunch: Bool
     let showFreshStartWipeAlert: Bool
     let showFreshStartWipeFailedAlert: Bool
+    let showLateICloudNotice: Bool
     let showRemoteWipeAlert: Bool
     let showICloudRestartAlert: Bool
     let hasActiveInviteError: Bool
@@ -81,6 +82,7 @@ private struct ReadinessGateObserversModifier: ViewModifier {
             .onChange(of: forceUpdateRequired) { _, _ in recompute() }
             .onChange(of: showFreshStartWipeAlert) { _, _ in recompute() }
             .onChange(of: showFreshStartWipeFailedAlert) { _, _ in recompute() }
+            .onChange(of: showLateICloudNotice) { _, _ in recompute() }
             .onChange(of: showRemoteWipeAlert) { _, _ in recompute() }
             .onChange(of: showICloudRestartAlert) { _, _ in recompute() }
             .onChange(of: hasActiveInviteError) { _, _ in recompute() }
@@ -102,6 +104,7 @@ extension View {
         secondaryEntryRelaunch: Bool,
         showFreshStartWipeAlert: Bool,
         showFreshStartWipeFailedAlert: Bool,
+        showLateICloudNotice: Bool,
         showRemoteWipeAlert: Bool,
         showICloudRestartAlert: Bool,
         hasActiveInviteError: Bool,
@@ -131,6 +134,7 @@ extension View {
             secondaryEntryRelaunch: secondaryEntryRelaunch,
             showFreshStartWipeAlert: showFreshStartWipeAlert,
             showFreshStartWipeFailedAlert: showFreshStartWipeFailedAlert,
+            showLateICloudNotice: showLateICloudNotice,
             showRemoteWipeAlert: showRemoteWipeAlert,
             showICloudRestartAlert: showICloudRestartAlert,
             hasActiveInviteError: hasActiveInviteError,

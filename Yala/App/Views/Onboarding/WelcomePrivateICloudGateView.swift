@@ -1,0 +1,496 @@
+//
+//  WelcomePrivateICloudGateView.swift
+//  Yala
+//
+//  Paso 4 del rediseño de sesiones · **la pantalla que faltaba entre «elijo privado» y «reabre la app».**
+//
+//  Es un STEP del `WelcomeFlowContainer`, con el molde de `WelcomeGroupsGateView`, y por las mismas tres
+//  razones más una cuarta que aquí es la que manda:
+//
+//   1. El portal `leaveWelcome` es la única salida del cover, y esta puerta tiene que decidir ANTES.
+//   2. Una presentación nueva del anchor de `ContentView` entraría en la matriz de readiness (regla 3 de
+//      Presentaciones).
+//   3. Dos source-scans prohíben `.alert(` en el container (`WelcomeHeroReentryTests`,
+//      `GroupsOrganizerBranchTests.gateIsAScreenAndNeverAnAlert`).
+//   4. **Y la razón medida:** un `.alert` colgado del anchor de `ContentView` **DESMONTA el cover del
+//      Welcome** — traza en `ShellDataAlertsModifier.swift`, `DIAG gated.set: true -> false`. Ese es el bug
+//      de la pantalla negra del 2026-09-03. Aquí sería peor que allí: «cancelar» tiene que devolver al
+//      chooser privado/nube, y ese chooser ya no existiría cuando el usuario tocara el botón.
+//
+//  **Las dos confirmaciones del borrado son FASES de esta pantalla, no dos modales encadenados.** El ADR
+//  pide doble confirmación; el ticket sugiere «el alert existente + una segunda». La forma es distinta a
+//  propósito: encadenar dos presentaciones desde el mismo anchor es la carrera que `UserDataResetView`
+//  evita usando dos CONTENEDORES distintos (sheet → alert) y un `onDismiss`, y aquí no hay un contenedor
+//  de repuesto —el step ya vive dentro del `fullScreenCover` del Welcome—. Dos fases dan los dos gestos
+//  deliberados que la doble confirmación existe para exigir, sin ninguna presentación anidada. El texto
+//  de la segunda sí se REUSA (`settings.wipeDataSecondConfirmTitle`), que es lo que el ticket pedía.
+//
+//  **La FASE conduce el trabajo, y no al revés** (review adversarial del 2026-09-10). La primera versión
+//  lanzaba `Task { await runWipe() }` desde los botones: `Task` no estructurado, sin handle y sin
+//  cancelación, así que `Task.isCancelled` era SIEMPRE `false` ahí y un «volver» a media operación dejaba
+//  el trabajo corriendo sobre una vista ya desmontada — que acababa llamando a `onProceed()` y arrancando
+//  a la persona del chooser hacia el terminal de relanzamiento. Ahora los botones solo cambian `phase` y
+//  el trabajo cuelga de `.task(id: phase)`: SwiftUI lo cancela al desmontar y al cambiar de fase, que es
+//  exactamente la semántica que los `guard !Task.isCancelled` afirmaban tener y no tenían.
+//
+//  **Lo que esta pantalla NO hace: borrar.** El borrado vive en `ContentView` (`performICloudCorpusWipe`),
+//  que es quien tiene el `modelContext` y el cover de relanzamiento. No es reparto de tareas: la puerta es
+//  alcanzable con el espejo YA adjunto —el mount neutro dura UN arranque, así que quien abre la app, ve el
+//  Welcome y la cierra sin elegir llega aquí en `.iCloudMirror`— y ahí borrar solo la zona de CloudKit
+//  dejaría el corpus viejo entero en el dispositivo.
+//
+
+import SwiftUI
+
+struct WelcomePrivateICloudGateView: View {
+
+    /// Seguir al onboarding privado por el portal de siempre (que decide si hay que reabrir la app).
+    var onProceed: () -> Void
+    /// Tercera salida del aviso: «esto es mío» → «Restaurar desde iCloud», por el portal, con su destino.
+    var onRestore: () -> Void
+    /// Cancelar: vuelve a la elección privado / nube.
+    var onBack: () -> Void
+    /// Borrar el corpus del iCloud de este Apple ID **y** lo que el espejo hubiera bajado ya. Devuelve
+    /// `nil` si fue bien, o el motivo del fallo. Lo ejecuta `ContentView`.
+    var performWipe: @MainActor () async -> String?
+
+    @State private var phase: Phase = .checking
+
+    private enum Phase: Equatable {
+        case checking
+        case found(ICloudPersonalCorpus)
+        /// 2.ª confirmación. Lleva el corpus dentro para poder volver a `.found` sin re-medir si la
+        /// persona se arrepiente: re-preguntar a CloudKit por retroceder sería cobrarle una espera por
+        /// dudar, y el corpus no ha cambiado en esos dos segundos.
+        case confirmingWipe(ICloudPersonalCorpus)
+        case wiping
+        case wipeFailed
+        case noICloud
+        case unreachable
+    }
+
+    var body: some View {
+        WelcomeFlowScreen { logoTopSpacing in
+            VStack(spacing: 0) {
+                Spacer(minLength: logoTopSpacing)
+
+                Image("YalaLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 128)
+                    .colorMultiply(.white)
+                    .accessibilityHidden(true)
+
+                Spacer(minLength: DS.Spacing.xl)
+
+                content
+
+                Spacer(minLength: DS.Spacing.xl)
+            }
+        }
+        // **El «volver» desaparece durante el borrado, y no es cosmético** (`nil` deja la vista intacta,
+        // que es para lo que ese parámetro es opcional). Salir a media operación deja el arm puesto
+        // —correcto: la llamada puede haber llegado al servidor— pero devuelve a la persona al chooser,
+        // donde puede elegir la nube; y el arranque siguiente la traería aquí a terminar un borrado que ya
+        // no quiere, sobre datos que ya no son los mismos. Mientras hay algo destructivo en vuelo no hay
+        // marcha atrás que ofrecer, así que no se ofrece.
+        .welcomeBackButton(tint: .white, action: backAction)
+        // **La FASE conduce.** `id: phase` es lo que da cancelación real: al desmontar el step o al cambiar
+        // de fase, SwiftUI cancela el trabajo en vuelo. Con `Task { }` sueltos desde los botones no la
+        // había, y los `guard !Task.isCancelled` de abajo eran decorativos.
+        .task(id: phase) { await runPhase() }
+    }
+
+    /// El «volver», o `nil` para que no se pinte. Va en una propiedad y no en un ternario dentro del
+    /// `body` porque el type-checker no resuelve `cond ? nil : método` sin anotación — y en este `body` un
+    /// tropiezo del inferidor no da un error legible, da «failed to produce diagnostic».
+    private var backAction: (() -> Void)? {
+        if phase == .wiping { return nil }
+        return { leaveGate() }
+    }
+
+    // MARK: - Contenido
+
+    @ViewBuilder
+    private var content: some View {
+        switch phase {
+        case .checking:
+            progressContent(text: L10n.Welcome.PrivateICloud.checking,
+                            identifier: "welcome_private_icloud_checking")
+        case .wiping:
+            progressContent(text: L10n.Welcome.PrivateICloud.wiping,
+                            identifier: "welcome_private_icloud_wiping")
+        case .found(let corpus):
+            foundContent(corpus)
+        case .confirmingWipe(let corpus):
+            confirmContent(corpus)
+        case .noICloud:
+            // Estado K de la matriz. **Informa y sigue** — el ADR es explícito en que no poder preguntar
+            // jamás bloquea. El CTA es el que sale del Welcome, no el «volver».
+            noticeContent(
+                icon: "icloud.slash",
+                title: L10n.Welcome.PrivateICloud.noAccountTitle,
+                body: L10n.Welcome.PrivateICloud.noAccountBody,
+                cta: L10n.Welcome.PrivateICloud.noAccountCta,
+                identifier: "welcome_private_icloud_no_account",
+                action: continueWithoutValidating)
+        case .unreachable:
+            // Se pudo intentar y falló. Dos salidas, y las dos hacen falta:
+            //
+            //  · **Reintentar** es la primera, porque aquí el remedio existe (a diferencia del estado K).
+            //  · **Seguir sin comprobar** es la segunda, y sin ella esta pantalla era un CAMINO MUERTO
+            //    (review adversarial, 2026-09-10): las otras dos ramas del chooser —restaurar de iCloud y
+            //    cuenta en la nube— también necesitan red, así que un primer arranque sin conexión dejaba
+            //    a la persona sin ninguna forma de entrar en la app. El ADR dice que no poder preguntar
+            //    JAMÁS bloquea, y un botón que solo puede reintentar sí bloquea.
+            //
+            // Seguir deja el mismo testigo que el estado K: la validación no se pierde, se aplaza al
+            // primer arranque en que se pueda hacer.
+            twoWayNoticeContent(
+                icon: "exclamationmark.icloud",
+                title: L10n.Welcome.PrivateICloud.errorTitle,
+                body: L10n.Welcome.PrivateICloud.errorBody,
+                primary: L10n.Welcome.Restore.retry,
+                secondary: L10n.Welcome.PrivateICloud.noAccountCta,
+                identifier: "welcome_private_icloud_error",
+                primaryAction: { phase = .checking },
+                secondaryAction: continueWithoutValidating)
+        case .wipeFailed:
+            // El borrado falló y los datos SIGUEN en iCloud, intactos. Continuar sería mentirle. Dos
+            // salidas: reintentar, o irse — y ese «irse» es el ÚNICO sitio donde se retira el arm, porque
+            // es el único donde consta que la persona ya no quiere el borrado.
+            twoWayNoticeContent(
+                icon: "exclamationmark.icloud",
+                title: L10n.Welcome.PrivateICloud.wipeFailedTitle,
+                body: L10n.Welcome.PrivateICloud.wipeFailedBody,
+                primary: L10n.Welcome.Restore.retry,
+                secondary: L10n.Welcome.PrivateICloud.wipeFailedBack,
+                identifier: "welcome_private_icloud_wipe_failed",
+                primaryAction: { phase = .wiping },
+                secondaryAction: leaveGate)
+        }
+    }
+
+    private func progressContent(text: String, identifier: String) -> some View {
+        VStack(spacing: DS.Spacing.lg) {
+            ProgressView()
+                .controlSize(.large)
+                .tint(.white)
+            Text(text)
+                .font(DS.Typography.subheadline)
+                .foregroundStyle(.white.opacity(0.7))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, DS.Spacing.xl)
+        }
+        .accessibilityIdentifier(identifier)
+    }
+
+    /// El aviso con CIFRAS y sus TRES salidas (decisión de Jürgen, 2026-09-09).
+    ///
+    /// El orden de los botones no es estético: **primero la salida que no destruye nada**. Quien llega
+    /// aquí quería empezar de cero y se acaba de enterar de que tiene un histórico; el camino más probable
+    /// —y el único irreversible al revés— es quedárselo.
+    private func foundContent(_ corpus: ICloudPersonalCorpus) -> some View {
+        VStack(spacing: DS.Spacing.lg) {
+            Image(systemName: "exclamationmark.icloud")
+                .font(.system(size: 44)) // A11Y-DT: icono decorativo hero, tamaño fijo (patrón del flow)
+                .foregroundStyle(.white.opacity(0.8))
+                .accessibilityHidden(true)
+
+            VStack(spacing: DS.Spacing.sm) {
+                Text(L10n.Welcome.PrivateICloud.foundTitle)
+                    .font(DS.Typography.title2)
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                Text(Self.countsLine(corpus))
+                    .font(DS.Typography.headline)
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    // El separador `·` lo lee VoiceOver como un carácter suelto, o lo salta. Es la cifra
+                    // que sostiene una decisión irreversible, así que se le da su lectura hablada.
+                    .accessibilityLabel(Self.countsLine(corpus, forVoiceOver: true))
+                Text(L10n.Welcome.PrivateICloud.foundBody)
+                    .font(DS.Typography.subheadline)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.horizontal, DS.Spacing.lg)
+            .accessibilityIdentifier("welcome_private_icloud_found")
+
+            VStack(spacing: DS.Spacing.sm) {
+                YalaPrimaryButton(L10n.Welcome.PrivateICloud.restoreAction) {
+                    onRestore()
+                }
+                .accessibilityIdentifier("welcome_private_icloud_restore")
+
+                destructiveButton(L10n.Welcome.PrivateICloud.wipeAction,
+                                  identifier: "welcome_private_icloud_wipe") {
+                    phase = .confirmingWipe(corpus)
+                }
+            }
+            .padding(.horizontal, DS.Spacing.xl)
+        }
+    }
+
+    /// 2.ª confirmación. Copy reusado del «Vaciar datos» de Ajustes, que es donde ese texto ya vive.
+    private func confirmContent(_ corpus: ICloudPersonalCorpus) -> some View {
+        VStack(spacing: DS.Spacing.lg) {
+            Image(systemName: "trash")
+                .font(.system(size: 44)) // A11Y-DT: icono decorativo hero, tamaño fijo (patrón del flow)
+                .foregroundStyle(.white.opacity(0.8))
+                .accessibilityHidden(true)
+
+            VStack(spacing: DS.Spacing.sm) {
+                Text(L10n.Settings.wipeDataSecondConfirmTitle)
+                    .font(DS.Typography.title2)
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                Text(L10n.Welcome.PrivateICloud.wipeConfirmBody)
+                    .font(DS.Typography.subheadline)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.horizontal, DS.Spacing.lg)
+            .accessibilityIdentifier("welcome_private_icloud_confirm")
+
+            VStack(spacing: DS.Spacing.sm) {
+                YalaPrimaryButton(L10n.Welcome.PrivateICloud.wipeConfirmKeep) {
+                    phase = .found(corpus)
+                }
+                .accessibilityIdentifier("welcome_private_icloud_confirm_keep")
+
+                destructiveButton(L10n.Settings.deleteAllDataAction,
+                                  identifier: "welcome_private_icloud_confirm_wipe") {
+                    phase = .wiping
+                }
+            }
+            .padding(.horizontal, DS.Spacing.xl)
+        }
+    }
+
+    private func noticeContent(icon: String, title: String, body: String, cta: String,
+                               identifier: String, action: @escaping () -> Void) -> some View {
+        noticeShell(icon: icon, title: title, body: body, identifier: identifier) {
+            YalaPrimaryButton(cta) { action() }
+                .accessibilityIdentifier(identifier + "_cta")
+        }
+    }
+
+    private func twoWayNoticeContent(icon: String, title: String, body: String,
+                                     primary: String, secondary: String, identifier: String,
+                                     primaryAction: @escaping () -> Void,
+                                     secondaryAction: @escaping () -> Void) -> some View {
+        noticeShell(icon: icon, title: title, body: body, identifier: identifier) {
+            VStack(spacing: DS.Spacing.sm) {
+                YalaPrimaryButton(primary) { primaryAction() }
+                    .accessibilityIdentifier(identifier + "_cta")
+                Button { secondaryAction() } label: {
+                    Text(secondary)
+                        .font(DS.Typography.label)
+                        .foregroundStyle(.white.opacity(0.7))
+                        .frame(maxWidth: .infinity, minHeight: DS.Button.actionSize)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityIdentifier(identifier + "_secondary")
+            }
+        }
+    }
+
+    private func noticeShell<Actions: View>(
+        icon: String, title: String, body: String, identifier: String,
+        @ViewBuilder actions: () -> Actions
+    ) -> some View {
+        VStack(spacing: DS.Spacing.lg) {
+            Image(systemName: icon)
+                .font(.system(size: 44)) // A11Y-DT: icono decorativo hero, tamaño fijo (patrón del flow)
+                .foregroundStyle(.white.opacity(0.8))
+                .accessibilityHidden(true)
+
+            VStack(spacing: DS.Spacing.sm) {
+                Text(title)
+                    .font(DS.Typography.title2)
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                Text(body)
+                    .font(DS.Typography.subheadline)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.horizontal, DS.Spacing.lg)
+            .accessibilityIdentifier(identifier)
+
+            actions()
+                .padding(.horizontal, DS.Spacing.xl)
+        }
+    }
+
+    /// El botón que destruye. **Con `role: .destructive` y con el área táctil estándar**, que es lo que le
+    /// falta al molde del flujo (`WelcomeRestoreView.startFresh` es un `Button` pelado sobre el texto):
+    /// aquí abre un borrado irreversible del iCloud de la persona, y un control así no puede tener menos
+    /// superficie que el que no destruye.
+    private func destructiveButton(_ title: String, identifier: String,
+                                   action: @escaping () -> Void) -> some View {
+        Button(role: .destructive, action: action) {
+            Text(title)
+                .font(DS.Typography.label)
+                .foregroundStyle(.white.opacity(0.7))
+                .frame(maxWidth: .infinity, minHeight: DS.Button.actionSize)
+                .contentShape(Rectangle())
+        }
+        .accessibilityIdentifier(identifier)
+    }
+
+    // MARK: - La puerta
+
+    /// Seguir sin haber podido validar. **Escribe el testigo**, que es la mitad que impide que el bug
+    /// vuelva por la puerta de atrás: cuando el espejo pueda sincronizar, el aviso se dará entonces.
+    ///
+    /// Lo comparten los dos desenlaces en los que no se pudo preguntar —sin cuenta y sin red— porque el
+    /// hecho que recuerdan es el mismo: *esta persona siguió adelante sin que pudiéramos comprobarlo*.
+    private func continueWithoutValidating() {
+        StorageModePersistence.markPrivateChoseWithoutICloud()
+        onProceed()
+    }
+
+    /// Salir de la puerta. **Retira el arm si el borrado FALLÓ, y solo entonces.**
+    ///
+    /// Un borrado que falla no borró nada, así que un arm que le sobrevive no protege ningún estado a
+    /// medias: solo recuerda una petición, y quien se va de esta pantalla acaba de retirarla. Sin esto,
+    /// alguien que se arrepiente tras un fallo de red y elige la nube se encuentra esta misma puerta en el
+    /// arranque siguiente, pidiéndole que termine un borrado que ya no quiere.
+    ///
+    /// **Desde `.wiping` no se puede llegar aquí**, y esa es la otra mitad de la kill-safety: el «volver»
+    /// está oculto mientras la operación está en vuelo, así que el arm solo sobrevive a un KILL —que es
+    /// para lo que existe— y nunca a un abandono.
+    ///
+    /// **No toca el neutro durable**, y eso es una corrección de la review: `clearNeutralMountArm` tiene
+    /// OTRO dueño —el wipe de cierre de sesión (`performSignOutWipeIfArmed`)— y limpiarlo aquí le quitaba
+    /// al device recién vaciado la única cosa que impide que el espejo se readjunte sobre el corpus del
+    /// humano que se acaba de ir.
+    private func leaveGate() {
+        if phase == .wipeFailed {
+            StorageModePersistence.clearICloudCorpusWipeArm()
+        }
+        onBack()
+    }
+
+    /// El trabajo de cada fase. Lo llama `.task(id: phase)`, así que la cancelación es real.
+    private func runPhase() async {
+        switch phase {
+        case .checking: await measure()
+        case .wiping: await wipe()
+        default: return
+        }
+    }
+
+    /// Medir y decidir. **No escribe nada**: quien escribe es el borrado, y solo si el usuario lo pide dos
+    /// veces.
+    private func measure() async {
+        // **Hermeticidad ANTES de la red, no después.** Bajo XCUITest no se toca CloudKit en ningún punto
+        // del Welcome; decidirlo dentro de `decide` dejaba el `await` de la sonda igualmente pagado, y que
+        // hoy no muerda es un accidente del simulador (sin cuenta iCloud), no el invariante que este
+        // fichero afirma. Es el mismo orden que `WelcomeFlowContainer.task` y `WelcomeGroupsGateView`.
+        guard !SwiftDataConfiguration.isUITesting else {
+            onProceed()
+            return
+        }
+        // **Aquí NO hay pre-filtro, y esa es la segunda corrección del mismo sitio.** El primer diseño
+        // preguntaba `isICloudAvailable()`, que mide iCloud Drive; la review lo cambió por «¿este mount
+        // espeja?» (`mirrorWillSync`) — y ese término apaga la puerta **justo en el caso principal del
+        // ticket**: en instalación fresca el mount es `.neutralNoMirror`, que no adjunta espejo AHORA
+        // aunque lo vaya a adjuntar en el arranque siguiente, tras el relanzamiento. Con él, la rama
+        // privada volvía a salir sin preguntar nada.
+        //
+        // La pregunta de esta pantalla no es «¿hay espejo ahora?» sino «¿el iCloud de este Apple ID tiene
+        // datos que van a acabar en este dispositivo?», y a eso solo contesta CloudKit. Quien declara que
+        // no hay cuenta es él, con su `notAuthenticated`. (`mirrorWillSync` sigue siendo el pre-filtro
+        // correcto del aviso TARDÍO, donde la pregunta sí es sobre el espejo que ya está puesto.)
+        let outcome = await ICloudPersonalCorpusProbe.probe()
+        // La cancelación es COOPERATIVA y la sonda solo la mira entre páginas: sin este guard, quien toca
+        // «volver» mientras CloudKit contesta vería la pantalla cambiar bajo el dedo, o peor, saldría del
+        // Welcome solo.
+        guard !Task.isCancelled else { return }
+
+        switch WelcomePrivateICloudGateLogic.decide(skipValidation: false, outcome: outcome) {
+        case .proceed:
+            onProceed()
+        case .foundData(let corpus):
+            phase = .found(corpus)
+        case .noICloud:
+            phase = .noICloud
+        case .unreachable:
+            phase = .unreachable
+        }
+    }
+
+    /// Borrar. **El orden es el de `performSignOutWipeIfArmed` y no se puede reordenar:** armar ANTES de
+    /// la primera llamada, desarmar DESPUÉS de que el borrado confirme. Un kill en medio deja el arm
+    /// puesto y el arranque siguiente vuelve a esta puerta, que **vuelve a medir en vez de reanudar a
+    /// ciegas**: si la zona ya se borró, la sonda la ve vacía y sale al onboarding limpio; y si no, se le
+    /// vuelve a preguntar a la persona, que es lo honesto cuando no sabemos qué llegó a pasar.
+    ///
+    /// La limpieza de residuales va **después** del borrado y no antes, por el mismo motivo que en
+    /// `ShellDataAlertsModifier`: si el borrado falla, los datos siguen ahí y quitarle el nombre y la
+    /// divisa sería cobrarle por un borrado que no ocurrió.
+    private func wipe() async {
+        StorageModePersistence.armICloudCorpusWipe()
+        let failure = await performWipe()
+        guard !Task.isCancelled else { return }
+        guard failure == nil else {
+            phase = .wipeFailed
+            return
+        }
+        OnboardingResetHelper.clearResidualPreferencesForFreshStart()
+        StorageModePersistence.clearICloudCorpusWipeArm()
+        onProceed()
+    }
+
+    // MARK: - Cifras
+
+    /// «128 registros · 3 cuentas · 12 categorías · desde marzo de 2025». Se compone con las claves que YA
+    /// existen para las cifras del restore (`welcome.restore.found*`), que son el mismo hecho contado en
+    /// el mismo sitio — inventar claves gemelas para decir «3 cuentas» otra vez es exactamente cómo
+    /// divergen dos pantallas que hablan de lo mismo.
+    ///
+    /// **Las categorías se pintan aunque parezcan un detalle**, y no es cosmético: `hasAnyData` dispara el
+    /// aviso con ellas solas —alguien que dejó sus categorías y nada más— y sin esta línea esa persona
+    /// veía un `Text("")` en medio de un aviso que le pide confirmar un borrado irreversible.
+    ///
+    /// `forVoiceOver` cambia el separador `·` —que la voz lee como un carácter suelto, o se salta— por una
+    /// coma. Es el MISMO contenido: si divergiera, la pantalla y su lectura afirmarían cosas distintas.
+    static func countsLine(_ corpus: ICloudPersonalCorpus, forVoiceOver: Bool = false) -> String {
+        var parts: [String] = []
+        if corpus.transactions > 0 {
+            parts.append(corpus.truncated
+                ? L10n.Welcome.PrivateICloud.foundAtLeast(corpus.transactions)
+                : L10n.Welcome.Restore.foundTransactions(corpus.transactions))
+        }
+        if corpus.accounts > 0 {
+            parts.append(L10n.Welcome.Restore.foundAccounts(corpus.accounts))
+        }
+        if corpus.categories > 0 {
+            parts.append(L10n.Welcome.PrivateICloud.foundCategories(corpus.categories))
+        }
+        if let oldest = corpus.oldestTransactionDate {
+            parts.append(L10n.Welcome.PrivateICloud.foundSince(Self.monthYear.string(from: oldest)))
+        }
+        // **El corpus truncado sin ninguna cifra tiene que decir ALGO.** `hasAnyData` lo trata como «sí
+        // hay» —el tope se agotó antes de llegar a los tipos que se cuentan— y un aviso que pide confirmar
+        // un borrado irreversible no puede salir con la línea en blanco.
+        if parts.isEmpty && corpus.truncated {
+            parts.append(L10n.Welcome.PrivateICloud.foundUnknownAmount)
+        }
+        return parts.joined(separator: forVoiceOver ? ", " : " · ")
+    }
+
+    /// `DateFormatter` no es `Sendable`, así que vive en el MainActor con su única consumidora.
+    private static let monthYear: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = .current
+        formatter.setLocalizedDateFormatFromTemplate("MMMMyyyy")
+        return formatter
+    }()
+}
