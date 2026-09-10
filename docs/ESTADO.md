@@ -5,45 +5,30 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-09 (Lima)
 
-**Rama** `2.1` — Merge #123: el avisador de rojos del CI ya entrega, y dejó de tumbar la suite
+**Rama** `2.1` — Merge #124: el candado que prohíbe atribuir un commit a una IA ya está puesto
 TestFlight build **13** (CPV 13) — subido el 2026-09-09, `VALID` e `IN_BETA_TESTING`.
 **Subida Yala (TF/store) = solo Mini.**
 
-## Esta sesión (la última: el avisador del CI)
+## Esta sesión (la última: el candado anti-atribución)
 
-**El canal de avisos del CI vuelve a entregar, y ya no puede morir en silencio.** Verificado desde
-el runner —que era el punto: el secreto que fallaba es el del repo, y probarlo en el Mac no
-demostraba nada—: HTTP **200** contra el webhook real. Y el avisador de push a `2.1` está **verde
-por primera vez tras 37 rojos seguidos**, con el propio commit del merge.
+**Un commit de este repo ya no puede decir que lo escribió una IA.** Hasta hoy podía: el hook que
+ADR-013 da por puesto **nunca corrió aquí**, porque `core.hooksPath` local **sustituye** al global
+en vez de sumarse. Yala era el único de los 25 repos del Mac en esa situación.
 
-**Eran tres workflows, no uno.** `qa.yml`, `avisar-grok-push-principal.yml` y
-`nocturna-vigilante.yml` compartían el par de secretos y el mismo `curl` triplicado con tres
-tratamientos de error distintos. El envío vive ahora en `.github/actions/avisar`: si el webhook no
-responde, deja el aviso escrito en un issue (`aviso-ci`) en vez de morir, y solo se pone rojo
-cuando no queda ningún canal.
+**El dato que cambió tu decisión no estaba en el ticket:** el hook global también prohíbe
+*mencionar* «Claude», y aplicado aquí rechazaría **216 commits legítimos** que citan rutas del
+propio árbol. De ahí el camino elegido — hook propio, solo atribución, y aquí se puede seguir
+nombrando `CLAUDE.md` y `.claude/rules/…`.
 
-**Decisión de Jürgen: check propio + canal de respaldo.** El aviso salió del job `tests`, así que
-un `tests: fail` vuelve a significar «la suite falló de verdad». De los 3 rojos de `qa.yml` en las
-40 últimas corridas los TRES eran del avisador, y dos tapaban señal real.
+**774 rechazos sobre los 3348 mensajes de la historia, 0 fugas y 0 falsos positivos.** Cubre
+también el `--author`, que es atribución permanente en la cabecera y no viaja en el mensaje. Banco
+de 32 casos en el CI. Detalle en `tickets/done/` y en el PR #124.
 
-**Una premisa del ticket queda matizada:** `2.1` no tiene protección de rama ni rulesets, así que
-GitHub nunca bloqueó nada. Lo que paró el #118 fue nuestra propia `/cerrar-total`, que para si
-`mergeStateStatus` no está limpio — y con checks rojos no requeridos ese estado es `UNSTABLE`,
-que significa «mergeable con checks fallando». Ticket propio.
+## La sesión anterior (el avisador del CI) — cerrada
 
-**La review adversarial cazó SEIS defectos del arreglo**, y el peor lo anulaba entero: el ping
-salía **verde** el día que el canal muere, porque el respaldo entregaba y el paso salía con 0. Un
-vigilante que se rescata a sí mismo no vigila nada. El segundo se midió en producción en vez de
-razonarlo: con `always()`, cancelar un run **a mano** entregaba «la suite NO llegó a correr»; con
-`!cancelled()`, el mismo gesto no dice nada. Dos runs, mismo gesto, resultado opuesto.
-
-## La sesión anterior (la divisa de una cuenta) — cerrada
-
-Merge #118. Cambiar la divisa de una cuenta ya no deja su histórico atrás: con movimientos, Guardar
-pide confirmación con el número de filas y reexpresa cada importe con la tasa **de su fecha**. Es el
-primer sitio del repo que reescribe el `amount` crudo de filas ya persistidas, y por eso la
-confirmación es explícita y sin cobertura no se convierte nada. Lo que sigue vivo de esa sesión está
-en «Abiertos» y en sus cinco tickets; el resto lo guarda git.
+Merge #123. El canal de avisos del CI vuelve a entregar y ya no puede morir en silencio: el envío
+vive en `.github/actions/avisar`, con respaldo a un issue. Eran tres workflows compartiendo el
+mismo `curl` triplicado. Lo que sigue vivo está abajo; el resto lo guarda git.
 
 ## Abiertos
 
@@ -76,8 +61,13 @@ en «Abiertos» y en sus cinco tickets; el resto lo guarda git.
 guion. Sí es simulable, pero **dos de los cuatro pasos van a mano**: el selector de Moneda es un
 `NavigationLink` y no responde a taps sintéticos (medido el 8-sep con cuatro técnicas).
 
-**El backlog está en 239 y trae cuatro tickets nuevos del avisador**, además de los cinco de la
-sesión de la divisa: `nocturna-del-9-sep-dejo-cuatro-xcuitest-en-rojo` (**high**),
+**El backlog está en 244.** Los cuatro nuevos son del candado:
+`adr-013-does-not-know-yala-has-its-own-commit-msg` (el hook global no sabe que Yala tiene el suyo),
+`rebase-and-cherry-pick-skip-the-attribution-hook` (git no invoca el hook al replayar commits, ni en
+los merges de la web), `open-worktrees-lack-the-attribution-hook` y `two-qa-benches-nobody-runs`
+(dos bancos de `qa/scripts/` que no ejecuta nadie, y los dos nacieron de un fallo real).
+
+**Los cuatro del avisador**, además de los cinco de la sesión de la divisa: `nocturna-del-9-sep-dejo-cuatro-xcuitest-en-rojo` (**high**),
 `cerrar-total-para-ante-un-check-rojo-que-no-bloquea`,
 `vigilante-calla-si-no-puede-comprobar-la-nocturna` y
 `qa-yml-no-cancela-la-corrida-anterior-de-la-misma-rama`.
@@ -100,10 +90,12 @@ previo `preferred-currency-has-three-different-defaults`, `financial-report-amou
 
 ## Bloqueo
 
-**Tres decisiones tuyas** (era una más: la divisa de la cuenta se decidió hoy y ya está cerrada):
-`el-hook-que-prohibe-atribuir-a-una-ia-no-corre-en-este-repo` (**high**, toca a todos los agentes;
-los **seis** commits de esta sesión se verificaron con un grep a mano, uno a uno),
+**Dos decisiones tuyas** (eran tres: el candado anti-atribución se decidió y se cerró hoy):
 `corpus-de-test-de-staging-crece-sin-limite` y el filtro de naturaleza.
+
+**Y una nueva, corta, del candado:** los worktrees abiertos antes de hoy **no lo tienen** —el hook
+vive en el árbol de trabajo, así que una rama sin el fichero no ejecuta nada y git no avisa—. Había
+**11 vivos** al medirlo. `open-worktrees-lack-the-attribution-hook` trae las tres opciones.
 
 **Y dos cortas de la tanda del 9-sep, sin contestar:**
 

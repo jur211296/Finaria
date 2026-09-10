@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (253)
+## Index (258)
 
 | id | status | path |
 |----|--------|------|
@@ -38,6 +38,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | account-goldens-freeze-read-test-times-out | backlog | tickets/backlog/account-goldens-freeze-read-test-times-out.md |
 | accounts-need-more-visibility-in-the-ui | backlog | tickets/backlog/accounts-need-more-visibility-in-the-ui.md |
 | adopt-terminal-claims-ready-without-checking-engine | backlog | tickets/backlog/adopt-terminal-claims-ready-without-checking-engine.md |
+| adr-013-does-not-know-yala-has-its-own-commit-msg | backlog | tickets/backlog/adr-013-does-not-know-yala-has-its-own-commit-msg.md |
 | after-session-redesign-review-widgets-siri-applepay-and-web-copy | backlog | tickets/backlog/after-session-redesign-review-widgets-siri-applepay-and-web-copy.md |
 | ai-recommended-budgets | backlog | tickets/backlog/ai-recommended-budgets.md |
 | apple-watch | backlog | tickets/backlog/apple-watch.md |
@@ -103,7 +104,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | edgecases-extreme-minimum-flaky-under-load | backlog | tickets/backlog/edgecases-extreme-minimum-flaky-under-load.md |
 | el-aviso-de-cierre-cita-el-pr-de-otra-sesion | backlog | tickets/backlog/el-aviso-de-cierre-cita-el-pr-de-otra-sesion.md |
 | el-gate-no-corre-un-check-que-el-ci-si-bloquea | backlog | tickets/backlog/el-gate-no-corre-un-check-que-el-ci-si-bloquea.md |
-| el-hook-que-prohibe-atribuir-a-una-ia-no-corre-en-este-repo | backlog | tickets/backlog/el-hook-que-prohibe-atribuir-a-una-ia-no-corre-en-este-repo.md |
+| el-hook-que-prohibe-atribuir-a-una-ia-no-corre-en-este-repo | done | tickets/done/el-hook-que-prohibe-atribuir-a-una-ia-no-corre-en-este-repo.md |
 | el-job-de-tests-del-ci-no-tiene-timeout | done | tickets/done/el-job-de-tests-del-ci-no-tiene-timeout.md |
 | el-saldo-de-distribucion-no-se-entera-de-un-registro-nuevo | backlog | tickets/backlog/el-saldo-de-distribucion-no-se-entera-de-un-registro-nuevo.md |
 | ensure-rates-for-existing-transactions-has-no-callers | backlog | tickets/backlog/ensure-rates-for-existing-transactions-has-no-callers.md |
@@ -197,6 +198,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | notifications-not-delivered-testflight | done | tickets/done/notifications-not-delivered-testflight.md |
 | onboarding-purpose-drops-groups-card | backlog | tickets/backlog/onboarding-purpose-drops-groups-card.md |
 | only-testing-filters-may-be-silently-empty | backlog | tickets/backlog/only-testing-filters-may-be-silently-empty.md |
+| open-worktrees-lack-the-attribution-hook | backlog | tickets/backlog/open-worktrees-lack-the-attribution-hook.md |
 | orphan-alerts-behind-fullscreen-covers | backlog | tickets/backlog/orphan-alerts-behind-fullscreen-covers.md |
 | panel-accounts-redesign | backlog | tickets/backlog/panel-accounts-redesign.md |
 | panel-colapsa-la-seleccion-de-cuentas-a-la-primera | qa | tickets/qa/panel-colapsa-la-seleccion-de-cuentas-a-la-primera.md |
@@ -212,6 +214,8 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | qa-guion-tanda-no-cubre-17-tickets | backlog | tickets/backlog/qa-guion-tanda-no-cubre-17-tickets.md |
 | qa-no-puede-crear-cuenta-en-otra-divisa | done | tickets/done/qa-no-puede-crear-cuenta-en-otra-divisa.md |
 | qa-yml-no-cancela-la-corrida-anterior-de-la-misma-rama | backlog | tickets/backlog/qa-yml-no-cancela-la-corrida-anterior-de-la-misma-rama.md |
+| readme-index-duplicates-internal-worktree-files | backlog | tickets/backlog/readme-index-duplicates-internal-worktree-files.md |
+| rebase-and-cherry-pick-skip-the-attribution-hook | backlog | tickets/backlog/rebase-and-cherry-pick-skip-the-attribution-hook.md |
 | records-standalone-amount-discrepancy | backlog | tickets/backlog/records-standalone-amount-discrepancy.md |
 | records-summary-chips-hide-their-amount-from-voiceover | backlog | tickets/backlog/records-summary-chips-hide-their-amount-from-voiceover.md |
 | records-summary-mixes-preferred-currencies | backlog | tickets/backlog/records-summary-mixes-preferred-currencies.md |
@@ -259,6 +263,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | transaction-service-bulk-block-is-dead-code | backlog | tickets/backlog/transaction-service-bulk-block-is-dead-code.md |
 | trends-comparison-kpi-vs-curve | done | tickets/done/trends-comparison-kpi-vs-curve.md |
 | trends-insight-card-v2-bullets | backlog | tickets/backlog/trends-insight-card-v2-bullets.md |
+| two-qa-benches-nobody-runs | backlog | tickets/backlog/two-qa-benches-nobody-runs.md |
 | uitest-compara-fechas-sin-fijar-locale | backlog | tickets/backlog/uitest-compara-fechas-sin-fijar-locale.md |
 | uitest-seed-reseeds-the-corpus-without-reset | backlog | tickets/backlog/uitest-seed-reseeds-the-corpus-without-reset.md |
 | undercount-dias-intervalos-cerrados | done | tickets/done/undercount-dias-intervalos-cerrados.md |
