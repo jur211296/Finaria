@@ -321,3 +321,44 @@ nombrar.
 que lleva a ella está cerrada para toda cuenta nacida en la nube —`reverse_claim` exige `migrated_at`—
 y tras el fresh start eso es el 100 % de producción. La fila E de la matriz promete algo que hoy nadie
 puede recorrer. Necesita decisión.
+
+---
+
+## Worker desplegado (2026-09-10, con el OK de Jürgen en la sesión del paso 3)
+
+Lo que este ticket dejaba pendiente —«desplegar el Worker a staging y a producción para que el `kind`
+viaje»— está hecho, y **en el orden que importa**: la base primero (ya estaba), el Worker después.
+
+| Entorno | Versión desplegada | Antes | Delta de `gateway/` |
+|---|---|---|---|
+| **producción** `yala-gateway-production` | `034e1074-929c-495b-b91b-579a0b4b0875` | `e5f553f2` (2026-09-10T06:12Z) | **1 commit**: `675aadec`, el del `kind` |
+| **staging** `yala-gateway-staging` | `53e181d4-58ec-42b5-8197-a83bab78b15a` | `645b6820` (**2026-08-12**) | **12 commits**, casi un mes sin desplegar |
+
+**La base se verificó en los DOS entornos antes de desplegar, no se heredó de este ticket**: columna
+`kind` con `default 'groups_only'::text`, trigger `profiles_kind_guard`, check `profiles_kind_check`, y
+`claim_account` con `p_kind` y **una sola sobrecarga** — dos vivas darían `PGRST203` y tumbarían el claim
+entero. Producción, además, con 0 perfiles (el fresh start de este ticket).
+
+**El mapa de acceso de hoy** (se mide cada sesión porque cambia): `list_projects` del MCP lista **solo
+staging**, pero `execute_sql` contra producción **funciona pasando su `project_id`** aunque no aparezca
+listado. Es la mitad inversa de lo que decía el runbook el 2026-09-08.
+
+**Smoke, los dos entornos:** `/healthz` 200 y `/account/exists` sin JWT → 401 `yala_attest_required`
+(«Falta el JWT de usuario»), que es lo correcto: esa ruta es `requireUser`. Y el path es `/account/exists`,
+sin el prefijo `/v1` que sí llevan otras.
+
+**Y un efecto colateral verificado:** el deploy de producción **no apagó** la elección nube del Welcome —
+`CLOUD_ONBOARDING_CHOICE_ROLLOUT_PERCENT` salió a `100` en el volcado del deploy. Es exactamente lo que
+protegía el paso 1 (`wrangler-prod-onboarding-choice-percent-drift`), y esta es su primera prueba real.
+
+### Batería del gateway contra staging tras el deploy
+
+`npm test` con las credenciales de staging cargadas (`~/Secrets/yala-supabase-test/test-users.env`, más
+`GROUPS_ENC_KEY` y `PUSH_ROLE_JWT` de `~/Secrets/yala-groups-enc/staging*`): **`account.kind.test.ts`
+13/13** y `sync.goldens` 13/13 contra red real. El **único** rojo es el golden 20 del freeze, que es
+**preexistente y tiene ticket abierto** desde el 2026-09-03
+(`account-goldens-freeze-read-test-times-out`, timeout de 5 s, antigüedad desconocida). No lo introdujo
+este deploy.
+
+⚠️ **Sin las credenciales en el entorno, tres ficheros de goldens fallan al CARGAR** y eso se lee como
+«el código está roto» cuando es «falta un export». Los nombres exactos y de dónde salen, arriba.

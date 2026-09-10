@@ -1,6 +1,6 @@
 ---
 name: mi-docblock-tambien-es-una-premisa
-description: Lo que YO escribo en un docblock mientras implemento es una afirmación sin medir; siete falsas el 8-sep. Tres variantes: inventar una JUSTIFICACIÓN técnica, ENSANCHAR una premisa prestada, y NOMBRAR UN GUARD que no cubre la superficie que digo.
+description: Lo que YO escribo en un docblock mientras implemento es una afirmación sin medir; siete falsas el 8-sep y cinco más el 10-sep. Cuatro variantes: inventar una JUSTIFICACIÓN técnica, ENSANCHAR una premisa prestada, NOMBRAR UN GUARD que no cubre la superficie que digo, y CITAR UN TEST que dice lo contrario.
 metadata:
   type: feedback
 ---
@@ -95,3 +95,25 @@ repegar el método lo pone rojo y deja verdes los tres de comportamiento.
 **Y la regla general que deja:** un test de comportamiento sobre la ruta A no protege un borrado en la
 ruta B, por parecidas que sean. Borrar código sin llamador es seguro; lo que hay que vigilar es que no
 VUELVA, y eso es un source-scan, no un test de comportamiento.
+
+## Cuarta variante, y la más tramposa: **cito un test como prueba y el test me refuta** (2026-09-10)
+
+En el bloque [I] escribí una rama agrupada con este comentario: «inalcanzables por esta puerta, y no es
+una promesa: lo afirma `soloTresDestinosSalenDelWelcome`». El primer caso de esa rama era
+`.adoptAsComplete` — **el destino más frecuente de esa puerta**, y el test citado lo tiene
+explícitamente en su lista de permitidos. O sea: invoqué como prueba justo al test que decía lo
+contrario, y la frase sobrevivió porque **el código era correcto**: la rama hace `break` y sigue al
+guard, que es lo que `.adoptAsComplete` necesita. Solo mentía el comentario.
+
+Es peor que las otras tres porque **añadir una referencia a un test da sensación de rigor**: parece que
+lo he verificado precisamente porque lo nombro. La comprobación es leer el test citado, no citarlo.
+
+En la misma tanda cayeron cuatro más del mismo día, todas de un grep: «el motor compartido» con un solo
+llamador (mientras el Welcome conservaba su copia de la secuencia, y las dos ya cacheaban distinto) ·
+«el belt lo cierra de inmediato» cuando ya hacía un viaje de red · un valor cableado justificado con
+«esta pantalla solo se alcanza desde el Welcome», premisa que **mi propio cambio** rompía en la misma
+sesión · y «tiene ticket propio» sin ticket.
+
+**How to apply:** al escribir un docblock que nombra un test, un símbolo o un conteo, ábrelo. Y cuando
+justifiques un valor cableado con «aquí solo se llega desde X», comprueba si el cambio que estás
+haciendo añade una puerta — dos de las cinco eran premisas que yo mismo invalidaba en el mismo diff.

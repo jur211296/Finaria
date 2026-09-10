@@ -18,8 +18,15 @@
 //    · iCloud-KV (`CloudBeacon`) VIAJA a otros dispositivos del mismo Apple ID, donde puede haber otra
 //      cuenta en la nube activa — el dato describiría una cuenta distinta de la que está firmada.
 //
-//  NO RUTEA NADA. Quién lee este dato para elegir pantalla es `cloud-sign-in-discovers-account-kind`
-//  (bloque [I]). Este ticket lo deja escrito y refrescándose.
+//  NO RUTEA NADA. Quién lee este dato para elegir pantalla es `CloudIdentityRoutingLogic` (bloque [I]), y
+//  quien lo descubre en el momento de firmar es `CloudIdentityDiscovery`. Este servicio es la otra mitad:
+//  la CORRECCIÓN en el arranque, para la sesión que ya estaba viva y a la que nadie va a preguntar de nuevo.
+//
+//  **Tenía un tercer método, `handleSignIn()`, y se retiró el 2026-09-10.** Lo dejó preparado el paso 2 para
+//  que el sign-in descubriera el tipo, y llegó al bloque [I] con **cero call-sites**. El descubrimiento en
+//  las puertas lo hace `CloudIdentityDiscovery` —que además necesita saber si la cuenta EXISTE, algo que
+//  `refresh()` descarta por dentro— así que mantenerlo era dejar dos caminos para el mismo hecho, y por ahí
+//  se separan. Si algún día vuelve a hacer falta, es una línea.
 //
 //  ADR 2026-09-09 «Sesiones — dos ejes» §11 · ticket `backend-account-kind-complete-or-groups-only`.
 //
@@ -123,11 +130,6 @@ final class AccountKindService {
             store.write(snapshot)
         }
         return AccountKindLogic.resolve(cached: store.read(), sessionUserID: userIDVivo)
-    }
-
-    /// Al entrar: el tipo se descubre de inmediato, no en el siguiente arranque.
-    func handleSignIn() async {
-        await refresh()
     }
 
     /// Al salir: el dato de la cuenta se va con ella.

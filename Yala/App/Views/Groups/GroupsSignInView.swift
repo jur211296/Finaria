@@ -3,14 +3,35 @@
 //  Yala
 //
 //  Sign-in SOLO-GRUPOS (G4-invites A2, §16d): un invitado por link backend sin sesión Nube firma con
-//  Apple o Google para poder unirse. Autentica (SIWA/Google → JWT en `CloudAuthService`) y NADA MÁS — reglas duras:
-//  NO `CloudMigrationController`, NO `startAdoptWithExistingSession`, NO `CrossAccountEntryGuardLogic`,
-//  NO toca `StorageMode` ni flags de onboarding de migración. La cuenta queda como sesión viva que
-//  `GroupsMembershipClient.tokenProvider` ya consume.
+//  Apple o Google para poder unirse. Autentica (SIWA/Google → JWT en `CloudAuthService`) y **pregunta al
+//  backend qué hay detrás de esa identidad** — reglas duras que SIGUEN en pie: NO `CloudMigrationController`,
+//  NO `startAdoptWithExistingSession`, NO `CrossAccountEntryGuardLogic`, NO toca `StorageMode` ni flags de
+//  onboarding de migración. La cuenta queda como sesión viva que `GroupsMembershipClient.tokenProvider`
+//  ya consume.
+//
+//  ## Bloque [I] (2026-09-10): esta puerta CAMBIÓ DE MOTOR, no de aspecto
+//
+//  Hasta hoy firmaba y nada más, así que trataba como solo-grupos a quien tenía años de finanzas en esa
+//  misma cuenta. Ahora, con la sesión ya viva, `CloudIdentityDiscovery` pregunta `GET /account/exists` y
+//  `CloudIdentityRoutingLogic` dice a dónde va la persona. Lo que esta vista NO hace es ejecutar ese
+//  destino: se lo entrega al productor, que es el dueño del anchor.
+//
+//  **Por fuera no cambia nada** —decisión de Jürgen, 2026-09-09: «cambia de motor, no de aspecto»—. Los
+//  dos botones, su verbo, el spinner y el mensaje de error son los mismos; el descubrimiento corre dentro
+//  del MISMO `Task` del sign-in, así que lo único que ocurre es que el spinner gira un poco más — **y en
+//  el camino del belt, que antes no tenía spinner, ahora lo hay**. Si algún día esta puerta debe
+//  unificarse visualmente con el Welcome, eso es del ticket 12.
+//
+//  **Las tres reglas duras se conservan y siguen siendo ciertas**: el guard cross-cuenta y el adopt viven
+//  en `WelcomeCloudSignInView`, y a esta puerta le llega el destino `adoptAsCompleteAndOpenGroups` para
+//  que el productor la reencamine ALLÍ. Nada de eso se ejecuta aquí.
 //
 //  Invariante R9 (§2): el copy dice que esa será LA cuenta si algún día migra lo personal.
 //  Si ya hay sesión viva, la vista JAMÁS se presenta (`GroupBackendInviteEntryLogic.nextStep` lo
-//  garantiza en el productor) — y el belt de `onAppear` la cierra de inmediato si aparece igual.
+//  garantiza en el productor) — y el belt de `onAppear` la cierra igual si aparece. **Ya no es
+//  «de inmediato»**: desde el bloque [I] ese belt también descubre el tipo de cuenta, así que enciende el
+//  spinner y cierra al volver la red. Sin el spinner, esa ventana re-ofrecería el sign-in con sesión viva,
+//  que es justo lo que la regla dura prohíbe.
 //
 //  DARK: solo la presenta el drain de `.presentGroupsSignIn` (flag `groupsBackendEnabled` OFF ⇒ el
 //  intent jamás se submitea).
@@ -20,12 +41,16 @@ import AuthenticationServices
 import SwiftUI
 
 struct GroupsSignInView: View {
-    /// Se invoca con la sesión VIVA (recién firmada o preexistente). El caller cierra el sheet y
-    /// continúa el flujo encadenado (consent → join).
-    var onAuthenticated: () -> Void
+    /// Se invoca con la sesión VIVA (recién firmada o preexistente) y con el **destino** que decidió el
+    /// bloque [I]. El caller cierra el sheet y rutea: `continueGroupsSetup` / `associateGroupsAccount`
+    /// siguen el flujo encadenado de siempre (consent → join), y los otros dos son las novedades.
+    var onAuthenticated: (CloudIdentityRoutingLogic.Destination) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    /// [I] · el eje de sesión privada se lee del espejo observable (rules de área: preferencias
+    /// persistentes por `AppPreferences`, nunca `UserDefaults` a pelo en una vista).
+    @Environment(AppPreferences.self) private var appPreferences
 
     @State private var isSigningIn = false
     @State private var signInFailed = false
@@ -121,8 +146,24 @@ struct GroupsSignInView: View {
         .onAppear {
             // Belt del productor: con sesión viva la vista nunca debió presentarse — cerrar
             // y continuar (jamás re-ofrecer sign-in con sesión).
+            //
+            // [I]: también por aquí hay que descubrir el destino. Sin esto, el único camino con sesión
+            // preexistente se saltaría la tabla entera y seguiría tratando como solo-grupos a una cuenta
+            // completa — el bug del ticket, entrando por la puerta de atrás.
             if CloudAuthService.shared.hasSession {
-                onAuthenticated()
+                // `isSigningIn` ANTES del await, y es lo que mantiene viva la regla dura del docblock
+                // («jamás re-ofrecer sign-in con sesión»). Sin él, el descubrimiento convierte un frame en
+                // un viaje de red con los dos botones y el «Cancelar» tapeables: un tap en Apple firmaría
+                // ENCIMA de una sesión viva, y un tap en Cancelar mataría el Task y el productor trataría
+                // como cancelada una sesión que era buena.
+                isSigningIn = true
+                signInTask?.cancel()
+                signInTask = Task { @MainActor in
+                    let destino = await resolveDestination()
+                    guard !Task.isCancelled else { return }
+                    isSigningIn = false
+                    onAuthenticated(destino)
+                }
             }
         }
         .onDisappear {
@@ -143,8 +184,13 @@ struct GroupsSignInView: View {
             do {
                 try await CloudAuthService.shared.signIn(with: provider)
                 guard !Task.isCancelled else { return }
+                // [I] · el descubrimiento va DENTRO de este Task, antes de avisar al productor. Fuera
+                // —en el closure del callback— habría carrera: el `onDismiss` del sheet corre en cuanto
+                // `showGroupsSignIn` baja, y llegaría al ruteo con el destino todavía sin resolver.
+                let destino = await resolveDestination()
+                guard !Task.isCancelled else { return }
                 isSigningIn = false
-                onAuthenticated()
+                onAuthenticated(destino)
             } catch CloudAuthError.cancelled {
                 guard !Task.isCancelled else { return }
                 isSigningIn = false  // cancel silencioso: jamás signInFailed
@@ -157,6 +203,47 @@ struct GroupsSignInView: View {
                 signInFailed = true
             }
         }
+    }
+}
+
+// MARK: - Bloque [I] · el descubrimiento
+
+extension GroupsSignInView {
+
+    /// Pregunta al backend qué hay detrás de la identidad viva y consulta la tabla del ADR §7.
+    ///
+    /// **Un `exists` que no contesta NO bloquea la entrada al grupo.** Degrada a `groupsOnly`, que es lo
+    /// que esta puerta hacía antes de que el dato existiera, y `AccountKindService.refresh()` corrige en el
+    /// arranque siguiente. La alternativa —parar el recorrido— dejaría a un invitado sin poder unirse
+    /// porque el gateway tosió, y la matriz de escenarios pide justo lo contrario para cualquier [I] sin
+    /// red: «error reintentable, sin crear ni borrar nada». Aquí no hay nada que crear ni borrar todavía.
+    ///
+    /// El estado del dispositivo se lee VIVO, en el instante de la decisión: entre montar el sheet y firmar
+    /// puede haber terminado un restore de iCloud, y con él aparece una sesión privada que no estaba.
+    @MainActor
+    func resolveDestination() async -> CloudIdentityRoutingLogic.Destination {
+        let discovery: CloudIdentityRoutingLogic.Discovery
+        switch await CloudIdentityDiscovery().discover(gate: .groups) {
+        case .discovered(let resultado, _):
+            discovery = resultado
+        case .unavailable:
+            discovery = .groupsOnly
+        }
+        return CloudIdentityRoutingLogic.destination(
+            gate: .groups,
+            discovery: discovery,
+            deviceState: CloudIdentityRoutingLogic.deviceState(
+                // Por el espejo observable y no por `UserDefaults.standard`: es lo que piden las rules
+                // de área para una vista, y además `hasCompletedOnboarding` tiene su nº de sitios
+                // CLAVADO por `SessionPreferenceKeysTests.spellingCountsMatch` (26) — un lector nuevo a
+                // pelo lo rompe, y con razón: esa key es la más dispersa del árbol.
+                hasCompletedOnboarding: appPreferences.hasCompletedOnboarding,
+                storageMode: StorageModePersistence.read(),
+                onboardingMode: OnboardingMode.current()),
+            // Esta puerta no puede saber si la cuenta es la que ya estaba asociada: la identidad de la
+            // asociada la persiste `groups-account-association-in-storage-row` (paso 10). La tabla solo
+            // lo mira en la puerta de Ajustes, así que aquí `nil` no cambia ningún destino.
+            isAssociatedGroupsAccount: nil)
     }
 }
 

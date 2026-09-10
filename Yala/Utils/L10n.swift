@@ -2176,6 +2176,19 @@ enum L10n {
             static var accept: String { ls("groups.consent.accept", comment: "") }
         }
 
+        /// **Bloque [I]** · el bloqueo de «privada + asociar una cuenta que ya tiene Yala completo».
+        enum AccountIsComplete {
+            static var title: String { ls("groups.accountIsComplete.title", comment: "") }
+            static var body: String { ls("groups.accountIsComplete.body", comment: "") }
+            static var useAnotherAccount: String {
+                ls("groups.accountIsComplete.useAnotherAccount", comment: "")
+            }
+            /// La otra salida del ADR: dónde se decide usar esa cuenta como tu Yala.
+            static var settingsHint: String {
+                ls("groups.accountIsComplete.settingsHint", comment: "")
+            }
+        }
+
         /// G4-invites (A2, §16d): sign-in solo-grupos (SIWA para unirse por link backend).
         enum SignIn {
             static var title: String { ls("groups.signin.title", comment: "") }
@@ -5216,6 +5229,8 @@ enum L10n {
             static var adoptingHint: String { ls("welcome.cloud.adoptingHint", comment: "") }
             static var notFoundTitle: String { ls("welcome.cloud.notFoundTitle", comment: "") }
             static var notFoundBody: String { ls("welcome.cloud.notFoundBody", comment: "") }
+            /// Bloque [I] · la salida de «no hay cuenta»: lleva al alta con el proveedor ya elegido.
+            static var notFoundCta: String { ls("welcome.cloud.notFoundCta", comment: "") }
             static var blockedTitle: String { ls("welcome.cloud.blockedTitle", comment: "") }
             static var blockedBody: String { ls("welcome.cloud.blockedBody", comment: "") }
             /// El SEGUNDO mundo de la misma pantalla: el dueño que restauró de iCloud y volvió atrás con

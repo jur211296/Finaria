@@ -4786,6 +4786,7 @@
 
 /* Body when Apple ID has no cloud account */
 "welcome.cloud.notFoundBody" = "このApple IDにはまだYalaのクラウドアカウントがありません。";
+"welcome.cloud.notFoundCta" = "アカウントを作る";
 
 /* Title when foreign local data blocks sign-in */
 "welcome.cloud.blockedTitle" = "このデバイスには別のアカウントのデータがあります";
@@ -5740,3 +5741,15 @@
 
 /* Body of the rates-unavailable alert */
 "account.currencyChange.ratesUnavailableMessage" = "この口座の一部の日付の為替レートがありません。何も変更していません。接続を確認してからもう一度お試しください。";
+
+/* Bloque [I]: bloqueo al asociar una cuenta que ya lleva finanzas personales */
+"groups.accountIsComplete.title" = "そのアカウントはすでにYala全体を使っています";
+
+/* Bloque [I]: por qué se bloquea */
+"groups.accountIsComplete.body" = "そのアカウントには、すでに誰かの家計データがクラウドに入っています。グループだけに使うと2つのアカウントが1つに混ざってしまうので、ここではできません。";
+
+/* Bloque [I]: CTA para firmar con otra cuenta */
+"groups.accountIsComplete.useAnotherAccount" = "別のアカウントを使う";
+
+/* Bloque [I]: la otra salida del ADR */
+"groups.accountIsComplete.settingsHint" = "そのアカウントで家計を管理したいときは、設定の「データの保存先」で切り替えられます。";

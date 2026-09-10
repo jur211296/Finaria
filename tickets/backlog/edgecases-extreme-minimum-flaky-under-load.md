@@ -91,3 +91,30 @@ falló — murió el runner. Y `bash qa/scripts/sim-libre.sh` antes de correr, o
 Sobre el contexto de la observación original: allí se decía que con **26 GB libres** el disco «no lo
 explica esa vez». Es correcto, y ahora se puede afirmar más fuerte: el disco no lo explica **nunca**
 — también pasa a 12 GB.
+
+## Tercera observación, 2026-09-10 — la muestra sube a 2 de 3, y el lote ya es la suite ENTERA
+
+Gate del bloque [I] (`cloud-sign-in-discovers-account-kind`), con la suite **completa** de `YalaUITests`
+en una sola invocación: **136 pasados, 1 fallado**, y el fallado es este, con el **mismo mensaje y la misma
+línea** del helper (`XCUIApplication+Yala.swift:218`, era `:208`). **Cero reinicios del runner**, así que no
+es la colisión de dos corridas — es un rojo de test de verdad.
+
+Re-corrido **aislado** en el mismo árbol y el mismo simulador: **los 2 tests pasan**, éste en **30,1 s**
+(las otras veces: 32,5 s aislado, ~37,7 s antes de rendirse en lote). El perfil se repite exacto.
+
+**Qué añade esta observación, además de una muestra:**
+
+- **El lote ya no son cinco suites: es la suite entera** (137 casos). El fenómeno escala con la carga y no
+  con qué suites concretas la acompañan, lo que refuerza la hipótesis del timeout bajo carga frente a
+  cualquier interacción entre suites.
+- **Descarta el diff del día como causa, y conviene decir por qué no basta con que «pase aislado»**: el
+  síntoma —«el guardado no completó»— es *exactamente* el de la trampa del `.alert` de `ContentView`
+  (`.claude/rules/swiftui-ds.md`), donde un cambio de presentación inerte rompió el guardado de una
+  transacción y el rojo salió en un área sin relación. Y ese gate tocaba `ContentView`. Lo que lo zanja no
+  es el razonamiento sino que **este fenómeno ya estaba medido el 2026-09-05, en un árbol sin ese diff**.
+- El disco estaba en **23 GB**, por debajo del umbral de 25. No es descartable como en la primera
+  observación (que tenía 26 GB), así que la carga de disco vuelve a la lista de sospechosos — aunque la
+  medición del 2026-09-07 (12 corridas verdes con el disco forzado a 12 GB) le quita peso.
+
+**Va 2 fallos de 3 corridas en lote, 0 de 2 en aislamiento.** Sigue sin ser determinista, pero ya no es
+«una vez»: en un gate con la suite entera, este test cae la mitad de las veces.

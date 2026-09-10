@@ -36,6 +36,7 @@ struct ContentViewReadinessLogicTests {
         showGroupInviteOnboarding: Bool = false,
         showGroupsConsent: Bool = false,
         showGroupsSignIn: Bool = false,
+        showGroupsAccountIsCompleteBlock: Bool = false,
         showGroupsOrganizerName: Bool = false,
         showGroupsEducational: Bool = false,
         showFullModeActivation: Bool = false,
@@ -63,6 +64,7 @@ struct ContentViewReadinessLogicTests {
             hasActiveGroupSyncError: hasActiveGroupSyncError,
             hasActiveInboxAlert: hasActiveInboxAlert, showGroupInviteOnboarding: showGroupInviteOnboarding,
             showGroupsConsent: showGroupsConsent, showGroupsSignIn: showGroupsSignIn,
+            showGroupsAccountIsCompleteBlock: showGroupsAccountIsCompleteBlock,
             showGroupsOrganizerName: showGroupsOrganizerName,
             showGroupsEducational: showGroupsEducational,
             showFullModeActivation: showFullModeActivation,
@@ -89,6 +91,24 @@ struct ContentViewReadinessLogicTests {
         #expect(ContentViewReadinessLogic.blocker(
             state: make(showGroupsSignIn: true)) == "groupsSignIn")
         #expect(!ContentViewReadinessLogic.isReady(state: make(showGroupsSignIn: true)))
+    }
+
+    /// **Bloque [I]** · el bloqueo «esa cuenta ya tiene Yala completo». Es el que MÁS lo necesita de los
+    /// cuatro hermanos de Grupos: lo presenta el `onDismiss` del sheet de sign-in, o sea el instante exacto
+    /// en el que el gate se despierta y el drain busca a quién montar. Sin blocker, el intent siguiente se
+    /// monta encima y SwiftUI descarta uno de los dos en silencio, con el intent ya consumido.
+    @Test func groupsAccountIsCompleteBlock_blocks() {
+        #expect(ContentViewReadinessLogic.blocker(
+            state: make(showGroupsAccountIsCompleteBlock: true)) == "groupsAccountIsCompleteBlock")
+        #expect(!ContentViewReadinessLogic.isReady(
+            state: make(showGroupsAccountIsCompleteBlock: true)))
+    }
+
+    /// Tampoco es cadena welcome: un intent que la supersede no puede tumbarlo. Mismo trato que sus tres
+    /// hermanos — y aquí importa más, porque tumbarlo dejaría entrar a la cuenta que se acaba de rechazar.
+    @Test func groupsAccountIsCompleteBlock_isNotTearableWelcomeChain() {
+        #expect(!ContentViewReadinessLogic.isBlockedSolelyByWelcomeChain(
+            state: make(showGroupsAccountIsCompleteBlock: true)))
     }
 
     /// C2 · el educativo es el PRIMER escalón de las puertas A y B, y su cover cuelga del mismo anchor.

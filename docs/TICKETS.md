@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (261)
+## Index (267)
 
 | id | status | path |
 |----|--------|------|
@@ -49,6 +49,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | aviso-de-nuevo-miembro-no-llega-hasta-abrir-la-app | qa | tickets/qa/aviso-de-nuevo-miembro-no-llega-hasta-abrir-la-app.md |
 | backend-account-kind-complete-or-groups-only | qa | tickets/qa/backend-account-kind-complete-or-groups-only.md |
 | beacon-routes-only-never-blocks | backlog | tickets/backlog/beacon-routes-only-never-blocks.md |
+| borncloud-consent-epoch-written-before-the-guard-decides | backlog | tickets/backlog/borncloud-consent-epoch-written-before-the-guard-decides.md |
 | bridge-de-grupos-pierde-la-marca-de-sus-patas | qa | tickets/qa/bridge-de-grupos-pierde-la-marca-de-sus-patas.md |
 | bridge-synthesis-trusts-a-zero-converted-amount | backlog | tickets/backlog/bridge-synthesis-trusts-a-zero-converted-amount.md |
 | bridge-virtual-only-currency-mismatch-is-silent | backlog | tickets/backlog/bridge-virtual-only-currency-mismatch-is-silent.md |
@@ -79,7 +80,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | ci-warns-but-does-not-block | backlog | tickets/backlog/ci-warns-but-does-not-block.md |
 | ci-workflow-cites-missing-testing-strategy | backlog | tickets/backlog/ci-workflow-cites-missing-testing-strategy.md |
 | cloud-fx-rates-blob-two-faces | qa | tickets/qa/cloud-fx-rates-blob-two-faces.md |
-| cloud-sign-in-discovers-account-kind | backlog | tickets/backlog/cloud-sign-in-discovers-account-kind.md |
+| cloud-sign-in-discovers-account-kind | qa | tickets/qa/cloud-sign-in-discovers-account-kind.md |
 | cloud-tx-epoch-orphan-relations | backlog | tickets/backlog/cloud-tx-epoch-orphan-relations.md |
 | cloudsync-account-currency-orphans-receiver-history | backlog | tickets/backlog/cloudsync-account-currency-orphans-receiver-history.md |
 | cobertura-ui-diaria-cuelga-del-push | backlog | tickets/backlog/cobertura-ui-diaria-cuelga-del-push.md |
@@ -144,6 +145,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | groups-archived-still-accepts-changes | backlog | tickets/backlog/groups-archived-still-accepts-changes.md |
 | groups-background-emitter-no-upload | done | tickets/done/groups-background-emitter-no-upload.md |
 | groups-batch-facts-plural-identity | backlog | tickets/backlog/groups-batch-facts-plural-identity.md |
+| groups-block-has-no-route-to-storage-settings | backlog | tickets/backlog/groups-block-has-no-route-to-storage-settings.md |
 | groups-budget | done | tickets/done/groups-budget.md |
 | groups-canal-sin-capability-set | backlog | tickets/backlog/groups-canal-sin-capability-set.md |
 | groups-cloud-identity-loss-on-migrate | discarded | tickets/discarded/groups-cloud-identity-loss-on-migrate.md |
@@ -161,6 +163,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | groups-leave-rpc-error-10 | qa | tickets/qa/groups-leave-rpc-error-10.md |
 | groups-log-expense-via-chat-voice | backlog | tickets/backlog/groups-log-expense-via-chat-voice.md |
 | groups-only-second-launch-mounts-icloud-mirror | backlog | tickets/backlog/groups-only-second-launch-mounts-icloud-mirror.md |
+| groups-organizer-intent-is-lost-on-relaunch | backlog | tickets/backlog/groups-organizer-intent-is-lost-on-relaunch.md |
 | groups-owner-debt-no-heir-dead-end | done | tickets/done/groups-owner-debt-no-heir-dead-end.md |
 | groups-owner-transfer-and-leave | qa | tickets/qa/groups-owner-transfer-and-leave.md |
 | groups-pending-member-can-open-group | done | tickets/done/groups-pending-member-can-open-group.md |
@@ -195,6 +198,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | merchant-memory-suggests-across-natures-in-three-more-places | backlog | tickets/backlog/merchant-memory-suggests-across-natures-in-three-more-places.md |
 | multi-currency-accounts | backlog | tickets/backlog/multi-currency-accounts.md |
 | no-hay-seed-con-miembro-rechazado | backlog | tickets/backlog/no-hay-seed-con-miembro-rechazado.md |
+| no-test-seam-for-account-exists-blocks-xcuitest-of-identity | backlog | tickets/backlog/no-test-seam-for-account-exists-blocks-xcuitest-of-identity.md |
 | nocturna-del-9-sep-dejo-cuatro-xcuitest-en-rojo | backlog | tickets/backlog/nocturna-del-9-sep-dejo-cuatro-xcuitest-en-rojo.md |
 | notifications-not-delivered-testflight | done | tickets/done/notifications-not-delivered-testflight.md |
 | onboarding-purpose-drops-groups-card | backlog | tickets/backlog/onboarding-purpose-drops-groups-card.md |
@@ -250,6 +254,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | session-exits-one-verb-per-session | backlog | tickets/backlog/session-exits-one-verb-per-session.md |
 | session-redesign-implementation-order | backlog | tickets/backlog/session-redesign-implementation-order.md |
 | session-redesign-web-and-store-copy | backlog | tickets/backlog/session-redesign-web-and-store-copy.md |
+| settings-migrate-to-cloud-adopts-silently-instead-of-migrating | backlog | tickets/backlog/settings-migrate-to-cloud-adopts-silently-instead-of-migrating.md |
 | shell-derives-from-two-session-axes | backlog | tickets/backlog/shell-derives-from-two-session-axes.md |
 | siri-ai-integration-ios-27 | backlog | tickets/backlog/siri-ai-integration-ios-27.md |
 | siri-intent-dual-container | qa | tickets/qa/siri-intent-dual-container.md |

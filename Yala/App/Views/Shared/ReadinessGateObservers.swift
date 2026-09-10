@@ -29,6 +29,8 @@ private struct ReadinessGateObserversModifier: ViewModifier {
     let showGroupInviteOnboarding: Bool
     let showGroupsConsent: Bool
     let showGroupsSignIn: Bool
+    /// [I] · el bloqueo «esa cuenta ya tiene Yala completo».
+    let showGroupsAccountIsCompleteBlock: Bool
     let showGroupsOrganizerName: Bool
     /// C2 · el educativo de las puertas A/B. Observarlo NO es opcional: su cover es un blocker de la
     /// matriz, así que sin este `onChange` el readiness no se recomputa al montarlo ni al bajarlo y el
@@ -65,6 +67,7 @@ private struct ReadinessGateObserversModifier: ViewModifier {
             .onChange(of: showGroupInviteOnboarding) { _, _ in recompute() }
             .onChange(of: showGroupsConsent) { _, _ in recompute() }
             .onChange(of: showGroupsSignIn) { _, _ in recompute() }
+            .onChange(of: showGroupsAccountIsCompleteBlock) { _, _ in recompute() }
             .onChange(of: showGroupsOrganizerName) { _, _ in recompute() }
             .onChange(of: showGroupsEducational) { _, _ in recompute() }
             .onChange(of: showFullModeActivation) { _, _ in recompute() }
@@ -107,6 +110,7 @@ extension View {
         showGroupInviteOnboarding: Bool,
         showGroupsConsent: Bool,
         showGroupsSignIn: Bool,
+        showGroupsAccountIsCompleteBlock: Bool,
         showGroupsOrganizerName: Bool,
         showGroupsEducational: Bool,
         showFullModeActivation: Bool,
@@ -135,6 +139,7 @@ extension View {
             showGroupInviteOnboarding: showGroupInviteOnboarding,
             showGroupsConsent: showGroupsConsent,
             showGroupsSignIn: showGroupsSignIn,
+            showGroupsAccountIsCompleteBlock: showGroupsAccountIsCompleteBlock,
             showGroupsOrganizerName: showGroupsOrganizerName,
             showGroupsEducational: showGroupsEducational,
             showFullModeActivation: showFullModeActivation,
