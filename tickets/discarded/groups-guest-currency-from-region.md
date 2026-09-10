@@ -1,15 +1,17 @@
 ---
 id: groups-guest-currency-from-region
-status: backlog
+status: discarded
 priority: medium
 area: groups
 created: 2026-08-08
-updated: 2026-09-06
+updated: 2026-09-09
 source: YalaWiki/Backlog/groups-invitado-moneda-region-red-muerta.md
 ---
 
 
 # El invitado con moneda «adivinada por región» ya no recibe la moneda del grupo — ¿hueco o limpieza?
+
+Why: Discarded 2026-09-09. Superado por el ADR 2026-09-09 «Sesiones — dos ejes» §7: quien entra por una invitación con cuenta NUEVA pasa por el bloque [G] (consentimiento + nombre + **moneda elegida**), así que la moneda «adivinada por región» deja de existir como estado. Ticket `cloud-sign-in-discovers-account-kind`, fila «Vengo por un grupo (crear / invitación) → nueva».
 
 ## El problema, en lenguaje de usuario
 

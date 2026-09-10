@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (252)
+## Index (253)
 
 | id | status | path |
 |----|--------|------|
@@ -151,7 +151,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | groups-equal-split-shows-not-participating-on-peer | qa | tickets/qa/groups-equal-split-shows-not-participating-on-peer.md |
 | groups-expense-notif-only-on-foreground | qa | tickets/qa/groups-expense-notif-only-on-foreground.md |
 | groups-ghost-tx-on-delete | done | tickets/done/groups-ghost-tx-on-delete.md |
-| groups-guest-currency-from-region | backlog | tickets/backlog/groups-guest-currency-from-region.md |
+| groups-guest-currency-from-region | discarded | tickets/discarded/groups-guest-currency-from-region.md |
 | groups-import-splitwise-tricount | backlog | tickets/backlog/groups-import-splitwise-tricount.md |
 | groups-in-group-search | backlog | tickets/backlog/groups-in-group-search.md |
 | groups-invite-skips-unirme-sheet-if-onboarded | qa | tickets/qa/groups-invite-skips-unirme-sheet-if-onboarded.md |
@@ -242,6 +242,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | secondary-visitor-writes-owner-domain | discarded | tickets/discarded/secondary-visitor-writes-owner-domain.md |
 | seeds-de-grupos-no-escriben-userid-ni-memberkey | backlog | tickets/backlog/seeds-de-grupos-no-escriben-userid-ni-memberkey.md |
 | session-exits-one-verb-per-session | backlog | tickets/backlog/session-exits-one-verb-per-session.md |
+| session-redesign-implementation-order | backlog | tickets/backlog/session-redesign-implementation-order.md |
 | shell-derives-from-two-session-axes | backlog | tickets/backlog/shell-derives-from-two-session-axes.md |
 | siri-ai-integration-ios-27 | backlog | tickets/backlog/siri-ai-integration-ios-27.md |
 | siri-intent-dual-container | qa | tickets/qa/siri-intent-dual-container.md |
@@ -322,7 +323,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | Backlog/groups-busqueda-interna.md | tickets/backlog/groups-in-group-search.md |
 | Backlog/groups-emisor-segundo-plano-no-sube.md | tickets/done/groups-background-emitter-no-upload.md |
 | Backlog/groups-import-splitwise-tricount.md | tickets/backlog/groups-import-splitwise-tricount.md |
-| Backlog/groups-invitado-moneda-region-red-muerta.md | tickets/backlog/groups-guest-currency-from-region.md |
+| Backlog/groups-invitado-moneda-region-red-muerta.md | tickets/discarded/groups-guest-currency-from-region.md |
 | Backlog/groups-presupuesto-de-grupo.md | tickets/backlog/groups-budget.md |
 | Backlog/groups-reconexion-poda-o-recableado.md | tickets/done/groups-reconnect-prune-or-rewire.md |
 | Backlog/groups-recordatorio-liquidacion.md | tickets/qa/groups-settlement-reminder.md |

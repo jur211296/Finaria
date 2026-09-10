@@ -7,7 +7,8 @@ metadata:
 
 **El modelo de sesiones está decidido y escrito: `docs/DECISIONS.md` → «[2026-09-09] Sesiones — dos
 ejes (privada × nube), un verbo por sesión, y Grupos como mini-app».** De ahí salen 13 tickets en
-`tickets/backlog/` con el orden de implementación dentro del ADR, y 12 tickets de la sesión de visita
+`tickets/backlog/` y el runbook `session-redesign-implementation-order` (Jürgen pedirá «implementa el
+siguiente»: es el primero de esa lista que no esté en done), y 12 tickets de la sesión de visita
 (M1) descartados. El acta del dictado está en `docs/sessions/2026-09-09-onboarding-lo-que-jurgen-espera.md`.
 
 **Why:** un device-QA guiado destapó que la confusión no era de pantalla sino de modelo: tres flags

@@ -67,7 +67,7 @@ estado: referencia del ADR 2026-09-09 «Sesiones — dos ejes»; se archiva cuan
 | E · «Volver a iCloud» (reverse cutover existente) | lo personal vuelve a iCloud (C); la cuenta pasa a `groups_only` y queda **asociada** si tiene grupos (D). Única degradación permitida | `backend-account-kind-complete-or-groups-only` (decía «no hay degradación») | **HUECO / contradicción** → añadido |
 | E · Eliminar mi cuenta | en «Tu cuenta de Yala» (5.1.1 v) | `session-exits-one-verb-per-session` | — |
 | E · Vaciar datos | contenido de la cuenta; grupos no | ídem | — |
-| F · Activar Yala completo → privado | chooser → validar iCloud → alert / **o restaurar** → [P] → D | `full-mode-activation-must-ask-where-personal-data-lives` | «restaurar» como tercera salida: **propuesta de Frank**, pendiente de Jürgen |
+| F · Activar Yala completo → privado | chooser → validar iCloud → alert / **o restaurar** → [P] → D | `full-mode-activation-must-ask-where-personal-data-lives` | «restaurar» como tercera salida: ratificada por Jürgen el 2026-09-09 |
 | F · Activar Yala completo → nube | promover a `complete` → [P] → E | ídem + backend | — |
 | F · Cerrar sesión | pushAll grupos → borrar local → neutro | `session-exits-one-verb-per-session` | — |
 | F · llega una invitación | unirse con la sesión activa | existente | — |

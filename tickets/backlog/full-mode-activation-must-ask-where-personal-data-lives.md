@@ -48,16 +48,15 @@ entra por «Primera vez» (las dos cards: «Tu cuenta en tu iCloud privado» / �
    y el motor de sync personal arranca (el mismo tramo que el alta born-cloud recorre hoy tras
    `activateBornCloudStorage`). Resultado: celda «nacida en la nube».
 4. Copy: el CTA puede seguir diciendo «Activar Yala completo»; lo que cambia es que ahora pregunta.
-5. **Propuesta de Frank, pendiente de Jürgen:** en la rama *privado*, si iCloud tiene datos, ofrecer
-   **«Restaurar mis datos»** además de borrar/cancelar. Quien llega aquí no es «nuevo» (entró por grupos
+5. **Ratificado por Jürgen (2026-09-09):** en la rama *privado*, si iCloud tiene datos, se ofrece **«Restaurar mis datos»** además de borrar/cancelar. Quien llega aquí no es «nuevo» (entró por grupos
    y puede ser un usuario privado de antes); mandarlo a cerrar sesión → «Ya tengo cuenta → iCloud» →
-   asociar de nuevo para conseguir lo mismo es un rodeo. Si Jürgen dice que no, la rama es idéntica a
-   «Primera vez → privado» (borrar / cancelar).
+   asociar de nuevo para conseguir lo mismo es un rodeo. Restaurar = el mismo recorrido de «Ya tengo cuenta → iCloud» (`WelcomeRestoreView`: resumen → continuar), terminando en D (privada + la cuenta de grupos asociada).
 
 ## Criterios de aceptación
 
 - [ ] Desde solo-grupos, «Activar Yala completo» muestra el chooser antes de cualquier onboarding.
-- [ ] Privado + iCloud con datos → alert; borrar → onboarding limpio; cancelar → vuelve al chooser.
+- [ ] Privado + iCloud con datos → alert con TRES salidas; borrar → onboarding limpio; restaurar → los datos
+      de iCloud aparecen y la cuenta de grupos queda asociada; cancelar → vuelve al chooser.
 - [ ] Privado + iCloud vacío → onboarding directo; al terminar, «¿Dónde viven tus datos?» muestra
       «iCloud privado» y la cuenta de grupos como **asociada**.
 - [ ] Nube → al terminar, el backend devuelve `kind = complete` para la cuenta, `storageMode == .cloud`
