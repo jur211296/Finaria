@@ -28,11 +28,12 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (223)
+## Index (224)
 
 | id | status | path |
 |----|--------|------|
 | account-goldens-freeze-read-test-times-out | backlog | tickets/backlog/account-goldens-freeze-read-test-times-out.md |
+| adopt-se-cuelga-en-conectando-sin-boton-reintentar | backlog | tickets/backlog/adopt-se-cuelga-en-conectando-sin-boton-reintentar.md |
 | adopt-terminal-claims-ready-without-checking-engine | backlog | tickets/backlog/adopt-terminal-claims-ready-without-checking-engine.md |
 | ai-recommended-budgets | backlog | tickets/backlog/ai-recommended-budgets.md |
 | apple-watch | backlog | tickets/backlog/apple-watch.md |
