@@ -27,6 +27,8 @@
 - [La tabla del ticket nombra un sitio por pantalla](feedback_la_tabla_del_ticket_nombra_un_sitio_por_pantalla.md) — 7 superficies eran 21; el mismo número marcado y exacto en la misma vista; los punteros a tickets en docblocks caducan.
 - [Ticket nuevo: busca el duplicado primero](feedback_ticket_nuevo_busca_el_duplicado_primero.md) — dos de tres ya existían el 10-sep, y el que existía era MEJOR; leer el motivo del descarte antes de reabrir.
 - [El mecanismo que existe se probó con OTRO corpus](feedback_el_mecanismo_existente_se_probo_con_otro_corpus.md) — reusar un barrido sobre un corpus nuevo puede destruir datos buenos; el AC dice QUÉ, no CÓMO.
+- [El mecanismo que reuso trae sus PRECONDICIONES](feedback_el_mecanismo_que_reuso_trae_sus_precondiciones.md) — pregunta qué hace ADEMÁS de lo que quieres: el boot-wipe se llevaba el canal de Grupos y las colas de Apple Pay.
+- [Una premisa corregida no reabre el camino](feedback_una_premisa_corregida_no_reabre_el_camino.md) — refutar UNA razón del bloqueo no basta; y antes de proponer, comprueba que cada pieza que hace falta EXISTE.
 - [Mi arreglo rompe la premisa de OTRO guard](feedback_mi_arreglo_rompe_la_premisa_de_otro_guard.md) — ensanchar un predicado deja mentirosos a los guards que se apoyaban en su forma vieja, a varios ficheros de distancia.
 - [El guard va DENTRO del escritor](feedback_el_guard_va_dentro_del_escritor.md) — repetido en vistas SwiftUI solo lo prueba un grep, y un grep no ve un guard invertido.
 - [Mi fix hereda la forma del bug](feedback_mi_fix_hereda_la_forma_del_bug.md) — el arreglo repite el error del bug; enuncia el bug en una frase y aplícasela al arreglo.
@@ -57,6 +59,7 @@
 - [El fixture hereda la anatomía de producción](feedback_el_fixture_hereda_la_anatomia_de_produccion.md) — no la deduzcas del ticket; el error se ve en el TOTAL, y el fixture tiene que ser DISCRIMINANTE.
 
 ## Estado del trabajo
+- [La puerta de Grupos con espejo: BLOQUEADA por el paso 9](project_puerta_grupos_espejo_bloqueada.md) — implementada entera y parada; rama sin PR, ~30 defectos anotados y tres tickets nuevos del repo.
 - [Una sesión solo-grupos ya no baja el iCloud del teléfono](project_neutro_durable_solo_grupos.md) — PR #134; la review cazó 12 defectos MÍOS, dos graves; la mitad 2 la paró Jürgen y falta device-QA NO simulable.
 - [«Primera vez → privado» ya valida iCloud antes de reiniciar](project_puerta_icloud_rama_privada.md) — PR #133; la review cazó 19 defectos MÍOS y el peor dejaba el bug vivo; falta device-QA y NO es simulable.
 - [«Volver a iCloud» ya está abierta a quien nació en la nube](project_reversa_abierta_a_born_cloud.md) — PR #132; la review cazó DOS defectos graves MÍOS; falta el device-QA de CloudKit y NO es simulable.
