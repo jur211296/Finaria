@@ -23,6 +23,23 @@ struct L10nFormatAccessorsTests {
         #expect(result.contains("3"))
     }
 
+    /// Paso 4 · los tres accessors con formato de la puerta de iCloud. El de `lateBody` carga más peso
+    /// que sus hermanos: su `%@` es la línea de CIFRAS del aviso, y una key cruda ahí le diría al usuario
+    /// que borre su histórico sin enseñarle cuánto es.
+    @Test func privateICloudAccessors_interpolate_neverRawKey() {
+        let since = L10n.Welcome.PrivateICloud.foundSince("marzo de 2025")
+        #expect(!since.contains("welcome.privateICloud"))
+        #expect(since.contains("marzo de 2025"))
+
+        let atLeast = L10n.Welcome.PrivateICloud.foundAtLeast(20_000)
+        #expect(!atLeast.contains("welcome.privateICloud"))
+        #expect(atLeast.contains("20"))
+
+        let late = L10n.Welcome.PrivateICloud.lateBody("128 registros · 3 cuentas")
+        #expect(!late.contains("welcome.privateICloud"))
+        #expect(late.contains("128 registros · 3 cuentas"))
+    }
+
     @Test func exchangeRateShort_embedsRate_neverRawKey() {
         let result = L10n.Transaction.exchangeRateShort("3.7500")
 

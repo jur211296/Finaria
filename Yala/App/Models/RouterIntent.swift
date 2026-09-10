@@ -53,6 +53,13 @@ enum RouterIntent: Identifiable, Equatable {
     case presentMilestoneUpgrade(Int)
     case requestAppStoreReview
 
+    /// **Paso 4 · el espejo de iCloud llegó tarde y trajo un corpus previo.** Va por el router y no como
+    /// un `@State` encendido a pelo porque su sonda contesta desde un `Task` async, cuando el anchor de
+    /// `ContentView` puede estar presentando otra cosa (el cover de idioma, el sheet del trial): encender
+    /// una presentación ahí sin gate es la regla (3) de Presentaciones, y su corolario del MOMENTO —un
+    /// cover montado con el bootstrap a medias se queda PEGADO— está medido en este repo.
+    case presentLateICloudMirrorNotice(ICloudPersonalCorpus)
+
     // C) Groups & invites
     case showInviteError(String)
     case showGroupSyncError(String)
@@ -111,6 +118,7 @@ extension RouterIntent {
     /// Consumer view that owns this intent's drain logic.
     var handler: AppRouter.ConsumerID {
         switch self {
+        case .presentLateICloudMirrorNotice: return .contentView
         case .showInboxAlert, .presentTrialOffer, .presentWhatsNew,
              .presentGroupsConsent, .presentGroupsSignIn, .presentGroupBackendInviteOnboarding,
              .presentGroupsOrganizerStep,
@@ -150,6 +158,11 @@ extension RouterIntent {
         case .showInboxAlert, .presentSharedImage, .presentDowngradeResolution,
              .presentTrialExpired, .requestAIConsent, .showGroupSyncError,
              .remoteOnboardingCompleted:
+            return .high
+        // **`.high` y no `.normal`**: mientras este aviso no se conteste, el espejo sigue mezclando dos
+        // corpus personales. Va por delante del trial y del What's New —que pueden esperar al arranque
+        // siguiente— y por detrás de los `.critical`, que contestan a un tap que la persona acaba de dar.
+        case .presentLateICloudMirrorNotice:
             return .high
         case .presentInboxSheet, .presentNewTransaction, .presentNewTransactionFromChatDraft,
              .presentVoiceEntry, .presentImageEntry, .presentUpgradeSheet,
@@ -192,6 +205,10 @@ extension RouterIntent {
             return "trialExpired"
         case .presentTrialOffer:
             return "trialOffer"
+        // Dedup por el HECHO y no por las cifras: dos sondas del mismo arranque hablan del mismo corpus
+        // aunque el espejo haya bajado tres filas más entre una y otra.
+        case .presentLateICloudMirrorNotice:
+            return "lateICloudMirrorNotice"
         case .presentMilestoneUpgrade(let n):
             return "milestone:\(n)"
         case .requestAppStoreReview:

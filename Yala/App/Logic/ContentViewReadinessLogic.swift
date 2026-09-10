@@ -57,6 +57,12 @@ struct ShellReadinessState: Equatable {
     /// El wipe de «empiezo de cero» LANZÓ y la app NO navegó al onboarding: el usuario está
     /// leyendo «no pudimos borrar tus datos» y nada del router puede presentarse debajo.
     let showFreshStartWipeFailedAlert: Bool
+    /// **Paso 4 · el aviso del espejo que llegó tarde.** Es un sheet del anchor de `ContentView`, así
+    /// que entra a la matriz por la regla (3) de Presentaciones: un intent que presentara debajo se lo
+    /// comería, y dentro de él vive un borrado irreversible que nada puede interrumpir. La condición es
+    /// VIVA (`lateICloudCorpus != nil`), no un `@State` de red visual — que es lo que la regla (4) pide
+    /// para los blockers.
+    let showLateICloudNotice: Bool
     let showRemoteWipeAlert: Bool
     let showICloudRestartAlert: Bool
     let hasActiveInviteError: Bool
@@ -136,6 +142,7 @@ enum ContentViewReadinessLogic {
         if state.showICloudRestartAlert { return "iCloudRestartAlert" }
         if state.showFreshStartWipeAlert { return "freshStartWipeAlert" }
         if state.showFreshStartWipeFailedAlert { return "freshStartWipeFailedAlert" }
+        if state.showLateICloudNotice { return "lateICloudNotice" }
         if state.hasActiveInviteError { return "inviteError" }
         if state.hasActiveGroupSyncError { return "groupSyncError" }
 
@@ -216,6 +223,7 @@ extension ShellReadinessState {
             secondaryEntryRelaunch: secondaryEntryRelaunch,
             showFreshStartWipeAlert: showFreshStartWipeAlert,
             showFreshStartWipeFailedAlert: showFreshStartWipeFailedAlert,
+            showLateICloudNotice: showLateICloudNotice,
             showRemoteWipeAlert: showRemoteWipeAlert,
             showICloudRestartAlert: showICloudRestartAlert,
             hasActiveInviteError: hasActiveInviteError,

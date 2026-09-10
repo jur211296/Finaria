@@ -38,6 +38,10 @@ enum WelcomeFlowStep {
     /// hay nada que impedir desde que el dominio de preferencias por sesión cerró las escrituras al dueño—
     /// sino el paso que faltaba para que la app no se contradijera según por dónde entres.
     case privateSecondaryNotice
+    /// Paso 4 del rediseño · **la puerta de la rama privada: le pregunta a iCloud qué hay ANTES de que
+    /// nadie vea una pantalla de reinicio** (ADR §9). Es un step y no un alert por las mismas razones que
+    /// `.groupsGate`, más una medida: un `.alert` del anchor de `ContentView` desmonta este cover entero.
+    case privateICloudGate
     /// R2 · TERMINAL: este proceso montó el store NEUTRO y el destino elegido necesita el mirror de
     /// CloudKit ⇒ hay que reabrir la app. Vive DENTRO de este cover a propósito: un cover propio sería una
     /// presentación nueva colgando del anchor de `ContentView` (matriz de readiness, regla (3) de
@@ -73,6 +77,10 @@ struct WelcomeFlowContainer: View {
     /// G3: fetch VIVO del corpus local para la puerta (mismo closure que alimenta el guard cross-cuenta
     /// del sign-in de nube — un snapshot no vale, el mirror puede estar re-importando).
     var hasLocalDataNow: @MainActor @Sendable () -> Bool
+    /// Paso 4: el borrado del corpus de iCloud. Vive en `ContentView` —es quien tiene el `modelContext`,
+    /// y el borrado tiene que llevarse también las filas que el espejo hubiera bajado ya—; el container
+    /// solo lo reenvía a la puerta.
+    var performICloudCorpusWipe: @MainActor () async -> String?
 
     @State private var step: WelcomeFlowStep = .hero
 
@@ -87,7 +95,8 @@ struct WelcomeFlowContainer: View {
         onSelectGroupsOrganizer: @escaping () -> Void,
         onBeaconRoutesToCloudSignIn: @escaping (CloudSignInProvider) -> Void,
         onNeedsMirrorRelaunch: @escaping (WelcomeMirrorRelaunchLogic.Destination) -> Void,
-        hasLocalDataNow: @escaping @MainActor @Sendable () -> Bool
+        hasLocalDataNow: @escaping @MainActor @Sendable () -> Bool,
+        performICloudCorpusWipe: @escaping @MainActor () async -> String?
     ) {
         self.initialStep = initialStep
         self.onSelectBranch = onSelectBranch
@@ -98,6 +107,7 @@ struct WelcomeFlowContainer: View {
         self.onSelectGroupsOrganizer = onSelectGroupsOrganizer
         self.onNeedsMirrorRelaunch = onNeedsMirrorRelaunch
         self.hasLocalDataNow = hasLocalDataNow
+        self.performICloudCorpusWipe = performICloudCorpusWipe
         self._step = State(initialValue: initialStep)
     }
 
@@ -206,6 +216,23 @@ struct WelcomeFlowContainer: View {
                     // nueva al retroceder. Derivarlo de `visibleNewOptions` en vez de recordarlo en un
                     // `@State` es lo que impide que las dos condiciones diverjan.
                     onBack: { goTo(newBranchOriginStep) }
+                )
+                .transition(.opacity)
+            case .privateICloudGate:
+                WelcomePrivateICloudGateView(
+                    onProceed: {
+                        leaveWelcome(to: .privateOnboarding) { onSelectPrivateAccount() }
+                    },
+                    // La tercera salida del aviso. Se delega en `handleExistingOption` en vez de cruzar el
+                    // portal aquí: ese helper YA es el que traduce «restaurar» a su `Destination`, y
+                    // escribir la traducción por segunda vez es como divergen dos caminos que deben acabar
+                    // en la misma pantalla.
+                    onRestore: { handleExistingOption(.restoreICloud) },
+                    // Cancelar → la elección privado / nube, que es de donde vino. Mismo término que usa
+                    // el aviso de sesión secundaria, y por el mismo motivo: con bypass nunca vio el
+                    // sub-chooser, así que mandarlo ahí sería enseñarle una pantalla nueva al retroceder.
+                    onBack: { goTo(newBranchOriginStep) },
+                    performWipe: performICloudCorpusWipe
                 )
                 .transition(.opacity)
             case .mirrorRelaunch:
@@ -330,12 +357,23 @@ struct WelcomeFlowContainer: View {
                 goTo(.privateSecondaryNotice)
                 return
             }
+            // **Paso 4 · esta rama ya no sale directa por el portal: pasa por la puerta.** Hasta el
+            // 2026-09-10 iba a `leaveWelcome(.privateOnboarding)`, y con el mount neutro eso persiste el
+            // destino y **NO llama a `onSelectPrivateAccount`** — el único callback que consultaba «¿hay
+            // datos?». Resultado medido en device el 2026-09-09: instalación fresca + iCloud con meses de
+            // histórico → pantalla de reinicio CIEGA, y al reabrir el onboarding completo montándose
+            // encima mientras el espejo bajaba el corpus viejo por debajo.
+            //
+            // La puerta no sustituye al portal, va DELANTE: su `onProceed` es el mismo
+            // `leaveWelcome(to: .privateOnboarding)` de siempre, con su relanzamiento. Lo que cambia es que
+            // ya no se cruza sin haber preguntado a iCloud (ADR §9, punto 4).
+            //
             // R2: es «Soy nuevo» sin nube, y el que paga el relanzamiento que el alta nube deja de pagar
             // — el reparto que la Opción C aprueba. **Dejó de ser el bypass de producción**: con el percent
             // de la elección nube EN 100 (medido el 2026-09-09) el sub-chooser SÍ se muestra en prod y esta
             // rama es una de sus dos salidas, no la única. Sigue siendo camino ÚNICO donde el percent no
             // llega: device sin snapshot fetcheado (fail-closed), bajo UITest, y si se vuelve el percent a 0.
-            leaveWelcome(to: .privateOnboarding) { onSelectPrivateAccount() }
+            goTo(.privateICloudGate)
         case .cloudAccount:
             // A5: el alta born-cloud. El stub explícito de A4 (`showBornCloudPendingAlert`) queda
             // BORRADO en este mismo commit, no silenciado — era una promesa con fecha.

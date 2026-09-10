@@ -98,8 +98,13 @@ struct WelcomeSecondaryNoticeWiringTests {
 
         let notice = try #require(body.range(of: "goTo(.privateSecondaryNotice)"),
                                   "sin el desvío no hay nada que ordenar")
-        let exit = try #require(body.range(of: "leaveWelcome(to: .privateOnboarding)"),
-                                "la salida al onboarding privado desapareció del switch")
+        // **Cambió el literal, no el invariante (2026-09-10, paso 4 del rediseño).** La rama privada ya no
+        // sale directa por el portal: entra en la puerta que valida iCloud, y es ESA la que cruza
+        // `leaveWelcome(to: .privateOnboarding)` en su `onProceed`. Lo que este test protege sigue siendo
+        // lo mismo —que el aviso de sesión secundaria se evalúe ANTES de que la rama se vaya a ningún
+        // sitio— así que lo que se busca es la salida de la rama, sea cual sea.
+        let exit = try #require(body.range(of: "goTo(.privateICloudGate)"),
+                                "la salida de la rama privada desapareció del switch")
 
         #expect(notice.lowerBound < exit.lowerBound, """
             el desvío al aviso quedó DESPUÉS de la salida por el portal, así que nunca se alcanza: \

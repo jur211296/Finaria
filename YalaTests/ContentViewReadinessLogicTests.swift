@@ -43,7 +43,8 @@ struct ContentViewReadinessLogicTests {
         showProTrialOffer: Bool = false,
         showWhatsNew: Bool = false,
         showSyncSettingsSheet: Bool = false,
-        isMainTabModalVisible: Bool = false
+        isMainTabModalVisible: Bool = false,
+        showLateICloudNotice: Bool = false
     ) -> ShellReadinessState {
         ShellReadinessState(
             forceUpdateRequired: forceUpdateRequired,
@@ -59,6 +60,7 @@ struct ContentViewReadinessLogicTests {
             secondaryEntryRelaunch: secondaryEntryRelaunch,
             showFreshStartWipeAlert: showFreshStartWipeAlert,
             showFreshStartWipeFailedAlert: showFreshStartWipeFailedAlert,
+            showLateICloudNotice: showLateICloudNotice,
             showRemoteWipeAlert: showRemoteWipeAlert, showICloudRestartAlert: showICloudRestartAlert,
             hasActiveInviteError: hasActiveInviteError,
             hasActiveGroupSyncError: hasActiveGroupSyncError,
