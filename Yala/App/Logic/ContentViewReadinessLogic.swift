@@ -69,6 +69,11 @@ struct ShellReadinessState: Equatable {
     /// que todo lo demás — mientras uno está arriba, el drain se retiene (peek-first).
     let showGroupsConsent: Bool
     let showGroupsSignIn: Bool
+    /// **Bloque [I]** · el bloqueo «esa cuenta ya tiene Yala completo». Sheet del MISMO anchor que sus
+    /// tres hermanos de arriba, y entra aquí por lo mismo: la regla 3 de Presentaciones no admite
+    /// excepciones. Y aquí muerde especialmente, porque quien lo presenta es el `onDismiss` del sheet de
+    /// sign-in — el instante exacto en el que el drain se despierta y puede montar otro encima.
+    let showGroupsAccountIsCompleteBlock: Bool
     /// G3 · la ÚNICA presentación nueva de la rama organizador (sign-in y consent reusan los dos de
     /// arriba, del mismo anchor). Entra aquí porque la regla 3 de Presentaciones no admite excepciones:
     /// un cover del anchor de `ContentView` que no bloquee deja que el siguiente intent se monte encima.
@@ -147,6 +152,7 @@ enum ContentViewReadinessLogic {
         if state.showGroupInviteOnboarding { return "groupInviteOnboarding" }
         if state.showGroupsConsent { return "groupsConsent" }
         if state.showGroupsSignIn { return "groupsSignIn" }
+        if state.showGroupsAccountIsCompleteBlock { return "groupsAccountIsCompleteBlock" }
         if state.showGroupsOrganizerName { return "groupsOrganizerName" }
         if state.showGroupsEducational { return "groupsEducational" }
 
@@ -218,6 +224,7 @@ extension ShellReadinessState {
             showGroupInviteOnboarding: showGroupInviteOnboarding,
             showGroupsConsent: showGroupsConsent,
             showGroupsSignIn: showGroupsSignIn,
+            showGroupsAccountIsCompleteBlock: showGroupsAccountIsCompleteBlock,
             showGroupsOrganizerName: showGroupsOrganizerName,
             showGroupsEducational: showGroupsEducational,
             showFullModeActivation: showFullModeActivation,

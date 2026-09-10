@@ -45,3 +45,21 @@ devuelve el wrapper.
 
 Relacionado: [[mis-mediciones-fallan-por-el-filtro]] — misma familia: el «cero» no era del código, era
 del filtro. Y [[gate-paso3-no-detecta-cero-casos]], que es este mismo hueco en el propio gate.
+
+## El mismo error por el pipe: `| tee | grep` devuelve el exit del GREP (2026-09-10)
+
+Corrí la suite unit completa así:
+
+    xcodebuild test … 2>&1 | tee "$LOG" | grep -E 'TEST SUCCEEDED|✘'
+
+y el harness reportó **exit 0**. La suite había **FALLADO**: `Test run with 6669 tests … failed after
+93.7 s with 2 issues`, y en el log había 7 líneas con `✘`. El `0` era del `grep`, que encontró líneas.
+
+Lo cazó el hábito de contar: leí `Test run with` del log en vez de fiarme del exit, y ahí estaba el
+`failed`. **Los dos rojos eran míos** —un lector de `UserDefaults` con una key cuyo nº de sitios está
+clavado en 26— así que fiarse del exit habría metido el defecto en el PR.
+
+**How to apply:** redirige a fichero y lee el exit de xcodebuild directamente
+(`xcodebuild … > "$LOG" 2>&1; echo "EXIT=$?"`), y después grepea el fichero. Con pipe, `$?` es del
+último comando de la tubería. Es la misma familia que el word-splitting de arriba: el veredicto se lee
+de `Test run with` y del exit **de xcodebuild**, nunca del de un envoltorio.

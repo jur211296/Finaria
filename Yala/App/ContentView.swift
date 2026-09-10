@@ -83,6 +83,13 @@ struct ContentView: View {
     /// OFF los intents jamás se submitean.
     @State private var showGroupsConsent: Bool = false
     @State private var showGroupsSignIn: Bool = false
+    /// **Bloque [I]** · el bloqueo «esa cuenta ya tiene Yala completo». Vive aquí y no en el modifier
+    /// porque tiene que entrar en la matriz de readiness, y esa la construye ESTE tipo.
+    @State private var showGroupsAccountIsCompleteBlock: Bool = false
+    /// **Bloque [I]** · el cover del adopt se abrió con la sesión ya firmada en la puerta de Grupos, así
+    /// que arranca en el consentimiento y no en el intro (le ahorra un sign-in que acaba de hacer). Se
+    /// repone al cerrarse el cover: la siguiente entrada por el chooser es un recorrido normal.
+    @State private var adoptStartsAtConsent: Bool = false
     /// Keying `zoneName` (== group_id backend) del join pendiente que abrió el sheet. `nil` cuando los
     /// mismos dos sheets los abre la rama ORGANIZADOR (G3), que no se une a ninguna zona.
     @State private var pendingGroupsJoinZone: String?
@@ -301,6 +308,7 @@ struct ContentView: View {
             showInviteRecovery: $showInviteRecovery,
             showWelcomeCloudSignIn: $showWelcomeCloudSignIn,
             welcomeCloudEntry: $welcomeCloudEntry,
+            adoptStartsAtConsent: $adoptStartsAtConsent,
             prefilledOnboardingData: $prefilledOnboardingData,
             hasShownWelcomeChooser: $hasShownWelcomeChooser,
             hasCompletedOnboarding: $hasCompletedOnboarding,
@@ -323,11 +331,13 @@ struct ContentView: View {
         .modifier(GroupsBackendInviteModifier(
             showGroupsConsent: $showGroupsConsent,
             showGroupsSignIn: $showGroupsSignIn,
+            showGroupsAccountIsCompleteBlock: $showGroupsAccountIsCompleteBlock,
             showGroupsEducational: $showGroupsEducational,
             pendingGroupsJoinZone: $pendingGroupsJoinZone,
             groupsOrganizerFlowActive: $groupsOrganizerFlowActive,
             pendingGroupsOnlyPayload: $pendingGroupsOnlyPayload,
-            onGroupsOrganizerCancelled: { returnToGroupsChooser() }
+            onGroupsOrganizerCancelled: { returnToGroupsChooser() },
+            onAdoptCompleteAccount: { adoptCompleteAccountFromGroups() }
         ))
         // G3 · paso 6 de la rama organizador. Cover propio (no sheet): el alta es terminal —cancelarla a
         // medias dejaría al usuario fuera del Welcome y sin shell— y su blocker `groupsOrganizerName` ya
@@ -579,6 +589,7 @@ struct ContentView: View {
             showGroupInviteOnboarding: showGroupInviteOnboarding,
             showGroupsConsent: showGroupsConsent,
             showGroupsSignIn: showGroupsSignIn,
+            showGroupsAccountIsCompleteBlock: showGroupsAccountIsCompleteBlock,
             showGroupsOrganizerName: showGroupsOrganizerName,
             showGroupsEducational: showGroupsEducational,
             showFullModeActivation: showFullModeActivation,
@@ -825,6 +836,7 @@ struct ContentView: View {
             showGroupInviteOnboarding: showGroupInviteOnboarding,
             showGroupsConsent: showGroupsConsent,
             showGroupsSignIn: showGroupsSignIn,
+            showGroupsAccountIsCompleteBlock: showGroupsAccountIsCompleteBlock,
             showGroupsOrganizerName: showGroupsOrganizerName,
             showGroupsEducational: showGroupsEducational,
             showFullModeActivation: showFullModeActivation,
@@ -1067,6 +1079,38 @@ struct ContentView: View {
             SessionState.shared.selectedMainTab = .groups
             SessionState.shared.pendingNewGroupForm = true
         }
+    }
+
+    /// **Bloque [I]** · la cuenta que firmó en la puerta de Grupos lleva Yala completo y no hay sesión
+    /// privada que respetar: se adopta y se aterriza en Grupos.
+    ///
+    /// **Reencamina al cover del Welcome en vez de adoptar aquí**, y no es una comodidad: la pantalla de
+    /// adopt —con su progreso, su guard cross-cuenta, su auto-resume y sus seis fases terminales— vive en
+    /// `WelcomeCloudSignInView`, cuyo docblock prohíbe instanciarla en paralelo (dos anchors ante el mismo
+    /// flujo es la regla (4) de Presentaciones, y ya costó el bug del sign-out del 2026-07-14). Con la
+    /// sesión ya viva, `runSignInFlow` salta el sign-in y sigue por `exists` → guard → adopt: es
+    /// literalmente el camino que el alta born-cloud usa cuando su claim dice `existing_stable`.
+    ///
+    /// La pestaña se selecciona **antes**, por debajo del cover, así que al cerrarse la persona ya está en
+    /// Grupos sin necesidad de un testigo durable. Si el adopt termina pidiendo relanzamiento, eso se
+    /// pierde con el proceso: la invitación se retoma sola en el arranque —vive en `PendingJoinStore`, que
+    /// sobrevive— y quien venía a CREAR un grupo aterriza en el Panel. Darle durabilidad a ese intent es
+    /// del paso 12 y tiene ticket.
+    @MainActor
+    private func adoptCompleteAccountFromGroups() {
+        // La rama de Grupos se apaga: quien conduce a partir de aquí es la máquina de migración, y dejarla
+        // encendida haría que un cancel del cover devolviera al usuario al Welcome de grupos.
+        groupsOrganizerFlowActive = false
+        SessionState.shared.selectedMainTab = .groups
+        // El proveedor con el que ACABA de firmar, leído del Keychain. `.apple` como último recurso: el
+        // `Entry` solo elige el copy y el botón del intro, y ese intro no se muestra —`runSignInFlow` salta
+        // el sign-in con la sesión viva—, así que un fallback aquí no puede mandar a nadie al proveedor
+        // equivocado.
+        let proveedor = CloudSignInProvider(rawValue: CloudAuthService.shared.storedProvider() ?? "")
+            ?? .apple
+        welcomeCloudEntry = .reentry(proveedor)
+        adoptStartsAtConsent = true
+        showWelcomeCloudSignIn = true
     }
 
     /// Cierra los 4 covers de la cadena welcome para que un intent que la
@@ -1441,6 +1485,9 @@ private struct WelcomeFlowModifier: ViewModifier {
     /// Qué hace el cover de nube: re-entrada (con su provider) o alta born-cloud (A5). Cada
     /// productor lo setea EXPLÍCITO antes de presentar — jamás se hereda el del intento anterior.
     @Binding var welcomeCloudEntry: WelcomeCloudSignInView.Entry
+    /// **Bloque [I]** · el cover del adopt se abrió con la sesión ya firmada en la puerta de Grupos, así
+    /// que arranca en el consentimiento y no en el intro. Lo repone este modifier al cerrarse el cover.
+    @Binding var adoptStartsAtConsent: Bool
     @Binding var prefilledOnboardingData: ICloudAccountSummary?
     @Binding var hasShownWelcomeChooser: Bool
     @Binding var hasCompletedOnboarding: Bool
@@ -1574,11 +1621,19 @@ private struct WelcomeFlowModifier: ViewModifier {
             .fullScreenCover(
                 isPresented: $showWelcomeCloudSignIn.gated(by: showGroupInviteOnboarding),
                 onDismiss: {
+                    // El arranque-en-consent es de UNA entrada: la siguiente por el chooser es un
+                    // recorrido normal y debe ver su intro.
+                    adoptStartsAtConsent = false
                     // R2: `!showOnboarding` es el término nuevo. El alta born-cloud que NO relanza cierra
                     // este cover y enciende el onboarding en la misma vuelta; sin este término, el respaldo
                     // devolvería al usuario al chooser encima del onboarding que acaba de abrirse — dos
                     // presentaciones ante el mismo anchor, que es la regla (4) de Presentaciones.
-                    if !hasCompletedOnboarding && !showGroupInviteOnboarding && !showOnboarding {
+                    // `!showWelcomeFlow` es el término del bloque [I], hermano del `!showOnboarding` de
+                    // arriba: `onEnterGroupsOnly` cierra este cover y enciende el Welcome en el step de
+                    // Grupos, y sin este término el respaldo lo pisaba con `.chooser` — devolviendo a la
+                    // persona a «¿qué quieres hacer en Yala?» justo después de haberlo elegido.
+                    if !hasCompletedOnboarding && !showGroupInviteOnboarding && !showOnboarding
+                        && !showWelcomeFlow {
                         welcomeFlowInitialStep = .chooser
                         showWelcomeFlow = true
                     }
@@ -1586,6 +1641,16 @@ private struct WelcomeFlowModifier: ViewModifier {
             ) {
                 WelcomeCloudSignInView(
                     entry: welcomeCloudEntry,
+                    startsAtConsent: adoptStartsAtConsent,
+                    deviceStateNow: {
+                        // Se compone AQUÍ y se evalúa en el momento de la decisión: el mirror puede
+                        // asentar entre que se monta la pantalla y que la persona firma, y esta vista es
+                        // alcanzable desde la puerta de Grupos con el onboarding ya completado.
+                        CloudIdentityRoutingLogic.deviceState(
+                            hasCompletedOnboarding: hasCompletedOnboarding,
+                            storageMode: StorageModePersistence.read(),
+                            onboardingMode: OnboardingMode.current())
+                    },
                     hasLocalDataNow: hasLocalDataNow,
                     onAdoptStarted: {
                         // TEMPRANO (antes de conducir la máquina): cierra el hazard
@@ -1639,6 +1704,44 @@ private struct WelcomeFlowModifier: ViewModifier {
                         // `onDismiss` decida — su rama de respaldo devuelve al chooser.
                         showWelcomeCloudSignIn = false
                         showOnboarding = true
+                    },
+                    onEnterGroupsOnly: {
+                        // **Bloque [I]** · el backend dijo que esta cuenta solo lleva grupos, así que no
+                        // se adopta nada: el recorrido pasa a la mini-app de Grupos con la sesión VIVA.
+                        //
+                        // **Va a la PUERTA de Grupos del Welcome, no a la cadena directamente**, y esa es
+                        // la corrección de dos defectos que las lentes adversariales cazaron:
+                        //
+                        // 1. `startGroupsOrganizerBranch()` se salta `GroupsOrganizerGateLogic`, que es
+                        //    quien comprueba el canal, la sesión secundaria y —lo que más pesa— los DATOS
+                        //    AJENOS. `advanceGroupsOrganizerFlow` solo mira la secundaria, así que por ahí
+                        //    un device con el corpus de otra persona llegaba al alta, y su final escribe
+                        //    `onboardingMode` en el iKV del Apple ID del dueño, que es never-downgrade y
+                        //    NO VUELVE.
+                        // 2. El `onDismiss` de respaldo de este cover se dispara igual —en el Welcome
+                        //    `hasCompletedOnboarding` es `false` por construcción, así que el término que
+                        //    salva a sus hermanos no puede salvar a este— y reabría el chooser encima,
+                        //    dejando la cadena de Grupos retenida por el blocker `welcomeFlow`. Encender
+                        //    aquí el flujo del Welcome en su step lo hace explícito, y el respaldo ya no
+                        //    actúa (su guard mira `showWelcomeFlow`).
+                        //
+                        // Lo que NO se hace aquí, y no por olvido: escribir el trío de solo-grupos. Lo
+                        // escribe `GroupsOrganizerNameView` al final de su cadena, que es quien tiene
+                        // permiso.
+                        // **El desarme del boot-wipe de grupos, que este camino se saltaba.** Lo medido:
+                        // «Salir de Yala en este dispositivo» arma `groupsOnlyWipeArmed` y reabre el
+                        // Welcome SIN relanzar, así que la persona puede volver a entrar por aquí y
+                        // recuperar sus grupos… hasta el siguiente arranque en frío, que los borra. El
+                        // único desarme de re-entrada vivía en el closure del sheet de `GroupsSignInView`,
+                        // y por este camino ese sheet no se presenta (con la sesión viva, `GroupsGateLogic`
+                        // no pide sign-in). Los otros efectos de ese closure sí se auto-curan: el latch de
+                        // historial y el arranque del canal los repone el `onAppear` del tab, y el consent
+                        // baja en el boot siguiente.
+                        StorageModePersistence.clearGroupsOnlyWipeArm()
+                        GroupsSignOutBannerMarker.clear()
+                        welcomeFlowInitialStep = .groupsGate
+                        showWelcomeFlow = true
+                        showWelcomeCloudSignIn = false
                     },
                     onBack: {
                         showWelcomeCloudSignIn = false

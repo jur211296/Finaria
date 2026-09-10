@@ -4786,6 +4786,7 @@
 
 /* Body when Apple ID has no cloud account */
 "welcome.cloud.notFoundBody" = "此 Apple ID 还没有 Yala 云端账户。";
+"welcome.cloud.notFoundCta" = "创建账户";
 
 /* Title when foreign local data blocks sign-in */
 "welcome.cloud.blockedTitle" = "此设备上有另一个账户的数据";
@@ -5740,3 +5741,15 @@
 
 /* Body of the rates-unavailable alert */
 "account.currencyChange.ratesUnavailableMessage" = "此账户部分日期的汇率缺失。未做任何更改——请检查网络连接后重试。";
+
+/* Bloque [I]: bloqueo al asociar una cuenta que ya lleva finanzas personales */
+"groups.accountIsComplete.title" = "该账户已经在用完整版 Yala";
+
+/* Bloque [I]: por qué se bloquea */
+"groups.accountIsComplete.body" = "该账户的云端已经存着别人的财务数据。只用它来管理你的群组会把两个账户混成一个，所以这里不能这样做。";
+
+/* Bloque [I]: CTA para firmar con otra cuenta */
+"groups.accountIsComplete.useAnotherAccount" = "使用其他账户";
+
+/* Bloque [I]: la otra salida del ADR */
+"groups.accountIsComplete.settingsHint" = "想让这个账户管理你的财务？可以在“设置”的“你的数据存放在哪里”里选择。";

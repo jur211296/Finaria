@@ -4775,6 +4775,7 @@
 
 /* Body when Apple ID has no cloud account */
 "welcome.cloud.notFoundBody" = "Cet identifiant Apple n'a pas encore de compte Yala dans le cloud.";
+"welcome.cloud.notFoundCta" = "Créer mon compte";
 
 /* Title when foreign local data blocks sign-in */
 "welcome.cloud.blockedTitle" = "Cet appareil contient les données d'un autre compte";
@@ -5729,3 +5730,15 @@
 
 /* Body of the rates-unavailable alert */
 "account.currencyChange.ratesUnavailableMessage" = "Il manque des taux de change pour certaines dates de ce compte. Rien n'a été modifié — vérifie ta connexion et réessaie.";
+
+/* Bloque [I]: bloqueo al asociar una cuenta que ya lleva finanzas personales */
+"groups.accountIsComplete.title" = "Ce compte a déjà Yala complet";
+
+/* Bloque [I]: por qué se bloquea */
+"groups.accountIsComplete.body" = "Ce compte contient déjà les finances de quelqu'un dans le cloud. L'utiliser seulement pour tes groupes mélangerait deux comptes en un, donc ce n'est pas possible ici.";
+
+/* Bloque [I]: CTA para firmar con otra cuenta */
+"groups.accountIsComplete.useAnotherAccount" = "Utiliser un autre compte";
+
+/* Bloque [I]: la otra salida del ADR */
+"groups.accountIsComplete.settingsHint" = "Tu veux que ce compte porte tes finances ? Ça se décide dans Réglages, dans « Où vivent tes données ».";

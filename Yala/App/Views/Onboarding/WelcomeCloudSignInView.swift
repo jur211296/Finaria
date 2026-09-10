@@ -60,6 +60,22 @@ struct WelcomeCloudSignInView: View {
     }
 
     let entry: Entry
+    /// **Bloque [I]** · esta pantalla se abrió con la sesión YA firmada en otra puerta, así que arranca en
+    /// el consentimiento en vez de en el intro.
+    ///
+    /// Sin esto, la adopción desde Grupos le pedía **dos gestos** a quien solo quería ver un grupo: un
+    /// «Iniciar sesión con Apple» que acababa de hacer hace dos segundos, y luego el consentimiento. La
+    /// decisión de Jürgen (2026-09-09) es explícita: «sin aviso, sin banner y sin preguntar… **no añadas
+    /// ceremonia por prudencia**». El tap redundante es ceremonia y se va.
+    ///
+    /// **El consentimiento se queda**, y no por descuido: Jürgen lo llamó «el único paso que no se
+    /// recorta» al decidir el `.notFound`, y adoptar mueve datos personales a la nube — es el registro
+    /// GDPR de esa cuenta. Un gesto, y es el que él protegió.
+    var startsAtConsent: Bool = false
+    /// **Bloque [I]** · el estado de sesión de este dispositivo, evaluado EN el momento de la decisión y
+    /// no al montar la pantalla: entre una cosa y otra puede asentar un import de iCloud, o el usuario
+    /// puede llegar aquí desde la puerta de Grupos con el onboarding ya completado.
+    let deviceStateNow: @MainActor () -> CloudIdentityRoutingLogic.DeviceSessionState
     /// Corpus personal en el device, evaluado EN el momento de la decisión (S5: el
     /// mirror de iCloud puede estar re-importando en background durante el Welcome —
     /// un snapshot sería stale). Input del guard cross-cuenta F0-C.
@@ -77,6 +93,13 @@ struct WelcomeCloudSignInView: View {
     /// callback el `onDismiss` del cover devolvería al usuario al chooser (`!hasCompletedOnboarding`),
     /// que es justo el sitio del que acaba de salir.
     var onBornCloudCompleted: () -> Void
+    /// **Bloque [I]** · el backend dijo que esta cuenta solo lleva grupos, así que NO se adopta: se cierra
+    /// este cover y el recorrido sigue por la mini-app de Grupos con la sesión ya viva.
+    ///
+    /// Es un callback y no un `phase` propio porque lo que sigue no es una pantalla de este flujo: es la
+    /// cadena de Grupos, cuyo anchor es de `GroupsBackendInviteModifier`. Presentarla desde aquí sería el
+    /// segundo anchor que la regla (4) de Presentaciones prohíbe.
+    var onEnterGroupsOnly: () -> Void
     /// Volver al chooser (solo en fases no comprometidas: intro/notFound/blocked/error).
     var onBack: () -> Void
 
@@ -95,6 +118,11 @@ struct WelcomeCloudSignInView: View {
     /// provider lo trae el `Entry`). Se fija ANTES de abrir el consent y de ahí sale el `provider`
     /// que ve `CloudAuthService`.
     @State private var chosenProvider: CloudSignInProvider?
+    /// Bloque [I] · la pantalla se reencaminó a sí misma (hoy: `.notFound` → alta). `nil` = manda `entry`.
+    @State private var entryOverride: Entry?
+    /// Bloque [I] · latch del auto-arranque en el consent (ver el `onAppear`). Sin él, cancelar el consent
+    /// lo reabre en bucle: sus condiciones vuelven a cumplirse todas.
+    @State private var didAutoOpenConsent = false
     /// Task del flujo/poll en vuelo — se cancela en onDisappear (el Task nace de un
     /// callback, NO de `.task`, así que el desmontaje no lo cancela solo).
     @State private var flowTask: Task<Void, Never>?
@@ -124,6 +152,19 @@ struct WelcomeCloudSignInView: View {
             }
         }
         .welcomeBackButton(tint: .white, action: canGoBack ? onBack : nil)
+        .onAppear {
+            // La sesión ya está firmada en otra puerta ⇒ el intro no tiene nada que pedir. Se abre el
+            // consent directamente y su `onAccept` sigue por `runFlowAfterConsent`, igual que si el
+            // usuario hubiera tapeado el botón.
+            //
+            // **One-shot, y no un guard por estado.** SwiftUI invoca `onAppear` más de una vez, y las tres
+            // condiciones «obvias» (`startsAtConsent`, fase inicial, nada presentado) vuelven a ser TODAS
+            // ciertas en cuanto la persona CANCELA el consent: se le reabriría en bucle y no habría forma
+            // de llegar al intro. Con el latch, cancelar deja el intro del alta, que es la salida.
+            guard startsAtConsent, !didAutoOpenConsent else { return }
+            didAutoOpenConsent = true
+            showConsent = true
+        }
         // EL CONSENT VA SIEMPRE ANTES DEL SIGN-IN, en las dos entradas: el login envía identidad, así
         // que pedir permiso después sería pedirlo para algo ya hecho (docblock de `CloudConsentView`).
         // Estructuralmente lo garantiza que el ÚNICO productor del flujo sea este `onAccept`: los
@@ -144,11 +185,30 @@ struct WelcomeCloudSignInView: View {
         flowTask = Task { await operation() }
     }
 
+    /// La entrada que manda AHORA. Es `entry` salvo que la pantalla se haya reencaminado a sí misma.
+    ///
+    /// **El único reencaminamiento que existe es `.notFound` → alta** (bloque [I]): quien entró por «Ya
+    /// tengo cuenta» y no tiene ninguna consigue un botón que le crea la cuenta con el proveedor que ya
+    /// eligió. Se hace con un `@State` y no re-presentando el cover con otro `entry` a propósito: el cover
+    /// es el mismo, así que cambiarlo desde fuera dejaría la `phase` de esta pantalla en `.notFound` —el
+    /// `@State` no se reinicia porque la identidad de la vista no cambia— y el usuario vería el mismo
+    /// callejón. Y una vista hermana sería un segundo anchor, que es lo que el docblock de arriba prohíbe.
+    private var activeEntry: Entry { entryOverride ?? entry }
+
+    /// Cuál de las cinco puertas del ADR §7 es esta pantalla. Las dos que sirve están en la tabla con
+    /// nombres propios porque su celda «nueva» es distinta: el alta la CREA, la re-entrada ofrece crearla.
+    private var identityGate: CloudIdentityRoutingLogic.Gate {
+        switch activeEntry {
+        case .reentry:   return .welcomeExistingAccount
+        case .bornCloud: return .welcomeFirstTimeCloud
+        }
+    }
+
     /// Método con el que se va a firmar. En `.reentry` lo trae el `Entry`; en `.bornCloud` es el que
     /// el usuario acaba de tapear. El `?? .apple` no es una elección silenciosa: el flujo del alta no
     /// arranca sin pasar por un botón, y ese botón siempre escribe `chosenProvider`.
     private var provider: CloudSignInProvider {
-        switch entry {
+        switch activeEntry {
         case .reentry(let p): return p
         case .bornCloud:      return chosenProvider ?? .apple
         }
@@ -157,7 +217,7 @@ struct WelcomeCloudSignInView: View {
     /// Ruta que se registra con el consent (telemetría §j.4). El alta tiene la suya para que el
     /// dashboard pueda separar «cuánta gente entra a una cuenta que ya tenía» de «cuánta se da de alta».
     private var consentPath: CloudMigrationController.ConsentPath {
-        switch entry {
+        switch activeEntry {
         case .reentry:   return .adopt
         case .bornCloud: return .bornCloud
         }
@@ -168,7 +228,7 @@ struct WelcomeCloudSignInView: View {
     /// así que ahí escribe la pantalla, como siempre. La RE-ENTRADA no: su ruta la decide el guard
     /// DESPUÉS del sign-in, y escribir antes deja el epoch de la invitada en el iKV del DUEÑO.
     private var persistsConsentOnAccept: Bool {
-        switch entry {
+        switch activeEntry {
         case .bornCloud: true
         case .reentry:   false
         }
@@ -191,7 +251,7 @@ struct WelcomeCloudSignInView: View {
 
     /// Qué corre al aceptar el consent. Es el ÚNICO punto donde el flujo se bifurca por entrada.
     private func runFlowAfterConsent() async {
-        switch entry {
+        switch activeEntry {
         case .reentry:   await runSignInFlow()
         case .bornCloud: await runBornCloudFlow()
         }
@@ -242,10 +302,7 @@ struct WelcomeCloudSignInView: View {
         case .relaunchSecondary:
             secondaryRelaunchContent
         case .notFound:
-            messageContent(
-                icon: "person.crop.circle.badge.questionmark",
-                title: L10n.Welcome.Cloud.notFoundTitle,
-                body: L10n.Welcome.Cloud.notFoundBody)
+            notFoundContent
         case .providerMismatch(let knownProvider):
             messageContent(
                 icon: "person.crop.circle.badge.exclamationmark",
@@ -315,7 +372,7 @@ struct WelcomeCloudSignInView: View {
 
     @ViewBuilder
     private var introContent: some View {
-        switch entry {
+        switch activeEntry {
         case .reentry:   reentryIntro
         case .bornCloud: bornCloudIntro
         }
@@ -501,7 +558,7 @@ struct WelcomeCloudSignInView: View {
                 // CLAIM, idempotente por contrato (§f.1, el re-claim del mismo device colapsa a
                 // `created`). Llamar a `pollLeader()` aquí conduciría una máquina que born-cloud no
                 // tiene y dejaría la pantalla clavada.
-                switch entry {
+                switch activeEntry {
                 case .reentry:   launchFlow { await retryLeaderPoll() }
                 case .bornCloud: launchFlow { await runBornCloudFlow() }
                 }
@@ -631,6 +688,45 @@ struct WelcomeCloudSignInView: View {
         .accessibilityIdentifier("welcome_cloud_secondary_relaunch")
     }
 
+    /// **Bloque [I]** · «Ya tengo cuenta» + no hay cuenta = una salida, no un callejón.
+    ///
+    /// Hasta hoy esta pantalla era un `messageContent` sin acción: el único modo de avanzar era la flecha
+    /// de atrás, volver al chooser y encontrar la card del alta por tu cuenta.
+    ///
+    /// **El botón lleva al CONSENTIMIENTO, no al chooser de proveedor** (decisión de Jürgen, 2026-09-09):
+    /// el método ya lo eligió al entrar, así que volver a preguntárselo sería repetirle un paso. Lo que no
+    /// se salta es el consentimiento — es el único paso que no se recorta. Y si quería otro proveedor,
+    /// retrocede: cerrar el consent lo deja en el intro del alta, con sus dos botones.
+    ///
+    /// La sesión ya se soltó (`signOut()` en la rama `.accountMissing`) y **se queda soltada**: dejarla
+    /// viva haría que un «atrás» + entrada por otra card la reusara —`ensureSignedIn` salta con
+    /// `hasSession`— y la persona entraría con una cuenta que no eligió. Lo que viaja al alta es el
+    /// proveedor, no la sesión.
+    private var notFoundContent: some View {
+        VStack(spacing: DS.Spacing.lg) {
+            messageContent(
+                icon: "person.crop.circle.badge.questionmark",
+                title: L10n.Welcome.Cloud.notFoundTitle,
+                body: L10n.Welcome.Cloud.notFoundBody)
+            YalaPrimaryButton(L10n.Welcome.Cloud.notFoundCta) {
+                DS.Haptic.selection()
+                // El proveedor se captura ANTES de reencaminar: `provider` se deriva de `activeEntry`, y
+                // en cuanto el override dice `.bornCloud` pasa a leer `chosenProvider`. Sin esta línea
+                // caería en el `?? .apple` y mandaría a Apple a quien acababa de entrar con Google.
+                let proveedorFirmado = provider
+                chosenProvider = proveedorFirmado
+                entryOverride = .bornCloud
+                // La fase vuelve al intro para que cerrar el consent aterrice en el chooser de proveedor
+                // del ALTA y no otra vez en este mismo callejón.
+                phase = .intro
+                showConsent = true
+            }
+            .padding(.horizontal, DS.Spacing.xl)
+            .accessibilityIdentifier("welcome_cloud_not_found_cta")
+        }
+        .accessibilityIdentifier("welcome_cloud_not_found")
+    }
+
     private func messageContent(icon: String, title: String, body bodyText: String) -> some View {
         VStack(spacing: DS.Spacing.md) {
             Image(systemName: icon)
@@ -731,17 +827,21 @@ struct WelcomeCloudSignInView: View {
         phase = .checking
         guard await ensureSignedIn() else { return }
 
-        guard let userID = CloudAuthService.shared.currentUserID,
-              let jwt = await CloudAuthService.shared.accessToken() else {
+        guard let userID = CloudAuthService.shared.currentUserID else {
             phase = .error(retryable: true)
             return
         }
 
-        // `CloudAccountClient` SIN `attestProvider` a propósito: `GET /account/exists` va por `requireUser`
-        // (`gateway/src/sync/account.ts:256`). Es PRE-SESIÓN de nube por definición — cablear attest aquí
-        // es justo lo que puede romper el alta.
-        switch CloudWelcomeSignInFlow.route(await CloudAccountClient().exists(jwt: jwt)) {
-        case .accountMissing:
+        // **El descubrimiento va por `CloudIdentityDiscovery`, el motor del bloque [I].** Antes esta función
+        // tenía su propia copia de la secuencia —pedir el JWT, `GET /account/exists`, cachear el tipo— y la
+        // puerta de Grupos la suya: dos sitios donde el mismo hecho se averigua y se guarda, y ya guardaban
+        // distinto (uno por `AccountKindLogic.snapshotToPersist`, que NO pisa con un `kind` ausente, y el
+        // otro escribiendo el snapshot a pelo). El motor conserva por dentro `CloudWelcomeSignInFlow.route`,
+        // así que la tabla que traduce el wire sigue siendo la misma y sus tests siguen valiendo. Y sigue
+        // construyendo `CloudAccountClient` SIN `attestProvider` a propósito: `/account/exists` va por
+        // `requireUser` y es PRE-SESIÓN por definición (`.claude/rules/gateway-attest.md`).
+        switch await CloudIdentityDiscovery().discover(gate: identityGate) {
+        case .discovered(.newAccount, _):
             // Guard R9 SUB-FIRST (sesión 2, H4): antes del `.notFound` engañoso, consultar el
             // faro del device — si la cuenta nube de este Apple ID se creó con OTRO método y
             // este sub NO la matchea, lo probable es "método equivocado", no "sin cuenta".
@@ -763,16 +863,45 @@ struct WelcomeCloudSignInView: View {
             case .proceed:
                 phase = .notFound
             }
-        case .failed(let retryable):
+        case .unavailable(let retryable):
             phase = .error(retryable: retryable)
-        case .accountFound(let kind):
-            // El tipo de cuenta se CACHEA aquí porque éste es el único punto de la app donde el
-            // backend lo dice antes de que haya sesión. Quién lo usa para elegir pantalla es el
-            // ticket `cloud-sign-in-discovers-account-kind`; hoy el ruteo de abajo no cambia.
-            if let kind {
-                AccountKindStore.shared.write(
-                    AccountKindSnapshot(userID: userID, kind: kind, refreshedAt: Date())
-                )
+        case .discovered(let discovery, _):
+            // El tipo de cuenta ya lo cacheó el motor: es el único punto de la app donde el backend lo dice
+            // antes de que la sesión esté en marcha.
+            //
+            // **Bloque [I]**: aquí es donde el tipo de cuenta por fin elige pantalla. Hasta hoy esta rama
+            // iba SIEMPRE al adopt, así que quien solo tenía grupos acababa con Yala completo montado.
+            //
+            // El estado del dispositivo se PREGUNTA, no se asume. La versión anterior lo cableaba a
+            // «móvil limpio» justificándolo con «esta pantalla solo se alcanza desde el Welcome, y el
+            // Welcome solo se muestra con el onboarding sin completar» — y ese razonamiento lo rompió el
+            // propio bloque [I]: `adoptCompleteAccountFromGroups` presenta este cover desde la puerta de
+            // GRUPOS, donde el onboarding sí puede estar completado. `nil` en la cuenta asociada porque
+            // esta puerta no puede saberlo y la tabla no se lo pregunta.
+            let destino = CloudIdentityRoutingLogic.destination(
+                gate: identityGate,
+                discovery: discovery,
+                deviceState: deviceStateNow(),
+                isAssociatedGroupsAccount: nil)
+            switch destino {
+            case .enterGroupsOnly, .enterGroupsOnlyOfferingFullActivation:
+                // La cuenta existe y solo lleva grupos: **no se adopta**. La sesión se queda VIVA —es la
+                // suya y la mini-app la necesita— y el recorrido sigue por la cadena de Grupos, que ya
+                // sabe pedir lo que falte en este dispositivo. La oferta de «Activar Yala completo» que
+                // distingue los dos destinos la construye `full-mode-activation-must-ask-where-personal-
+                // data-lives`; hoy los dos van al mismo sitio, y por eso comparten rama.
+                onEnterGroupsOnly()
+                return
+            // `.adoptAsComplete` es el destino NORMAL de esta puerta: sigue al guard cross-cuenta y al
+            // adopt de abajo, intactos. Los demás son inalcanzables aquí con `exists == true` —lo afirma
+            // `soloTresDestinosSalenDelWelcome`, que solo permite estos tres— y comparten rama porque, si
+            // algún día saliera otro, caer en el camino de HOY es no-regresión y no silencio.
+            case .adoptAsComplete,
+                 .createCompleteAccountThenPersonalOnboarding, .adoptAsCompleteAndOpenGroups,
+                 .continueGroupsSetup, .associateGroupsAccount, .offerSignUpNoAccountFound,
+                 .blockedAccountIsComplete, .blockedAnotherGroupsAccountAssociated,
+                 .cutoverPrivateToCloud, .promoteAssociatedAccountThenCutover:
+                break
             }
             let decision = CrossAccountEntryGuardLogic.decide(
                 hasLocalData: hasLocalDataNow(),

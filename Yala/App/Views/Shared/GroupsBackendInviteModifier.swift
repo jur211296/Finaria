@@ -43,6 +43,10 @@ struct GroupsBackendInviteModifier: ViewModifier {
     @Environment(AppPreferences.self) private var appPreferences
     @Binding var showGroupsConsent: Bool
     @Binding var showGroupsSignIn: Bool
+    /// [I] · el bloqueo «esa cuenta ya tiene Yala completo». Es un `@Binding` y no un `@State` propio
+    /// porque `ContentView` necesita verlo para la matriz de readiness: un sheet de este anchor que no
+    /// bloquee deja que el drain monte el siguiente intent encima (regla 3 de Presentaciones).
+    @Binding var showGroupsAccountIsCompleteBlock: Bool
     /// C2 · el educativo, paso 0 de las puertas A y B.
     @Binding var showGroupsEducational: Bool
     @Binding var pendingGroupsJoinZone: String?
@@ -61,10 +65,20 @@ struct GroupsBackendInviteModifier: ViewModifier {
     /// una sesión abandonada.
     @Binding var pendingGroupsOnlyPayload: GroupsOnlyOnboardingPayload?
     var onGroupsOrganizerCancelled: () -> Void
+    /// **Bloque [I]** · el backend dijo que esta cuenta lleva Yala completo y no hay sesión privada que
+    /// respetar: se adopta y se aterriza en Grupos. Lo ejecuta `ContentView` reencaminando al cover del
+    /// Welcome con la sesión ya viva — la pantalla de adopt vive allí y su docblock prohíbe instanciarla
+    /// en paralelo, así que este modifier no la monta.
+    var onAdoptCompleteAccount: () -> Void
 
     /// One-shots de resultado del sheet: se arman en el callback de éxito y se consumen en
     /// `onDismiss` (dismiss sin éxito = cancel ⇒ sin continuación).
     @State private var signInAuthenticated = false
+    /// [I] · one-shot del bloqueo: la persona pidió «usar otra cuenta». Se consume en el `onDismiss`, que
+    /// es el único punto por el que pasan sus cuatro salidas (botón, «Entendido», «X» y swipe).
+    @State private var blockRetriesSignIn = false
+    /// [I] · el destino que decidió la tabla, armado junto a `signInAuthenticated` y consumido con él.
+    @State private var signInDestination: CloudIdentityRoutingLogic.Destination?
     @State private var consentAccepted = false
     /// C2 · el mismo molde para el educativo. Sin él, cerrar con la «X» —que NO marca la preferencia, por
     /// diseño del educativo— haría que `GroupsGateLogic` devolviera `.presentEducational` otra vez, y otra:
@@ -105,11 +119,22 @@ struct GroupsBackendInviteModifier: ViewModifier {
             .sheet(isPresented: $showGroupsSignIn, onDismiss: {
                 guard signInAuthenticated else { return handleCancel() }  // cancel → sin continuación
                 signInAuthenticated = false
-                continueFlow()
+                let destino = signInDestination
+                signInDestination = nil
+                routeIdentityDestination(destino)
             }) {
-                GroupsSignInView {
+                GroupsSignInView { destino in
                     signInAuthenticated = true
+                    signInDestination = destino
                     showGroupsSignIn = false
+
+                    // [I] · **el bloqueo no escribe NADA.** Los efectos de abajo son los de una sesión de
+                    // grupos que se acepta; con la cuenta rechazada, cada uno de ellos dejaría rastro de
+                    // una sesión que no va a existir: el latch de historial cambiaría el empty state del
+                    // tab para siempre (es monotónico y nadie lo repone), el desarme del boot-wipe dejaría
+                    // vivos unos grupos que el «Salir de Yala» previo mandó borrar, y el registro del
+                    // consent atribuiría a esta cuenta un consentimiento dado para otra cosa.
+                    guard destino != .blockedAccountIsComplete else { return }
                     // D2 (§3.3.3): re-firmar sesión de grupos DESARMA un boot-wipe de grupos colgado por un
                     // "Salir de Yala" in-session previo (`exitYalaOnThisDevice`) — sin esto, un cold boot
                     // posterior borraría los grupos recién re-sincronizados — y quema el banner de re-entrada
@@ -146,6 +171,81 @@ struct GroupsBackendInviteModifier: ViewModifier {
                 }
                 .environment(SessionState.shared)
             }
+            // [I] · el bloqueo. Sheet del MISMO anchor que los tres de arriba (este tipo es su dueño
+            // único) y sin continuación en `onDismiss`: cerrarlo no avanza nada, porque el recorrido se
+            // detuvo a propósito. El intent del invitado sigue vivo en `PendingJoinStore` con su TTL,
+            // así que la invitación no se pierde — se retoma cuando entre con una cuenta que sí valga.
+            .sheet(isPresented: $showGroupsAccountIsCompleteBlock, onDismiss: {
+                // **La sesión rechazada se suelta AQUÍ, en el `onDismiss`, y no en cada botón.** Es la
+                // corrección de un defecto que una lente adversarial cazó: la primera versión solo la
+                // soltaba en «usar otra cuenta», así que «Entendido», la «X» y el swipe dejaban viva la
+                // cuenta que la app acababa de rechazar — y toda la cadena de Grupos decide por
+                // `hasSession` (`GroupsGateLogic:145`). El bloqueo **se deshacía solo**: al volver a
+                // foreground, el reconciler saltaba el sign-in y unía a la persona al grupo con esa
+                // cuenta, sin que tocara nada. El `onDismiss` es el único punto por el que pasan las
+                // cuatro salidas, incluido el swipe — que además es la razón de la regla (1) de
+                // Presentaciones: un binding sin `onDismiss:` de respaldo pierde la dismissal interactiva.
+                let reofrecerSignIn = blockRetriesSignIn
+                blockRetriesSignIn = false
+                // La zona se captura ANTES del `await`: la readiness ya se reabrió y el drain puede
+                // escribir otra, así que leerla después mandaría el sign-in a un grupo distinto.
+                let zona = pendingGroupsJoinZone
+                Task { @MainActor in
+                    await CloudAuthService.shared.signOut()
+                    guard reofrecerSignIn else {
+                        // Igual que un cancel: no-op para el invitado —su intent sobrevive en
+                        // `PendingJoinStore`— y vuelta al Welcome para el organizador, que si no se queda
+                        // mirando una pantalla muerta.
+                        return handleCancel()
+                    }
+                    // Se re-ofrece por el router y no a pelo para que este sheet acabe de irse antes
+                    // (contrato C7), y **siempre por `.presentGroupsSignIn`**, con zona o sin ella.
+                    //
+                    // La alternativa —mandar `.presentGroupsOrganizerStep` cuando no hay zona— era un
+                    // camino MUERTO: ese intent sale por el `guard groupsOrganizerFlowActive` de
+                    // `advanceGroupsOrganizerFlow`, y ese flag está apagado en el caso dominante del
+                    // bloqueo (sesión privada + tab Grupos, que no pasa por el Welcome). La persona
+                    // tapeaba «Usar otra cuenta» y no ocurría nada.
+                    //
+                    // El `?? ""` es inocuo porque `continueFlow` descarta la zona vacía explícitamente.
+                    RouterEntryGate.shared.submit(.presentGroupsSignIn(pendingJoin: zona ?? ""))
+                }
+            }) {
+                GroupsAccountIsCompleteBlockView(
+                    onUseAnotherAccount: {
+                        blockRetriesSignIn = true
+                        showGroupsAccountIsCompleteBlock = false
+                    },
+                    onDismiss: { showGroupsAccountIsCompleteBlock = false })
+                .environment(SessionState.shared)
+            }
+    }
+
+    /// **Bloque [I]** · qué se hace con el destino que decidió la tabla.
+    ///
+    /// `nil` cae con el camino de siempre y es deliberado: significa que el sheet se cerró con éxito sin
+    /// que el descubrimiento dejara destino —una versión anterior de esta vista, o un `Task` cancelado— y
+    /// ahí lo correcto es el comportamiento de HOY, no detener el recorrido de alguien que ya firmó.
+    private func routeIdentityDestination(_ destino: CloudIdentityRoutingLogic.Destination?) {
+        switch destino {
+        case .continueGroupsSetup, .associateGroupsAccount, .none:
+            // El camino de HOY, byte-idéntico. `associateGroupsAccount` comparte rama porque lo que
+            // significa —esta cuenta queda ligada a mi Yala privado para grupos— es lo que la cadena ya
+            // hace; ponerle escritura propia es `groups-account-association-in-storage-row` (paso 10).
+            continueFlow()
+        case .adoptAsCompleteAndOpenGroups:
+            onAdoptCompleteAccount()
+        case .blockedAccountIsComplete:
+            showGroupsAccountIsCompleteBlock = true
+        case .some(let otro):
+            // Inalcanzables por esta puerta, y lo afirma `elEjeCompletoTieneSuBorde` en los tests de la
+            // tabla —recorre los CUATRO estados del dispositivo por esta puerta y exige que ninguno salga
+            // del conjunto de arriba—. Si algún día sale otro, cae al camino de hoy: no-regresión.
+            #if DEBUG
+            print("GroupsBackendInviteModifier: destino [I] inesperado por la puerta de Grupos: \(otro)")
+            #endif
+            continueFlow()
+        }
     }
 
     /// Cancel: para el invitado es un no-op (su intent persiste, TTL 7 d); para el organizador es la
@@ -169,7 +269,10 @@ struct GroupsBackendInviteModifier: ViewModifier {
             RouterEntryGate.shared.submit(.presentGroupsOrganizerStep)
             return
         }
-        guard let zone = pendingGroupsJoinZone else { return }
+        // `!isEmpty` además de `let`: el intent de re-ofrecer el sign-in tras el bloqueo puede llegar sin
+        // zona (crear un grupo desde el tab), y el drain la asigna tal cual ⇒ `pendingGroupsJoinZone` pasa
+        // de `nil` a `""`. Sin este término, la continuación llamaría al handler con una zona vacía.
+        guard let zone = pendingGroupsJoinZone, !zone.isEmpty else { return }
         Task { @MainActor in
             await GroupBackendInviteEntryHandler.continueFlow(zoneName: zone)
         }
