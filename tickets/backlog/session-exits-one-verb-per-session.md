@@ -47,6 +47,30 @@ pantalla de bienvenida con todos mis datos vivos en el teléfono, a la vista del
 Dos botones en Ajustes y nada más. El texto de confirmación de cada uno dice exactamente qué se
 borra y qué queda (el `DestructiveScopeSheet` ya sabe pintar eso por ubicación).
 
+## Un SEGUNDO consumidor, medido el 2026-09-10: la puerta de «Vengo por un grupo»
+
+**El verbo de este ticket —subir lo pendiente, borrar lo local, dejar iCloud intacto— es exactamente lo
+que necesita `groups-entry-on-a-mirrored-store-still-blocks-the-owner`**, que quedó `blocked` esperándolo
+por decisión de Jürgen del 2026-09-10. Aquella sesión lo implementó entero y midió por qué no se puede
+cerrar sin esta pieza; su ticket lleva la medición completa y estas tres conclusiones importan aquí:
+
+1. **No reuses `armSignOutWipe` para un camino que no cierra sesión.** Su hook declara tres precondiciones
+   («ya subió TODO el outbox, cerró la sesión y armó»), borra `YalaSyncMeta` incondicionalmente —donde
+   viven `GroupSyncOutbox` y `GroupSyncCursor`, o sea el canal de Grupos, que se supone que sobrevive— y
+   purga las colas de Apple Pay/Siri, que **nunca pasaron por iCloud** y ninguna subida puede salvar.
+2. **La espera de export necesita una señal que hoy no existe.** `forceSync` devuelve `.ok` sin tocar la
+   red si ya hay sync en vuelo; su watchdog convierte «todavía no ha empezado» en «ya terminó» a los 8 s;
+   y `lastExportError` no se limpia nunca dentro del proceso. Los tres tienen ticket propio
+   (`forcesync-returns-ok-without-touching-the-network`, `icloud-export-error-latch-never-clears`) y
+   conviene mirarlos ANTES de escribir la espera, porque son sus insumos.
+3. **El arm no tiene desarme si el borrado aborta**, y mientras está puesto la app se queda sin drains, sin
+   notificaciones nuevas y con el widget congelado (`sign-out-boot-wipe-has-no-way-back-if-it-aborts`).
+   Cualquier verbo nuevo que arme hereda eso.
+
+**Al cerrar este paso, avisar a la puerta de Grupos**: su mitad 2 se vuelve corta —llamar al verbo y
+seguir al sign-in— y su ticket ya tiene escrito lo que le falta además (la entrada por invitación y el
+disparador por el eje ancho).
+
 ## Alcance
 
 1. `CloudSignOutFlowLogic.path` pasa a decidir por los dos ejes del ADR (¿sesión privada? × sesión
