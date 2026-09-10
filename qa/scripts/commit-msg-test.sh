@@ -23,12 +23,19 @@ set -uo pipefail
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 HOOK="${1:-$RAIZ/.githooks/commit-msg}"
-GLOBAL="${HOOK_GLOBAL:-$HOME/.claude/git-hooks/commit-msg}"
+GLOBAL="${HOOK_GLOBAL:-${HOME:-/nonexistent}/.claude/git-hooks/commit-msg}"
 
 # Falla CERRADO: sin hook que probar no hay veredicto que dar.
 [ -f "$HOOK" ] || { echo "FALLO: no encuentro el hook: $HOOK"; exit 1; }
 
-TMP=$(mktemp -d /tmp/commit-msg-bench.XXXXXX)
+TMP=$(mktemp -d /tmp/commit-msg-bench.XXXXXX 2>/dev/null)
+# Falla CERRADO: sin directorio propio los mensajes se escriben en la raíz y el
+# veredicto lo decide el sistema de ficheros, no el hook. Medido: como root salía
+# VERDE 17/17 habiendo escrito 18 ficheros en `/`.
+if [ -z "$TMP" ] || [ ! -d "$TMP" ] || [ ! -w "$TMP" ]; then
+    echo "FALLO: no pude crear un directorio de trabajo (mktemp)."
+    exit 1
+fi
 trap 'rm -rf "$TMP"' EXIT
 
 ok=0; ko=0
@@ -223,8 +230,6 @@ fix(qa): dos cosas
 - CLAUDE.md: la sección de hooks
 EOF
 
-TOTAL_ESPERADO=27
-
 # --- el autor del commit, que no viaja en el mensaje ---
 # `git commit --author=` no toca `$1`, así que este caso no se puede montar con un
 # fichero: se monta con el entorno, que es de donde `git var` saca la identidad.
@@ -243,14 +248,47 @@ autor_caso() {
     fi
 }
 
+# El caso 27 es además el que vigila que la regla de autor del hook esté VIVA: si
+# `git var` no contestara —medido: sobre un directorio que no resuelve su gitdir
+# devuelve 128— el hook dejaría pasar el autor falsificado y este caso saldría rojo.
+# No hace falta comprobarlo aparte; se intentó y el guard no podía fallar.
 autor_caso 27 RECHAZA "--author falsificado: atribución en la cabecera" "Claude Opus 5" "noreply@anthropic.com"
 autor_caso 28 PASA    "el autor humano de siempre" "Jürgen Schmidt" "jur211296@gmail.com"
+
+# ---------- lo que cazó la SEGUNDA lente: falsos positivos de las reglas de prosa ----------
+#
+# Estos cuatro los rechazaba el hook antes de neutralizar las rutas del repo. El tercero
+# es el que más duele: el candado tumbaba un commit por atribuir el trabajo A JÜRGEN.
+
+caso 29 legitimo PASA "«generado con» + una ruta .claude cerca" <<'EOF'
+docs: el índice
+
+El índice está generado con `qa/validate-coverage.py`, que lee `.claude/rules/testing.md`.
+EOF
+
+caso 30 legitimo PASA "«generated with» + CLAUDE.md en la misma frase" <<'EOF'
+docs: la tabla
+
+The table is generated with the script documented in CLAUDE.md.
+EOF
+
+caso 31 legitimo PASA "atribución explícita a un HUMANO, con rutas al lado" <<'EOF'
+docs: el índice
+
+Escrito por Jürgen; el índice vive en CLAUDE.md y en `.claude/rules/`.
+EOF
+
+caso 32 legitimo PASA "«creado con» una herramienta, con rutas al lado" <<'EOF'
+chore: xcode
+
+Creado con Xcode 26; sus reglas quedan en `.claude/rules/testing.md`.
+EOF
 
 TOTAL=$((ok+ko))
 echo
 # Falla CERRADO: una lista de casos vacía no es un banco en verde.
-if [ "$TOTAL" -lt 28 ]; then
-    echo "FALLO: se esperaban 28 casos y solo corrieron $TOTAL."
+if [ "$TOTAL" -lt 32 ]; then
+    echo "FALLO: se esperaban 32 casos y solo corrieron $TOTAL."
     exit 1
 fi
 echo "casos del hook de Yala: $ok/$TOTAL"

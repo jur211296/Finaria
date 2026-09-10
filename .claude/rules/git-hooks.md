@@ -1,3 +1,23 @@
+<!-- INDICE:inicio — generado por scripts/indexar_doc.py, no editar a mano -->
+
+## Índice (10 entradas)
+
+> **No hace falta leer este fichero entero** — son 8 KB. Localiza la entrada
+> aquí y salta a ella.
+
+- `—` [`core.hooksPath` NO es acumulativo: el local SUSTITUYE al global](#corehookspath-no-es-acumulativo-el-local-sustituye-al-global)
+- `—` [El candado anti-atribución vive aquí, y es propio](#el-candado-anti-atribucin-vive-aqu-y-es-propio)
+- `—` [Tres cosas que no son el mensaje, y el hook las mira igual](#tres-cosas-que-no-son-el-mensaje-y-el-hook-las-mira-igual)
+- `—` [El candado no corre en rebase, cherry-pick ni revert](#el-candado-no-corre-en-rebase-cherry-pick-ni-revert)
+- `—` [Aviso: documentar el candado choca con el candado](#aviso-documentar-el-candado-choca-con-el-candado)
+- `—` [Lo que NO se bloquea, y es una decisión](#lo-que-no-se-bloquea-y-es-una-decisin)
+- `—` [Si tocas los patrones, el banco tiene que seguir en verde](#si-tocas-los-patrones-el-banco-tiene-que-seguir-en-verde)
+- `—` [La trampa que queda abierta: el hook vive en el árbol de trabajo](#la-trampa-que-queda-abierta-el-hook-vive-en-el-rbol-de-trabajo)
+- `—` [El otro hook: `pre-commit`](#el-otro-hook-pre-commit)
+- `—` [Las rutas del repo se borran del texto antes de buscar atribución](#las-rutas-del-repo-se-borran-del-texto-antes-de-buscar-atribucin)
+
+<!-- INDICE:fin -->
+
 ---
 description: Los hooks de git de Yala — por qué el repo tiene su propio commit-msg, qué bloquea y qué no, y la trampa de core.hooksPath. Se cargan al tocar .githooks/ o los scripts del gate.
 paths:
@@ -73,6 +93,34 @@ Las cazó una lente adversarial el 2026-09-09, y las tres estaban abiertas:
 
 Y el prefijo de línea tolera viñetas y comillas de cita: **el 37 % de los cuerpos de
 commit de este repo usan `- `**, y un guion delante desactivaba el ancla `^[[:space:]]*`.
+
+## Las rutas del repo se borran del texto antes de buscar atribución
+
+Porque nombrarlas está permitido aquí, y si no se borran, cuentan como si fueran la firma.
+Sin ese paso el hook rechazaba **«Escrito por Jürgen; el índice vive en CLAUDE.md»** — o
+sea, tumbaba un commit por atribuir el trabajo **a Jürgen**. Y hay **7 commits en la
+historia** que dicen «Generated with» citando `.claude/…` y solo sobreviven por la
+distancia entre las dos mitades.
+
+Se borran `CLAUDE.md` y cualquier ruta que contenga `.claude/`. Los **dominios** no son
+rutas del repo y no se tocan: `claude.ai` y `anthropic.com` siguen siendo firma.
+
+## El candado no corre en rebase, cherry-pick ni revert
+
+Medido: git **no invoca** `commit-msg` en `cherry-pick`, `revert`, `rebase` ni
+`rebase --continue`. Sí lo invoca en `commit`, `--amend`, `--fixup`, `--squash`, `merge` y
+`merge --squash`. Y los botones de merge de la web de GitHub crean el commit en servidor,
+donde no hay hook que valga.
+
+O sea que el candado cubre **escribir** un commit, no **replayarlo**. Cerrar eso pide otra
+superficie (un `pre-push` o un check de CI) y tiene su ticket:
+`rebase-and-cherry-pick-skip-the-attribution-hook`.
+
+Dos detalles de flujo, por si te muerden: si el hook tumba un `git merge`, el árbol queda a
+medias (`MERGE_HEAD` y `MERGE_MSG` puestos, índice staged, `HEAD` sin mover) y hay que
+commitear otra vez o `git merge --abort`. Y un `--fixup` cuyo commit destino lleve el
+disparador en el **asunto** no tiene arreglo posible salvo `--no-verify`, porque git copia
+ese asunto y no te deja editarlo.
 
 ## Aviso: documentar el candado choca con el candado
 

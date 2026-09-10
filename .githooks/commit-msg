@@ -75,6 +75,20 @@ CUERPO=$(
   | awk '{ if (NR>1 && $0 ~ /^[[:space:]]+[^[:space:]]/) printf " %s", $0; else printf "%s%s", (NR>1 ? "\n" : ""), $0 } END { print "" }'
 )
 
+# --- Las rutas del repo no son el nombre de nadie ---
+#
+# Jürgen decidió que aquí SE PUEDE nombrar `CLAUDE.md` y `.claude/rules/…`, así que esas
+# rutas se borran del texto antes de buscar atribución. Sin esto, las reglas de prosa de
+# abajo cuentan la ruta como si fuera la firma y rechazan mensajes legítimos — medido:
+# «Escrito por Jürgen; el índice vive en CLAUDE.md» salía RECHAZADO, o sea que el candado
+# tumbaba un commit por atribuírselo A JÜRGEN. Y hay 7 commits en la historia que dicen
+# «Generated with» citando `.claude/…` y solo sobreviven por la distancia entre las dos.
+#
+# Los dominios (`claude.ai`, `anthropic.com`) NO son rutas del repo y no se tocan aquí.
+CUERPO=$(printf '%s' "$CUERPO" | sed -E \
+    -e 's#[~A-Za-z0-9_.*/-]*\.claude/[A-Za-z0-9_.*/-]*##g' \
+    -e 's#[Cc][Ll][Aa][Uu][Dd][Ee]\.[Mm][Dd]##g')
+
 # Prefijo tolerado al principio de línea: sangría, viñetas y comillas de cita. Sin
 # esto, un `- Co-Authored-By: …` o un `#Co-Authored-By: …` se colaban, y el 37 % de
 # los cuerpos de commit de este repo usan viñetas `- `.

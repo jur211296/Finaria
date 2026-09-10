@@ -195,6 +195,35 @@ Y una de volumen: el ancla `^[[:space:]]*` se desactivaba con un guion delante, 
 ellos sobre el autor —que no se pueden montar con un fichero de mensaje y se montan con
 el entorno.
 
+## La segunda lente: el endurecimiento traía su propio bug
+
+La primera lente atacó el candado; la segunda buscó dónde **estorba**. Cazó cuatro cosas, y
+la primera invalidaba parte del arreglo anterior:
+
+1. **Las reglas de prosa que acababa de añadir creaban falsos positivos.** Con una ventana
+   de 60 caracteres, «generado con … `.claude/rules/testing.md`» disparaba. El caso que
+   duele: **«Escrito por Jürgen; el índice vive en CLAUDE.md» salía RECHAZADO** — el
+   candado tumbaba un commit por atribuir el trabajo **a Jürgen**. Y no era hipotético:
+   **7 commits reales** dicen «Generated with» citando `.claude/…` y solo sobreviven por la
+   distancia entre las dos mitades. Arreglado **borrando las rutas del repo del texto antes
+   de escanear** — que es coherente con la decisión de Jürgen: aquí nombrarlas se puede. Los
+   dominios no son rutas y siguen siendo firma.
+2. **El candado no corre en `rebase`, `cherry-pick` ni `revert`** (sí en `commit`, `amend`,
+   `fixup`, `squash` y `merge`), ni en los botones de merge de la web. No se puede cerrar
+   desde un `commit-msg`: git no lo invoca. → ticket
+   `rebase-and-cherry-pick-skip-the-attribution-hook`.
+3. **Tres fallos del banco.** `mktemp` fallando dejaba `TMP` vacío, los mensajes se
+   escribían en `/` y salía **VERDE 17/17** sin haber probado nada; `HOME` sin definir lo
+   tumbaba con `unbound variable` y ni una línea útil. Los dos, arreglados.
+4. **Un caso que pasaba sin comprobar nada** (el del autor humano, si `git var` no
+   contestaba). Añadí un guard… y un mutante demostró que **el guard no podía fallar** y que
+   su pareja —el caso del autor falsificado— **ya cubría el escenario**. Retirado el guard:
+   antes de apuntalar, comprobar si el mecanismo que ya existe basta.
+
+**Re-medido con el hook final** sobre los 3348 mensajes: **el conjunto de 774 rechazos es
+idéntico** al de antes de neutralizar rutas. Cero fugas, cero falsos positivos. El banco
+queda en **32 casos**.
+
 ## Lo que queda abierto
 
 - **El candado vive en el árbol de trabajo**, así que una rama que no traiga
