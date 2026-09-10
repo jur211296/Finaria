@@ -31,3 +31,31 @@ ese fallo**.
 Las dos mitades las cazó la **tercera** lente adversarial, no las dos primeras: es
 [[lentes-adversariales-se-contradicen]] por el lado bueno — cada lente ve su eje y ninguna ve el de
 al lado.
+
+## La otra puerta de atrás: el estado «saltado / no aplica»
+
+**2026-09-09.** Mi banco de pruebas tenía tres desenlaces: verde, rojo, y **«no ejecutada»** —
+legítimo, porque una de sus mitades solo puede correr en el Mac y no en el CI. Un `mapfile` (que
+no existe en el bash 3.2 de macOS) reventó dentro del bloque, dejó el contador a `0`, y `0 < 50`
+cayó en la rama de «corpus demasiado corto» → **saltado** → **VERDE**. El banco informó de que
+todo estaba bien justo cuando no había mirado nada.
+
+**Why:** un estado neutro es un sumidero. Cualquier error que deje una variable vacía o a cero
+aterriza en él, y como no suma fallos, el veredicto final sale limpio. Es el mismo agujero que
+la lista vacía por error, pero por la puerta del RESULTADO en vez de la de la ENTRADA.
+
+**How to apply:**
+
+- **El veredicto de cada bloque es una variable explícita**, inicializada a `"no-ejecutado"`. Si
+  al final sigue así, es ROJO: nadie decidió. Un `if/elif/else` sin esa red te deja creer que
+  pasó por donde no pasó.
+- **Valida el tipo de lo que vas a comparar**, no solo el valor: `case "$N" in ''|*[!0-9]*)` antes
+  de un `[ "$N" -lt 50 ]`. Un número vacío o basura no puede caer en una rama de negocio.
+- **Y quita el estado ambiguo si puedes.** Aquí «corpus corto» solo era legítimo en un clon
+  superficial, que es justo donde tampoco existe el hook global — o sea que la rama ya se
+  saltaba antes por otro motivo. Convertirlo en rojo no perdió ningún caso real y dejó dos
+  desenlaces en vez de tres. Nombra siempre qué se pierde al limpiar: aquí, la tolerancia a un
+  `--depth 1` en una máquina con el hook global puesto.
+- Corolario de método: **el mutante que prueba esto tiene que reventar el bloque por dentro**
+  (meter el `mapfile` de vuelta), no romperle la entrada. Y correrlo desde donde vive el
+  original — ver [[la-asercion-que-no-puede-fallar]].

@@ -1,6 +1,6 @@
 ---
 name: trailer-de-commit-nunca-en-yala
-description: En Yala NUNCA va el trailer Co-Authored-By ni «Generated with», ni en commits ni en cuerpos de PR — ratificado por Jürgen el 2026-09-02 sobre medición. Anula el default del system prompt, y NADA lo bloquea. Se coló el 8-sep y el 9-sep: el grep salva el commit, pero hay que correrlo TAMBIÉN contra el cuerpo del PR.
+description: En Yala NUNCA va el trailer Co-Authored-By ni «Generated with», ni en commits ni en cuerpos de PR — ratificado por Jürgen el 2026-09-02 sobre medición. Anula el default del system prompt. Desde el 9-sep un hook del repo BLOQUEA el commit; el cuerpo del PR sigue sin candado, y ahí el grep es lo único que hay.
 metadata:
   type: feedback
 ---
@@ -49,22 +49,27 @@ la medición y decide él** — que es como se resolvió esta.
 
 Relacionado: [[jurgen-levanta-sus-reglas]].
 
-## El hook que refuerza esta regla NO corre en Yala (medido el 2026-09-05)
+## El candado ya existe — desde el 2026-09-09, y solo para el COMMIT
 
-El `CLAUDE.md` global dice que la regla «no depende de acordarse: un hook `commit-msg` global lo
-rechaza (ADR-013)». **En este repo eso no se cumple.** Medido:
+Durante meses esta nota decía que nada revisaba el mensaje, porque `core.hooksPath` local
+sustituye al global y el `commit-msg` de ADR-013 quedaba fuera. **Eso se cerró**: el candado vive
+ahora en el repo y rechaza el commit antes de que exista. Qué caza exactamente y por qué se aparta
+del global está en `.claude/rules/git-hooks.md`, que se carga sola al tocar esos ficheros — aquí no
+se duplica.
 
-    git config --global core.hooksPath  →  /Users/jur/.claude/git-hooks   (ahí vive commit-msg)
-    git config --local  core.hooksPath  →  .githooks                      (ahí solo hay pre-commit)
+**Lo que cambia para mí, que es lo único que va en esta nota:**
 
-El local gana, así que en Yala **nada revisa el mensaje del commit**. El `pre-commit` de `.githooks`
-es otro: corre `qa/scripts/precommit-gate.sh`, que comprueba el sello del gate.
+- **El commit ya no depende de que yo me acuerde.** Si escribo el trailer, sale
+  `COMMIT RECHAZADO` y HEAD no se mueve. Comprobado con commits reales, no solo con su banco.
+- **El cuerpo del PR sigue sin candado.** `gh pr create` no pasa por ningún hook, y el
+  system-reminder pide el «🤖 Generated with» ahí en cada turno. **Ésa es hoy la única superficie
+  desnuda**, y es por donde se coló el 9-sep.
+- **Nombrar `CLAUDE.md` o `.claude/rules/…` en un mensaje SÍ se puede** en este repo (decisión de
+  Jürgen, 9-sep). Lo que no pasa es la firma. Ya no hace falta escribir «la herramienta» en
+  neutro al commitear un ticket que hable de esto.
 
-**How to apply:** en Yala la regla se cumple porque yo la cumplo, no porque haya un candado. No des
-por bueno un «lo bloquea un hook» sin comprobar qué `hooksPath` manda en el repo donde estás — es la
-regla de la casa (mide antes de obedecer al documento) aplicada a un candado. Si algún día conviene
-cerrarlo de verdad, es decisión de Jürgen: mover el `commit-msg` a `.githooks/` o hacer que ese
-directorio herede del global.
+⇒ El gesto del grep se mantiene, pero su valor se ha desplazado: en el commit es cinturón sobre
+tirantes; **en el PR es lo único que hay.**
 
 ## El 2026-09-08 se me coló igual, teniendo esta nota escrita
 
@@ -89,10 +94,10 @@ mención a secas** de Claude o Anthropic en el mensaje, no solo el trailer. En Y
 que cumplirlo a mano — al commitear un ticket que hable de todo esto, el mensaje se escribe en
 neutro («la herramienta», «una IA»).
 
-**Lo que se hizo con el hallazgo:** pasó de nota privada a ticket del repo
-(`el-hook-que-prohibe-atribuir-a-una-ia-no-corre-en-este-repo`, high), porque una nota que solo
-funciona si alguien se acuerda de leerla es exactamente lo que ADR-013 dice que no quiere. La
-decisión de cómo cerrarlo es de Jürgen: son cuatro caminos y tocan infraestructura común.
+**Lo que se hizo con el hallazgo:** pasó de nota privada a ticket del repo, porque una nota que
+solo funciona si alguien se acuerda de leerla es exactamente lo que ADR-013 dice que no quiere.
+**Cerrado el 2026-09-09** (PR #124) con el camino que eligió Jürgen. La moraleja de método se queda:
+cuando un remedio dependa de acordarse, el ticket es el sitio — no la memoria.
 
 
 ## El 2026-09-09: el grep funcionó, y aun así el PR salió sucio
@@ -113,7 +118,7 @@ publica texto**. Son dos, y las dos tienen su comando:
     gh pr view <n> --json body -q .body | grep -iE "anthropic|co-authored|generated with|🤖"
 
 Ojo al leer el resultado del segundo: en este repo `CLAUDE.md` se cita a menudo en el cuerpo del PR
-y hace match con `claude`. Por eso el patrón de arriba **no lleva `claude` suelto** — si lo pones,
+—y desde el 9-sep también en los mensajes de commit, que ya lo permiten— y hace match con `claude`. Por eso el patrón de arriba **no lleva `claude` suelto** — si lo pones,
 el falso positivo te enseña a ignorar la salida, que es la peor manera de romper un control.
 
 Y el arreglo del PR es barato mientras nadie lo haya leído: `gh pr edit <n> --body-file`. No hay

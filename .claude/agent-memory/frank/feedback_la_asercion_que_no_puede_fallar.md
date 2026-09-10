@@ -138,3 +138,42 @@ coincidencia; con destino == preferida ese `#expect` se pone rojo»— y lo dej�
 hallazgo venía dentro de otro más grande. ⇒ **una nota de una lente sobre un test es un hallazgo,
 no un comentario**: los hallazgos de los tests se atienden igual que los del código, o se pagan
 enteros después. Ver [[review-adversarial-caza-lo-mio]].
+
+## Séptimo eslabón: el CORPUS que ya no contiene el fenómeno
+
+**2026-09-09, el banco del candado anti-atribución.** Escribí una comprobación que corría dos
+hooks sobre «los últimos 400 commits» y cantaba si el mío dejaba pasar algo que el otro
+rechazaba. Salió **0 divergencias** y la di por buena. Luego medí el corpus: **los últimos 400
+commits de Yala tienen CERO atribución** — el más reciente con trailer estaba en la posición
+**408**. La comprobación no podía fallar: no había en su corpus ni un solo caso del fenómeno
+que decía vigilar. Ocho commits de distancia entre una red y un adorno.
+
+**Why:** un corpus «los últimos N» es una muestra por RECENCIA, y el fenómeno que vigilas puede
+haber dejado de ocurrir — que es justo lo que pasa cuando el corpus lo tomas después de arreglar
+algo. Cuanto mejor va el repo, menos mide.
+
+**How to apply:**
+
+- **Elige el corpus por CONTENIDO, no por recencia**: filtra por lo que puede disparar el
+  criterio (aquí, `git log --grep` de los literales que cualquiera de los dos hooks puede cazar)
+  y quédate con el superconjunto. Es defendible en una frase y no caduca solo.
+- **Cuenta cuántos casos del fenómeno trae el corpus, y falla si son cero.** Esa línea es la que
+  convierte la aserción en algo que puede ponerse rojo: «0 casos de atribución en el corpus ⇒ esto
+  no está midiendo nada» es un fallo, no un verde.
+- Vale para cualquier barrido sobre historia, logs o ficheros: la pregunta gemela de siempre —
+  **¿qué tendría que pasar para que esto saliera rojo, y hay algo así en lo que estoy mirando?**
+
+## Y dos formas de mutante que no demuestran nada
+
+Del mismo día, las dos me costaron una vuelta entera:
+
+- **El mutante que no AÍSLA.** Quité del hook dos de sus cinco patrones esperando que dejara
+  pasar los 768 commits con firma. Siguió cazándolos: esos mensajes llevan **también** el emoji,
+  y ése no lo había quitado. Un mutante que borra una defensa mientras otra cubre el mismo caso
+  sale verde y parece que la defensa borrada sobraba. ⇒ antes de mutar, **comprueba qué otras
+  ramas cubren ese caso**, y muta hasta dejar una sola en pie.
+- **El mutante que vive FUERA del árbol.** Copié el script mutado al scratchpad y lo corrí desde
+  allí: calculó su raíz con `${BASH_SOURCE[0]}`, no encontró el repo y salió por una rama de
+  «no aplica» sin ejecutar nada de lo que yo quería probar — dos veces, y las dos leí el verde
+  como resultado. ⇒ **un mutante de un script se corre desde donde vive el original** (copia
+  temporal dentro del árbol, borrada después), o no está probando el mismo código.
