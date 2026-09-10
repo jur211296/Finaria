@@ -230,6 +230,11 @@ end $verify$;
 -- en verde sin que el guard se ejecute nunca. Esto ejercita las cinco poblaciones de la tabla del header
 -- contra el motor real, con filas sintéticas que se borran ANTES de terminar el bloque.
 --
+-- **Probado en LAS DOS DIRECCIONES contra staging el 2026-09-10**, porque un verificador que no puede
+-- fallar es peor que ninguno: con los cinco esperados correctos pasa y deja cero filas sintéticas; con
+-- un esperado falseado a propósito **aborta** con el escenario y los dos valores en el mensaje, y el
+-- `exception when others` limpia igual antes de re-lanzar (comprobado: cero filas tras el fallo).
+--
 -- Se limpia con DELETE explícito y no con una sub-transacción: `apply_migration` ya envuelve el fichero
 -- entero, y un `rollback` aquí se llevaría la migración por delante. El `exception` re-lanza tras limpiar,
 -- así que un fallo aborta la transacción externa (y con ella el cambio) sin dejar filas.
