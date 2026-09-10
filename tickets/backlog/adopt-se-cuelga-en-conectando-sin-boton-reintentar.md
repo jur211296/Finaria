@@ -32,7 +32,37 @@ Existe una red para exactamente esto —`WelcomeAdoptAutoResume`
 ⇒ En el peor caso, el botón debería estar en pantalla en **~12-15 segundos**. Tras varios minutos no
 estaba.
 
-## Hipótesis principal (NO confirmada — hace falta instrumentar)
+## Cómo se llegó ahí: el adopt corrió DURANTE una restauración de iCloud
+
+Dato de la repro, medido el 2026-09-09 y clave para entender el escenario: el owner **acababa de
+restaurar desde iCloud** («Ya tengo una cuenta» → iCloud, datos cargados) y **acto seguido** eligió
+«Ya tengo una cuenta» → Apple.
+
+Con eso, el guard cross-cuenta **no bloquea**, y es deliberado:
+
+```swift
+guard hasLocalData, !restoreInProgress else { return .proceed }   // CrossAccountEntryGuardLogic:66
+```
+
+`restoreInProgress` es `ICloudRestoreSessionSignal.isRestoringNow` — *«esta sesión pidió restaurar de
+iCloud y ese import no ha terminado»* — y existe para que el dueño no se quede fuera de su propia
+cuenta mientras sus filas bajan. ⇒ el sign-in pasó a `.adopting` con un import de CloudKit
+posiblemente **aún en vuelo**.
+
+**Hipótesis de carrera (más fuerte que la de abajo)**: el adopt se ejecuta sobre un corpus que todavía
+está siendo escrito por el mirror de CloudKit, y queda esperando algo que no llega. Encaja con los
+síntomas —fracción 0, sin error, recuperable al reiniciar— y con que el estado no se corrompiera.
+
+**Lo que la debilita y hay que descartar**: la vista pinta un texto propio cuando el controller está
+esperando un import (`resumeWaitingForImport` → «esperando importación»,
+`WelcomeCloudSignInView.swift:471-478`), y en la captura del owner **ese texto no aparece**. O la
+espera es de otra naturaleza, o esa bandera no cubre este camino.
+
+⇒ **La repro a intentar primero** es la del owner, en este orden: restaurar de iCloud → sin esperar a
+que asiente, entrar con Apple. Es más específica que «entrar con Apple» a secas y explica por qué esto
+no había salido antes.
+
+## Hipótesis secundaria (NO confirmada — hace falta instrumentar)
 
 El detector se dispara con `isAdopting && !isWorking` sostenido, y su propio docblock lo dice:
 *«`isWorking == false` con fase `.adopting` significa que NADIE conduce»*. Es decir, **cubre el drive
