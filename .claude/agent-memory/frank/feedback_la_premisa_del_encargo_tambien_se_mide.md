@@ -187,3 +187,33 @@ dispositivo reinstalando? ¿dos aparatos? Y comprueba el modo de App Attest ante
 **Corolario del mismo día, sobre el binario:** antes de mandar a nadie a comprobar algo en TestFlight,
 verifica que **el fix está dentro del build**. `git log <commit-del-build>..origin/<rama>` lo contesta
 en un comando, y si hay código posterior, el FAIL que lea será falso y costará la tanda entera.
+
+## 2026-09-09 — dirigir a una persona por una UI que no he recorrido
+
+Jürgen paró la sesión: *«estás fracasando horrible»*. El encargo era device-QA de Grupos y no bajó ni
+un ticket. Tres errores míos, en orden de coste:
+
+1. **Le dicté pasos de UI leídos del fichero de traducciones.** Encontré «Empezar desde cero» en
+   `Localizable.strings` y escribí el paso sin comprobar **quién presenta esa vista**. Estaba dos
+   pantallas más allá y en otra rama del chooser. Un literal que existe **no prueba que haya camino
+   hasta él**: eso se contesta con `grep` al nombre de la vista y a quién la instancia.
+2. **Le hice reinstalar la app y con eso destruí la precondición** de los tres tickets que íbamos a
+   verificar. Antes de pedir un gesto destructivo hay que preguntarse qué estado se lleva por delante.
+3. **Le mandé a «Migrar a la nube» sin decirle qué hace.** Él quería una cuenta nueva y vacía; ese
+   botón **sube su corpus de iCloud a la nube**, justo lo contrario. Lo cazó él al ver la barra.
+
+**Why:** cuando la que ejecuta es una persona con su teléfono real, un paso mal escrito no cuesta un
+`re-run`: cuesta su tiempo, y puede tocar sus datos. La asimetría es total — yo no veo la pantalla, y
+él no ve el código.
+
+**How to apply:**
+- **Antes de dictar un tap, recorre el camino en el código**: quién presenta la vista, bajo qué
+  condición, y qué pantallas hay antes. Si no puedo nombrar el gate, no puedo dictar el paso.
+- **Nombra el efecto antes del gesto**, no después: «esto sube tus datos a X» va ANTES de «toca aquí».
+  Es la misma regla de [[prefiere-lo-limpio-a-lo-defensivo]] (di siempre qué se pierde) aplicada a
+  instrucciones en vivo.
+- **Un gesto destructivo (borrar, reinstalar, cerrar sesión) se piensa dos veces**: qué estado
+  destruye, y si ese estado era la precondición de lo que veníamos a mirar.
+- Y cuando la persona describe lo que quiere en sus palabras —«por un lado iCloud, por otro una cuenta
+  nueva»—, **eso es el requisito**. Comprobar que el camino que propongo lo cumple es parte del paso,
+  no un detalle.
