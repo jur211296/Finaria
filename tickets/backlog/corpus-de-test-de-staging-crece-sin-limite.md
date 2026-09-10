@@ -98,3 +98,24 @@ timeout de 60 000 ms. El trigger corre sobre una tabla de 6 filas; el corpus est
 ⇒ **Los goldens de grupos ya no dan señal**, y eso es lo que este ticket venía a evitar. Sube a
 prioridad real: hasta que el corpus se acote, un rojo ahí no distingue «el código está roto» de «el
 corpus creció otra vez».
+
+## Medición del 2026-09-10, tras desplegar el Worker de staging
+
+El deploy de staging de hoy subió **`f84620b5` («los goldens de Grupos seguían pidiendo el canon
+viejo»)**, un fix que llevaba **sin desplegar desde el 8-sep** — así que cabía la esperanza de que el
+rojo de los goldens fuera eso y no el corpus.
+
+**No lo es.** Con el Worker nuevo (`53e181d4`) y las credenciales cargadas, `groups.goldens.test.ts`
+**avanza pero no termina**: se quedó recorriendo G2 y G3 durante más de veinte minutos, un caso cada
+varios minutos, hasta que se cortó a mano. O sea: el canon ya no es la causa, **el corpus sigue
+siéndolo**, y este ticket sigue en pie tal cual.
+
+Lo que sí cambia es cómo se lee un rojo viejo: **cualquier veredicto de los goldens de Grupos anterior
+al 2026-09-10 se midió contra un Worker sin ese fix**, así que no vale como línea base. Al retomar
+esto, la primera corrida es la que fija el punto de partida.
+
+Y un dato de método que se pagó hoy: **sin `GROUPS_ENC_KEY` y `PUSH_ROLE_JWT` exportados, tres ficheros
+de goldens fallan al CARGAR** (`groups.goldens`, `push.fanout`, y `account.goldens` sin `USER_A_PASS`).
+Eso se lee como «el código está roto» cuando es «falta un export» — y es la clase de confusión que hace
+perder una vuelta de diagnóstico. Están en `~/Secrets/yala-groups-enc/staging*` y
+`~/Secrets/yala-supabase-test/test-users.env`.
