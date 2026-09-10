@@ -5,23 +5,23 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-10 (Lima)
 
-**Rama** `2.1` — Merge #126: el rediseño de sesiones está **decidido, especificado y desbloqueado**;
-sigue sin haber código. TestFlight build **13** (CPV 13) — `VALID` e `IN_BETA_TESTING`.
+**Rama** `2.1` — Merge #127: el rediseño de sesiones arranca por su **paso 0**, el vocabulario.
+Sigue sin haber código de producto. TestFlight build **13** (CPV 13) — `VALID` e `IN_BETA_TESTING`.
 **Subida Yala (TF/store) = solo Mini.**
 
-## Esta sesión (la última: la pasada de decisiones)
+## Esta sesión (paso 0: el vocabulario)
 
-**Los trece tickets del rediseño pasaron uno a uno por AskUserQuestion, y ninguno se libró.** Cada uno
-lleva ahora al final una sección **«Decisiones de Jürgen (2026-09-09, pasada de desbloqueo)»** que
-**manda sobre el cuerpo del ticket y sobre el ADR**; varias derogan lo escrito antes. El runbook gana una
-**regla 0** que lo dice, para que la cola autónoma no repregunte. Índice:
-`docs/sessions/2026-09-09-desbloqueo-decisiones-rediseno-sesiones.md`.
+**Para el usuario no cambia nada, y ese es medio objetivo**; la otra mitad es que siga sin cambiar
+cuando los pasos 4-10 escriban el copy nuevo. Conviven **dos vocabularios a propósito**: dentro se dice
+*sesión privada* / *sesión en la nube*; al usuario se le habla de **dónde viven sus datos**, y ese copy
+ya funciona. `docs/glosario.md` lo deja escrito, con los strings reales y con **«Yala completo» ≠ «nube
+completa»**, que el ADR advierte y ningún documento recogía. `.claude/rules/l10n.md` y `BRAND-VOICE.md`
+§7 llevan un puntero de una línea: la tabla no se copia.
 
-Tres cambios de forma: el **vocabulario se adelantó al paso 0** (con el orden viejo, siete tickets
-escribían copy antes de que existiera el glosario); el **13 se partió** y la mitad de web, ficha y legal
-salió a `session-redesign-web-and-store-copy`, **de Lola**; y **producción se vacía entera** —identidades
-incluidas— antes del esquema del ticket 2, decidido con los conteos delante: son dos cuentas, las dos
-tuyas, cero datos de terceros.
+**Medido, y una corrección mía:** cero de los 4.074 strings ES usa la jerga interna; «invitad» sigue en
+2 keys, que viven en **los 16 locales** — el paso 12 retira 32 strings, no 2. El «15 hermanos» del
+ticket eran los otros locales, no otras keys; lo leí mal y medirlo lo corrigió. El código M1 sigue vivo
+(65 ficheros), así que las rules se **marcan como históricas**, no se borran.
 
 ## Abiertos
 
@@ -34,8 +34,8 @@ tuyas, cero datos de terceros.
 4. **CUATRO XCUITest en rojo** de la nocturna del 9-sep (**high**): caminos centrales, y la suite de UI ya
    no corre en los PR.
 5. **Un markdown de encargo dispara la suite entera de iOS**
-   (`encargos-markdown-triggers-the-whole-ios-suite`, medido en el #126): pasa en toda sesión lanzada, y
-   sin `concurrency` dos pushes dejan dos runs de 90 min compitiendo.
+   (`encargos-markdown-triggers-the-whole-ios-suite`): vuelto a ver en el #127 — 90 min de suite sobre un
+   diff sin una línea de Swift. Pasa en toda sesión lanzada.
 6. **El aviso de cierre cita el PR de OTRA sesión** (medium): falla en silencio con `HTTP 200`.
 7. **El build 13 llega al grupo interno, no al externo**: un segundo teléfono sin tu Apple ID no lo verá
    hasta pasar beta review.
@@ -43,11 +43,11 @@ tuyas, cero datos de terceros.
 
 ## Siguiente
 
-**El paso 0 del runbook:** `retire-guest-vocabulary-for-session-terms` (fija el glosario antes de que se
-escriba una línea de copy). Luego `wrangler-prod-onboarding-choice-percent-drift` y los once restantes en
-orden. **El 11 está vacante a propósito** y no se renumera: las decisiones se citan entre sí por número.
+**El paso 1 del runbook:** `wrangler-prod-onboarding-choice-percent-drift` (protege algo que ya está en
+producción), y luego los diez restantes en orden. **El 11 está vacante a propósito** y no se renumera:
+las decisiones se citan entre sí por número. El paso 0 no bloqueaba a nadie y ya está en `done`.
 
-**El board: 158 en backlog, 46 en qa** (`docs/TICKETS.md`, 260 = 260 contra disco). Los `high` fuera del
+**El board: 157 en backlog, 46 en qa** (`docs/TICKETS.md`, 260 = 260 contra disco). Los `high` fuera del
 rediseño siguen siendo `nocturna-del-9-sep-…`, `chat-assistant-is-down` y `siri-ai-integration-ios-27`.
 
 ## Bloqueo
