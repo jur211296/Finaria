@@ -1,6 +1,6 @@
 ---
 name: la-premisa-del-encargo-tambien-se-mide
-description: El encargo de Jürgen puede traer una premisa falsa heredada del ticket; medirla es barato y cambia el trabajo entero
+description: El encargo hereda las premisas falsas del ticket y medirlas cambia el trabajo; y la cara B — a veces la premisa es buena y el que la leyó mal fui yo, así que la CORRECCIÓN también se mide antes de publicarla
 metadata:
   type: feedback
 ---
@@ -155,3 +155,31 @@ Y en este repo la documentación envejece más rápido que el código.
 estado. Cuesta un `grep -rl`. Y si al medirla sale otra, dilo en el sitio donde la reusaste **y
 corrige el documento de origen**: dejarlo pasar es lo que hace que la próxima sesión herede el mismo
 número.
+
+## La cara B, y da más vergüenza: la premisa era buena y el que leía mal era yo (2026-09-10)
+
+En el paso 0 del rediseño (`retire-guest-vocabulary-for-session-terms`) el ticket decía: «los dos
+strings ES **y sus 15 hermanos** se retiran cuando `WelcomeGroupsGateView` pierda la rama
+secundaria». Medí `welcome.groups.secondary*` en el catálogo ES, salieron **dos** keys, y escribí en
+el ticket y en el PR una fila que decía «**Falso: son 2**».
+
+Estuvo a punto de quedarse escrito. Los «15 hermanos» **son los otros 15 locales**: la app tiene 16
+y las dos keys viven en los 16, así que el paso 12 retira **32 strings**, no 2. El ticket tenía
+razón, y mi «corrección» habría metido en el repo un error donde no lo había — con el agravante de
+que iba en la tabla de «lo medido», que es la que la próxima sesión creerá sin comprobar.
+
+**Why:** todo lo de arriba entrena a buscar dónde miente el documento, y eso crea el sesgo
+contrario: cuando un número no casa con mi medición, la explicación cómoda es que el documento se
+equivocó. Casi siempre hay una tercera lectura —una palabra que significa otra cosa en ese
+dominio— y no cuesta nada descartarla. Aquí bastó `ls Yala/Resources/*.lproj | wc -l`.
+
+**How to apply:**
+- **Una corrección es una afirmación, y se mide igual que la premisa que corrige.** Antes de
+  escribir «el ticket dice X y es falso», pregúntate qué tendría que ser cierto para que X lo fuera.
+  Si esa lectura existe y no la has descartado, no publiques la corrección.
+- Sospecha de las palabras vagas de un ticket —«hermanos», «variantes», «los demás»— **en el dominio
+  del ticket**: en l10n «hermano» es un locale, no una key.
+- Y el corolario del mismo día: **el checklist de un ticket puede llegar hecho a medias.** Cuatro de
+  las cinco entradas de glosario que este pedía **ya existían**, escritas por el commit del propio
+  ADR. Comprobar el estado real antes de escribir cuesta un `grep` y evita re-escribir encima. Es la
+  misma familia que «el defecto YA estaba arreglado», pero por dentro del alcance en vez de fuera.
