@@ -63,6 +63,29 @@ decir «Tus grupos usan esta misma cuenta» y **no** ofrecer desasociar.
 → Cierra el aviso y vuelve a tocar «Desasociar»: **tiene que responder**. Si el segundo toque no hace
   nada, la fase se quedó bloqueada.
 
+**8 · Los OTROS miembros no pierden nada (2026-09-11, ticket
+`detach-history-replay-can-tombstone-groups-on-next-launch`).** Es el recorrido que más daño evita y
+**necesita dos personas**: el gasto que se borraría es el de los demás.
+
+Montaje: un grupo con **otro miembro real** (segundo Apple ID / segunda cuenta de Yala) y **3 gastos suyos**
+visibles en los dos teléfonos.
+
+1. En tu iPhone: desasocia la cuenta de grupos (cualquiera de las dos salidas).
+2. **Mata la app del multitarea y vuelve a abrirla.** Este paso es el recorrido: el daño no ocurría en la
+   sesión del desasociar sino en el ARRANQUE siguiente, cuando el canal vuelve a mirar el historial local.
+3. Vuelve a asociar la MISMA cuenta y espera a que los grupos bajen.
+4. **Mira el teléfono del OTRO miembro**: sus 3 gastos tienen que seguir ahí. Si desaparecen —a él, sin que
+   él haya tocado nada—, el borrado local está viajando al servidor y hay que parar el release.
+5. Repite el ciclo una segunda vez sin cerrar la app entre medias.
+
+→ Comprueba también en tu propio teléfono que los grupos vuelven completos (no una cáscara sin gastos).
+→ Si tienes acceso al panel del backend: cero filas nuevas con `op = tombstone` para esa zona durante todo
+  el recorrido.
+
+**NO es simulable, y el porqué es el de siempre:** el simulador no tiene sesión de nube ni un segundo
+miembro, así que el unit test llega hasta «el teléfono no encola la escritura» y el resto —que el servidor
+no la reciba y que el otro miembro no la vea— solo se ve en device.
+
 ## Lo que NO entra aquí
 
 La promoción de la asociada a `complete` desde «Migrar a la nube»: su cableado es del ticket
