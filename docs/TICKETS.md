@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (281)
+## Index (286)
 
 | id | status | path |
 |----|--------|------|
@@ -80,11 +80,13 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | ci-verde-con-la-suite-en-rojo | done | tickets/done/ci-verde-con-la-suite-en-rojo.md |
 | ci-warns-but-does-not-block | backlog | tickets/backlog/ci-warns-but-does-not-block.md |
 | ci-workflow-cites-missing-testing-strategy | backlog | tickets/backlog/ci-workflow-cites-missing-testing-strategy.md |
+| claim-promotion-lost-response-blocks-the-retry | backlog | tickets/backlog/claim-promotion-lost-response-blocks-the-retry.md |
 | cloud-fx-rates-blob-two-faces | qa | tickets/qa/cloud-fx-rates-blob-two-faces.md |
 | cloud-sign-in-discovers-account-kind | qa | tickets/qa/cloud-sign-in-discovers-account-kind.md |
 | cloud-tx-epoch-orphan-relations | backlog | tickets/backlog/cloud-tx-epoch-orphan-relations.md |
 | cloudsync-account-currency-orphans-receiver-history | backlog | tickets/backlog/cloudsync-account-currency-orphans-receiver-history.md |
 | cobertura-ui-diaria-cuelga-del-push | backlog | tickets/backlog/cobertura-ui-diaria-cuelga-del-push.md |
+| completed-mode-escalates-a-second-groups-only-device | backlog | tickets/backlog/completed-mode-escalates-a-second-groups-only-device.md |
 | converted-amount-sweep-blind-to-input-changes | backlog | tickets/backlog/converted-amount-sweep-blind-to-input-changes.md |
 | corpus-de-test-de-staging-crece-sin-limite | backlog | tickets/backlog/corpus-de-test-de-staging-crece-sin-limite.md |
 | coverage-index-meta-counts-drifted-from-reality | backlog | tickets/backlog/coverage-index-meta-counts-drifted-from-reality.md |
@@ -119,7 +121,8 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | filtro-de-cuentas-se-colapsa-al-navegar-a-registros | backlog | tickets/backlog/filtro-de-cuentas-se-colapsa-al-navegar-a-registros.md |
 | financial-report-amounts-unmarked | backlog | tickets/backlog/financial-report-amounts-unmarked.md |
 | flows-atlas-predates-session-redesign | backlog | tickets/backlog/flows-atlas-predates-session-redesign.md |
-| full-mode-activation-must-ask-where-personal-data-lives | backlog | tickets/backlog/full-mode-activation-must-ask-where-personal-data-lives.md |
+| full-activation-cloud-adopt-when-account-already-complete | backlog | tickets/backlog/full-activation-cloud-adopt-when-account-already-complete.md |
+| full-mode-activation-must-ask-where-personal-data-lives | qa | tickets/qa/full-mode-activation-must-ask-where-personal-data-lives.md |
 | fx-approximate-mark-missing-on-secondary-surfaces | qa | tickets/qa/fx-approximate-mark-missing-on-secondary-surfaces.md |
 | fx-category-totals-unmarked | backlog | tickets/backlog/fx-category-totals-unmarked.md |
 | fx-historical-balance-curve-unmarked | backlog | tickets/backlog/fx-historical-balance-curve-unmarked.md |
@@ -161,6 +164,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | groups-expense-notif-only-on-foreground | qa | tickets/qa/groups-expense-notif-only-on-foreground.md |
 | groups-ghost-tx-on-delete | done | tickets/done/groups-ghost-tx-on-delete.md |
 | groups-guest-currency-from-region | discarded | tickets/discarded/groups-guest-currency-from-region.md |
+| groups-history-cutoff-needs-synced-state | backlog | tickets/backlog/groups-history-cutoff-needs-synced-state.md |
 | groups-import-splitwise-tricount | backlog | tickets/backlog/groups-import-splitwise-tricount.md |
 | groups-in-group-search | backlog | tickets/backlog/groups-in-group-search.md |
 | groups-invite-skips-unirme-sheet-if-onboarded | qa | tickets/qa/groups-invite-skips-unirme-sheet-if-onboarded.md |
@@ -240,6 +244,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | reparacion-de-tasas-no-avisa-al-panel | backlog | tickets/backlog/reparacion-de-tasas-no-avisa-al-panel.md |
 | rescue-discarded-groups-pull | discarded | tickets/discarded/rescue-discarded-groups-pull.md |
 | restore-beacon-outlives-account-deletion | backlog | tickets/backlog/restore-beacon-outlives-account-deletion.md |
+| restore-start-fresh-keeps-the-imported-corpus | backlog | tickets/backlog/restore-start-fresh-keeps-the-imported-corpus.md |
 | retire-guest-vocabulary-for-session-terms | done | tickets/done/retire-guest-vocabulary-for-session-terms.md |
 | reverse-claim-rejection-has-no-way-out-in-the-client | backlog | tickets/backlog/reverse-claim-rejection-has-no-way-out-in-the-client.md |
 | reverse-cutover-cerrado-para-cuentas-born-cloud | qa | tickets/qa/reverse-cutover-cerrado-para-cuentas-born-cloud.md |
