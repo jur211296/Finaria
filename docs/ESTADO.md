@@ -1,29 +1,26 @@
 ---
-updated: 2026-09-10
+updated: 2026-09-11
 tags: [now, punto-de-retomada]
 ---
 
-# NOW — 2026-09-10 (Lima)
+# NOW — 2026-09-11 (Lima)
 
-**Rama** `2.1` — Merge #136: **el onboarding personal ofrece dos propósitos; a solo-grupos se entra por el Welcome.**
+**Rama** `2.1` — Merge #137: **«Activar Yala completo» pregunta dónde viven tus datos personales.**
 TestFlight build **13** (CPV 13). **Subida Yala (TF/store) = solo Mini.**
 
-## Esta sesión (el paso 7, y el ticket que no era pequeño)
+## Esta sesión (el paso 8, y lo que costaba el bridge)
 
-**El paso «¿Qué te gustaría hacer?» del onboarding ya no ofrece «Dividir gastos con amigos».** Quedan
-«Llevar el control de mi dinero» y «Solo anotar gastos». A una sesión solo-grupos se entra por «Vengo por
-un grupo», y solo por ahí: es lo que pide el ADR del rediseño (§7).
+**Quien usa Yala solo para grupos y toca «Activar Yala completo» ve primero «¿Dónde guardamos tus
+finanzas?»**, con las dos cards del Welcome; la de nube dice que es la misma cuenta que ya usa para sus
+grupos. Privado pasa por la puerta de iCloud del paso 4 y deja restaurar; nube promociona la cuenta al
+final, y si no sale no escribe nada. Al terminar el onboarding se pregunta si los gastos de grupo se ven
+también en lo personal.
 
-**El ticket se decía pequeño, y no lo era.** La card no terminaba en el onboarding: cedía a la misma cadena
-de alta de Grupos que el Welcome. Tu decisión —borrar el caso sin dejar ramas muertas— se llevó esa segunda
-puerta entera. La del Welcome quedó idéntica, y su XCUITest la recorre hasta el formulario de grupo. Una
-red nueva fija que esa cadena tenga **una sola entrada**: si el paso 10 la reutiliza para asociar grupos,
-saltará **a propósito**, y habrá que ampliarla, no «arreglarla».
-
-**La review (una lente) no encontró nada roto en «Vengo por un grupo»** y sí siete cosas del cambio, que
-arreglé: dos tests que prometían más de lo que cazaban, un comentario que prometía una red que no existía
-—ahora existe— y docblocks que seguían describiendo la card como viva. Suite unitaria y XCUITest **enteras**
-en verde (6751 y 136). Este paso no deja device-QA: nada depende de CloudKit.
+**La review (cuatro lentes) cazó 14 defectos míos, y el más caro era de dinero**: con el modo aún en
+solo-grupos, el bridge borra la transacción real de cada gasto que re-puentea — y tras restaurar, esas son
+las de tu vida anterior. Ahora el bridge queda cerrado mientras la activación está a medias y los gastos
+convergen después del modo completo; medido contra el bridge real, con su control. Suite unitaria (6808) y
+XCUITest **enteras** (62 clases) en verde.
 
 ## Tu cola
 
@@ -32,7 +29,7 @@ en verde (6751 y 136). Este paso no deja device-QA: nada depende de CloudKit.
    el orden del punto 2-quinquies.**
 2. **Device-QA del paso 3** — los cuatro recorridos del ticket. Sal del bloqueo **por swipe y por
    «Entendido»**, no solo por el botón; y en el recorrido 1 **fuerza el cierre de la app** antes de darlo
-   por bueno. Más los device-QA de los pasos 4, 5 y 6.
+   por bueno. Más los device-QA de los pasos 4, 5, 6 y 8.
 2-bis. **Device-QA del paso 4, y empieza por su punto BLOQUEANTE** (`welcome-private-fresh-start-skips-icloud-check`,
    guion dentro): comprobar que la sonda de CloudKit **no lanza**. Baja una lista de `desiredKeys` única
    sobre una zona multi-tipo, y si el servidor la validara contra el schema de cada tipo, la rama privada
@@ -48,6 +45,11 @@ en verde (6751 y 136). Este paso no deja device-QA: nada depende de CloudKit.
    build 13, el faro sigue ahí; con el TestFlight nuevo, entrar con Apple por Grupos ya lo limpia —a
    propósito: el motor lo hace en toda puerta— y el recorrido 1 se comprueba en Console.app en vez de en
    pantalla.
+2-sexies. **Device-QA del paso 8** (`full-mode-activation-must-ask-where-personal-data-lives`, guion de 10
+   recorridos dentro). **NO es simulable.** Antes, **reinstala** si tu sesión solo-grupos es de antes del
+   10-sep: si no, verás el aviso de reinstalar —correcto— y no el chooser. El que más caro sale es
+   **restaurar**: los gastos de grupo tienen que salir UNA vez, y los que ya habías clasificado conservan
+   su cuenta y su nota.
 2-ter. **Device-QA de la reversa born-cloud → iCloud** (`reverse-cutover-cerrado-para-cuentas-born-cloud`).
    Dos cosas: el **contador de testigos con `ckRecordName`** del panel DEBUG tiene que pasar de 0 a cubrir
    tus filas vivas —ése es el único testigo real de que la subida ocurrió—, y **borra 2-3 transacciones
@@ -60,19 +62,21 @@ en verde (6751 y 136). Este paso no deja device-QA: nada depende de CloudKit.
 
 ## Siguiente
 
-**El paso 8** del rediseño (`full-mode-activation-must-ask-where-personal-data-lives`, [adv]). Pasos 0-7
-cerrados; el 11 sigue vacante a propósito. **El board: 170 en backlog, 52 en qa** (281 = 281 contra disco).
+**El paso 9** del rediseño (`session-exits-one-verb-per-session`): un solo verbo de salida por sesión.
+Pasos 0-8 cerrados; el 11 sigue vacante a propósito. **El board: 174 en backlog, 53 en qa** (286 = 286
+contra disco).
 
 ## Bloqueo
 
-**Un bug vivo medido hoy** (`settings-migrate-to-cloud-adopts-silently-instead-of-migrating`, **high**):
-«Ajustes → migrar a la nube» sobre una cuenta que ya tiene datos **no migra: adopta en silencio**, y te
-cobra dos confirmaciones destructivas antes. Tus datos locales se quedan donde están, sin aviso.
+**Un bug vivo medido el 10-sep** (`settings-migrate-to-cloud-adopts-silently-instead-of-migrating`,
+**high**): «Ajustes → migrar a la nube» sobre una cuenta que ya tiene datos **no migra: adopta en
+silencio**, y te cobra dos confirmaciones destructivas antes. Tus datos locales se quedan donde están, sin
+aviso.
 
 **Los goldens de grupos** (`corpus-de-test-de-staging-crece-sin-limite`, **high**): seguían sin dar señal
 por timeout, con 702 grupos de un usuario de test. **Dato nuevo:** el deploy de staging subió `f84620b5`
-—el fix del canon viejo, sin desplegar desde el 8-sep— así que **un rojo anterior a hoy puede no valer**.
-Re-medir antes de perseguirlo.
+—el fix del canon viejo, sin desplegar desde el 8-sep— así que **un rojo anterior al 10-sep puede no
+valer**. Re-medir antes de perseguirlo.
 
 **Dos que el paso 6 agranda de un caso raro a toda la población** (los dos **high**, y ninguno lo
 introdujo esa sesión): `reverse-upload-has-no-ceiling-and-no-exit` —la subida a iCloud no tiene tope ni
@@ -98,6 +102,12 @@ la máquina de `CloudSessionSignOut`.
 **Un gemelo de lo que arregló el paso 6, anterior a él** (`welcome-cloud-back-leaves-chooser-marked-seen`,
 **medium**): volver atrás desde el sign-in de nube deja el Welcome «ya elegido», y cerrar la app ahí abre
 el onboarding privado sin la puerta de iCloud.
+
+**Dos del paso 8, con ticket** (los dos **medium**): `completed-mode-escalates-a-second-groups-only-device`
+—activar Yala completo en un dispositivo sube de nivel al otro, que sigue en solo-grupos, y lo deja sin
+espejo; no lo introdujo el paso 8 y **la salida es decisión tuya**— y
+`claim-promotion-lost-response-blocks-the-retry` —si se pierde la respuesta de la promoción, «Reintentar»
+bloquea la activación a la nube—.
 
 **Y decisiones tuyas, pequeñas.** Tres de copy: `revert-card-copy-says-datos-regresan-a-quien-nunca-estuvo`
 (el texto dice «tus datos **regresan** a tu iCloud» a quien nunca estuvo ahí) y, del paso 6,
