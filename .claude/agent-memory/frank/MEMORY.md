@@ -55,8 +55,10 @@
 - [Medir la web: axe, Lighthouse, preview](feedback_medir_la_web_a11y_y_preview.md) — axe ciego con opacity 0; transiciones congeladas; preview con SSO se verifica por config.json; heredoc suelto en zsh imprime.
 - [Capturas del simulador para la web](feedback_capturas_simulador_para_la_web.md) — receta y trampas: Secrets.xcconfig, nombre efímero, categorías sembradas, `sips -Z` escala el lado largo.
 - [El fixture hereda la anatomía de producción](feedback_el_fixture_hereda_la_anatomia_de_produccion.md) — no la deduzcas del ticket; el error se ve en el TOTAL, y el fixture tiene que ser DISCRIMINANTE.
+- [«Cero warnings» se mide en TODOS los logs](feedback_cero_warnings_se_mide_en_todos_los_logs.md) — el gate no mira los tests y lee un build incremental; dos míos iban al commit el 10-sep.
 
 ## Estado del trabajo
+- [El faro solo encamina: «Crear otra cuenta» y mismatch con dos salidas](project_faro_solo_encamina.md) — paso 6, PR #135; el huérfano se limpia con PRUEBA (Apple+Apple); device-QA pendiente; `restore-beacon…` NO cerrado.
 - [Una sesión solo-grupos ya no baja el iCloud del teléfono](project_neutro_durable_solo_grupos.md) — PR #134; la review cazó 12 defectos MÍOS, dos graves; la mitad 2 la paró Jürgen y falta device-QA NO simulable.
 - [«Primera vez → privado» ya valida iCloud antes de reiniciar](project_puerta_icloud_rama_privada.md) — PR #133; la review cazó 19 defectos MÍOS y el peor dejaba el bug vivo; falta device-QA y NO es simulable.
 - [«Volver a iCloud» ya está abierta a quien nació en la nube](project_reversa_abierta_a_born_cloud.md) — PR #132; la review cazó DOS defectos graves MÍOS; falta el device-QA de CloudKit y NO es simulable.
