@@ -127,15 +127,15 @@ struct GroupsBackendInviteModifier: ViewModifier {
                     // grupos que se acepta; con la cuenta rechazada, cada uno de ellos dejaría rastro de
                     // una sesión que no va a existir: el latch de historial cambiaría el empty state del
                     // tab para siempre (es monotónico y nadie lo repone), el desarme del boot-wipe dejaría
-                    // vivos unos grupos que el «Salir de Yala» previo mandó borrar, y el registro del
+                    // vivos unos grupos que un cierre previo mandó borrar, y el registro del
                     // consent atribuiría a esta cuenta un consentimiento dado para otra cosa.
                     guard destino != .blockedAccountIsComplete else { return }
-                    // D2 (§3.3.3): re-firmar sesión de grupos DESARMA un boot-wipe de grupos colgado por un
-                    // "Salir de Yala" in-session previo (`exitYalaOnThisDevice`) — sin esto, un cold boot
-                    // posterior borraría los grupos recién re-sincronizados — y quema el banner de re-entrada
-                    // stale. Idempotente/no-op si nada estaba armado; el sign-out normal exit(0) antes de este
-                    // seam (jamás interfiere). Los otros armadores (`.groupsOnlySignOut`/borrado de cuenta)
-                    // hacen relaunch inmediato ⇒ el wipe ya corrió antes de cualquier re-sign-in.
+                    // D2 (§3.3.3): re-firmar sesión de grupos DESARMA un boot-wipe de grupos que hubiera quedado
+                    // colgado — sin esto, un cold boot posterior borraría los grupos recién re-sincronizados — y
+                    // quema el banner de re-entrada stale. Idempotente/no-op si nada estaba armado. Desde el
+                    // paso 9 del rediseño (2026-09-11) el único armador que queda es el cierre local tras borrar
+                    // la cuenta de grupos de una sesión privada, que termina en el cover terminal ⇒ el wipe corre
+                    // antes de cualquier re-sign-in; los cierres de sesión arman el wipe PERSONAL, no este.
                     StorageModePersistence.clearGroupsOnlyWipeArm()
                     GroupsSignOutBannerMarker.clear()
                     // C2 · el latch «este device tuvo sesión de Grupos alguna vez». Es lo que separa el

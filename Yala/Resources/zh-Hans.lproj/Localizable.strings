@@ -4920,19 +4920,11 @@
 "groups.migrated.rejoinCTA" = "重新登录";
 
 /* G6-3: settings row to delete the frozen CloudKit copy */
-"groups.migrated.deleteCopyRow" = "删除我的冻结副本";
 
 /* G6-3: hint under the delete-copy row */
-"groups.migrated.deleteCopyHint" = "该群组现已存放在 Yala 云端。你可以删除旧的 iCloud 副本，不会丢失任何内容。";
 
-/* G6-3: delete-copy confirmation title */
-"groups.migrated.deleteCopyConfirmTitle" = "删除旧副本？";
 
-/* G6-3: delete-copy confirmation body */
-"groups.migrated.deleteCopyConfirmBody" = "群组将保留在 Yala 云端。仅删除本设备的 iCloud 副本。";
 
-/* G6-3: delete-copy confirmation button */
-"groups.migrated.deleteCopyConfirmButton" = "删除副本";
 
 /* G6-3: progress banner while the owner's groups migrate to backend */
 "groups.migrated.migratingBanner" = "正在将你的群组迁移到 Yala 云端…";
@@ -5016,26 +5008,15 @@
 /* Fase 1: subtitulo de la fila Vaciar mis datos */
 "settings.wipeDataSubtitle" = "清除你的数据。你的账户和群组会保留。";
 
-/* Fase 1: subtitulo de la fila Cerrar sesion */
-"settings.signOutSubtitle" = "仅此设备，不影响你的账户";
 
 /* Fase 1: subtitulo de la fila Eliminar mi cuenta */
-"settings.deleteAccountSubtitle" = "永久删除你的账户和云端数据";
 
 /* Fase 1: desvio cruzado del dialogo de eliminar cuenta hacia Vaciar */
 "settings.deleteAccountCrossReferHint" = "只想清空数据并保留账户？请使用「清空我的数据」。";
 
-/* D6: row title, sign out of the group-only legacy mode (returns to Welcome, no data touched) */
-"settings.exitYala" = "在此设备上退出 Yala";
 
-/* D6: row subtitle for 'Salir de Yala' */
-"settings.exitYalaSubtitle" = "你将回到开始屏幕。你的群组仍保留在 iCloud 中。";
 
-/* D6: confirmation dialog title for 'Salir de Yala' */
-"settings.exitYalaConfirmTitle" = "在此设备上退出 Yala？";
 
-/* D6: destructive action button for 'Salir de Yala' */
-"settings.exitYalaConfirmAction" = "退出 Yala";
 
 /* D6: confirmation dialog message for 'Salir de Yala' */
 
@@ -5054,14 +5035,8 @@
 /* D6: a11y hint when Export row is disabled in group-only mode */
 "accessibility.noGroupsToExport" = "没有可导出的群组";
 
-/* D2 (3.3.3): fila 'Cerrar sesion de grupos' del split privado+grupos con sesion backend */
-"settings.signOutGroups" = "退出群组登录";
 
-/* D2 (3.3.3): subtitulo de 'Cerrar sesion de grupos' */
-"settings.signOutGroupsSubtitle" = "此设备将忘记你的群组；你的财务数据不受影响";
 
-/* D2 (3.3.3): subtitulo de 'Salir de Yala' en el split solo-grupos backend */
-"settings.exitYalaGroupsSubtitle" = "返回开始屏幕；你的数据不会被删除";
 
 /* D2 (3.3.3): mensaje del dialogo de 'Salir de Yala' en el split solo-grupos backend */
 
@@ -5107,8 +5082,6 @@
 /* D4 Vaciar (solo grupos 5a): fila dispositivo */
 "settings.wipeScopeDeviceGroupsOnly" = "你的个人资料和偏好设置将被重置";
 
-/* D4 Vaciar: fila iCloud (modo privado) */
-"settings.wipeScopeCloudICloud" = "同样会被清除；你的其他设备也会丢失这些数据";
 
 /* D4 Vaciar: fila cuenta de Yala (modo nube) */
 "settings.wipeScopeCloudAccount" = "同样会从你的账户中清除；你的其他设备同步后也会丢失这些数据";
@@ -5138,7 +5111,7 @@
 "settings.deleteAccountScopeGroups" = "你仍会显示为“已删除的用户”";
 
 /* D4 Cerrar sesión (privado): fila dispositivo */
-"settings.signOutScopeDevicePrivate" = "不会删除任何内容；你将回到开始屏幕";
+"settings.signOutScopeDevicePrivate" = "将从此设备删除；删除前我们会先完成上传到 iCloud";
 
 /* D4 Cerrar sesión (privado): fila iCloud */
 "settings.signOutScopeCloudPrivate" = "你的数据仍保留在 iCloud 中";
@@ -5155,23 +5128,13 @@
 /* D4 Cerrar sesión (sesión secundaria): fila cuenta de Yala */
 "settings.signOutScopeCloudSecondary" = "你的数据仍安全地保存在你的账户中";
 
-/* D4 Cerrar sesión de grupos: fila dispositivo */
-"settings.signOutScopeDeviceGroupsOnly" = "你的个人数据不受影响";
 
-/* D4 Salir de Yala (solo grupos legado 5a): fila dispositivo */
-"settings.exitYalaScopeDeviceLegacy" = "你将回到开始屏幕；你的数据不受影响";
 
-/* D4 Salir de Yala (5a): fila iCloud */
-"settings.exitYalaScopeCloudLegacy" = "你的群组仍保留在你的 iCloud 中";
 
-/* D4 Salir de Yala (5a): fila grupos */
-"settings.exitYalaScopeGroupsLegacy" = "仍保留在你的 iCloud 中";
 
-/* D4 Salir de Yala (split D2): fila dispositivo */
-"settings.exitYalaScopeDeviceGroups" = "你将回到开始屏幕；你的数据不会被删除";
 
 /* D4 Cerrar sesión (privado): nota de conservación */
-"settings.signOutScopeConservationPrivate" = "你可以随时重新登录；你的数据会一直在这里。";
+"settings.signOutScopeConservationPrivate" = "如需找回，请在重新打开 Yala 时选择“从 iCloud 恢复”。";
 
 /* D4 Cerrar sesión (nube): nota de conservación */
 "settings.signOutScopeConservationCloud" = "你可以随时重新登录并恢复全部数据。";
@@ -5181,21 +5144,23 @@
 
 /* D4 Cerrar sesión de grupos / Salir (D2): nota de conservación */
 "settings.signOutScopeConservationGroups" = "想查看你的群组时，随时重新登录即可。";
+"settings.signOutScopeDeviceNoCopy" = "将从此设备上永久删除";
+"settings.signOutScopeCloudNoCopy" = "此设备未开启 iCloud：任何地方都没有副本";
+"settings.signOutNoCopyWarning" = "如果退出登录，你将永久失去这些数据。";
+"settings.signOutNoCopyConfirmTitle" = "永久删除你的数据？";
+"settings.signOutNoCopyConfirmMessage" = "iCloud 和其他任何地方都没有副本。此操作无法撤销。";
+"settings.signOutNoCopyConfirmAction" = "退出登录并删除";
+"settings.signOutScopeConservationPrivateWithGroups" = "如需回来，请选择“从 iCloud 恢复”，然后用你的账户重新登录群组。";
+"settings.signOutExportPendingTitle" = "还有更改尚未上传到 iCloud";
+"settings.signOutExportPendingMessage" = "此设备上尚未上传到 iCloud 的更改：%d 项。现在退出登录，这些更改将会丢失。";
+"settings.signOutExportPendingMessageUnknown" = "无法确认你最近的更改已上传到 iCloud。现在退出登录，这些更改可能会丢失。";
+"settings.signOutExportDiscardButton" = "仍然退出登录";
+"settings.wipeScopeCloudICloudAllDevices" = "将从 iCloud 删除，并从你的 iPad、Mac 以及使用此 Apple ID 的所有设备上消失";
 
-/* D4 Salir de Yala (5a): nota de conservación */
-"settings.exitYalaScopeConservationLegacy" = "你可以随时重新进入；你的群组仍保留在你的 iCloud 中。";
 
-/* D4 Borrar copia congelada: fila dispositivo */
-"settings.deleteFrozenScopeDevice" = "此设备上不会丢失任何内容";
 
-/* D4 Borrar copia congelada: fila iCloud */
-"settings.deleteFrozenScopeCloud" = "该群组的旧 iCloud 副本将被删除";
 
-/* D4 Borrar copia congelada: fila grupos */
-"settings.deleteFrozenScopeGroups" = "该群组在你的 Yala 账户中保持原样";
 
-/* D4 Borrar copia congelada: nota de conservación */
-"settings.deleteFrozenScopeConservation" = "你不会丢失任何内容：群组的真实数据保存在你的 Yala 账户中。";
 
 /* Vaciar v2: botón para exportar los datos antes de vaciarlos (red de seguridad) */
 "settings.wipeExportBeforeButton" = "先导出";
@@ -5245,26 +5210,12 @@
 /* D10 batch: acknowledge/done button */
 "settings.batchLeaveDone" = "完成";
 
-/* D1 retention success screen title (post-wipe with live groups) */
-"settings.retentionTitle" = "你的数据已清空，你的群组还在这里。";
 
-/* D1 retention screen question */
-"settings.retentionQuestion" = "接下来你想怎么使用 Yala？";
 
-/* D1 retention choice: keep only Groups tab */
-"settings.retentionGroupsOnly" = "只保留我的群组";
 
-/* D1 subtitle for the Groups-only choice */
-"settings.retentionGroupsOnlySubtitle" = "Yala 会变得更简单：只保留群组标签页。你随时可以切回完整模式。";
 
-/* D1 retention choice: full app from scratch */
-"settings.retentionStartFresh" = "从零开始";
 
-/* D1 subtitle for the start-fresh choice */
-"settings.retentionStartFreshSubtitle" = "所有功能，从头开始。";
 
-/* D1 debt note shown when the user has outstanding group balances */
-"settings.retentionDebtNote" = "你在群组里还有未结清的余额。留下来能保护其他成员：不会有人看到你带着欠款突然消失。";
 
 /* Fila que abre la pantalla Tu cuenta de Yala (§3.3.5) */
 "settings.yalaAccountRowTitle" = "你的 Yala 账户";
@@ -5295,6 +5246,7 @@
 
 /* Datos en solo-grupos (5b) */
 "settings.yalaAccountDataLocationGroupsOnly" = "在此设备和你的私密 iCloud 中。你的账户仅用于群组。";
+"settings.yalaAccountDataLocationGroupsOnlyNoPrivate" = "你的账户只保存你的群组；此设备上没有个人数据。";
 
 /* Alcance del desenlace Cerrar sesión */
 "settings.yalaAccountSignOutScope" = "你的账户会保留；随时都能回来。";

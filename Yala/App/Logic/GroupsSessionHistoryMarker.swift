@@ -8,7 +8,7 @@
 //  ## Por qué NO es `GroupsSignOutBannerMarker`, que es lo que el spec proponía
 //
 //  El §4 del spec sugería reusarlo y pedía **medirlo antes de dar el atajo por bueno**. Medido, y no
-//  sirve: aquel es un one-shot de BANNER —se arma solo en `CloudSessionSignOut.finalizeGroupsOnlyClose`, se
+//  sirve: aquel es un one-shot de BANNER —se armaba solo en `CloudSessionSignOut.finalizeGroupsOnlyClose` (retirado en el paso 9), se
 //  QUEMA en el `onAppear` del banner real y se DESARMA al re-firmar—, así que en cuanto el banner se
 //  muestra una vez vuelve a `false` y quien SÍ tuvo cuenta leería «crea una cuenta». Y tampoco cubre el
 //  cierre de sesión de nube completo, que no pasa por ese camino.

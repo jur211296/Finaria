@@ -5,7 +5,7 @@
 //  Marker one-shot del banner de re-entrada del tab Grupos (D2, §3.3.3). Tras un "Cerrar sesión de
 //  grupos" (`.groupsOnlySignOut`), al reabrir la app el empty state H-7 ("tus grupos están en tu
 //  cuenta") lleva un banner one-shot ("Cerraste tu sesión de grupos…"). El marker se ARMA en
-//  `CloudSessionSignOut.finalizeGroupsOnlyClose` (in-session, sobrevive el exit(0)+relaunch por vivir
+//  `CloudSessionSignOut.finalizeGroupsOnlyClose` (retirado en el paso 9: el marcador se quedó sin productor, ticket `groups-signout-reentry-banner-has-no-producer`) (in-session, sobrevive el exit(0)+relaunch por vivir
 //  en UserDefaults), se QUEMA en el `onAppear` del banner real (regla de one-shots del repo — jamás en
 //  el productor ni en el drain) y se DESARMA si el usuario re-firma sesión de grupos (belt: un banner
 //  "cerraste tu sesión" es stale tras re-firmar).

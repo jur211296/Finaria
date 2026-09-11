@@ -2,20 +2,22 @@
 //  CloudSessionSignOut.swift
 //  Yala
 //
-//  Coordinador del "Cerrar sesión" universal (H4, decisión owner 2026-07-12; G5-B añade la fila
-//  solo-grupos). Vive FUERA de CloudMigrationController a propósito: el camino privado debe funcionar
-//  con el backend NO configurado (prod DARK), donde `CloudMigrationController.shared` es nil.
+//  Coordinador del "Cerrar sesión" (H4, decisión owner 2026-07-12; un verbo por sesión desde el paso 9 del
+//  rediseño, ADR 2026-09-09 «Sesiones — dos ejes» §5). Vive FUERA de CloudMigrationController a propósito:
+//  el camino privado debe funcionar con el backend NO configurado, donde `CloudMigrationController.shared`
+//  es nil.
 //
-//  Caminos (CloudSignOutFlowLogic.path):
-//  - `.privateReset` (.icloud, sin sesión backend): NO toca datos — teardown si hay runtime, signOut
-//    local (idempotente, no-op sin backend), reset de onboarding → ContentView re-presenta el Welcome
-//    vía su onChange. Re-entrada: "Ya tengo cuenta → Restaurar iCloud".
-//  - `.cloudSecureSignOut` (.cloud): push-all VERIFICADO personal + GRUPOS (jamás descartar) →
-//    teardown + signOut → armar el wipe de boot (personal+sync-meta, y grupos si el flag ON) →
-//    pantalla de relaunch asistido (NUNCA auto-kill). El cleanup destructivo corre en el BOOT.
-//  - `.groupsOnlySignOut` (.icloud + sesión backend viva, flag ON): cierra SOLO la sesión de grupos —
-//    push-all de grupos → teardown del canal → purga in-session del outbox/cursor de grupos → limpieza
-//    del consent → signOut → wipe ARMADO del store de grupos al boot. Los datos personales no se tocan.
+//  Todas las salidas dejan el dispositivo como recién instalado por el MISMO boot-wipe de archivos
+//  (`armSignOutWipe` → `SwiftDataConfiguration.performSignOutWipeIfArmed`, que arma el neutro duradero);
+//  lo que cambia por celda es qué se sube antes (CloudSignOutFlowLogic.path):
+//  - `.privateSignOut` (C): espera a que el último cambio llegue a iCloud → borra personal + sync-meta.
+//    iCloud intacto; «entrar» es «Restaurar desde iCloud».
+//  - `.privateWithGroupsSignOut` (D, «equipo»): push-all de grupos → espera del export → cierra la sesión
+//    de grupos → borra personal + sync-meta + grupos.
+//  - `.cloudSecureSignOut` (E): push-all VERIFICADO personal + grupos (jamás descartar) → teardown +
+//    signOut → borra personal + sync-meta (+ grupos).
+//  - `.groupsOnlySignOut` (F): push-all de grupos → cierra la sesión → borra personal + sync-meta + grupos.
+//  - `.secondaryCloudSignOut` (M1): push-all verificado → borra SOLO los archivos `-Secondary`.
 //
 
 import Foundation
@@ -51,6 +53,7 @@ final class CloudSessionSignOut {
     /// Vuelve a `.idle` tras un `.blocked` (el usuario cerró el error).
     func acknowledgeBlocked() {
         if case .blocked = phase { phase = .idle }
+        blockedExit = nil
     }
 
     #if DEBUG
@@ -69,117 +72,352 @@ final class CloudSessionSignOut {
     /// (y `ProfileView.signOutRowPath` lee lo mismo — si divergieran, la UI ofrecería filas que este
     /// dispatch no honra y la hoja de alcance prometería lo contrario de lo que va a pasar).
     ///
-    /// Con el compuesto, un kill remoto sobre un device `.icloud` con sesión de grupos VIVA lo manda a
-    /// `.privateReset`, que cierra la sesión y no toca nada más. Eso deja tres cosas cruzando la frontera
-    /// de humano: las filas de `GroupSyncOutbox` (que no tienen dueño — `pushPending` las sube con el
-    /// bearer de la sesión que esté viva en ese momento), el consent de grupos (sin él, la cuenta
-    /// siguiente no ve la pantalla y el canal subiría bajo un `user_id` que jamás consintió) y las filas
-    /// `Split*` visibles del que se fue. El camino `.groupsOnlySignOut` es el único que limpia las tres.
+    /// Con el compuesto, un kill remoto sobre un device `.icloud` con sesión de grupos VIVA lo mandaría al
+    /// cierre privado sin grupos (`.privateSignOut`), que no sube el outbox de grupos, no olvida el consent
+    /// en sesión ni incluye el store de grupos en el borrado. Eso dejaría filas `Split*` del que se fue
+    /// visibles para el siguiente y cambios de grupos sin subir muriendo con sync-meta. Los caminos con
+    /// grupos (`.privateWithGroupsSignOut`, `.groupsOnlySignOut`) son los que suben y limpian las tres cosas.
     ///
-    /// No hay riesgo de dejar al usuario encerrado, y desde el 2026-08-03 la razón es SOLO la segunda mitad
-    /// de esta frase: este mismo path es el que hace pintar la fila de escape «Salir de Yala en este
-    /// dispositivo» (`rowLayout` → `.groupsSignOutPlusExitYala`), que no hace push-all y siempre completa.
-    /// Con el compuesto bajo kill esa fila ni siquiera existe.
+    /// **Con el kill remoto de Grupos, el cierre de una sesión con grupos puede quedar bloqueado, y es
+    /// deliberado.** El kill se aplica en el SERVIDOR (`gateway/src/groups/killSwitch.ts`, 403
+    /// `yala_groups_disabled` a `/groups/push`) ⇒ con filas de grupos pendientes el push-all no drena y el
+    /// cierre queda `.blocked` (reintentable, outbox intacto); con el outbox vacío drena sin una sola
+    /// petición. Hasta el paso 9 lo «salvaba» la fila «Salir de Yala en este dispositivo», que purgaba el
+    /// outbox —descartaba esas filas en silencio—. El ADR 2026-09-09 dejó un solo verbo y el criterio del
+    /// ticket es «nunca descarta»: se espera a que el kill se levante.
     ///
-    /// ⚠️ **CORRECCIÓN**: la primera mitad decía que «el transporte NO consulta el flag
-    /// (`syncCycleOnce`/`pushPending` solo miran outbox y token), así que el push-all drena con el kill
-    /// activo». Lo del transporte sigue siendo cierto —no consulta ningún flag— pero la CONCLUSIÓN ya no lo
-    /// es: el kill se aplica ahora en el SERVIDOR (`gateway/src/groups/killSwitch.ts`), que responde 403
-    /// `yala_groups_disabled` a `/groups/push`. ⇒ con el kill activo el push-all **NO drena** y el cierre
-    /// queda `.blocked` (reintentable, outbox intacto). Está asumido y ratificado por el owner: el kill
-    /// existe para parar las escrituras. Lo que salva al usuario es la fila de escape, no que el push pase.
-    func signOut(context: ModelContext) async {
+    /// `confirmedPath` (paso 9): el camino cuya hoja leyó y confirmó la persona. Si al ejecutar la celda ya
+    /// es otra —una sesión que caducó con la hoja abierta—, no se ejecuta un borrado que nadie leyó: la vista
+    /// vuelve a comprobarlo antes de llamar y enseña la hoja nueva; esto es el cinturón.
+    ///
+    /// `confirmedWithoutICloudCopy`: la persona confirmó, con el segundo gesto, cerrar una sesión PRIVADA sin
+    /// copia en iCloud. Solo entonces se salta la espera del export — no hay a dónde subir, y ya se le dijo
+    /// que se pierde (decisión de Jürgen del 2026-09-09). En los demás caminos se ignora.
+    func signOut(context: ModelContext, confirmedPath: CloudSignOutFlowLogic.Path? = nil,
+                 confirmedWithoutICloudCopy: Bool = false) async {
         guard phase == .idle else { return }
-        switch CloudSignOutFlowLogic.path(
+        let path = CloudSignOutFlowLogic.path(
             for: CloudSyncFlags.storageMode,
             secondarySessionActive: SecondarySessionStore.isActive(),
             hasLiveSession: CloudAuthService.shared.hasSession,
-            groupsBackendEnabled: CloudSyncFlags.groupsBackendCompiledCapability
-        ) {
-        case .privateReset:
-            await performPrivateReset()
+            groupsBackendEnabled: CloudSyncFlags.groupsBackendCompiledCapability,
+            hasPrivateSession: !SessionState.shared.isGroupInviteMode)
+        if let confirmedPath, confirmedPath != path {
+            CloudSyncBreadcrumb.signOutCellChangedBeforeRunning()
+            return
+        }
+        switch path {
         case .cloudSecureSignOut:
             await performCloudSecureSignOut(context: context)
         case .secondaryCloudSignOut:
             await performSecondaryCloudSignOut(context: context)
-        case .groupsOnlySignOut:
-            await performGroupsOnlySignOut(context: context)
+        case .privateSignOut, .privateWithGroupsSignOut, .groupsOnlySignOut:
+            // Quién sube grupos y quién espera al export lo decide una tabla pura
+            // (`CloudSignOutFlowLogic.exitPlan`), no este `switch`.
+            guard let plan = CloudSignOutFlowLogic.exitPlan(
+                path: path, confirmedWithoutICloudCopy: confirmedWithoutICloudCopy,
+                mountAttachesMirror: Self.personalMountAttachesMirror) else { return }
+            await performSessionExit(context: context, plan: plan)
         }
     }
 
-    // MARK: - Camino privado (.icloud) — datos intactos
+    // MARK: - Los tres cierres que borran por ARCHIVOS: privada (C), «equipo» (D) y solo grupos (F)
 
-    /// D2 (§3.3.3): "Salir de Yala en este dispositivo" en el escenario privado+grupos con sesión
-    /// backend ([FLAG], path resuelto = `.groupsOnlySignOut`). FUERZA el `.privateReset` directo — la
-    /// precedencia NO se toca (daría `.groupsOnlySignOut`): vuelve al Welcome EN SESIÓN sin cover ni
-    /// relaunch, cerrando la sesión backend y el canal de grupos (vía `performPrivateReset`).
+    /// El cierre parado en la espera del export, a la espera de lo que decida la persona: «Cerrar sesión
+    /// igualmente» (`exitDiscardingUnconfirmed`) o «Esperar» (`resumeWaitingForExport`). `nil` fuera de ese
+    /// bloqueo.
     ///
-    /// Decisión owner (2026-07-19, "encadenar cierre de grupos"): `.privateReset` deja las filas locales
-    /// `Split*` del canal backend presentes (cierra la sesión pero no las purga). Para no dejarlas visibles
-    /// e inertes tras re-entrar, encadenamos el cierre de grupos: purga IN-SESSION del cursor/outbox de
-    /// grupos + `armGroupsOnlyWipe` (boot-wipe de los archivos `YalaGroups`), como UNIDAD.
-    ///
-    /// Por qué la purga del cursor/outbox es OBLIGATORIA junto al file-wipe (review adversarial D2): el
-    /// boot-wipe borra SOLO los archivos de `YalaGroups` (los `Split*`), NUNCA `YalaSyncMeta` — donde viven
-    /// `GroupSyncCursor`/`GroupSyncOutbox`. Un cursor por-grupo superviviente suprimiría el re-pull
-    /// INCREMENTAL tras el wipe (el server solo devuelve `seq > cursor` ⇒ nada) → grupos invisibles al
-    /// re-firmar + canario `groupMerkleDivergence` espurio (la señal que la puerta D9 lee como incidente);
-    /// un dead-letter superviviente dejaría ese grupo invisible PERMANENTE (los guards del Merkle lo saltan).
-    /// Espeja lo que `finalizeGroupsOnlyClose`/`closeLocalAfterAccountDeletionGroupsOnly` ya hacen — `exitYala`
-    /// era el único armador que no purgaba, rompiendo la garantía "re-descargable del backend".
-    ///
-    /// GATE DE QUIESCENCIA (invariante b): la purga es un `save()` sobre el mainContext COMPARTIDO. Timeout ⇒
-    /// NO purgamos NI armamos → las filas `Split*` quedan intactas (residual inerte CONSISTENTE: cursor válido
-    /// + filas presentes ⇒ re-sincroniza normal al re-firmar; jamás salvar sobre un import a medio asentar).
-    /// Purga+arm atómicos evitan la asimetría cursor-vs-wipe. Residual ratificado: re-entrada in-session
-    /// ("Restaurar iCloud" sin cold boot) muestra las filas hasta el próximo boot; un re-sign-in de grupos
-    /// DESARMA un wipe aún colgado (`GroupsBackendInviteModifier` → `clearGroupsOnlyWipeArm`).
-    ///
-    /// **D-R1 paso 2: capacidad COMPILADA.** El docblock anterior decía «gateado por el flag (no-op con
-    /// flag OFF; jamás alcanzable ahí)», y con el compilado en `true` eso deja de ser un gate: el bloque
-    /// corre siempre que alguien invoque la función. Es lo correcto, porque es el ÚNICO limpiador de tres
-    /// superficies que nadie más toca en este camino — el consent (aquí no se arma el wipe personal, así
-    /// que el hook de boot que lo limpia no corre, y el hook solo-grupos no lo limpia a propósito), el
-    /// outbox sin dueño y el arm del olvido del store. Bajo un kill remoto, además, es MÁS seguro que
-    /// antes: ningún ciclo puede repoblar cursor+filas entre la purga y el `signOut`, porque
-    /// `startIfEligible`/`syncNowFromPush` sí leen el compuesto y retornan.
-    func exitYalaOnThisDevice(context: ModelContext) async {
-        guard phase == .idle else { return }
-        if CloudSyncFlags.groupsBackendCompiledCapability {
-            phase = .working
-            if await Self.awaitPersonalQuiescenceForGroupsSignOut() {
-                GroupsSyncClient.shared.teardownForSignOut()  // corta la generación antes de purgar (CR-3)
-                Self.purgeGroupsSyncState(context: context)
-                GroupsConsentState.clear()
-                StorageModePersistence.armGroupsOnlyWipe()
-                CloudSyncBreadcrumb.signOutGroupsOnlyWipeArmed()
-            }
-        }
-        await performPrivateReset(breadcrumbPath: "exit-yala-groups-session")
+    /// `credentialsReleased` dice dónde se paró: ANTES de soltar la sesión (la primera espera) o DESPUÉS (el
+    /// último recuento, pegado al arm). En el segundo caso la sesión en la nube, el push token y el consent
+    /// ya se soltaron, así que retomar no puede volver a empezar el cierre: solo le queda esperar o armar.
+    /// Volver a `.idle` desde ahí dejaba el dispositivo a medio cerrar, sin sesión y sin borrado (review
+    /// adversarial del paso 9).
+    private struct BlockedExit {
+        let kind: CloudSignOutFlowLogic.ExitKind
+        let credentialsReleased: Bool
+    }
+    private var blockedExit: BlockedExit?
+
+    /// Qué hace el tramo final con lo que no se pudo confirmar en iCloud.
+    private enum ExportPolicy {
+        /// Solo se arma con cero pendientes demostrado.
+        case confirm
+        /// La persona aceptó perder lo que no llegó. `upTo` es la cifra que se le enseñó (`nil` = «no pudimos
+        /// confirmar», sin número): si al armar hay MÁS, se le vuelve a avisar en vez de llevárselo callado.
+        case acceptLoss(upTo: Int?)
+        /// No hay a dónde subir: la persona confirmó que no hay copia, o el store no espeja (F).
+        case notAwaited
     }
 
-    private func performPrivateReset(breadcrumbPath: String = "private-reset") async {
+    /// ¿El store personal de ESTE proceso espeja a iCloud? El testigo exacto del mount (eje A), el mismo que
+    /// usa el aviso del espejo tardío: no una segunda verdad.
+    static var personalMountAttachesMirror: Bool {
+        SwiftDataConfiguration.personalStoreMountedDecision.attachesCloudKitMirror
+    }
+
+    /// ¿Hay copia en iCloud a la que esperar? La pregunta la hace la VISTA al tocar «Cerrar sesión», para
+    /// elegir la hoja (con copia o sin ella), y la respuesta viaja con la confirmación. Lee los testigos
+    /// que ya gobiernan: el del mount y lo que dijo el espejo.
+    static func privateCopyChannel() -> PrivateSignOutExportGateLogic.CopyChannel {
+        PrivateSignOutExportGateLogic.copyChannel(
+            mountAttachesMirror: personalMountAttachesMirror,
+            mirrorReportedNotAuthenticated: iCloudSyncService.shared.mirrorReportedNotAuthenticated)
+    }
+
+    /// Cambios locales del store personal que el espejo aún podría no haber subido (`nil` = no hay número
+    /// honesto que dar; ver `PersonalExportPendingCounter`).
+    static func pendingPersonalExportCount(context: ModelContext) -> Int? {
+        PersonalExportPendingCounter.pendingChangeCount(
+            context: context, confirmedExportStart: iCloudSyncService.shared.confirmedExportStart)
+    }
+
+    /// ¿El store de grupos guarda filas del canal BACKEND? Son re-descargables (las devuelve el pull), así
+    /// que el cierre privado sin sesión las OLVIDA con el resto: una sesión de grupos que caducó deja a este
+    /// dispositivo con cara de privada sin grupos (C), y conservar esas filas enseñaría a la persona
+    /// siguiente grupos y montos ajenos junto a un cursor que el boot-wipe ya borró (el par incoherente del
+    /// camino `.cloud`). Las filas de la era CloudKit que nunca migraron no tienen de dónde volver y se quedan.
+    /// Solo lee.
+    static func hasBackendGroupRows(context: ModelContext) -> Bool {
+        do {
+            return try context.fetchCount(FetchDescriptor<SplitGroup>(
+                predicate: #Predicate { $0.isBackendGroup || $0.movedToBackendAt != nil })) > 0
+        } catch {
+            #if DEBUG
+            print("CloudSessionSignOut: Error contando grupos del canal backend: \(error)")
+            #endif
+            return true  // ante la duda, olvidar: grupos ajenos a la vista de otra persona es peor
+        }
+    }
+
+    /// **Cerrar sesión en una sesión PRIVADA (C), en el «equipo» (D) o en solo grupos (F)** — ADR
+    /// 2026-09-09 §5: sube lo pendiente, borra lo local, deja iCloud y la cuenta intactos, y vuelve al
+    /// Welcome.
+    ///
+    /// Orden, y por qué:
+    ///  0. **La privada (C) no descarta grupos**: si le quedan cambios de grupos sin subir —una sesión de
+    ///     grupos que caducó con el outbox lleno—, se bloquea pidiendo volver a entrar (`blockIfGroupsCannotUpload`).
+    ///  1. **Los grupos suben primero** (D, y F si va a esperar al export) — push-all verificado con el
+    ///     reintento de H-2026-07-18-6. Si no drena, el cierre se bloquea con el «un momento más» de siempre
+    ///     y SIN salida de emergencia: lo de grupos es de más gente, y el criterio del ticket es «nunca
+    ///     descarta».
+    ///  2. **La espera del export de iCloud** (`PrivateSignOutExportGateLogic`): solo se borra con cero
+    ///     cambios locales sin subir. Agotada la espera normal, se bloquea contando lo pendiente y el aviso
+    ///     ofrece cerrar igualmente o seguir esperando (decisión de Jürgen del 2026-09-09). Si la persona ya
+    ///     confirmó que no hay copia en iCloud, no hay a dónde subir.
+    ///  3. **El borrado por ARCHIVOS** (`finalizeSessionExit`), que vuelve a subir los grupos, suelta la sesión
+    ///     y cuenta lo personal justo antes de armar (`armAfterCredentials`).
+    private func performSessionExit(context: ModelContext, plan: CloudSignOutFlowLogic.ExitPlan) async {
         phase = .working
-        CloudSyncBreadcrumb.signOutStarted(path: breadcrumbPath)
+        waitingForPending = false
+        CloudSyncBreadcrumb.signOutStarted(path: Self.breadcrumbPath(plan.kind))
+        // Salir por CUALQUIER camino apaga el caption de espera (regla del @Observable).
+        defer { waitingForPending = false }
 
-        // Teardown del runtime si existe (post-reversa / spikes): idempotente, purga espejo+prefs.
+        if blockIfGroupsCannotUpload(context: context, kind: plan.kind) { return }
+        if plan.waitsForExport {
+            if plan.kind.pushesGroups {
+                guard await pushGroupsForSignOut(context: context) else { return }
+            }
+            guard await confirmExportOrBlock(context: context, kind: plan.kind, credentialsReleased: false) else { return }
+        } else if plan.kind != .groupsOnly {
+            CloudSyncBreadcrumb.signOutWithoutICloudCopy()
+        }
+        await finalizeSessionExit(context: context, kind: plan.kind, export: plan.waitsForExport ? .confirm : .notAwaited)
+    }
+
+    /// **Salida de EMERGENCIA** («Cerrar sesión igualmente»), aceptando que lo que no llegó a iCloud se
+    /// pierde. Decisión de Jürgen del 2026-09-09: tras la espera normal no se deja a nadie atrapado ni se le
+    /// borra en silencio — el aviso cuenta lo pendiente, y esto solo corre si la persona lo elige.
+    ///
+    /// Solo es alcanzable desde ese aviso: sin el bloqueo del export vivo no hay nada que forzar, y sin el
+    /// cierre que lo originó no se sabe qué borrar. La cifra aceptada viaja hasta el arm: el cierre todavía
+    /// sube grupos y suelta la sesión, y si al armar hay MÁS cambios que los avisados se vuelve a avisar con
+    /// el número nuevo en vez de llevárselos sin decirlo (review adversarial del paso 9: antes solo se
+    /// comparaba al tocar). Los grupos NO se descartan nunca: el cierre los vuelve a subir.
+    func exitDiscardingUnconfirmed(context: ModelContext) async {
+        guard case .blocked(let shown, .exportUnconfirmed) = phase else { return }
+        guard let blocked = blockedExit else { return }
+        // Un 0 en el aviso es «no pudimos confirmar», sin cifra: lo aceptado no tiene número con que comparar.
+        let accepted: Int? = shown > 0 ? shown : nil
+        if let accepted, let now = Self.pendingPersonalExportCount(context: context), now > accepted {
+            phase = .blocked(pendingCount: now, reason: .exportUnconfirmed)
+            return
+        }
+        blockedExit = nil
+        CloudSyncBreadcrumb.signOutExportDiscarded()
+        MetricsService.canary(.privateSignOutExportDiscarded, detail: accepted.map { "pending=\($0)" } ?? "pending=unknown")
+        if blocked.credentialsReleased {
+            phase = .working
+            await armAfterCredentials(context: context, kind: blocked.kind, export: .acceptLoss(upTo: accepted))
+        } else {
+            await finalizeSessionExit(context: context, kind: blocked.kind, export: .acceptLoss(upTo: accepted))
+        }
+    }
+
+    /// **«Esperar»**: el cierre sigue esperando al export y termina solo en cuanto llega lo último, que es
+    /// lo que dice el botón. Volver a `.idle` cancelaba el cierre sin decirlo y, si se había parado después de
+    /// soltar credenciales, dejaba el dispositivo sin sesión y sin borrado (review adversarial del paso 9). Si
+    /// la espera vuelve a agotarse, vuelve el aviso.
+    func resumeWaitingForExport(context: ModelContext) async {
+        guard case .blocked(_, .exportUnconfirmed) = phase else { return }
+        guard let blocked = blockedExit else { return }
+        blockedExit = nil
+        phase = .working
+        defer { waitingForPending = false }
+        if blocked.credentialsReleased {
+            await armAfterCredentials(context: context, kind: blocked.kind, export: .confirm)
+        } else {
+            guard await confirmExportOrBlock(context: context, kind: blocked.kind, credentialsReleased: false) else { return }
+            await finalizeSessionExit(context: context, kind: blocked.kind, export: .confirm)
+        }
+    }
+
+    /// La privada (C) no sube grupos. Si aun así le quedan cambios de grupos sin subir —el outbox de una sesión
+    /// de grupos que caducó—, se bloquea pidiendo volver a entrar: el boot-wipe borra sync-meta, que es donde
+    /// viven, y descartarlos rompe el «nunca descarta» (review adversarial del paso 9: se perdían en silencio
+    /// mientras la hoja decía que los grupos no se tocaban). `true` = bloqueado, con la fase puesta.
+    /// Síncrono a propósito: también corre pegado al arm.
+    private func blockIfGroupsCannotUpload(context: ModelContext, kind: CloudSignOutFlowLogic.ExitKind) -> Bool {
+        guard !kind.pushesGroups else { return false }
+        let unuploaded = Self.liveGroupsPendingCount(context: context)
+        guard unuploaded > 0 else { return false }
+        phase = .blocked(pendingCount: unuploaded, reason: .sessionExpired)
+        CloudSyncBreadcrumb.signOutPushBlocked(pending: unuploaded)
+        return true
+    }
+
+    /// Una vuelta de la espera del export. `true` = confirmado (cero pendientes); `false` = bloqueado con el
+    /// aviso de la salida de emergencia, fase ya puesta y `blockedExit` recordando dónde retomar.
+    ///
+    /// Sin ancla, el contador recorre el historial ENTERO para saber si hay algo local: se hace UNA vez por
+    /// espera y se reutiliza hasta que aparece un ancla (un export que termina bien), que es lo único que
+    /// puede cambiar esa respuesta.
+    private func confirmExportOrBlock(context: ModelContext, kind: CloudSignOutFlowLogic.ExitKind, credentialsReleased: Bool) async -> Bool {
+        var withoutAnchor: Int?? = .none
+        let verdict = await PrivateSignOutExportGateLogic.awaitConfirmedExport(
+            pendingCount: {
+                if iCloudSyncService.shared.confirmedExportStart == nil {
+                    if case .some(let cached) = withoutAnchor { return cached }
+                    let fresh = Self.pendingPersonalExportCount(context: context)
+                    withoutAnchor = .some(fresh)
+                    return fresh
+                }
+                return Self.pendingPersonalExportCount(context: context)
+            },
+            onWaiting: { self.waitingForPending = true },
+            sleep: { seconds in
+                do {
+                    try await Task.sleep(for: .seconds(seconds))
+                    return true
+                } catch {
+                    return false  // cancelación del caller → «no se pudo demostrar», jamás borrar
+                }
+            })
+        guard case .stalled(let pending) = verdict else { return true }
+        blockedExit = BlockedExit(kind: kind, credentialsReleased: credentialsReleased)
+        phase = .blocked(pendingCount: pending ?? 0, reason: .exportUnconfirmed)
+        CloudSyncBreadcrumb.signOutExportUnconfirmed(pending: pending)
+        MetricsService.canary(.privateSignOutExportUnconfirmed,
+                              detail: pending.map { "pending=\($0)" } ?? "pending=unknown")
+        return false
+    }
+
+    /// El tramo común de los tres cierres hasta soltar la sesión (tras la espera confirmada, sin espera, o tras
+    /// la salida de emergencia). Lo último —el recuento y el arm— es `armAfterCredentials`.
+    ///
+    /// **Borra por ARCHIVOS y en el arranque, nunca filas en sesión**: con el espejo de CloudKit montado,
+    /// borrar filas exportaría los deletes a iCloud (`DataWipeService`) y destruiría la copia que esta
+    /// salida promete conservar. El boot-wipe es el MISMO de la nube (`performSignOutWipeIfArmed`): borra
+    /// los archivos personal + sync-meta (+ grupos) pre-mount, devuelve el dispositivo a recién instalado y
+    /// arma el neutro duradero ⇒ el arranque siguiente monta sin espejo, aterriza en el Welcome y
+    /// «Restaurar desde iCloud» encuentra todo. Kill-safe por construcción: el arm es la última escritura.
+    ///
+    /// **No intenta el swap sin relanzar**, ni siquiera donde el mount no espeja (F): el instrumento del
+    /// release verificado solo mide el archivo personal, y aquí se borran también grupos y sync-meta. Se
+    /// queda en la pantalla de reabrir, que es lo que el cierre solo-grupos ya hacía (`PersonalSwapReleaseTests`
+    /// fija que el swap vive solo en `.cloud`).
+    private func finalizeSessionExit(context: ModelContext, kind: CloudSignOutFlowLogic.ExitKind, export: ExportPolicy) async {
+        phase = .working
+        if kind.pushesGroups {
+            // Otra vuelta de grupos: lo escrito en grupos durante la espera puede estar SOLO en el historial —
+            // el recuento del outbox no lo ve— y solo el push-all lo drena (con su puerta de quiescencia).
+            guard await pushGroupsForSignOut(context: context) else { return }
+        }
+        // Un marker `includesGroups` huérfano de una corrida anterior no puede colarse en este wipe.
+        StorageModePersistence.clearSignOutWipeIncludesGroups()
+
         CloudSyncRuntime.shared?.teardownGuestSession()
-        // B2: canal de Grupos→backend — loop fuera + espejo App Group purgado (montos). Explícito AQUÍ
-        // (no dentro de teardownGuestSession: el runtime personal no debe conocer grupos). Idempotente
-        // y seguro con el flag OFF (no-ops).
+        // Canal de Grupos→backend: loop fuera + espejo del outbox en el App Group purgado. Idempotente.
         GroupsSyncClient.shared.teardownForSignOut()
         await PushTokenSignOutSeam.clearForSignOut()  // G8-2: desregistro best-effort del push token
+        if kind.pushesGroups {
+            // S2 (molde del camino `.cloud`): una fila encolada entre el push-all y el teardown moriría con el
+            // wipe. Tras el teardown ya no se puede subir, así que es `.permanent`, como allí.
+            let residual = Self.liveGroupsPendingCount(context: context)
+            guard residual == 0 else {
+                phase = .blocked(pendingCount: residual, reason: .permanent)
+                CloudSyncBreadcrumb.signOutPushBlocked(pending: residual)
+                return
+            }
+            // CR-2: sin esto, un kill entre `signOut()` y el arm dejaría el consent de una sesión que ya no
+            // existe, y la cuenta siguiente se saltaría su pantalla. Desde C1 es local puro.
+            GroupsConsentState.clear()
+        }
         await CloudAuthService.shared.signOut()
+        await armAfterCredentials(context: context, kind: kind, export: export)
+    }
 
-        resetOnboardingFlagsPreservingData()
-        SessionState.shared.resetToDefaults()
-        AppRouter.shared.resetAll()
+    /// Lo que queda con las credenciales ya sueltas: el último recuento y el arm.
+    ///
+    /// **El último recuento va PEGADO al arm, sin un solo `await` entre medias**: lo escrito mientras se
+    /// soltaba la sesión cuenta, y cualquier suspensión dejaría entrar un save que el borrado se llevaría sin
+    /// haberlo contado. Si hay que esperar se espera aquí —el espejo no depende de la sesión en la nube—, y si
+    /// la persona aceptó una pérdida y ahora hay MÁS, se le vuelve a avisar. Un bloqueo desde aquí se retoma
+    /// con `blockedExit.credentialsReleased`: ni «Esperar» ni «Cerrar sesión igualmente» vuelven a empezar un
+    /// cierre que ya soltó la sesión.
+    private func armAfterCredentials(context: ModelContext, kind: CloudSignOutFlowLogic.ExitKind, export: ExportPolicy) async {
+        switch export {
+        case .confirm:
+            while true {
+                guard await confirmExportOrBlock(context: context, kind: kind, credentialsReleased: true) else { return }
+                if Self.pendingPersonalExportCount(context: context) == 0 { break }
+            }
+        case .acceptLoss(let accepted):
+            // `nil` = se aceptó sin cifra («no pudimos confirmar»): no hay número con que comparar.
+            if let accepted {
+                let now = Self.pendingPersonalExportCount(context: context)
+                if now.map({ $0 > accepted }) ?? true {
+                    blockedExit = BlockedExit(kind: kind, credentialsReleased: true)
+                    phase = .blocked(pendingCount: now ?? 0, reason: .exportUnconfirmed)
+                    return
+                }
+            }
+        case .notAwaited:
+            break
+        }
+        // ── Desde aquí no hay ni un `await` hasta el arm. ──
+        if blockIfGroupsCannotUpload(context: context, kind: kind) { return }
+        if kind == .groupsOnly {
+            // El `.groupInvite` de esta sesión vive también en el iCloud KV: sin soltarlo, la vida siguiente de
+            // este teléfono nacería solo-grupos (review adversarial del paso 9).
+            DataWipeService.releaseGroupsOnlyOnboardingModeFromICloudKV()
+        }
+        let forgetsGroups = kind.pushesGroups || Self.hasBackendGroupRows(context: context)
+        if forgetsGroups && CloudSyncFlags.groupsBackendCompiledCapability {
+            StorageModePersistence.markSignOutWipeIncludesGroups()  // marker ANTES del arm (CR-4)
+        }
+        StorageModePersistence.armSignOutWipe()
+        CloudSyncBreadcrumb.signOutWipeArmed()
+        clearLocalSurfacesForArmedWipe()
+        phase = .awaitingRelaunch
+    }
 
-        CloudSyncBreadcrumb.signOutPrivateReset()
-        phase = .idle
-        // ContentView.onChange(hasCompletedOnboarding=false) desmonta MainTabView y
-        // re-presenta el Welcome. Los datos siguen en el device: "Soy nuevo" muestra el
-        // alert de fresh-start existente; "Restaurar iCloud" regresa a donde estaba.
+    private static func breadcrumbPath(_ kind: CloudSignOutFlowLogic.ExitKind) -> String {
+        switch kind {
+        case .privateOnly: return "private"
+        case .privateWithGroups: return "private-with-groups"
+        case .groupsOnly: return "icloud-groups-session"
+        }
     }
 
     /// §5.2.1 — capa IN-SESSION de la limpieza de las superficies del SISTEMA que muestran datos de la
@@ -203,10 +441,10 @@ final class CloudSessionSignOut {
     /// punto. Lo cierra el guard del choke point en `NotificationService.isPersonalWipeArmed`, que se
     /// evalúa en el `add`.
     ///
-    /// Exclusivo de los caminos que arman un wipe del store PERSONAL (`.cloud`, secundario M1 y el
-    /// cierre local post-borrado de cuenta). Los caminos SOLO-GRUPOS y `.privateReset` NO lo llaman:
-    /// ahí el store personal sobrevive, y tanto sus recordatorios como lo que pinta el widget siguen
-    /// siendo legítimos.
+    /// Exclusivo de los caminos que arman un wipe del store PERSONAL: los cuatro cierres de sesión (C, D, E,
+    /// F), el secundario M1 y el cierre local tras borrar una cuenta en la nube. El cierre local tras borrar
+    /// la cuenta de grupos de una sesión PRIVADA no lo llama: ahí el store personal sobrevive, y tanto sus
+    /// recordatorios como lo que pinta el widget siguen siendo legítimos.
     private func clearLocalSurfacesForArmedWipe() {
         NotificationService.shared.cancelAllNotifications()
         NotificationService.shared.clearDeliveredNotifications()
@@ -214,25 +452,6 @@ final class CloudSessionSignOut {
         // sin esperar al relanzamiento. El boot-cleanup lo repite (vía `DataWipeService.resetForSignOutWipe`).
         WidgetDataCache.clearCache()
         CloudSyncBreadcrumb.signOutNotificationsCleared()
-    }
-
-    /// Solo los 3 flags de onboarding — las prefs del usuario (tema, moneda, etc.) SOBREVIVEN
-    /// (a diferencia del camino `.cloud`, donde el boot-cleanup resetea todo a recién instalada).
-    private func resetOnboardingFlagsPreservingData() {
-        let defaults = UserDefaults.standard
-        defaults.set(false, forKey: AppPreferences.Keys.hasCompletedOnboarding)
-        defaults.set(false, forKey: "hasShownWelcomeChooser")
-        defaults.set(false, forKey: AppPreferences.Keys.hasShownYalaAIOnboarding)
-        // El neutro durable de solo-grupos se retira al volver al Welcome: a partir de aquí este device
-        // **vuelve a elegir**, así que la marca de «no ha elegido nada» ya no describe nada. Sin esto
-        // sobrevive al reset y decide el mount de la vida siguiente — la marca no caduca con el chooser,
-        // que es lo que retira a su hermana.
-        //
-        // No cierra el proceso VIVO —el testigo del mount ya se capturó y sigue siendo neutro hasta que la
-        // app se reabra—, así que el hueco de `groups-only-private-restart-skips-the-wipe-alert` sigue
-        // abierto para esta misma sesión. Lo que sí hace es que no PERSISTA: al reabrir, el mount vuelve a
-        // la tabla normal y el camino privado recupera su alert de datos existentes.
-        StorageModePersistence.clearGroupsOnlyNeutralMount(defaults)
     }
 
     // MARK: - Camino nube (.cloud) — push-all verificado + wipe armado
@@ -370,7 +589,7 @@ final class CloudSessionSignOut {
         //
         // Por qué el bucle envuelve SOLO los dos push-all: los dos corren con la generación INTACTA, que
         // es lo que hace útil reintentarlos. El teardown queda deliberadamente FUERA — misma separación
-        // que `attemptGroupsOnlyClose`/`finalizeGroupsOnlyClose` — porque después de él no hay nada que
+        // que `attemptGroupsOnlyClose`/`finalizeSessionExit` — porque después de él no hay nada que
         // drenar: `teardownGuestSession` deja el motor personal con `currentUserID = nil`, el mirror
         // purgado y la cadencia cancelada, y `teardownForSignOut` sube la generación del canal de grupos.
         // Reintentar ahí quemaría el presupuesto entero para llegar al mismo bloqueo.
@@ -491,28 +710,19 @@ final class CloudSessionSignOut {
         phase = .awaitingRelaunch
     }
 
-    // MARK: - Camino solo-grupos (G5-B) — cierra la sesión de grupos, datos personales intactos
+    // MARK: - La subida del outbox de grupos (D y F)
 
-    /// Sesión backend viva + personal `.icloud` (flag ON). Orden CONGELADO (CR-3: teardown ANTES de
-    /// purgar filas — un ciclo en vuelo repoblaría el outbox/cursor tras la purga). El store de grupos
-    /// se borra por ARCHIVOS al boot (nunca un store montado; nunca filas in-session como sustituto:
-    /// History + semántica re-descargable limpia).
-    private func performGroupsOnlySignOut(context: ModelContext) async {
-        phase = .working
-        waitingForPending = false
-        CloudSyncBreadcrumb.signOutStarted(path: "icloud-groups-session")
-        // Salir por CUALQUIER camino apaga el caption de espera (regla del @Observable).
-        defer { waitingForPending = false }
-
-        // RETRY INTERNO CON PRESUPUESTO GLOBAL (H-2026-07-18-6): el device-QA mostró que el bloqueo
-        // típico de este path es TRANSITORIO (writes INTERNOS del boot aún asentándose — no hay nada
-        // que el usuario pueda hacer salvo esperar) y el usuario terminaba tocando "Cerrar sesión"
-        // 2-3 veces hasta que "pegaba". Ahora reintentamos internamente los transitorios dentro de un
-        // presupuesto (segundos ADICIONALES tras el PRIMER bloqueo); los permanentes (sesión/cuenta)
-        // se muestran de inmediato. `retryClockStart` arranca en el primer bloqueo transitorio; en los
-        // reintentos el gate de quiescencia recibe un hardCap = lo que queda del presupuesto (jamás
-        // vuelve a bloquear 60s completos). La DECISIÓN es pura (`GroupsSignOutRetryDecision`); aquí
-        // solo se mide el tiempo real con `Date()` (orquestador de servicio, fuera del test target).
+    /// Push-all del outbox de GRUPOS con el RETRY INTERNO de presupuesto global (H-2026-07-18-6), común al
+    /// solo-grupos (F) y al «equipo» (D). `true` = drenado; `false` = bloqueado, con la fase ya puesta.
+    ///
+    /// El device-QA mostró que el bloqueo típico es TRANSITORIO (writes INTERNOS del boot aún asentándose —
+    /// no hay nada que el usuario pueda hacer salvo esperar) y el usuario terminaba tocando "Cerrar sesión"
+    /// 2-3 veces hasta que "pegaba". Se reintentan internamente los transitorios dentro de un presupuesto
+    /// (segundos ADICIONALES tras el PRIMER bloqueo); los permanentes (sesión/cuenta) se muestran de
+    /// inmediato. `retryClockStart` arranca en el primer bloqueo transitorio; en los reintentos el gate de
+    /// quiescencia recibe un hardCap = lo que queda del presupuesto (jamás vuelve a bloquear 60 s completos).
+    /// La DECISIÓN es pura (`GroupsSignOutRetryDecision`); aquí solo se mide el tiempo real con `Date()`.
+    private func pushGroupsForSignOut(context: ModelContext) async -> Bool {
         let budget = GroupsSignOutRetryDecision.budgetSeconds
         var retryClockStart: Date?
 
@@ -522,23 +732,21 @@ final class CloudSessionSignOut {
 
             switch await attemptGroupsOnlyClose(context: context, quiescenceHardCap: hardCap) {
             case .drained:
-                // Reusa la red terminal existente (cover + RelaunchNetLogic + exit(0) en background):
-                // la matriz de blockers opera por la FASE VIVA (no por storageMode).
-                await finalizeGroupsOnlyClose(context: context)
-                return
+                return true
             case .blocked(let pending, let reason):
                 let elapsed = retryClockStart.map { Date().timeIntervalSince($0) } ?? 0
                 switch GroupsSignOutRetryDecision.decide(
                     elapsedSeconds: elapsed, budgetSeconds: budget, reason: reason
                 ) {
                 case .surfacePermanent:
-                    phase = .blocked(pendingCount: pending, reason: .permanent)
+                    // Sesión caducada no es un problema de conexión: el aviso dice que hay que volver a entrar.
+                    phase = .blocked(pendingCount: pending, reason: reason == .sessionExpired ? .sessionExpired : .permanent)
                     CloudSyncBreadcrumb.signOutPushBlocked(pending: pending)
-                    return
+                    return false
                 case .surfaceTransient:
                     phase = .blocked(pendingCount: pending, reason: .transient)
                     CloudSyncBreadcrumb.signOutPushBlocked(pending: pending)
-                    return
+                    return false
                 case .retryAfter(let seconds):
                     if retryClockStart == nil { retryClockStart = Date() }
                     waitingForPending = true
@@ -547,7 +755,7 @@ final class CloudSessionSignOut {
                     } catch {
                         // Cancelación del caller → fail-closed transitorio (reintentable).
                         phase = .blocked(pendingCount: pending, reason: .transient)
-                        return
+                        return false
                     }
                     continue
                 }
@@ -557,7 +765,7 @@ final class CloudSessionSignOut {
 
     /// UN intento del cierre solo-grupos: gate de QUIESCENCIA (hardCap acotado en reintentos) +
     /// push-all VERIFICADO del outbox de grupos. NO hace teardown ni toca credenciales — eso es
-    /// `finalizeGroupsOnlyClose`, que corre UNA sola vez tras `.drained` (reintentar tras el teardown
+    /// `finalizeSessionExit`, que corre UNA sola vez tras `.drained` (reintentar tras el teardown
     /// repoblaría el outbox/cursor). Gate de quiescencia (HIGH del review lente-personal): el path
     /// corre en `.icloud` con el mirror personal VIVO y el mainContext COMPARTIDO por los 3 stores;
     /// TODO save de este flujo (drain del push-all, purga) flushearía también el grafo personal → con
@@ -577,37 +785,6 @@ final class CloudSessionSignOut {
         }
         // Push-all de grupos con la generación INTACTA (antes del teardown).
         return await pushAllPendingGroupsForSignOut(context: context)
-    }
-
-    /// Cierre EFECTIVO del canal solo-grupos tras `.drained` (orden CONGELADO, CR-3): teardown del
-    /// canal (stop loop + generation++ aborta ciclos en vuelo + purga espejo) → purga IN-SESSION del
-    /// outbox/cursor de grupos (TODAS las filas, incl. dead-letters; sync-meta es `.none` ⇒ sin replay
-    /// de History hacia iCloud, y el `save()` va al mainContext compartido ⇒ cubierto por el gate de
-    /// quiescencia ya pasado) → limpieza del consent (CR-2: sin ello `applyRemoteValues()` del próximo
-    /// boot lo resucitaría) → signOut backend → marker ÚLTIMO write (kill-safe: el boot borra SOLO el
-    /// store de grupos; NO toca personal/sync-meta, onboarding, prefs personales ni storageMode — el
-    /// device sigue en `.icloud`). Residual documentado: kill entre signOut() y el arm deja las filas
-    /// Split* de la sesión muerta visibles transitoriamente hasta el próximo sign-in/out (outbox ya
-    /// purgado — sin leak de sync).
-    private func finalizeGroupsOnlyClose(context: ModelContext) async {
-        GroupsSyncClient.shared.teardownForSignOut()
-        await PushTokenSignOutSeam.clearForSignOut()  // G8-2: desregistro best-effort del push token
-        Self.purgeGroupsSyncState(context: context)
-        GroupsConsentState.clear()
-        await CloudAuthService.shared.signOut()
-        // D2 (§3.3.3): arma el banner one-shot de re-entrada — al reabrir, el empty state H-7 del tab
-        // Grupos lo muestra ("Cerraste tu sesión de grupos…"). In-session ⇒ sobrevive el relaunch (vive
-        // en UserDefaults). SOLO en el sign-out de grupos, NO tras borrar cuenta (ahí no hay "vuelve a
-        // iniciar sesión"). Se quema en el `onAppear` del banner real.
-        GroupsSignOutBannerMarker.markPending()
-        // §5.2.1 — los banners de grupo YA ENTREGADOS apuntarán a un store que el boot borra. Se retiran
-        // AQUÍ (in-session, con `await` disponible) y no solo en el boot-hook: allí la lectura de entregadas
-        // es async y solo puede encolarse en un `Task` que el arm —ya limpiado— deja de respaldar. NUNCA las
-        // personales: en este camino los datos personales sobreviven intactos.
-        await NotificationService.shared.clearDeliveredGroupNotifications()
-        StorageModePersistence.armGroupsOnlyWipe()
-        CloudSyncBreadcrumb.signOutGroupsOnlyWipeArmed()
-        phase = .awaitingRelaunch
     }
 
     // MARK: - Cierre LOCAL tras un borrado de cuenta (G5-D1b) — SIN push-all
@@ -651,7 +828,7 @@ final class CloudSessionSignOut {
     }
 
     /// Cierre LOCAL del camino solo-grupos tras un `delete_personal_account` EXITOSO. Espeja el tail-end de
-    /// `performGroupsOnlySignOut` SIN el push-all (datos muertos server-side). El GATE DE QUIESCENCIA es
+    /// `finalizeSessionExit` SIN el push-all (datos muertos server-side). El GATE DE QUIESCENCIA es
     /// OBLIGATORIO: la purga in-session salva al mainContext COMPARTIDO por los 3 stores (mismo trap de
     /// SwiftData que en el sign-out solo-grupos). Timeout ⇒ devuelve `false` SIN cerrar la sesión ni armar
     /// nada — el caller marca fallo y el usuario reintenta (`groups_forget_user`/`/account/delete` son
@@ -760,9 +937,11 @@ final class CloudSessionSignOut {
         hardCap: TimeInterval = 60
     ) async -> Bool {
         func safe() -> Bool {
-            !iCloudSyncService.shared.isAccountAvailable
-                || (iCloudSyncService.shared.hasCompletedFirstImport
-                    && iCloudSyncService.shared.isImportQuiescent)
+            CloudSignOutFlowLogic.isPersonalSaveSafe(
+                mountAttachesMirror: personalMountAttachesMirror,
+                accountAvailable: iCloudSyncService.shared.isAccountAvailable,
+                firstImportCompleted: iCloudSyncService.shared.hasCompletedFirstImport,
+                importQuiescent: iCloudSyncService.shared.isImportQuiescent)
         }
         var waited: TimeInterval = 0
         while !safe() && waited < hardCap {

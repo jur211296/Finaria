@@ -5,12 +5,19 @@
 //  Lógica PURA de la "hoja de alcance" destructiva (D4, §3.1/§3.3 del estudio MODO-NUBE-GESTION-DATOS-UX,
 //  ratificada 2026-07-19). Decide la ESTRUCTURA del sheet de confirmación — qué filas (📱 dispositivo /
 //  ☁️ iCloud|cuenta de Yala / 👥 grupos) aparecen y con qué tono, qué etiqueta lleva la fila ☁️, qué
-//  líneas condicionales extra y si hay acción secundaria — para las 6 operaciones destructivas. NO decide
-//  el texto localizado (eso lo mapea `DestructiveScopeSheet.Config.make` a partir de este modelo).
+//  líneas condicionales extra y si hay acción secundaria. NO decide el texto localizado (eso lo mapea
+//  `DestructiveScopeSheet.Config.make` a partir de este modelo).
+//
+//  **Paso 9 del rediseño de sesiones (2026-09-11, ADR 2026-09-09 «Sesiones — dos ejes» §5-6).** Dos
+//  botones en Ajustes —«Cerrar sesión» y «Vaciar datos»— y un verbo por sesión en las cuatro celdas. Las
+//  operaciones de abajo son UNA por celda × lo que cambia el texto de su confirmación, que es donde vive
+//  el detalle de qué se borra y qué queda (decisión de Jürgen: nada de subtítulos por fila). Se retiraron
+//  `exitYalaLegacy` y `exitYalaGroups` («Salir de Yala en este dispositivo») y `deleteFrozenCopy`, que
+//  no tenía ningún call-site.
 //
 //  Es SOLO capa de presentación: los servicios (`DataWipeService`, `CloudSessionSignOut`,
-//  `AccountDeletionService`, `performDeleteFrozenCopy`) NO se tocan. `nonisolated enum` sin estado ni
-//  dependencias de UI/SwiftData — testeable por tabla (operación × etiqueta ☁️ × deuda × huella).
+//  `AccountDeletionService`) NO se deciden aquí. `nonisolated enum` sin estado ni dependencias de
+//  UI/SwiftData — testeable por tabla (operación × etiqueta ☁️ × deuda × huella).
 //
 //  Reutiliza `AccountDeletionMessageLogic.lines(...)` (D5) para las líneas condicionales de eliminar-cuenta:
 //  la decisión de qué avisos aparecen (deudas, desvío cruzado, copia iCloud congelada, huella legacy) sigue
@@ -21,36 +28,44 @@ import Foundation
 
 nonisolated enum DestructiveScopeLogic {
 
-    /// Las 11 variantes visuales concretas de la hoja (una por operación × escenario). El callsite resuelve
-    /// cuál corresponde a partir de su contexto (`storageMode`, path de sign-out, `isGroupInviteMode`).
+    /// Una variante por celda del ADR × lo que cambia su texto. El callsite la resuelve con
+    /// `wipeOperation`, `signOutOperation` y `deleteAccountOperation` (abajo), no a mano.
     enum Operation: Equatable, CaseIterable {
-        /// Vaciar mis datos — vida personal completa (escenarios 1/2/3/4/5b).
+        // MARK: Vaciar datos — «grupos, nunca»
+        /// Privada o nube (C · D · E): la vida personal entera. En privada se borra también de iCloud, y
+        /// con él de cualquier dispositivo con ese Apple ID (la hoja lo nombra: decisión de Jürgen).
         case wipeDataFull
-        /// Vaciar mis datos — group-invite legado (5a): solo perfil + preferencias.
+        /// Solo grupos (F) con un store que no espeja: perfil + preferencias. No hay vida personal que vaciar
+        /// ni nada que viaje a otro dispositivo (`wipeOperation`).
         case wipeDataGroupsOnly
-        /// Eliminar mi cuenta — Modo Nube (`.cloud`): la vida personal vive en la cuenta de Yala.
+
+        // MARK: Eliminar mi cuenta — vive dentro de «Tu cuenta de Yala»
+        /// Nube completa (E): la vida personal vive en la cuenta de Yala.
         case deleteAccountCloud
-        /// Eliminar mi cuenta — solo-grupos backend (5b): personal en `.icloud`, cuenta backend para grupos.
+        /// La cuenta de grupos de una sesión PRIVADA (D): lo personal, que vive en iCloud, no se toca.
         case deleteAccountGroupsOnly
-        /// Cerrar sesión — privado `.privateReset` (VIVO): no se borra nada, vuelta al Welcome in-session.
+        /// Solo grupos SIN sesión privada (F): la cuenta, y con ella lo que haya en este dispositivo.
+        case deleteAccountGroupsOnlyNoPrivate
+
+        // MARK: Cerrar sesión — el mismo verbo en las cuatro celdas
+        /// Privada (C) con copia en iCloud: se borra de este dispositivo tras subir lo pendiente.
         case signOutPrivate
-        /// Cerrar sesión — `.cloud` (`.cloudSecureSignOut`): wipe por archivos al boot, datos seguros en la cuenta.
+        /// Privada (C) SIN iCloud activo: no hay copia en ninguna parte y se borra para siempre.
+        case signOutPrivateNoCopy
+        /// «Equipo» (D) con copia en iCloud: lo personal queda en iCloud y los grupos en la cuenta.
+        case signOutPrivateWithGroups
+        /// «Equipo» (D) SIN iCloud activo: lo personal se pierde; los grupos quedan en la cuenta.
+        case signOutPrivateWithGroupsNoCopy
+        /// Nube completa (E): datos seguros en la cuenta; el dispositivo vuelve a recién instalado.
         case signOutCloud
-        /// Cerrar sesión — sesión SECUNDARIA M1: borra los archivos `-Secondary`; los del dueño intactos.
-        case signOutSecondary
-        /// Cerrar sesión de grupos — `.groupsOnlySignOut`: olvida los grupos; la vida personal intacta.
+        /// Solo grupos (F): los grupos siguen en la cuenta; el dispositivo vuelve a recién instalado.
         case signOutGroupsOnly
-        /// Salir de Yala — solo-grupos legado 5a (`.privateReset`): vuelta al Welcome, grupos en su iCloud.
-        case exitYalaLegacy
-        /// Salir de Yala — split D2 (`.privateReset` forzado): vuelta al Welcome + boot-wipe de grupos encadenado.
-        case exitYalaGroups
-        /// Borrar mi copia congelada (grupos, G6-C5): borra la zona CloudKit vieja; la verdad vive en el backend.
-        case deleteFrozenCopy
+        /// Sesión SECUNDARIA M1: borra los archivos `-Secondary`; los del dueño intactos. Se retira con M1
+        /// (paso 12 del rediseño).
+        case signOutSecondary
     }
 
-    /// Etiqueta de la fila ☁️ — mata C2 de raíz (el copy no caduca por modo). El callsite la calcula con
-    /// `cloudLabel(storageMode:)` cuando la fila representa "dónde viven los datos" (Vaciar, sign-out), o la
-    /// fija (`deleteAccount*` = siempre la cuenta de Yala; `deleteFrozenCopy` = siempre iCloud).
+    /// Etiqueta de la fila ☁️ — mata C2 de raíz (el copy no caduca por modo).
     enum CloudLabel: Equatable { case icloud, cloudAccount }
 
     enum Location: Equatable { case device, cloud, groups }
@@ -60,9 +75,11 @@ nonisolated enum DestructiveScopeLogic {
     enum Tone: Equatable { case destructive, preserved, neutral }
 
     /// Líneas condicionales que van BAJO las 3 filas. Las 4 primeras espejan `AccountDeletionMessageLogic.Line`
-    /// (D5); `.multiDeviceResidual` es exclusiva de Vaciar en `.cloud` (D9 — declarar el residual en copy).
+    /// (D5); `.multiDeviceResidual` es exclusiva de Vaciar en `.cloud` (D9 — declarar el residual en copy);
+    /// `.noICloudCopy` es exclusiva del cierre privado sin iCloud (decisión de Jürgen: se avisa de que no hay
+    /// copia en ninguna parte).
     enum ExtraLine: Equatable {
-        case debtWarning, crossRefer, frozenICloud, legacyFootprint, multiDeviceResidual
+        case debtWarning, crossRefer, frozenICloud, legacyFootprint, multiDeviceResidual, noICloudCopy
     }
 
     /// Acciones secundarias SEGURAS de la hoja (steer-away de la destrucción), EN ORDEN de aparición. La
@@ -92,26 +109,122 @@ nonisolated enum DestructiveScopeLogic {
         let secondaryActions: [SecondaryKind]
     }
 
+    // MARK: - Qué operación le toca a cada celda
+
     /// Etiqueta de la fila ☁️ según dónde viven los datos: `.cloud` → cuenta de Yala; resto → iCloud.
     static func cloudLabel(storageMode: StorageMode) -> CloudLabel {
         storageMode == .cloud ? .cloudAccount : .icloud
     }
 
-    /// Operación de Vaciar según el modo de la app (C4, §3.3.1). `isGroupInviteMode` es el ÚNICO
-    /// discriminante: distingue "sin vida personal" (5a legado group-invite → solo perfil + prefs) de
-    /// "con vida personal" (todo lo demás → corpus personal completo). Una sesión backend viva NUNCA baja
-    /// el scope a `.wipeDataGroupsOnly` — un 5b (onboarding `completed` + sesión solo-grupos) tiene
-    /// `isGroupInviteMode == false` ⇒ `.wipeDataFull` (ve el copy personal completo, con la fila 👥
-    /// reflejando sus grupos backend vía `accountDeletionGroupsSummary`); incluso un group-invite CON
-    /// sesión backend viva (D6, [FLAG]) sigue siendo `.wipeDataGroupsOnly` porque no tiene vida personal.
-    /// Por eso NO se recibe la sesión como parámetro (sería inerte). La presencia de vida personal la
-    /// determina el onboarding (`OnboardingMode`), no la sesión.
-    static func wipeOperation(isGroupInviteMode: Bool) -> Operation {
-        isGroupInviteMode ? .wipeDataGroupsOnly : .wipeDataFull
+    /// Etiqueta de la fila ☁️ para una operación concreta. Por defecto sigue a `storageMode`, salvo las
+    /// operaciones cuya fila ☁️ habla SIEMPRE de la cuenta de Yala: eliminar cuenta (se borra la cuenta del
+    /// backend) y los cierres de una sesión en la nube cuyo dispositivo está en `.icloud` — solo grupos (F)
+    /// y la visita M1 —, donde lo que queda a salvo es la cuenta y no un iCloud que no guarda nada suyo.
+    static func cloudLabel(for operation: Operation, storageMode: StorageMode) -> CloudLabel {
+        switch operation {
+        case .deleteAccountCloud, .deleteAccountGroupsOnly, .deleteAccountGroupsOnlyNoPrivate,
+             .signOutGroupsOnly, .signOutSecondary:
+            return .cloudAccount
+        case .wipeDataFull, .wipeDataGroupsOnly, .signOutPrivate, .signOutPrivateNoCopy,
+             .signOutPrivateWithGroups, .signOutPrivateWithGroupsNoCopy, .signOutCloud:
+            return cloudLabel(storageMode: storageMode)
+        }
     }
 
+    /// Operación de Vaciar según la sesión (C4, §3.3.1) y lo que el store tiene debajo.
+    ///
+    /// `isGroupInviteMode` distingue "sin vida personal" (solo grupos → perfil + prefs) de "con vida
+    /// personal" (todo lo demás → corpus personal completo). Una sesión backend viva NUNCA baja el scope: el
+    /// «equipo» (D, onboarding completado + sesión solo-grupos) tiene `isGroupInviteMode == false` ⇒
+    /// `.wipeDataFull`, con la fila 👥 reflejando sus grupos. Por eso NO se recibe la sesión como parámetro.
+    ///
+    /// **`personalMountAttachesMirror` sube el scope de un solo-grupos cuyo store ESPEJA** (review adversarial
+    /// del paso 9). «Vaciar datos» borra FILAS, y con el espejo montado esos borrados se exportan: salen de
+    /// iCloud y de todos los dispositivos del Apple ID. Pasa en una instalación anterior al paso 5, o con un
+    /// `.groupInvite` que llegó por el iCloud KV a un teléfono privado, y ahí la hoja de solo grupos decía
+    /// «No se tocan» sobre un borrado que cruzaba a todos los dispositivos. Con espejo, la hoja es la
+    /// completa, que lo nombra.
+    static func wipeOperation(isGroupInviteMode: Bool, personalMountAttachesMirror: Bool) -> Operation {
+        isGroupInviteMode && !personalMountAttachesMirror ? .wipeDataGroupsOnly : .wipeDataFull
+    }
+
+    /// ¿«Vaciar datos» avisa a los OTROS dispositivos del Apple ID para que se vacíen también? Solo desde una
+    /// sesión PRIVADA (C · D), que es la única cuyos datos son los del Apple ID.
+    ///
+    /// **La señal viaja por el iCloud KV del Apple ID** (`PreferenceSyncService.signalWipeInitiated` escribe
+    /// `lastWipeTimestamp`), y todo dispositivo con el onboarding hecho la obedece borrando FILAS — con el
+    /// espejo montado, eso borra además su iCloud. Emitida desde una sesión en la nube (E) o solo-grupos (F)
+    /// —la persona que usa el móvil prestado del dueño, el caso que el ADR 2026-09-09 hace normal— vaciaba
+    /// el iPad privado del dueño y su iCloud. Lo medió la review adversarial del plan del paso 9. La nube ya
+    /// propaga su vaciado por la cuenta (el motor sube los borrados); F no borra nada fuera de este teléfono.
+    static func wipeSignalsAppleIDDevices(isGroupInviteMode: Bool, storageMode: StorageMode) -> Bool {
+        !isGroupInviteMode && storageMode == .icloud
+    }
+
+    /// Operación de la hoja de «Cerrar sesión» para el camino que el coordinador va a recorrer.
+    ///
+    /// `hasICloudCopy` solo afecta a las dos celdas privadas: sin iCloud activo no hay copia en ninguna
+    /// parte, y la hoja lo tiene que decir antes del gesto (decisión de Jürgen: no se bloquea, se avisa, con
+    /// confirmación reforzada). Lo decide `PrivateSignOutExportGateLogic.copyChannel` AL TOCAR, y viaja con
+    /// la confirmación: la ejecución no lo recalcula a peor.
+    ///
+    /// `forgetsBackendGroups`: la privada sin sesión (C) cuyo store de grupos guarda filas del canal backend
+    /// —una sesión de grupos que caducó— las OLVIDA al cerrar (`CloudSessionSignOut.hasBackendGroupRows`). Su
+    /// hoja es entonces la del «equipo», que dice la verdad sobre ellos: este dispositivo los olvida y siguen
+    /// en la cuenta. La privada pura decía «No se tocan» sobre un store que el cierre borraba (review
+    /// adversarial del paso 9). Sin valor por defecto: la vista tiene que preguntarlo.
+    static func signOutOperation(path: CloudSignOutFlowLogic.Path, hasICloudCopy: Bool,
+                                 forgetsBackendGroups: Bool) -> Operation {
+        switch path {
+        case .privateSignOut where forgetsBackendGroups:
+            return hasICloudCopy ? .signOutPrivateWithGroups : .signOutPrivateWithGroupsNoCopy
+        case .privateSignOut:
+            return hasICloudCopy ? .signOutPrivate : .signOutPrivateNoCopy
+        case .privateWithGroupsSignOut:
+            return hasICloudCopy ? .signOutPrivateWithGroups : .signOutPrivateWithGroupsNoCopy
+        case .cloudSecureSignOut:
+            return .signOutCloud
+        case .secondaryCloudSignOut:
+            return .signOutSecondary
+        case .groupsOnlySignOut:
+            return .signOutGroupsOnly
+        }
+    }
+
+    /// Operación de «Eliminar mi cuenta»: la cuenta de la nube completa (E), la de grupos de una sesión
+    /// privada (D, lo personal no se toca) o la de un solo-grupos sin sesión privada (F, se va también lo
+    /// local). Misma decisión que el cierre local de `AccountDeletionService`.
+    static func deleteAccountOperation(storageMode: StorageMode, hasPrivateSession: Bool) -> Operation {
+        if storageMode == .cloud { return .deleteAccountCloud }
+        return hasPrivateSession ? .deleteAccountGroupsOnly : .deleteAccountGroupsOnlyNoPrivate
+    }
+
+    /// ¿La confirmación de la hoja necesita un SEGUNDO gesto? Solo los cierres sin copia en iCloud: son los
+    /// únicos «Cerrar sesión» que destruyen algo que no existe en ninguna otra parte (confirmación reforzada,
+    /// decisión de Jürgen del 2026-09-09).
+    static func requiresNoCopyConfirmation(_ operation: Operation) -> Bool {
+        operation == .signOutPrivateNoCopy || operation == .signOutPrivateWithGroupsNoCopy
+    }
+
+    // MARK: - A dónde lleva «Vaciar datos»
+
+    /// Dónde aterriza la app tras «Vaciar datos» (ticket §7, fila H de la matriz de escenarios).
+    enum WipeLanding: Equatable {
+        /// Con vida personal (C · D · E): directo al onboarding personal, sin pasar por el Welcome — la
+        /// sesión en la nube y los grupos, si los hay, siguen puestos. Al terminar, la celda es la de antes.
+        case personalOnboarding
+        /// Solo grupos (F): la app sigue enseñando sus grupos. No hay vida personal que volver a crear.
+        case groupsShell
+    }
+
+    static func wipeLanding(isGroupInviteMode: Bool) -> WipeLanding {
+        isGroupInviteMode ? .groupsShell : .personalOnboarding
+    }
+
+    // MARK: - El modelo de la hoja
+
     /// Modelo estructural de la hoja para una operación. `cloudLabel` la pasa el callsite; `hasOutstandingDebt`
-    /// / `hasLegacyCloudKitFootprint` solo influyen en `deleteAccount*` (resto los ignora).
+    /// / `hasLegacyCloudKitFootprint` solo influyen en `deleteAccount*` y en las secundarias de Vaciar.
     static func model(
         operation: Operation,
         cloudLabel: CloudLabel,
@@ -128,7 +241,8 @@ nonisolated enum DestructiveScopeLogic {
                        .init(location: .groups, tone: .preserved)],
                 cloudLabel: cloudLabel,
                 hasConservationNote: true,
-                // D9: en `.cloud` declarar el residual multi-device. VIVO `.icloud` → byte-idéntico (sin línea).
+                // D9: en `.cloud` declarar el residual multi-device. `.icloud` → sin línea: su fila ☁️ ya
+                // nombra todos los dispositivos del Apple ID.
                 extraLines: cloudLabel == .cloudAccount ? [.multiDeviceResidual] : [],
                 // "Exportar antes" SIEMPRE (red de seguridad §m.4); con deuda, "Ver mis grupos" va PRIMERO
                 // (protege a terceros: saldar antes de destruir); sin deuda y con grupos+flag (D10),
@@ -140,31 +254,35 @@ nonisolated enum DestructiveScopeLogic {
                 }())
 
         case .wipeDataGroupsOnly:
-            // 5a: solo perfil + preferencias (se restablecen; el iCloud KV de prefs también). Grupos intactos.
-            // Sin nota de conservación: no hay cuenta backend ni Pro que mencionar; la fila 👥 ya lo dice.
+            // Solo grupos: perfil + preferencias, en ESTE dispositivo. Desde el paso 9 no se avisa a los demás
+            // dispositivos del Apple ID (`wipeSignalsAppleIDDevices`), así que la fila ☁️ no se toca. Sin nota
+            // de conservación: no hay cuenta personal ni Pro que mencionar; la fila 👥 ya lo dice.
             return Model(
                 rows: [.init(location: .device, tone: .destructive),
-                       .init(location: .cloud, tone: .destructive),
+                       .init(location: .cloud, tone: .preserved),
                        .init(location: .groups, tone: .preserved)],
                 cloudLabel: cloudLabel,
                 hasConservationNote: false,
                 extraLines: [],
-                // 5a: sin export (no hay wizard personal; los grupos se exportan desde la fila de Ajustes).
-                // Con deuda de grupos (CloudKit legacy) sí ofrece "Ver mis grupos".
+                // Sin export (no hay wizard personal; los grupos se exportan desde la fila de Ajustes).
+                // Con deuda de grupos sí ofrece "Ver mis grupos".
                 secondaryActions: hasOutstandingDebt ? [.viewGroups] : [])
 
-        case .deleteAccountCloud, .deleteAccountGroupsOnly:
+        case .deleteAccountCloud, .deleteAccountGroupsOnly, .deleteAccountGroupsOnlyNoPrivate:
             let isCloud = (operation == .deleteAccountCloud)
-            // `.cloud`: la vida personal muere en device + cuenta. Solo-grupos backend (5b): el personal en
-            // `.icloud` NO se toca (📱 preserved), muere la cuenta backend (☁️ destructive). 👥 = anonimización.
-            let deviceTone: Tone = isCloud ? .destructive : .preserved
+            // `.cloud`: la vida personal muere en device + cuenta. D: el personal en `.icloud` NO se toca
+            // (📱 preserved). F: no hay vida privada que conservar y el dispositivo vuelve a recién instalado
+            // (📱 destructive). ☁️ muere siempre la cuenta; 👥 = anonimización.
+            let deviceTone: Tone = (operation == .deleteAccountGroupsOnly) ? .preserved : .destructive
             return Model(
                 rows: [.init(location: .device, tone: deviceTone),
                        .init(location: .cloud, tone: .destructive),
                        .init(location: .groups, tone: .neutral)],
                 cloudLabel: cloudLabel,
                 hasConservationNote: false,
-                // Reutiliza la decisión D5 (`AccountDeletionMessageLogic`), descartando `.base` (repartida en filas).
+                // Reutiliza la decisión D5 (`AccountDeletionMessageLogic`), descartando `.base` (repartida en
+                // filas). `isCloud` es false en las dos de grupos: la copia congelada de iCloud del cutover
+                // solo existe para quien migró su vida personal a la nube.
                 extraLines: AccountDeletionMessageLogic.lines(
                     isCloud: isCloud,
                     hasOutstandingDebt: hasOutstandingDebt,
@@ -173,14 +291,50 @@ nonisolated enum DestructiveScopeLogic {
                 secondaryActions: hasOutstandingDebt ? [.viewGroups] : [])
 
         case .signOutPrivate:
-            // No se borra NADA: reset de onboarding in-session → Welcome. Todo preservado.
+            // Se borra de este dispositivo (📱 neutral: cambia, pero sin pérdida — antes se sube lo pendiente);
+            // iCloud intacto (☁️ preserved); sin cuenta de grupos (👥 preserved: no se tocan).
             return Model(
-                rows: [.init(location: .device, tone: .preserved),
+                rows: [.init(location: .device, tone: .neutral),
                        .init(location: .cloud, tone: .preserved),
                        .init(location: .groups, tone: .preserved)],
                 cloudLabel: cloudLabel,
                 hasConservationNote: true,
                 extraLines: [],
+                secondaryActions: [])
+
+        case .signOutPrivateNoCopy:
+            // Sin iCloud activo: lo de este dispositivo es la única copia (📱 y ☁️ destructive — la ☁️ dice que
+            // no hay copia). Sin nota de conservación: no hay vuelta atrás que prometer.
+            return Model(
+                rows: [.init(location: .device, tone: .destructive),
+                       .init(location: .cloud, tone: .destructive),
+                       .init(location: .groups, tone: .preserved)],
+                cloudLabel: cloudLabel,
+                hasConservationNote: false,
+                extraLines: [.noICloudCopy],
+                secondaryActions: [])
+
+        case .signOutPrivateWithGroups:
+            // «Equipo»: lo personal queda en iCloud y los grupos en la cuenta (👥 neutral: el dispositivo los
+            // olvida, siguen en la cuenta).
+            return Model(
+                rows: [.init(location: .device, tone: .neutral),
+                       .init(location: .cloud, tone: .preserved),
+                       .init(location: .groups, tone: .neutral)],
+                cloudLabel: cloudLabel,
+                hasConservationNote: true,
+                extraLines: [],
+                secondaryActions: [])
+
+        case .signOutPrivateWithGroupsNoCopy:
+            // «Equipo» sin iCloud: lo personal se pierde; los grupos siguen en la cuenta.
+            return Model(
+                rows: [.init(location: .device, tone: .destructive),
+                       .init(location: .cloud, tone: .destructive),
+                       .init(location: .groups, tone: .neutral)],
+                cloudLabel: cloudLabel,
+                hasConservationNote: false,
+                extraLines: [.noICloudCopy],
                 secondaryActions: [])
 
         case .signOutCloud:
@@ -195,57 +349,24 @@ nonisolated enum DestructiveScopeLogic {
                 extraLines: [],
                 secondaryActions: [])
 
+        case .signOutGroupsOnly:
+            // Solo grupos: el dispositivo vuelve a recién instalado (📱 neutral); la cuenta sigue (☁️
+            // preserved); el dispositivo olvida los grupos, que siguen en la cuenta (👥 neutral).
+            return Model(
+                rows: [.init(location: .device, tone: .neutral),
+                       .init(location: .cloud, tone: .preserved),
+                       .init(location: .groups, tone: .neutral)],
+                cloudLabel: cloudLabel,
+                hasConservationNote: true,
+                extraLines: [],
+                secondaryActions: [])
+
         case .signOutSecondary:
             // M1: los datos de la sesión secundaria se eliminan del device (siguen en su cuenta); los del
             // dueño intactos (lo dice la nota de conservación).
             return Model(
                 rows: [.init(location: .device, tone: .neutral),
                        .init(location: .cloud, tone: .preserved),
-                       .init(location: .groups, tone: .preserved)],
-                cloudLabel: cloudLabel,
-                hasConservationNote: true,
-                extraLines: [],
-                secondaryActions: [])
-
-        case .signOutGroupsOnly:
-            // Olvida los grupos (👥 neutral: siguen en la cuenta, re-descargables); la vida personal intacta.
-            return Model(
-                rows: [.init(location: .device, tone: .preserved),
-                       .init(location: .cloud, tone: .preserved),
-                       .init(location: .groups, tone: .neutral)],
-                cloudLabel: cloudLabel,
-                hasConservationNote: true,
-                extraLines: [],
-                secondaryActions: [])
-
-        case .exitYalaLegacy:
-            // 5a: vuelta al Welcome; no se toca nada (datos y grupos siguen en su iCloud).
-            return Model(
-                rows: [.init(location: .device, tone: .preserved),
-                       .init(location: .cloud, tone: .preserved),
-                       .init(location: .groups, tone: .preserved)],
-                cloudLabel: cloudLabel,
-                hasConservationNote: true,
-                extraLines: [],
-                secondaryActions: [])
-
-        case .exitYalaGroups:
-            // Split D2: vuelta al Welcome + boot-wipe de grupos encadenado. Personal intacto; olvida grupos.
-            return Model(
-                rows: [.init(location: .device, tone: .preserved),
-                       .init(location: .cloud, tone: .preserved),
-                       .init(location: .groups, tone: .neutral)],
-                cloudLabel: cloudLabel,
-                hasConservationNote: true,
-                extraLines: [],
-                secondaryActions: [])
-
-        case .deleteFrozenCopy:
-            // G6-C5: borra la copia CloudKit congelada (☁️ destructive); el grupo sigue en el backend
-            // (👥 preserved); nada del device se pierde (📱 preserved). "No pierdes nada" (nota).
-            return Model(
-                rows: [.init(location: .device, tone: .preserved),
-                       .init(location: .cloud, tone: .destructive),
                        .init(location: .groups, tone: .preserved)],
                 cloudLabel: cloudLabel,
                 hasConservationNote: true,

@@ -28,6 +28,7 @@ struct AccountDeletionServiceTests {
         var canDelete = true
         var groupsEnabled = false
         var isCloud = true
+        var hasPrivateSession = true
         var deleteMarkerThrows = false
     }
 
@@ -36,6 +37,7 @@ struct AccountDeletionServiceTests {
             canDelete: { c.canDelete },
             groupsBackendEnabled: { c.groupsEnabled },
             storageModeIsCloud: { c.isCloud },
+            hasPrivateSession: { c.hasPrivateSession },
             forgetGroupsUser: {
                 c.events.append("forget")
                 if c.forgetThrows { throw GroupsRPCError.transient(status: 500) }
@@ -46,6 +48,7 @@ struct AccountDeletionServiceTests {
             revokeGoogle: { c.events.append("google") },
             closeLocalCloud: { c.events.append("closeCloud") },
             closeLocalGroupsOnly: { _ in c.events.append("closeGroupsOnly"); return c.closeGroupsResult },
+            releaseGroupsOnlyOnboardingMode: { c.events.append("releaseGroupsOnlyMode") },
             clearCloudBeacon: { c.events.append("clearBeacon") },
             deleteCloudKitMarker: { _ in
                 c.events.append("deleteMarker")
@@ -95,6 +98,26 @@ struct AccountDeletionServiceTests {
         #expect(c.events == [
             "forget", "teardown", "delete", "clearBeacon", "deleteMarker", "siwa", "google", "closeGroupsOnly",
         ])
+        #expect(sut.phase == .awaitingRelaunch)
+    }
+
+    /// Paso 9: la cuenta de un solo-grupos SIN sesión privada (F) cierra como la nube — su dispositivo no
+    /// guarda nada privado que conservar. Con el cierre de solo-grupos quedaría en una shell de grupos sin
+    /// sesión ni cuenta.
+    @Test func groupsOnlyWithoutPrivateSession_closesLikeTheCloud() async throws {
+        let ctx = try makeTestContext()
+        let c = Ctrl(); c.groupsEnabled = true; c.isCloud = false; c.hasPrivateSession = false
+        let sut = makeService(c)
+
+        await sut.deleteAccount(context: ctx)
+
+        // Y antes de cerrar suelta su `.groupInvite` del iCloud KV: sin eso, la vida siguiente de este teléfono
+        // nacía solo-grupos (review adversarial del paso 9). Los tests de la nube fijan que allí no se llama.
+        #expect(c.events == [
+            "forget", "teardown", "delete", "clearBeacon", "deleteMarker", "siwa", "google",
+            "releaseGroupsOnlyMode", "closeCloud",
+        ])
+        #expect(!c.events.contains("closeGroupsOnly"))
         #expect(sut.phase == .awaitingRelaunch)
     }
 
@@ -267,23 +290,17 @@ struct AccountDeletionServiceTests {
 @Suite
 struct AccountDeletionRowLogicTests {
 
-    @Test func shows_onlyWithLiveSession_notSecondary_notGroupInvite() {
-        #expect(AccountDeletionRowLogic.shouldShow(
-            hasSession: true, secondaryActive: false, isGroupInviteMode: false))
+    /// Paso 9: ya no depende del modo de onboarding — un solo-grupos con sesión TIENE cuenta y la App Store
+    /// (5.1.1 v) exige poder borrarla. La visibilidad en group-invite la cubre `SessionExitsPerCellUITests`.
+    @Test func shows_withLiveSession_outsideSecondary() {
+        #expect(AccountDeletionRowLogic.shouldShow(hasSession: true, secondaryActive: false))
     }
 
     @Test func hidden_withoutSession() {
-        #expect(!AccountDeletionRowLogic.shouldShow(
-            hasSession: false, secondaryActive: false, isGroupInviteMode: false))
+        #expect(!AccountDeletionRowLogic.shouldShow(hasSession: false, secondaryActive: false))
     }
 
     @Test func hidden_inSecondarySession() {
-        #expect(!AccountDeletionRowLogic.shouldShow(
-            hasSession: true, secondaryActive: true, isGroupInviteMode: false))
-    }
-
-    @Test func hidden_inGroupInviteMode() {
-        #expect(!AccountDeletionRowLogic.shouldShow(
-            hasSession: true, secondaryActive: false, isGroupInviteMode: true))
+        #expect(!AccountDeletionRowLogic.shouldShow(hasSession: true, secondaryActive: true))
     }
 }

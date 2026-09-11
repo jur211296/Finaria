@@ -4909,19 +4909,11 @@
 "groups.migrated.rejoinCTA" = "Se reconnecter";
 
 /* G6-3: settings row to delete the frozen CloudKit copy */
-"groups.migrated.deleteCopyRow" = "Supprimer ma copie gelée";
 
 /* G6-3: hint under the delete-copy row */
-"groups.migrated.deleteCopyHint" = "Ce groupe vit désormais dans le cloud de Yala. Tu peux supprimer l'ancienne copie iCloud sans rien perdre.";
 
-/* G6-3: delete-copy confirmation title */
-"groups.migrated.deleteCopyConfirmTitle" = "Supprimer l'ancienne copie ?";
 
-/* G6-3: delete-copy confirmation body */
-"groups.migrated.deleteCopyConfirmBody" = "Le groupe restera dans le cloud de Yala. Seule la copie iCloud de cet appareil est supprimée.";
 
-/* G6-3: delete-copy confirmation button */
-"groups.migrated.deleteCopyConfirmButton" = "Supprimer la copie";
 
 /* G6-3: progress banner while the owner's groups migrate to backend */
 "groups.migrated.migratingBanner" = "Déplacement de tes groupes vers le cloud de Yala…";
@@ -5005,26 +4997,15 @@
 /* Fase 1: subtitulo de la fila Vaciar mis datos */
 "settings.wipeDataSubtitle" = "Efface tes données. Ton compte et tes groupes sont conservés.";
 
-/* Fase 1: subtitulo de la fila Cerrar sesion */
-"settings.signOutSubtitle" = "Cet appareil, pas ton compte";
 
 /* Fase 1: subtitulo de la fila Eliminar mi cuenta */
-"settings.deleteAccountSubtitle" = "Supprime ton compte et tes données du cloud pour toujours";
 
 /* Fase 1: desvio cruzado del dialogo de eliminar cuenta hacia Vaciar */
 "settings.deleteAccountCrossReferHint" = "Tu veux seulement effacer tes données et garder ton compte ? Utilise « Vider mes données ».";
 
-/* D6: row title, sign out of the group-only legacy mode (returns to Welcome, no data touched) */
-"settings.exitYala" = "Quitter Yala sur cet appareil";
 
-/* D6: row subtitle for 'Salir de Yala' */
-"settings.exitYalaSubtitle" = "Tu reviendras à l'écran de démarrage. Tes groupes restent dans ton iCloud.";
 
-/* D6: confirmation dialog title for 'Salir de Yala' */
-"settings.exitYalaConfirmTitle" = "Quitter Yala sur cet appareil ?";
 
-/* D6: destructive action button for 'Salir de Yala' */
-"settings.exitYalaConfirmAction" = "Quitter Yala";
 
 /* D6: confirmation dialog message for 'Salir de Yala' */
 
@@ -5043,14 +5024,8 @@
 /* D6: a11y hint when Export row is disabled in group-only mode */
 "accessibility.noGroupsToExport" = "Aucun groupe à exporter";
 
-/* D2 (3.3.3): fila 'Cerrar sesion de grupos' del split privado+grupos con sesion backend */
-"settings.signOutGroups" = "Se déconnecter des groupes";
 
-/* D2 (3.3.3): subtitulo de 'Cerrar sesion de grupos' */
-"settings.signOutGroupsSubtitle" = "Cet appareil oubliera tes groupes ; tes finances ne sont pas touchées";
 
-/* D2 (3.3.3): subtitulo de 'Salir de Yala' en el split solo-grupos backend */
-"settings.exitYalaGroupsSubtitle" = "Revenir à l'écran de démarrage ; tes données ne sont pas supprimées";
 
 /* D2 (3.3.3): mensaje del dialogo de 'Salir de Yala' en el split solo-grupos backend */
 
@@ -5096,8 +5071,6 @@
 /* D4 Vaciar (solo grupos 5a): fila dispositivo */
 "settings.wipeScopeDeviceGroupsOnly" = "Ton profil et tes préférences sont réinitialisés";
 
-/* D4 Vaciar: fila iCloud (modo privado) */
-"settings.wipeScopeCloudICloud" = "Ils sont aussi supprimés ; tes autres appareils les perdront";
 
 /* D4 Vaciar: fila cuenta de Yala (modo nube) */
 "settings.wipeScopeCloudAccount" = "Ils sont aussi supprimés de ton compte ; tes autres appareils les perdront à la synchronisation";
@@ -5127,7 +5100,7 @@
 "settings.deleteAccountScopeGroups" = "Tu continueras d'apparaître comme « Utilisateur supprimé »";
 
 /* D4 Cerrar sesión (privado): fila dispositivo */
-"settings.signOutScopeDevicePrivate" = "Rien n'est supprimé ; tu reviens à l'écran de démarrage";
+"settings.signOutScopeDevicePrivate" = "Supprimées de cet appareil ; on termine d'abord de les envoyer vers iCloud";
 
 /* D4 Cerrar sesión (privado): fila iCloud */
 "settings.signOutScopeCloudPrivate" = "Tes données restent dans iCloud";
@@ -5144,23 +5117,13 @@
 /* D4 Cerrar sesión (sesión secundaria): fila cuenta de Yala */
 "settings.signOutScopeCloudSecondary" = "Tes données restent en sécurité dans ton compte";
 
-/* D4 Cerrar sesión de grupos: fila dispositivo */
-"settings.signOutScopeDeviceGroupsOnly" = "Tes données personnelles ne sont pas touchées";
 
-/* D4 Salir de Yala (solo grupos legado 5a): fila dispositivo */
-"settings.exitYalaScopeDeviceLegacy" = "Tu reviens à l'écran de démarrage ; tes données ne sont pas touchées";
 
-/* D4 Salir de Yala (5a): fila iCloud */
-"settings.exitYalaScopeCloudLegacy" = "Tes groupes restent dans ton iCloud";
 
-/* D4 Salir de Yala (5a): fila grupos */
-"settings.exitYalaScopeGroupsLegacy" = "Ils restent dans ton iCloud";
 
-/* D4 Salir de Yala (split D2): fila dispositivo */
-"settings.exitYalaScopeDeviceGroups" = "Tu reviens à l'écran de démarrage ; tes données ne sont pas supprimées";
 
 /* D4 Cerrar sesión (privado): nota de conservación */
-"settings.signOutScopeConservationPrivate" = "Tu peux revenir quand tu veux ; tes données seront toujours là.";
+"settings.signOutScopeConservationPrivate" = "Pour les récupérer, choisis « Restaurer depuis iCloud » quand tu rouvres Yala.";
 
 /* D4 Cerrar sesión (nube): nota de conservación */
 "settings.signOutScopeConservationCloud" = "Tu peux revenir quand tu veux et tout récupérer.";
@@ -5170,21 +5133,23 @@
 
 /* D4 Cerrar sesión de grupos / Salir (D2): nota de conservación */
 "settings.signOutScopeConservationGroups" = "Reconnecte-toi quand tu veux pour voir tes groupes.";
+"settings.signOutScopeDeviceNoCopy" = "Tes données sont supprimées définitivement de cet appareil";
+"settings.signOutScopeCloudNoCopy" = "iCloud n'est pas activé sur cet appareil : il n'existe aucune copie";
+"settings.signOutNoCopyWarning" = "Si tu te déconnectes, tu perdras ces données pour toujours.";
+"settings.signOutNoCopyConfirmTitle" = "Supprimer tes données pour toujours ?";
+"settings.signOutNoCopyConfirmMessage" = "Il n'existe aucune copie dans iCloud ni ailleurs. Cette action est irréversible.";
+"settings.signOutNoCopyConfirmAction" = "Se déconnecter et supprimer";
+"settings.signOutScopeConservationPrivateWithGroups" = "Pour revenir, choisis « Restaurer depuis iCloud » puis reconnecte-toi à Groupes avec ton compte.";
+"settings.signOutExportPendingTitle" = "Tout n'est pas encore dans iCloud";
+"settings.signOutExportPendingMessage" = "Modifications de cet appareil pas encore arrivées dans iCloud : %d. Si tu te déconnectes maintenant, elles seront perdues.";
+"settings.signOutExportPendingMessageUnknown" = "Nous n'avons pas pu confirmer que tes dernières modifications sont arrivées dans iCloud. Si tu te déconnectes maintenant, elles pourraient être perdues.";
+"settings.signOutExportDiscardButton" = "Se déconnecter quand même";
+"settings.wipeScopeCloudICloudAllDevices" = "Supprimées d'iCloud, elles disparaissent aussi de ton iPad, de ton Mac et de tout appareil utilisant cet Apple ID";
 
-/* D4 Salir de Yala (5a): nota de conservación */
-"settings.exitYalaScopeConservationLegacy" = "Tu peux revenir quand tu veux ; tes groupes restent dans ton iCloud.";
 
-/* D4 Borrar copia congelada: fila dispositivo */
-"settings.deleteFrozenScopeDevice" = "Rien n'est perdu sur cet appareil";
 
-/* D4 Borrar copia congelada: fila iCloud */
-"settings.deleteFrozenScopeCloud" = "L'ancienne copie iCloud de ce groupe est supprimée";
 
-/* D4 Borrar copia congelada: fila grupos */
-"settings.deleteFrozenScopeGroups" = "Le groupe reste inchangé dans ton compte Yala";
 
-/* D4 Borrar copia congelada: nota de conservación */
-"settings.deleteFrozenScopeConservation" = "Tu ne perds rien : la version de référence de ton groupe est dans ton compte Yala.";
 
 /* Vaciar v2: botón para exportar los datos antes de vaciarlos (red de seguridad) */
 "settings.wipeExportBeforeButton" = "Exporter d'abord";
@@ -5234,26 +5199,12 @@
 /* D10 batch: acknowledge/done button */
 "settings.batchLeaveDone" = "Terminé";
 
-/* D1 retention success screen title (post-wipe with live groups) */
-"settings.retentionTitle" = "Vos données ont été effacées. Vos groupes sont toujours là.";
 
-/* D1 retention screen question */
-"settings.retentionQuestion" = "Comment voulez-vous continuer à utiliser Yala ?";
 
-/* D1 retention choice: keep only Groups tab */
-"settings.retentionGroupsOnly" = "Seulement mes groupes";
 
-/* D1 subtitle for the Groups-only choice */
-"settings.retentionGroupsOnlySubtitle" = "Yala se simplifie : seulement l’onglet Groupes. Vous pourrez revenir à Yala complet quand vous voulez.";
 
-/* D1 retention choice: full app from scratch */
-"settings.retentionStartFresh" = "Repartir de zéro";
 
-/* D1 subtitle for the start-fresh choice */
-"settings.retentionStartFreshSubtitle" = "Toutes les fonctionnalités, depuis le début.";
 
-/* D1 debt note shown when the user has outstanding group balances */
-"settings.retentionDebtNote" = "Vous avez des soldes en attente dans vos groupes. Rester protège les autres : personne ne vous verra disparaître en laissant une dette derrière vous.";
 
 /* Fila que abre la pantalla Tu cuenta de Yala (§3.3.5) */
 "settings.yalaAccountRowTitle" = "Ton compte Yala";
@@ -5284,6 +5235,7 @@
 
 /* Datos en solo-grupos (5b) */
 "settings.yalaAccountDataLocationGroupsOnly" = "Sur cet appareil et dans ton iCloud privé. Ton compte te sert uniquement pour les Groupes.";
+"settings.yalaAccountDataLocationGroupsOnlyNoPrivate" = "Ton compte ne garde que tes groupes ; il n'y a aucune donnée personnelle sur cet appareil.";
 
 /* Alcance del desenlace Cerrar sesión */
 "settings.yalaAccountSignOutScope" = "Ton compte reste ; tu reviens quand tu veux.";

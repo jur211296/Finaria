@@ -82,7 +82,7 @@ final class UITestHooks {
     /// de boot no esperen un import de CloudKit que en sim nunca llega. Solo DEBUG.
     nonisolated static var fakeICloudAvailable: Bool { hasArg("-uitest-fake-icloud") }
 
-    /// `-uitest-fake-backend-session`: fuerza el input `hasSession` de la fila «Eliminar mi cuenta»
+    /// `-uitest-fake-backend-session`: fuerza el input `hasSession` de «Eliminar mi cuenta» (desde el paso 9 vive en «Tu cuenta de Yala»)
     /// (ProfileView) a `true`, para QA/XCUITest del diálogo de D5 (aviso de deudas + «Ver mis grupos»)
     /// SIN un sign-in backend real —SIWA/Google no corren en sim—. NO crea una sesión Supabase real
     /// (`CloudAuthService.hasSession` global NO se toca): solo hace visible la fila + el diálogo; tocar
@@ -92,7 +92,7 @@ final class UITestHooks {
     /// NO CONFUNDIR con `-uitest-fake-cloud-session` (abajo), su vecino tipográfico: aquel fuerza el
     /// predicado GLOBAL de sesión y este solo el input de DOS filas de Perfil. Fusionarlos rompería
     /// `YalaAccountUITests` y `DeleteAccountDialogUITests`, que dependen de que con este arg el path de
-    /// cierre siga siendo `.privateReset` y el layout de Perfil no gane la fila solo-grupos.
+    /// cierre siga siendo el privado (`.privateSignOut`) y no el del «equipo» con grupos.
     nonisolated static var fakeBackendSession: Bool { hasArg("-uitest-fake-backend-session") }
 
     /// `-uitest-fake-cloud-session`: fuerza el predicado GLOBAL `CloudAuthService.hasSession` a `true`
@@ -187,12 +187,6 @@ final class UITestHooks {
     /// (`requestStop` → `stopPending` → marcador + resultado honesto): esto no fabrica el resultado, solo el
     /// punto de partida. Inerte en release vía `hasArg`; el seed está bajo `#if DEBUG`.
     nonisolated static var groupsBatchRunning: Bool { hasArg("-uitest-groups-batch-running") }
-
-    /// `-uitest-retention-demo`: QA/XCUITest de la pantalla de retención D1 (§3.3.2). Arma
-    /// `groupsRetentionPending` (con deuda) al arrancar para presentar el cover de retención SIN
-    /// ejecutar el wipe destructivo real (ni depender del alert de 2ª confirmación localizado).
-    /// Inerte en release vía `hasArg`.
-    nonisolated static var retentionDemo: Bool { hasArg("-uitest-retention-demo") }
 
     /// `-uitest-inbox-alert`: tras el seed, encola `.showInboxAlert` con un payload de
     /// muestra para presentar el InboxAlertModal sin depender del sync de CloudKit.

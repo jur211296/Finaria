@@ -27,7 +27,7 @@ struct YalaAccountLogicTests {
             for mode in [StorageMode.icloud, .cloud] {
                 for can in [true, false] {
                     #expect(
-                        L.model(provider: provider, storageMode: mode, canDeleteAccount: can).showLinkingNote,
+                        L.model(provider: provider, storageMode: mode, canDeleteAccount: can, hasPrivateSession: true).showLinkingNote,
                         "linking note debe mostrarse siempre (\(provider ?? "nil"), \(mode), \(can))")
                 }
             }
@@ -35,14 +35,25 @@ struct YalaAccountLogicTests {
     }
 
     @Test func dataLocation_byMode() {
-        #expect(L.model(provider: "apple", storageMode: .cloud, canDeleteAccount: true).dataLocation == .cloud)
-        #expect(L.model(provider: "apple", storageMode: .icloud, canDeleteAccount: true).dataLocation == .groupsOnly)
+        #expect(L.model(provider: "apple", storageMode: .cloud, canDeleteAccount: true, hasPrivateSession: true).dataLocation == .cloud)
+        #expect(L.model(provider: "apple", storageMode: .icloud, canDeleteAccount: true, hasPrivateSession: true).dataLocation == .groupsOnly)
+    }
+
+    /// Paso 9: un solo-grupos SIN sesión privada llega aquí para borrar su cuenta, y la variante del
+    /// «equipo» le decía «en este dispositivo y en tu iCloud privado».
+    @Test func dataLocation_groupsOnlyWithoutPrivateSession() {
+        #expect(L.model(provider: "google", storageMode: .icloud, canDeleteAccount: true,
+                        hasPrivateSession: false).dataLocation == .groupsOnlyNoPrivate)
+        #expect(L.model(provider: "google", storageMode: .icloud, canDeleteAccount: true,
+                        hasPrivateSession: true).dataLocation == .groupsOnly)
+        #expect(L.model(provider: "google", storageMode: .cloud, canDeleteAccount: true,
+                        hasPrivateSession: false).dataLocation == .cloud)
     }
 
     @Test func signOut_alwaysFirst() {
         for mode in [StorageMode.icloud, .cloud] {
             for can in [true, false] {
-                let m = L.model(provider: "apple", storageMode: mode, canDeleteAccount: can)
+                let m = L.model(provider: "apple", storageMode: mode, canDeleteAccount: can, hasPrivateSession: true)
                 #expect(m.exits.first == .signOut, "signOut siempre primero (\(mode), \(can))")
             }
         }
@@ -50,7 +61,7 @@ struct YalaAccountLogicTests {
 
     @Test func returnToICloud_onlyInCloud() {
         for mode in [StorageMode.icloud, .cloud] {
-            let m = L.model(provider: "apple", storageMode: mode, canDeleteAccount: true)
+            let m = L.model(provider: "apple", storageMode: mode, canDeleteAccount: true, hasPrivateSession: true)
             #expect(m.exits.contains(.returnToICloud) == (mode == .cloud),
                     "returnToICloud solo en .cloud (\(mode))")
         }
@@ -58,7 +69,7 @@ struct YalaAccountLogicTests {
 
     @Test func deleteAccount_onlyWhenAllowed() {
         for can in [true, false] {
-            let m = L.model(provider: "apple", storageMode: .cloud, canDeleteAccount: can)
+            let m = L.model(provider: "apple", storageMode: .cloud, canDeleteAccount: can, hasPrivateSession: true)
             #expect(m.exits.contains(.deleteAccount) == can,
                     "deleteAccount solo si canDeleteAccount (\(can))")
         }
@@ -66,13 +77,13 @@ struct YalaAccountLogicTests {
 
     // Orden canónico (escalera de gravedad) por celda de la matriz.
     @Test func exits_canonicalOrder() {
-        #expect(L.model(provider: "apple", storageMode: .cloud, canDeleteAccount: true).exits
+        #expect(L.model(provider: "apple", storageMode: .cloud, canDeleteAccount: true, hasPrivateSession: true).exits
                 == [.signOut, .returnToICloud, .deleteAccount])
-        #expect(L.model(provider: "apple", storageMode: .icloud, canDeleteAccount: true).exits
+        #expect(L.model(provider: "apple", storageMode: .icloud, canDeleteAccount: true, hasPrivateSession: true).exits
                 == [.signOut, .deleteAccount])
-        #expect(L.model(provider: "apple", storageMode: .cloud, canDeleteAccount: false).exits
+        #expect(L.model(provider: "apple", storageMode: .cloud, canDeleteAccount: false, hasPrivateSession: true).exits
                 == [.signOut, .returnToICloud])
-        #expect(L.model(provider: "apple", storageMode: .icloud, canDeleteAccount: false).exits
+        #expect(L.model(provider: "apple", storageMode: .icloud, canDeleteAccount: false, hasPrivateSession: true).exits
                 == [.signOut])
     }
 }

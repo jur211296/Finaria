@@ -8,8 +8,9 @@
 //  Flujo DARK: la fila solo existe con sesión backend viva, imposible en el simulador (SIWA/Google no
 //  corren). El seam `-uitest-fake-backend-session` (#if DEBUG, inerte en release) fuerza el input
 //  `hasSession` de la fila SOLO en ProfileView — NO crea una sesión Supabase real; por eso el test jamás
-//  confirma «Cerrar sesión»/«Eliminar cuenta» (bajo el seam el path real es `.privateReset` y confirmar
-//  iría al Welcome). En el sim el modo es `.icloud` ⇒ «Volver a iCloud» NO aparece (solo en `.cloud`).
+//  confirma «Cerrar sesión»/«Eliminar cuenta» (bajo el seam el path real es el privado, `.privateSignOut`, y
+//  confirmar borraría el store del simulador). En el sim el modo es `.icloud` ⇒ «Volver a iCloud» NO aparece
+//  (solo en `.cloud`).
 //  Convenciones: ver CLAUDE.md (sin sleeps, scheme Yala Dev, targeting por accessibilityIdentifier).
 //
 

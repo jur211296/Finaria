@@ -13,16 +13,23 @@
 //  esos observers aquí violaría "dos anchors ante el mismo observable" (bug device 2026-07-14). "Volver a
 //  iCloud" es un `NavigationLink(value: .storageMode)` (destino registrado en el root del stack).
 //
+//  Desde el paso 9 es la ÚNICA puerta de «Eliminar mi cuenta» (App Store 5.1.1 v, a dos toques), así que
+//  hereda el bloqueo cruzado que tenía la fila retirada de Ajustes: con un cierre o un borrado en curso, las
+//  dos salidas quedan deshabilitadas (review adversarial del paso 9 — sin él se podían correr a la vez).
+//
 
 import SwiftUI
 
 struct YalaAccountView: View {
-    /// Dispara el flujo "Cerrar sesión" de ProfileView (setea `showCloudSignOutConfirm`, resuelto por
-    /// `signOutScopeOperation`).
+    /// Dispara el flujo "Cerrar sesión" de ProfileView (la misma hoja por celda que su fila de Ajustes,
+    /// `requestSignOut`).
     let onSignOut: () -> Void
-    /// Dispara el flujo "Eliminar mi cuenta" de ProfileView (recomputa el summary D5 READ-ONLY +
-    /// `showDeleteAccountConfirm`).
+    /// Dispara el flujo "Eliminar mi cuenta" de ProfileView (hoja de alcance con el resumen D5 READ-ONLY).
     let onDeleteAccount: () -> Void
+    /// Un cierre o un borrado de cuenta en curso: el cierre no puede arrancar encima (lo decide ProfileView).
+    var signOutDisabled: Bool = false
+    /// Ídem para el borrado: tampoco con un cierre parado en un aviso, que sigue esperando una decisión.
+    var deleteDisabled: Bool = false
     /// Solo para `#Preview`: fuerza un modelo concreto (las variantes `.cloud` son DARK e inalcanzables en
     /// sim). En runtime es `nil` ⇒ se computa VIVO de los singletons.
     var previewModel: YalaAccountLogic.Model?
@@ -45,8 +52,8 @@ struct YalaAccountView: View {
             storageMode: CloudSyncFlags.storageMode,
             canDeleteAccount: AccountDeletionRowLogic.shouldShow(
                 hasSession: UITestHooks.fakeBackendSession || CloudAuthService.shared.hasSession,
-                secondaryActive: SecondarySessionStore.isActive(),
-                isGroupInviteMode: SessionState.shared.isGroupInviteMode))
+                secondaryActive: SecondarySessionStore.isActive()),
+            hasPrivateSession: !SessionState.shared.isGroupInviteMode)
     }
 
     var body: some View {
@@ -107,9 +114,7 @@ struct YalaAccountView: View {
             Text(L10n.Settings.yalaAccountDataLocationTitle)
                 .font(DS.Typography.headline)
                 .foregroundStyle(.primary)
-            Text(model.dataLocation == .cloud
-                 ? L10n.Settings.yalaAccountDataLocationCloud
-                 : L10n.Settings.yalaAccountDataLocationGroupsOnly)
+            Text(dataLocationText)
                 .font(DS.Typography.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -117,6 +122,23 @@ struct YalaAccountView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Spacing.lg)
         .solidCard(radius: DS.Radius.xl)
+    }
+
+    private var dataLocationText: String {
+        switch model.dataLocation {
+        case .cloud:               return L10n.Settings.yalaAccountDataLocationCloud
+        case .groupsOnly:          return L10n.Settings.yalaAccountDataLocationGroupsOnly
+        case .groupsOnlyNoPrivate: return L10n.Settings.yalaAccountDataLocationGroupsOnlyNoPrivate
+        }
+    }
+
+    /// Qué se lleva «Eliminar mi cuenta», en una línea. En el «equipo» (D) se borra la cuenta de GRUPOS y lo
+    /// personal sigue en iCloud: «Se borra todo, para siempre» contradecía a su propia hoja (review adversarial
+    /// del paso 9). En la nube completa y en solo grupos sí se va todo.
+    private var deleteScopeText: String {
+        model.dataLocation == .groupsOnly
+            ? L10n.Settings.deleteAccountScopeCloudGroupsOnly
+            : L10n.Settings.yalaAccountDeleteScope
     }
 
     // MARK: - Desenlaces (mapa accionable — cada uno enlaza al flujo existente)
@@ -143,6 +165,7 @@ struct YalaAccountView: View {
                     destructive: false)
             }
             .buttonStyle(.plain)
+            .disabled(signOutDisabled)
             .accessibilityIdentifier("yala_account_signout")
 
         case .returnToICloud:
@@ -161,10 +184,11 @@ struct YalaAccountView: View {
                 exitRowContent(
                     icon: "trash",
                     title: L10n.Settings.deleteAccount,
-                    subtitle: L10n.Settings.yalaAccountDeleteScope,
+                    subtitle: deleteScopeText,
                     destructive: true)
             }
             .buttonStyle(.plain)
+            .disabled(deleteDisabled)
             .accessibilityIdentifier("yala_account_delete")
         }
     }

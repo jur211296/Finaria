@@ -85,6 +85,56 @@ final class iCloudSyncService {
     /// este flag se queda `false` para él; un restore con datos lo pone `true` apenas arranca el import.
     private(set) var hasObservedImportActivity: Bool = false
 
+    /// **Paso 9 · el espejo contestó que no hay cuenta.** Un evento con `CKError.notAuthenticated` lo pone a
+    /// `true`; cualquier evento con éxito lo apaga. Es la prueba de CloudKit —no la del token de iCloud
+    /// Drive— de que no hay copia a la que subir, y la usa el cierre privado para avisar de que no la hay
+    /// (`PrivateSignOutExportGateLogic.copyChannel`). `status == .noAccount` NO sirve para esto: también lo
+    /// pone `checkAccountStatus()` por el token, que con Drive apagado miente.
+    private(set) var mirrorReportedNotAuthenticated: Bool = false
+
+    /// **Paso 9 · el ANCLA del export: el INICIO del último export con éxito**, persistido. Todo cambio local
+    /// confirmado antes de ese instante viajó en él; lo posterior puede no haberlo hecho. Es lo que el cierre
+    /// privado compara contra el historial para saber si puede borrar (`PersonalExportPendingCounter`).
+    ///
+    /// Persistido y no en memoria porque el cierre puede llegar en un proceso donde el espejo aún no ha
+    /// exportado nada; y bajo `cloudSync.*` porque ese prefijo lo excluye a propósito el barrido de
+    /// preferencias de «Vaciar datos» y del boot-wipe. Sobrevive al borrado del store y es correcto que lo
+    /// haga: las escrituras del store nuevo son todas posteriores, así que cuentan como pendientes hasta que
+    /// un export las confirme. `nil` = nunca se vio un export con éxito (entonces cuenta todo lo local).
+    var confirmedExportStart: Date? {
+        Self.readConfirmedExportStart(exportAnchorDefaults)
+    }
+
+    nonisolated static let confirmedExportStartKey = "cloudSync.confirmedExportStartedAt"
+
+    /// Dominio del ancla. `.standard` en producción; `_testReset()` lo cambia por uno aislado para que ningún
+    /// test escriba en el `UserDefaults` del simulador.
+    @ObservationIgnored var exportAnchorDefaults: UserDefaults = .standard
+
+    /// El ancla que sirve ahora: una guardada en el FUTURO se lee como ausente
+    /// (`PrivateSignOutExportGateLogic.usableAnchor`: el reloj retrocedió con la app cerrada).
+    nonisolated static func readConfirmedExportStart(_ defaults: UserDefaults, now: Date = .now) -> Date? {
+        guard defaults.object(forKey: confirmedExportStartKey) != nil else { return nil }
+        let stored = Date(timeIntervalSince1970: defaults.double(forKey: confirmedExportStartKey))
+        return PrivateSignOutExportGateLogic.usableAnchor(stored, now: now)
+    }
+
+    /// MONÓTONO: un evento viejo que llegue tarde nunca retrasa el ancla. Retrasarla solo haría contar de
+    /// más (lado seguro), pero adelantarla con un evento fuera de orden sería el lado peligroso, y el `max`
+    /// cierra las dos direcciones. Un ancla del futuro se lee como ausente, así que el export siguiente la
+    /// reemplaza en vez de quedarse por detrás de ella para siempre.
+    nonisolated static func recordConfirmedExportStart(_ start: Date, _ defaults: UserDefaults, now: Date = .now) {
+        if let current = readConfirmedExportStart(defaults, now: now), current >= start { return }
+        defaults.set(start.timeIntervalSince1970, forKey: confirmedExportStartKey)
+    }
+
+    /// Se invalida cuando el ancla deja de probar lo que prueba: cambia la cuenta de iCloud, cambia el reloj,
+    /// o CloudKit dice que no hay cuenta. No se borra en el boot-wipe del cierre, y es a propósito: las
+    /// escrituras del store nuevo son todas posteriores, así que cuentan como pendientes igual.
+    nonisolated static func clearConfirmedExportStart(_ defaults: UserDefaults) {
+        defaults.removeObject(forKey: confirmedExportStartKey)
+    }
+
     /// ¿es seguro hacer `save()` del store personal AHORA? Verdadero solo si NO hay un import
     /// en curso y pasó la ventana de quietud desde el último import (quiescencia). Un `save()`
     /// sobre el coordinator del store personal mientras NSPersistentCloudKitContainer importa
@@ -147,6 +197,13 @@ final class iCloudSyncService {
             name: .NSUbiquityIdentityDidChange,
             object: nil
         )
+        // Paso 9 · el ancla del export compara relojes de pared: si el reloj cambia, deja de probar nada.
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(systemClockDidChange),
+            name: .NSSystemClockDidChange,
+            object: nil
+        )
         checkAccountStatus()
     }
 
@@ -190,7 +247,14 @@ final class iCloudSyncService {
     }
 
     @objc private func accountDidChange() {
+        // Paso 9 · otra cuenta de iCloud, otra historia de exports: lo confirmado para la anterior no dice
+        // nada de la nueva. Borrarla es el lado seguro (el cierre privado pasa a «no se puede confirmar»).
+        Self.clearConfirmedExportStart(exportAnchorDefaults)
         checkAccountStatus()
+    }
+
+    @objc private func systemClockDidChange() {
+        Self.clearConfirmedExportStart(exportAnchorDefaults)
     }
 
     // MARK: - Event Handling
@@ -227,18 +291,32 @@ final class iCloudSyncService {
         print("iCloudSync: event received — type=\(rawType) \(errorDesc) \(endDesc)")
         #endif
 
-        apply(eventType: rawType, error: event.error as? CKError, endDate: event.endDate)
+        apply(eventType: rawType, error: event.error as? CKError, endDate: event.endDate,
+              startDate: event.startDate, succeeded: event.succeeded)
     }
 
     /// Testable core. Flat parameters — tests call this directly without
     /// constructing NSPersistentCloudKitContainer.Event (which has private init).
-    func apply(eventType: RawEventType, error: CKError?, endDate: Date?) {
+    ///
+    /// `startDate` (paso 9) solo se usa en el export con éxito: es el ANCLA del cierre privado. `nil` en los
+    /// llamadores sintéticos (`forceSync`, tests), que nunca lo fijan — y sin inicio no hay ancla que mover.
+    ///
+    /// `succeeded` (paso 9) es `Event.succeeded`, y hace falta porque `error` llega filtrado a `CKError`: un
+    /// evento que TERMINÓ con un error de otro dominio (los `NSCocoaErrorDomain` 1344xx del espejo) llegaba
+    /// con `error == nil` y fecha de fin, y caía en la rama de éxito. El ancla avanzaba sobre un export que no
+    /// subió nada, y el cierre privado borraba lo que no estaba en iCloud (review adversarial del paso 9).
+    /// Solo gobierna las dos piezas del paso 9 —el ancla y `mirrorReportedNotAuthenticated`—; el resto del
+    /// estado sigue como estaba (ticket `icloud-sync-status-treats-non-ck-failures-as-success`).
+    func apply(eventType: RawEventType, error: CKError?, endDate: Date?, startDate: Date? = nil,
+               succeeded: Bool = true) {
         // Cualquier evento del container significa que el observer está vivo y
         // gobernará el status → el watchdog de force-sync ya no hace falta.
         pendingForceSyncReset?.cancel()
         // Not-authenticated overrides everything → no account.
         if let error, error.code == .notAuthenticated {
             pendingFailedTransition?.cancel()
+            mirrorReportedNotAuthenticated = true
+            Self.clearConfirmedExportStart(exportAnchorDefaults)
             setStatus(.noAccount)
             return
         }
@@ -250,6 +328,7 @@ final class iCloudSyncService {
                 surfaceOrSuppress(error)
             } else if let endDate {
                 consecutiveFailures = 0
+                if succeeded { mirrorReportedNotAuthenticated = false }
                 setStatus(.success(endDate))
             } else {
                 setStatus(.syncing(kind: .setup))
@@ -266,6 +345,7 @@ final class iCloudSyncService {
             } else if let endDate {
                 lastSuccessfulImportDate = endDate
                 consecutiveFailures = 0
+                if succeeded { mirrorReportedNotAuthenticated = false }
                 pendingFailedTransition?.cancel()
                 promoteToIdleOrStalled()
                 if !hasCompletedFirstImport {
@@ -296,6 +376,13 @@ final class iCloudSyncService {
                 let duration = lastSuccessfulExportDate.map { endDate.timeIntervalSince($0) } ?? 0
                 lastSuccessfulExportDate = endDate
                 consecutiveFailures = 0
+                // Paso 9: solo un export que TERMINÓ BIEN confirma algo (ver `succeeded` en la firma).
+                if succeeded {
+                    mirrorReportedNotAuthenticated = false
+                    if let startDate {
+                        Self.recordConfirmedExportStart(startDate, exportAnchorDefaults)
+                    }
+                }
                 pendingFailedTransition?.cancel()
                 promoteToIdleOrStalled()
                 MetricsService.canary(.cloudkitExportSucceeded, detail: durationBucket(duration))
@@ -606,6 +693,11 @@ final class iCloudSyncService {
         hasObservedImportActivity = false
         _testIgnoreExternalEvents = true
         _testForceAccountAvailable = nil
+        mirrorReportedNotAuthenticated = false
+        // Ancla aislada por test: el singleton escribiría en el `UserDefaults` del simulador.
+        if let isolated = UserDefaults(suiteName: "test.icloudsync.\(UUID().uuidString)") {
+            exportAnchorDefaults = isolated
+        }
     }
 
     /// Await the pending failed-transition Task so tests can assert post-debounce

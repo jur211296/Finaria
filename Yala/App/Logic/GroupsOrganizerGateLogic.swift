@@ -23,8 +23,10 @@
 //
 //  **El segundo término es la enmienda del punto de control (spec M1-revival §6.1).** La rama reusa
 //  `GroupsSignInView`, que NO consulta el guard cross-cuenta (regla dura de su docblock). Sobre un
-//  device CON DATOS de otro humano —la ventana M1: Welcome visible tras un `.privateReset` con el corpus
-//  del dueño vivo— la rama firmaría a la invitada solo-grupos SOBRE el store personal del dueño: su
+//  device CON DATOS de otro humano —la ventana M1: Welcome visible tras un `.privateReset` (el cierre privado anterior al paso 9) con el corpus
+//  del dueño vivo; desde el paso 9 del rediseño (2026-09-11) cerrar sesión ya no la abre, porque borra lo
+//  local, pero un store que importó por otra rama sigue llegando aquí— la rama firmaría a la invitada
+//  solo-grupos SOBRE el store personal del dueño: su
 //  bridge metería los gastos de ella en el Panel de él, y el trío del paso 7
 //  (`onboardingMode = .groupInvite`) viajaría al iKV del Apple ID del dueño por never-downgrade,
 //  contaminando sus otros devices. Aquí solo se BLOQUEA; ofrecer la sesión secundaria es de la ola M.

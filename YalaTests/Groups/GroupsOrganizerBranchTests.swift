@@ -201,7 +201,7 @@ struct GroupsOrganizerNoWriteTests {
 
     @Test("datos de otro humano ⇒ decisión de bloqueo Y el store sigue intacto (la ENMIENDA del punto de control)")
     func foreignData_writesNothing() {
-        // La ventana M1: Welcome visible tras un `.privateReset` con el corpus del dueño vivo. La rama reusa
+        // La ventana M1: Welcome visible tras un `.privateReset` (el cierre privado anterior al paso 9) con el corpus del dueño vivo. La rama reusa
         // `GroupsSignInView`, que NO consulta el guard cross-cuenta (regla dura de su docblock) ⇒ sin esta
         // celda, la invitada firmaría SOBRE el store personal del dueño: su bridge metería los gastos de
         // ella en el Panel de él, y el trío viajaría al iKV del Apple ID del dueño.

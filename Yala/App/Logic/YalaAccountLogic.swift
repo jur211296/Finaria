@@ -26,8 +26,10 @@ nonisolated enum YalaAccountLogic {
     enum Method: Equatable { case apple, google, unknown }
 
     /// Dónde viven los datos: `.cloud` (Modo Nube — la vida personal vive en la cuenta de Yala) vs
-    /// `.groupsOnly` (personal en `.icloud`; la cuenta solo se usa para Grupos — escenario 5b).
-    enum DataLocation: Equatable { case cloud, groupsOnly }
+    /// `.groupsOnly` (personal en `.icloud`; la cuenta solo se usa para Grupos — el «equipo» del ADR) vs
+    /// `.groupsOnlyNoPrivate` (solo grupos SIN sesión privada: no hay datos personales en ninguna parte —
+    /// paso 9; esta pantalla es la puerta de su «Eliminar mi cuenta» y el copy del «equipo» le mentía).
+    enum DataLocation: Equatable { case cloud, groupsOnly, groupsOnlyNoPrivate }
 
     /// Los desenlaces del enlace (§2.3), EN ORDEN de escalera de gravedad (reversible → irreversible).
     enum Exit: Equatable { case signOut, returnToICloud, deleteAccount }
@@ -51,18 +53,21 @@ nonisolated enum YalaAccountLogic {
         }
     }
 
-    /// Modelo de la pantalla. `canDeleteAccount` lo deriva el callsite de
-    /// `AccountDeletionRowLogic.shouldShow(...)` — MISMO gate que la fila de Seguridad (excluye group-invite
-    /// y secundaria) para que la pantalla nunca ofrezca un desenlace que la fila oculta.
-    static func model(provider raw: String?, storageMode: StorageMode, canDeleteAccount: Bool) -> Model {
+    /// Modelo de la pantalla. `canDeleteAccount` lo deriva el callsite de `AccountDeletionRowLogic.shouldShow(...)`
+    /// —toda sesión en la nube salvo la visita M1—, así que la pantalla nunca ofrece un borrado que el servicio
+    /// no haría. `hasPrivateSession` es el mismo eje que el cierre de sesión y va SIN valor por defecto a
+    /// propósito: con `true` implícito, un solo-grupos leería el «dónde viven» del «equipo».
+    static func model(provider raw: String?, storageMode: StorageMode, canDeleteAccount: Bool,
+                      hasPrivateSession: Bool) -> Model {
         let isCloud = (storageMode == .cloud)
         var exits: [Exit] = [.signOut]
         if isCloud { exits.append(.returnToICloud) }
         if canDeleteAccount { exits.append(.deleteAccount) }
+        let location: DataLocation = isCloud ? .cloud : (hasPrivateSession ? .groupsOnly : .groupsOnlyNoPrivate)
         return Model(
             method: method(fromProvider: raw),
             showLinkingNote: true,
-            dataLocation: isCloud ? .cloud : .groupsOnly,
+            dataLocation: location,
             exits: exits)
     }
 }
