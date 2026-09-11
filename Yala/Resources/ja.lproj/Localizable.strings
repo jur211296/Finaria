@@ -5458,12 +5458,6 @@
 /* Body of the alert shown when the fresh-start wipe throws */
 "welcome.freshStart.failedMessage" = "データはそのまま残っているので、ここで止めました。Yalaを一度閉じてから開き直してください。それでも同じなら、ご連絡ください。";
 
-/* Organizer gate: the device already holds data, so creating a group here would sign an account on top of it */
-"welcome.groups.existingDataTitle" = "この端末にはすでにデータがあります";
-
-/* Organizer gate body for existing data */
-"welcome.groups.existingDataBody" = "ここからグループを作ると、そのデータの上にアカウントをつなぐことになるので、混ざらないようにしています。前の画面に戻ってください。データはそのままです。あなたのデータなら、いつも使っているアプリからグループを作れます。";
-
 /* Título del aviso cuando Restaurar compras no encuentra Yala Pro */
 "subscription.restoreEmptyTitle" = "サブスクリプションがありません";
 
@@ -5793,3 +5787,42 @@
 "groups.fullActivation.blockedSessionBody" = "グループでもう一度ログインして、Yalaの全機能をもう一度有効にしてください。何も変更していません。";
 "groups.fullActivation.reinstallTitle" = "先にYalaを再インストールしてください";
 "groups.fullActivation.reinstallBody" = "このデバイスでは、以前のバージョンのYalaでグループを使い始めています。家計データの保存場所を選ぶには、アプリを削除してからもう一度インストールしてください。グループはアカウントに残り、iCloudのデータには手を付けません。";
+
+/* Vuelta al neutro: progreso mientras se espera al export y se prepara el borrado */
+"welcome.groups.neutralWorking" = "最新の変更をiCloudにアップロードし、グループのためにこの端末を準備しています…";
+
+/* Vuelta al neutro sin copia: titulo del segundo gesto */
+"welcome.groups.neutralNoBackupTitle" = "iCloudにコピーが見つかりませんでした";
+
+/* Vuelta al neutro sin copia: cuerpo del segundo gesto */
+"welcome.groups.neutralNoBackupBody" = "グループを始めるには、この端末を空にする必要があります。ここに保存されている内容はiCloudにないため、続けると失われます。";
+
+/* Vuelta al neutro sin copia: boton destructivo del segundo gesto */
+"welcome.groups.neutralNoBackupCta" = "続けて削除する";
+
+/* Vuelta al neutro: la espera del export se agoto */
+"welcome.groups.neutralStalledTitle" = "まだiCloudに届いていない変更があります";
+
+/* Vuelta al neutro: cuantos cambios quedan sin subir (%d = numero) */
+"welcome.groups.neutralStalledBody" = "まだiCloudに届いていないこの端末の変更: %d件。今続けると失われます。";
+
+/* Vuelta al neutro: la espera se agoto sin poder contar */
+"welcome.groups.neutralStalledBodyUnknown" = "最新の変更がiCloudに届いたか確認できませんでした。今続けると失われる可能性があります。";
+
+/* Vuelta al neutro: salida de emergencia tras la espera agotada */
+"welcome.groups.neutralStalledContinue" = "それでも続ける";
+
+/* Vuelta al neutro: seguir esperando al export */
+"welcome.groups.neutralStalledWait" = "待つ";
+
+/* Vuelta al neutro bloqueada: outbox de grupos de una sesion caducada */
+"welcome.groups.neutralBlockedTitle" = "グループの変更でまだアップロードされていないものがあります";
+
+/* Vuelta al neutro bloqueada: como desbloquearlo */
+"welcome.groups.neutralBlockedBody" = "この端末には、まだサーバーに届いていないグループの変更があります。そのアカウントで再度サインインしてアップロードしてから、ここでグループを始められます。";
+
+/* Vuelta al neutro imposible en esta celda: titulo */
+"welcome.groups.neutralUnavailableTitle" = "今はこの端末を準備できません";
+
+/* Vuelta al neutro imposible en esta celda: cuerpo */
+"welcome.groups.neutralUnavailableBody" = "この端末には開いたままのセッションがあります。ここでグループを始める前に、設定から閉じてください。戻ってください。何も変更していません。";

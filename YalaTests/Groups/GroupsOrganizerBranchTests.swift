@@ -72,22 +72,22 @@ private final class SpyPreferenceWriter: GroupsOrganizerPreferenceWriting {
 @Suite("G3 · la puerta de la rama organizador")
 struct GroupsOrganizerGateTests {
 
-    @Test("la tabla completa: canal × secundaria × datos ajenos")
+    @Test("la tabla completa: canal × secundaria × estado del store")
     func fullTable() {
-        #expect(Gate.decide(channelEnabled: true, isSecondarySession: false, hasExistingData: false, restoreInProgress: false) == .proceed)
-        #expect(Gate.decide(channelEnabled: false, isSecondarySession: false, hasExistingData: false, restoreInProgress: false) == .blockedChannelOff)
-        #expect(Gate.decide(channelEnabled: true, isSecondarySession: true, hasExistingData: false, restoreInProgress: false) == .blockedSecondarySession)
-        #expect(Gate.decide(channelEnabled: true, isSecondarySession: false, hasExistingData: true, restoreInProgress: false) == .blockedForeignData)
+        #expect(Gate.decide(channelEnabled: true, isSecondarySession: false, hasExistingData: false, mountAttachesMirror: false) == .proceed)
+        #expect(Gate.decide(channelEnabled: false, isSecondarySession: false, hasExistingData: false, mountAttachesMirror: false) == .blockedChannelOff)
+        #expect(Gate.decide(channelEnabled: true, isSecondarySession: true, hasExistingData: false, mountAttachesMirror: false) == .blockedSecondarySession)
+        #expect(Gate.decide(channelEnabled: true, isSecondarySession: false, hasExistingData: true, mountAttachesMirror: false) == .returnsToNeutral)
     }
 
-    @Test("con el canal APAGADO gana el canal, aunque además haya datos de otro humano")
-    func channelWinsOverForeignData() {
+    @Test("con el canal APAGADO gana el canal, aunque además haya que volver al neutro")
+    func channelWinsOverNeutralReturn() {
         // El orden no es estético. El canal acaba de re-medirse con `force`, así que su veredicto es el más
-        // fresco, y su copy describe algo TRANSITORIO («vuelve a intentarlo en un momento»). El de datos
-        // ajenos describe un estado del DISPOSITIVO, que no se arregla esperando: dárselo a alguien cuyo
-        // problema real es el canal le manda a buscar una causa que no existe.
-        #expect(Gate.decide(channelEnabled: false, isSecondarySession: false, hasExistingData: true, restoreInProgress: false) == .blockedChannelOff)
-        #expect(Gate.decide(channelEnabled: false, isSecondarySession: true, hasExistingData: true, restoreInProgress: false) == .blockedChannelOff)
+        // fresco, y su copy describe algo TRANSITORIO («vuelve a intentarlo en un momento»). Y la vuelta al
+        // neutro BORRA: ofrecérsela a quien no va a poder crear el grupo de todas formas sería cobrarle un
+        // borrado por nada.
+        #expect(Gate.decide(channelEnabled: false, isSecondarySession: false, hasExistingData: true, mountAttachesMirror: true) == .blockedChannelOff)
+        #expect(Gate.decide(channelEnabled: false, isSecondarySession: true, hasExistingData: true, mountAttachesMirror: true) == .blockedChannelOff)
     }
 
     /// **C3 · la celda que carga el peso, y la razón por la que no basta con `hasExistingData`.**
@@ -98,49 +98,51 @@ struct GroupsOrganizerGateTests {
     /// `UserDefaults.standard` del DUEÑO — incluida `groupsBetaUnlocked`, que **nadie repone al salir**.
     @Test("secundaria con el store de la invitada VACÍO: la celda que `hasExistingData` no ve")
     func secondarySessionBlocksEvenWithAnEmptyGuestStore() {
-        #expect(Gate.decide(channelEnabled: true, isSecondarySession: true, hasExistingData: false, restoreInProgress: false)
+        #expect(Gate.decide(channelEnabled: true, isSecondarySession: true, hasExistingData: false, mountAttachesMirror: false)
                 == .blockedSecondarySession)
-        // Y va DELANTE de los datos ajenos: si además hay corpus, el hecho que hay que contarle al usuario
-        // sigue siendo «estás de visita» — ese sí tiene salida (cerrar la sesión de invitado), y el copy de
-        // datos ajenos («su dueño puede volver a entrar cuando quiera») le mandaría a esperar algo que no
-        // va a pasar.
-        #expect(Gate.decide(channelEnabled: true, isSecondarySession: true, hasExistingData: true, restoreInProgress: false)
+        // Y va DELANTE del estado del store: si además hay corpus, el hecho que hay que contarle a la
+        // persona sigue siendo «estás de visita», y su salida es cerrar la sesión de invitado — no un
+        // borrado que además caería sobre datos que no son suyos.
+        #expect(Gate.decide(channelEnabled: true, isSecondarySession: true, hasExistingData: true, mountAttachesMirror: true)
                 == .blockedSecondarySession)
     }
 
-    /// **D2 · la celda de la dueña restaurando (decisión del owner, 2026-09-02).**
+    /// **El medio bug que el detector de filas NO puede ver (2026-09-11).**
     ///
-    /// Cambias de móvil, restauras desde iCloud y mientras tus datos están bajando intentas crear tu
-    /// primer grupo. El detector cuenta filas y no puede saber que las estás bajando tú, así que la
-    /// puerta te clasificaba como «hay datos de otro humano» y te mandaba a crear el grupo «desde la app
-    /// que ya usas» — que es ÉSTA, montándose delante de ti. La salida que ofrecía era imposible de
-    /// seguir.
-    ///
-    /// Es el mismo hecho mal clasificado que ya corrigió `CrossAccountEntryGuardLogic` con esta misma
-    /// señal, y por eso las dos puertas la consumen igual: comparten el detector.
-    @Test("D2 · restaurando de iCloud, el corpus propio NO es corpus ajeno")
-    func ownRestoreIsNotForeignData() {
-        // La celda nueva: con datos y restaurando, se pasa.
+    /// Un store personal VACÍO pero montado CON espejo dejaba pasar: no hay filas que contar. Y detrás de
+    /// la puerta, todo lo que el recién llegado escriba —el bridge de sus gastos de grupo incluido— se
+    /// exporta al iCloud del Apple ID de este teléfono, que es el del dueño. El eje ancho
+    /// (`attachesCloudKitMirror`) es el único término que ve esa celda, y es `true` también para
+    /// `.localNoMirror`, cuyo `.automatic` adjunta el espejo aunque no haya cuenta.
+    @Test("store VACÍO pero con ESPEJO: también vuelve al neutro")
+    func emptyStoreWithMirrorStillReturnsToNeutral() {
         #expect(Gate.decide(channelEnabled: true, isSecondarySession: false,
-                            hasExistingData: true, restoreInProgress: true) == .proceed)
-        // Y su control negativo, que es lo que impide que esto se convierta en un pase libre: sin
-        // restauración en curso, los mismos datos siguen bloqueando.
+                            hasExistingData: false, mountAttachesMirror: true) == .returnsToNeutral)
+        // Control negativo, que es lo que impide que el término se convierta en un «siempre borra»: sin
+        // espejo y sin datos —el mount neutro de toda instalación fresca— se pasa sin tocar nada.
         #expect(Gate.decide(channelEnabled: true, isSecondarySession: false,
-                            hasExistingData: true, restoreInProgress: false) == .blockedForeignData)
+                            hasExistingData: false, mountAttachesMirror: false) == .proceed)
     }
 
-    /// La señal corrige el TÉRMINO de los datos, no el veredicto: no es una llave maestra.
-    @Test("D2 · restaurar no desarma los otros dos términos")
-    func restoreDoesNotUnlockTheOtherGuards() {
-        // Canal apagado: sigue mandando el canal, restaure o no.
+    /// **D2 se INVIRTIÓ el 2026-09-11, y conviene saber por qué no es una regresión.**
+    ///
+    /// Hasta hoy `restoreInProgress` era un término de esta tabla: con una restauración en curso el corpus
+    /// no contaba como ajeno y la puerta ABRÍA, porque el veredicto alternativo era un bloqueo con una
+    /// salida imposible de seguir. Ya no hay bloqueo que corregir: restaure o no, el estado del store es el
+    /// mismo y la respuesta también —volver al neutro—, así que el término salió de la firma. El criterio
+    /// nº 3 del ticket lo pide con esas palabras, y lo que protege a la dueña es que su iCloud queda
+    /// intacto: puede volver a restaurar cuando quiera. La cancelación de la señal es un EFECTO de la
+    /// vuelta al neutro (`WelcomeGroupsGateView.returnToNeutral`), no un término de aquí.
+    @Test("D2 · restaurar ya no abre la puerta: el estado del store manda igual")
+    func restoreNoLongerOpensTheGate() {
+        // Un restore en curso implica espejo adjunto, así que la celda real es ésta.
+        #expect(Gate.decide(channelEnabled: true, isSecondarySession: false,
+                            hasExistingData: true, mountAttachesMirror: true) == .returnsToNeutral)
+        // Y los otros dos términos siguen mandando por encima, igual que antes.
         #expect(Gate.decide(channelEnabled: false, isSecondarySession: false,
-                            hasExistingData: true, restoreInProgress: true) == .blockedChannelOff)
-        // Sesión secundaria: sigue siendo «estás de visita». Que la invitada esté restaurando SU iCloud
-        // no la autoriza a escribir las seis preferencias en el `UserDefaults` del dueño.
+                            hasExistingData: true, mountAttachesMirror: true) == .blockedChannelOff)
         #expect(Gate.decide(channelEnabled: true, isSecondarySession: true,
-                            hasExistingData: true, restoreInProgress: true) == .blockedSecondarySession)
-        #expect(Gate.decide(channelEnabled: true, isSecondarySession: true,
-                            hasExistingData: false, restoreInProgress: true) == .blockedSecondarySession)
+                            hasExistingData: true, mountAttachesMirror: true) == .blockedSecondarySession)
     }
 
     @Test("`proceed` exige las CUATRO condiciones — es la única celda que deja escribir")
@@ -148,14 +150,21 @@ struct GroupsOrganizerGateTests {
         for channel in [true, false] {
             for secondary in [true, false] {
                 for data in [true, false] {
-                    for restoring in [true, false] {
+                    for mirror in [true, false] {
                         let decision = Gate.decide(
                             channelEnabled: channel, isSecondarySession: secondary,
-                            hasExistingData: data, restoreInProgress: restoring)
-                        // El corpus solo cuenta como AJENO si no lo está bajando esta misma sesión.
-                        let dataIsForeign = data && !restoring
-                        #expect((decision == .proceed) == (channel && !secondary && !dataIsForeign),
-                                "canal=\(channel) secundaria=\(secondary) datos=\(data) restaurando=\(restoring) ⇒ \(decision)")
+                            hasExistingData: data, mountAttachesMirror: mirror)
+                        // El store está limpio solo si no hay filas Y no hay espejo que exporte.
+                        let storeIsNeutral = !data && !mirror
+                        #expect((decision == .proceed) == (channel && !secondary && storeIsNeutral),
+                                "canal=\(channel) secundaria=\(secondary) datos=\(data) espejo=\(mirror) ⇒ \(decision)")
+                        // Y la otra mitad de la tabla, que es la que este ticket añade: con el canal
+                        // encendido y sin visita, todo store no-neutro vuelve al neutro. Sin esta línea el
+                        // mutante que devuelve `.blockedChannelOff` en la última rama seguiría verde.
+                        if channel && !secondary {
+                            #expect((decision == .returnsToNeutral) == !storeIsNeutral,
+                                    "canal=\(channel) datos=\(data) espejo=\(mirror) ⇒ \(decision)")
+                        }
                     }
                 }
             }
@@ -181,7 +190,7 @@ struct GroupsOrganizerNoWriteTests {
         let defaults = makeIsolatedDefaults(prefix: "g3.gate.off")
         let writer = SpyPreferenceWriter(defaults: defaults)
 
-        let decision = Gate.decide(channelEnabled: false, isSecondarySession: false, hasExistingData: false, restoreInProgress: false)
+        let decision = Gate.decide(channelEnabled: false, isSecondarySession: false, hasExistingData: false, mountAttachesMirror: false)
         #expect(decision == .blockedChannelOff)
 
         // La aserción que carga el peso: `onboardingMode` es never-downgrade cross-device, así que una
@@ -199,16 +208,17 @@ struct GroupsOrganizerNoWriteTests {
         #expect(writtenKeysPresent(in: defaults).count == GroupsOrganizerOnboarding.writtenKeys.count)
     }
 
-    @Test("datos de otro humano ⇒ decisión de bloqueo Y el store sigue intacto (la ENMIENDA del punto de control)")
-    func foreignData_writesNothing() {
-        // La ventana M1: Welcome visible tras un `.privateReset` (el cierre privado anterior al paso 9) con el corpus del dueño vivo. La rama reusa
-        // `GroupsSignInView`, que NO consulta el guard cross-cuenta (regla dura de su docblock) ⇒ sin esta
-        // celda, la invitada firmaría SOBRE el store personal del dueño: su bridge metería los gastos de
-        // ella en el Panel de él, y el trío viajaría al iKV del Apple ID del dueño.
-        let defaults = makeIsolatedDefaults(prefix: "g3.gate.foreign")
+    @Test("store no-neutro ⇒ vuelta al neutro Y ninguna preferencia del alta escrita")
+    func neutralReturn_writesNothing() {
+        // La decisión dejó de ser un bloqueo el 2026-09-11, pero **lo que no puede pasar sigue siendo lo
+        // mismo**: que el alta escriba antes de que el dispositivo esté listo. El trío que escribe el alta
+        // incluye `onboardingMode`, never-downgrade cross-device: si se escribiera aquí viajaría al iKV del
+        // Apple ID de este teléfono —que puede ser el del dueño de los datos— y no vuelve. La vuelta al
+        // neutro sí escribe, pero lo suyo (el arm del borrado) y por otra vía; esta tabla no toca nada.
+        let defaults = makeIsolatedDefaults(prefix: "g3.gate.neutral")
         let writer = SpyPreferenceWriter(defaults: defaults)
 
-        #expect(Gate.decide(channelEnabled: true, isSecondarySession: false, hasExistingData: true, restoreInProgress: false) == .blockedForeignData)
+        #expect(Gate.decide(channelEnabled: true, isSecondarySession: false, hasExistingData: true, mountAttachesMirror: true) == .returnsToNeutral)
         #expect(writer.writes.isEmpty)
         #expect(writtenKeysPresent(in: defaults).isEmpty)
     }
@@ -420,6 +430,12 @@ struct GroupsOrganizerWiringTests {
 
     private static let gateView = "Yala/App/Views/Onboarding/WelcomeGroupsGateView.swift"
     private static let nameView = "Yala/App/Views/Groups/GroupsOrganizerNameView.swift"
+    private static func count(_ needle: String, in haystack: String) -> Int {
+        haystack.components(separatedBy: needle).count - 1
+    }
+
+    private static let contentView = "Yala/App/ContentView.swift"
+    private static let container = "Yala/App/Views/Onboarding/WelcomeFlowContainer.swift"
 
     /// Cuerpo balanceado por llaves desde un marcador (molde `SecondaryOwnerDomainWiringTests`). Acotar al
     /// CUERPO importa: sobre el fichero entero, `ContentView.swift` nombra el descriptor en otros seis
@@ -436,6 +452,160 @@ struct GroupsOrganizerWiringTests {
         return out
     }
 
+    // MARK: - La vuelta al neutro (mitad 2 del paso 5, 2026-09-11)
+
+    /// **La lección del 2026-09-10, hecha red.**
+    ///
+    /// Aquella sesión intentó volver al neutro llamando a `StorageModePersistence.armSignOutWipe()` por su
+    /// cuenta, y tres lentes midieron que el boot-wipe declara precondiciones («el coordinador de sign-out
+    /// ya subió TODO el outbox, cerró la sesión y armó») que un call-site suelto **no cumple**: se llevaba
+    /// el canal de Grupos y las colas de Apple Pay/Siri, y no había desarme si abortaba. Consumir el
+    /// coordinador entero las cumple las tres por construcción.
+    ///
+    /// Este escáner es lo único que impide que alguien «simplifique» el camino saltándose el coordinador:
+    /// un `armSignOutWipe()` aquí compila, pasa la tabla de `decide` y vuelve a abrir los tres agujeros.
+    @Test("MUTACIÓN: la vuelta al neutro CONSUME el cierre de sesión, no arma el wipe por su cuenta")
+    func neutralReturnConsumesTheSignOutVerb() throws {
+        let code = try Self.code(Self.gateView)
+        #expect(code.contains("CloudSessionSignOut.shared.signOut("), """
+            la vuelta al neutro tiene que entrar por el coordinador del cierre privado: es lo único que
+            cumple las tres precondiciones del boot-wipe (outbox subido y verificado, sesión cerrada, arm).
+            """)
+        // **Los literales van SIN el paréntesis a propósito.** `SharedStateIsolationTests` escanea todo
+        // `YalaTests/` buscando `wipeAllUserData(` para exigir el trait de aislamiento del App Group a quien
+        // lo EJECUTA, y filtra comentarios pero no cadenas: con el paréntesis, este test se declaraba a sí
+        // mismo ejecutor del wipe y ponía en rojo a aquel. Sin él, la aserción de aquí mide lo mismo.
+        for prohibido in ["armSignOutWipe", "performSignOutWipeIfArmed", "wipeAllUserData",
+                          "markSignOutWipeIncludesGroups", "deleteStoreFiles"] {
+            #expect(!code.contains(prohibido), """
+                la puerta está borrando por su cuenta (`\(prohibido)`). Ese es exactamente el camino que
+                la review del 2026-09-10 tumbó: el mecanismo hace cosas que solo tienen sentido cuando sus
+                precondiciones son ciertas, y aquí no lo son si no ha corrido el coordinador.
+                """)
+        }
+    }
+
+    /// **Se informa, no se pregunta — salvo sin copia, y eso exige PRUEBA.**
+    ///
+    /// El segundo gesto tiene que colgar de `privateCopyChannel()`, que es quien sabe distinguir «no hay
+    /// copia» de «no lo sabemos»: con iCloud Drive apagado y CloudKit vivo el canal sigue siendo `.iCloud`
+    /// (hallazgo nº 7 de la review del paso 9). Un predicado escrito a mano aquí —por ejemplo
+    /// `!personalMountAttachesMirror`— le diría «no hay copia» a quien sí la tiene, y le pediría confirmar
+    /// una pérdida que no existe; o peor, al revés.
+    @Test("MUTACIÓN: el segundo gesto cuelga del canal de copia, no de un predicado propio")
+    func secondGestureHangsFromTheCopyChannel() throws {
+        let code = try Self.code(Self.gateView)
+        #expect(code.contains("CloudSessionSignOut.privateCopyChannel()"), """
+            quién tiene copia en iCloud lo contesta el canal del paso 9, que exige prueba para decir que no.
+            """)
+        // Y el segundo gesto viaja como la bandera que el coordinador entiende, no como un salto de fase
+        // que se salte la espera por su cuenta.
+        #expect(code.contains("confirmedWithoutICloudCopy: withoutICloudCopy"), """
+            saltarse la espera del export tiene que ser una DECISIÓN de la persona que viaja hasta el
+            coordinador, no un atajo del call-site.
+            """)
+    }
+
+    /// **El destino se persiste DESPUÉS del arm, y el orden es lo que evita un `exit(0)` espurio.**
+    ///
+    /// `RelaunchNetLogic.shouldExitOnBackground` lee «hay destino pendiente» como «este proceso tiene que
+    /// morir al pasar a segundo plano». Escribirlo antes de empezar haría que la app se cerrara sola
+    /// aunque la vuelta al neutro se hubiera bloqueado o abortado — y en ese caso no hay nada armado, así
+    /// que al reabrir no habría pasado nada y la persona no entendería el cierre.
+    @Test("MUTACIÓN: el destino durable se escribe al ARMAR, no al empezar")
+    func pendingDestinationIsWrittenOnArmOnly() throws {
+        let view = try Self.code(Self.gateView)
+        #expect(!view.contains("WelcomePendingDestinationStore"), """
+            la vista no persiste destinos: eso es de `ContentView`, que es quien tiene el flag del cover.
+            """)
+        #expect(view.contains("if new == .awaitingRelaunch { onNeutralReturnArmed() }"), """
+            el aviso cuelga de la fase terminal del coordinador, que es la que va pegada al arm sin ningún
+            `await` en medio.
+            """)
+
+        let content = try Self.code(Self.contentView)
+        let armed = try #require(Self.bodyOf("onGroupsGateNeutralReturnArmed: {", in: content), """
+            `ContentView` dejó de cablear el aviso de la vuelta al neutro.
+            """)
+        #expect(armed.contains("WelcomePendingDestinationStore.set(.groupsOrganizer)"), """
+            sin persistir el destino, quien vuelve a abrir la app aterriza en el chooser y tiene que volver
+            a elegir «Vengo por un grupo» — el camino muerto, movido un paso más adelante.
+            """)
+        #expect(armed.contains("showWelcomeFlow = false"), """
+            el cover del Welcome y el terminal del cierre cuelgan del MISMO body: sin cerrar éste, UIKit no
+            presenta el otro y la persona se queda en un progreso que ya no avanza.
+            """)
+    }
+
+    /// **Y el destino tiene que tener quién lo consuma.** `.groupsOrganizer` caía hasta hoy en la rama de
+    /// «inalcanzables» del consumidor, que aterriza en el chooser: persistirlo sin esta rama habría dejado
+    /// a la persona eligiendo otra vez lo que ya eligió.
+    @Test("MUTACIÓN: el arranque retoma `.groupsOrganizer` en la PUERTA, no en el chooser ni en el alta")
+    func bootResumesTheGate() throws {
+        let content = try Self.code(Self.contentView)
+        let resume = try #require(Self.bodyOf("if let pending = WelcomePendingDestinationStore.consume() {", in: content))
+        let rama = try #require(resume.range(of: "case .groupsOrganizer:"), """
+            `.groupsOrganizer` volvió a caer en la rama de destinos inalcanzables: el arranque siguiente
+            aterriza en el chooser y la vuelta al neutro pierde su razón de ser.
+            """)
+        let resto = resume[rama.upperBound...]
+        let siguiente = resto.range(of: "case .")?.lowerBound ?? resto.endIndex
+        let cuerpo = String(resto[..<siguiente])
+        #expect(cuerpo.contains("welcomeFlowInitialStep = .groupsGate"), """
+            se retoma en la PUERTA y no en el alta: el proceso nuevo no ha visto esa puerta, y volver a
+            medirla es lo que confirma que el dispositivo quedó de verdad en neutro.
+            """)
+        #expect(!cuerpo.contains(".chooser"), "retomar en el chooser es no retomar nada")
+    }
+
+    /// **Salir de un bloqueo tiene que devolver el coordinador a `.idle`, o el siguiente intento es MUDO.**
+    ///
+    /// `signOut` empieza con `guard phase == .idle`: un `.blocked` que sobrevive a esta pantalla hace que
+    /// la vuelta al neutro siguiente vuelva sin hacer nada y sin decirlo, con la persona mirando un
+    /// progreso que no avanza. No lo caza ningún test de comportamiento —la vista se desmonta igual— así
+    /// que el escáner es la única red.
+    @Test("MUTACIÓN: salir de un bloqueo reconoce la fase antes de volver")
+    func leavingABlockAcknowledgesThePhase() throws {
+        let view = try Self.code(Self.gateView)
+        let cuerpo = try #require(Self.bodyOf("private func leaveAfterBlock() {", in: view), """
+            la puerta dejó de tener salida propia para los bloqueos del cierre.
+            """)
+        #expect(cuerpo.contains("CloudSessionSignOut.shared.acknowledgeBlocked()"), """
+            sin reconocer la fase, el coordinador se queda en `.blocked` y el `guard phase == .idle` de
+            `signOut` deja mudo cualquier intento posterior.
+            """)
+        #expect(cuerpo.contains("onBack()"), "y hay que volver: quedarse aquí es el camino muerto")
+    }
+
+    /// **Todo bloqueo del cierre tiene que tener pantalla.** El único alcanzable en esta celda además del
+    /// export es `blockIfGroupsCannotUpload` (`.sessionExpired`): quedaron cambios de grupos sin subir de
+    /// una sesión que caducó, y el criterio del paso 9 es «nunca descarta». Sin su rama, la vista se queda
+    /// en el progreso para siempre — un spinner eterno, que es la definición de camino muerto.
+    @Test("MUTACIÓN: el bloqueo por grupos sin subir tiene su pantalla y su salida")
+    func groupsBlockHasItsOwnScreen() throws {
+        let view = try Self.code(Self.gateView)
+        #expect(view.contains("welcome_groups_gate_neutral_blocked"), """
+            desapareció la pantalla del bloqueo por grupos pendientes: ese cierre no descarta nunca, así
+            que sin pantalla la persona se queda mirando un progreso que ya no va a terminar.
+            """)
+        #expect(view.contains("L10n.Welcome.Groups.neutralBlockedBody"),
+                "y tiene que decir CÓMO se desbloquea (volver a entrar con esa cuenta)")
+    }
+
+    /// El container solo REENVÍA: si empezara a decidir, habría dos sitios donde escribir la condición.
+    @Test("el container reenvía el aviso de la vuelta al neutro sin decidir nada")
+    func containerOnlyForwardsTheNeutralReturn() throws {
+        let code = try Self.code(Self.container)
+        #expect(code.contains("onNeutralReturnArmed: onGroupsGateNeutralReturnArmed"), """
+            el step tiene que recibir el callback tal cual. Envolverlo aquí sería un segundo sitio donde
+            decidir qué pasa al armar.
+            """)
+        #expect(!code.contains("WelcomePendingDestinationStore.set(.groupsOrganizer)"), """
+            el container no toca `UserDefaults` — es el contrato que su propio docblock declara para el
+            callback hermano del relanzamiento.
+            """)
+    }
+
     @Test("MUTACIÓN (a): la puerta refresca el remote-config con `force: true`")
     func gateRefreshesWithForce() throws {
         let code = try Self.code(Self.gateView)
@@ -448,23 +618,160 @@ struct GroupsOrganizerWiringTests {
                 "un `refreshIfDue()` sin argumentos aquí es el no-op que el chip prohíbe")
     }
 
-    /// **D2 · el escáner que caza el mutante que la tabla NO ve.**
+    /// **El escáner que caza el mutante que la tabla NO ve.**
     ///
-    /// La tabla de arriba prueba que `decide` clasifica bien las cuatro celdas, pero pasaría igual de
-    /// verde si el call-site le pasara `restoreInProgress: false` a pelo, o leyera la señal en el sitio
-    /// equivocado. Ese es exactamente el mutante que en la pieza 1 de este ticket cayó SOLO en el
-    /// source-scan, con los ocho tests del guard en verde — la demostración de por qué este escáner
-    /// existe. El parámetro sin default obliga a poner ALGO; esto obliga a poner lo correcto.
-    @Test("MUTACIÓN (e): el call-site pasa la señal VIVA de restauración, no un literal")
-    func gatePassesTheLiveRestoreSignal() throws {
+    /// La tabla de arriba prueba que `decide` clasifica bien las ocho celdas, pero pasaría igual de verde
+    /// si el call-site le pasara `mountAttachesMirror: false` a pelo, o midiera el eje ESTRECHO. Ese es
+    /// exactamente el mutante que en la pieza 1 de este ticket cayó SOLO en el source-scan, con los ocho
+    /// tests del guard en verde. El parámetro sin default obliga a poner ALGO; esto obliga a poner lo
+    /// correcto.
+    ///
+    /// **Por qué el testigo tiene que ser el ancho:** `personalStoreMountedDecision == .iCloudMirror` deja
+    /// fuera a `.localNoMirror`, cuyo `cloudKitDatabase` cae en `.automatic` y **adjunta el espejo igual**
+    /// (auditoría R1(c), escrito en `PersonalStoreDecision.attachesCloudKitMirror`). Con el eje estrecho,
+    /// a quien tiene iCloud Drive apagado y CloudKit vivo se le abre la puerta con el espejo puesto y sus
+    /// gastos de grupo acaban en el iCloud del dueño del teléfono.
+    @Test("MUTACIÓN: el call-site mide el EJE ANCHO del mount, no un literal ni el estrecho")
+    func gateReadsTheWideMountAxis() throws {
         let code = try Self.code(Self.gateView)
-        #expect(code.contains("restoreInProgress: ICloudRestoreSessionSignal.isRestoringNow"), """
-            la puerta tiene que leer el latch VIVO. Con `restoreInProgress: false` cableado a mano, la
-            dueña que está restaurando vuelve a recibir «este dispositivo tiene datos de otra cuenta» y
-            una salida imposible de seguir («crea el grupo desde la app que ya usas» — es ésta).
+        #expect(code.contains("mountAttachesMirror: Self.mountAttachesMirrorNow"),
+                "el término del mount tiene que salir del seam, que es quien conoce la mentira del host de test")
+        let seam = try #require(Self.bodyOf("private static var mountAttachesMirrorNow: Bool {", in: code))
+        #expect(seam.contains("return CloudSessionSignOut.personalMountAttachesMirror"), """
+            en producción tiene que ser el eje ANCHO, y por el MISMO testigo que usa el cierre de sesión para
+            decidir si espera al export. Dos testigos distintos para el mismo hecho es como divergen la
+            decisión de borrar y la de esperar.
             """)
-        #expect(!code.contains("restoreInProgress: false"),
+        #expect(!code.contains("mountAttachesMirror: false"),
                 "un literal aquí es el bug de vuelta, y el compilador no puede cazarlo: el tipo casa")
+        #expect(!code.contains("== .iCloudMirror"), """
+            el eje ESTRECHO deja fuera a `.localNoMirror`, que adjunta el espejo igual: es el predicado que
+            falla ABIERTO justo sobre la población que este término existe para proteger.
+            """)
+    }
+
+    /// **El seam del host de test, y por qué su default tiene que ser `false`.**
+    ///
+    /// Medido: bajo `-uitest`, `SwiftDataConfiguration.personalConfiguration` sale por su rama
+    /// `YalaModel-UITest` —`cloudKitDatabase: .none`— ANTES de `capturePersonalStoreMountedDecisionOnce`, así
+    /// que `personalStoreMountedDecision` se queda en el default de su declaración, `.iCloudMirror`, y el eje
+    /// ancho da `true` en toda corrida. Sin este seam la puerta volvería SIEMPRE al neutro en XCUITest:
+    /// `.proceed` sería inalcanzable, `WelcomeChooserUITests` se caería, y cada corrida armaría un boot-wipe
+    /// real cuya key sobrevive a `-uitest-reset`.
+    ///
+    /// El default es la VERDAD de ese host (`false`), no una inversión. El hook solo lo enciende para quien
+    /// quiera recorrer la vuelta al neutro en simulador.
+    @Test("MUTACIÓN: el seam del mount vale `false` por defecto bajo uitest, y su hook existe")
+    func mountSeamDefaultsToFalseUnderUITest() throws {
+        let code = try Self.code(Self.gateView)
+        let seam = try #require(Self.bodyOf("private static var mountAttachesMirrorNow: Bool {", in: code))
+        #expect(seam.contains("if SwiftDataConfiguration.isUITesting { return UITestHooks.groupsGateMirrorLive }"), """
+            sin este corte el testigo del mount miente en TODA corrida y la rama buena de la puerta deja de
+            ser recorrible.
+            """)
+        #expect(!seam.contains("!UITestHooks.groupsGateMirrorLive"),
+                "invertir el hook haría que el default fuera `true`, que es justo la mentira que este seam quita")
+
+        let hooks = try Self.code("Yala/App/UITestHooks.swift")
+        #expect(hooks.contains("-uitest-groups-gate-mirror-live"),
+                "desapareció el hook: la vuelta al neutro deja de ser alcanzable desde XCUITest")
+    }
+
+    /// **La puerta NO apaga el latch de restauración, y la aserción va en negativo a propósito.**
+    ///
+    /// La primera versión lo apagaba como primera línea de la vuelta al neutro, leyendo el criterio nº 3 del
+    /// ticket al pie de la letra. Dos lentes independientes midieron el precio: si el cierre luego se
+    /// bloquea —espera agotada, grupos sin subir— y la persona sale, el import SIGUE bajando con el latch
+    /// apagado, y **nadie lo vuelve a encender**: su único encendedor de producción es `WelcomeRestoreView`,
+    /// pinneado a un solo sitio por `ICloudRestoreSignalTests`. A partir de ahí el guard cross-cuenta del
+    /// sign-in vuelve a clasificar el corpus propio de la dueña como ajeno — la enmienda D2, deshecha, en la
+    /// misma sesión.
+    ///
+    /// El criterio se cumple igual por el camino de siempre: el latch vive en MEMORIA y muere con el
+    /// proceso, que es exactamente lo que hace el relanzamiento de este flujo.
+    @Test("MUTACIÓN: la puerta no apaga el latch de restauración")
+    func neutralReturnDoesNotCancelTheRestoreSignal() throws {
+        let code = try Self.code(Self.gateView)
+        #expect(!code.contains("ICloudRestoreSessionSignal.noteRestoreFinished()"), """
+            apagar el latch aquí lo deja apagado también cuando el cierre se aborta, y su único encendedor
+            vive en otra pantalla. El relanzamiento ya lo apaga, porque vive en memoria.
+            """)
+    }
+
+    /// **La celda se mide ANTES de arrancar, y ésa es la red contra los tres `return` mudos de `signOut`.**
+    ///
+    /// `signOut` vuelve sin tocar su fase en tres casos —fase no `.idle`, celda distinta de la confirmada,
+    /// plan nulo— y la vista observa esa fase para pintar. Arrancar a ciegas dejaba un progreso eterno SIN
+    /// botón de volver, que es el camino muerto que este ticket existe para retirar.
+    @Test("MUTACIÓN: la puerta mide la celda antes de arrancar y tiene pantalla para la que no sirve")
+    func gateMeasuresTheExitCellBeforeStarting() throws {
+        let code = try Self.code(Self.gateView)
+        let entry = try #require(Self.bodyOf("private func neutralReturnEntryPhase() -> Phase {", in: code), """
+            desapareció la comprobación previa: la puerta vuelve a arrancar el cierre a ciegas.
+            """)
+        #expect(entry.contains("guard CloudSessionSignOut.shared.phase == .idle else { return .unavailable }"), """
+            con el coordinador ocupado, `signOut` vuelve mudo por su primer guard.
+            """)
+        #expect(entry.contains("case .cloudSecureSignOut, .secondaryCloudSignOut:"), """
+            las dos celdas que NO borran por archivos tienen que salir por una pantalla con salida: el cierre
+            de la nube haría un borrado distinto del que esta pantalla promete.
+            """)
+        #expect(code.contains("welcome_groups_gate_neutral_unavailable"),
+                "y esa pantalla tiene que existir, con su identifier")
+
+        // El cinturón del cinturón, para lo que cambie entre la medida y la ejecución.
+        let run = try #require(Self.bodyOf("private func returnToNeutral(withoutICloudCopy: Bool) async {", in: code))
+        #expect(run.contains("if CloudSessionSignOut.shared.phase == .idle { phase = .unavailable }"), """
+            si el coordinador volvió sin tocar su fase, no arrancó nada: sin esta línea la pantalla se queda
+            en un progreso que no avanza.
+            """)
+        #expect(run.contains("confirmedPath: celda"),
+                "la celda medida viaja como cinturón, para que un cambio entre medias no ejecute otro borrado")
+    }
+
+    /// **El espejo del dispatch tiene que llevar los CINCO términos.** Es el duplicado deliberado que ya
+    /// tiene `ProfileView.signOutRowPath`: si divergieran, la puerta prometería un borrado que el
+    /// coordinador no va a hacer, y el `confirmedPath` lo convertiría en un `return` mudo.
+    @Test("MUTACIÓN: el espejo de la celda usa los mismos cinco términos que el dispatch")
+    func exitCellMirrorsTheDispatch() throws {
+        let code = try Self.code(Self.gateView)
+        let cell = try #require(Self.bodyOf("private static func exitCell() -> CloudSignOutFlowLogic.Path {", in: code))
+        for termino in ["for: CloudSyncFlags.storageMode",
+                        "secondarySessionActive: SecondarySessionStore.isActive()",
+                        "hasLiveSession: CloudAuthService.shared.hasSession",
+                        "groupsBackendEnabled: CloudSyncFlags.groupsBackendCompiledCapability",
+                        "hasPrivateSession: !SessionState.shared.isGroupInviteMode"] {
+            #expect(cell.contains(termino), "al espejo de la celda le falta `\(termino)`")
+        }
+    }
+
+    /// **Los botones del aviso se pueden tocar dos veces.** `.task(id:)` solo re-arranca cuando el id
+    /// CAMBIA, y el cierre vuelve a bloquear si la espera se agota otra vez: sin un nonce, el segundo tap
+    /// del mismo botón asigna el mismo valor y no pasa nada. El primero en morir era «Esperar», que es el
+    /// que NO destruye — o sea que la pantalla empujaba hacia el botón que borra.
+    @Test("MUTACIÓN: las fases de trabajo llevan nonce, o el segundo tap es un no-op")
+    func workPhasesCarryANonce() throws {
+        let code = try Self.code(Self.gateView)
+        for caso in ["case returningToNeutral(withoutICloudCopy: Bool, intento: Int)",
+                     "case discardingUnconfirmed(intento: Int)",
+                     "case resumingExportWait(intento: Int)"] {
+            #expect(code.contains(caso), "la fase perdió su nonce: `\(caso)`")
+        }
+        #expect(Self.count("intento += 1", in: code) >= 4, """
+            cada sitio que lanza trabajo tiene que avanzar el nonce (los tres botones y la entrada).
+            """)
+    }
+
+    /// `initial: true` **no es cinturón**: sin él, un step que se montara con el coordinador YA en su fase
+    /// terminal no avisaría nunca, el Welcome no se cerraría y el cover que cuenta el relanzamiento no
+    /// podría presentarse — un solo cover por body.
+    @Test("MUTACIÓN: el aviso del arm se evalúa también al montar")
+    func armNoticeFiresOnAppearToo() throws {
+        let code = try Self.code(Self.gateView)
+        #expect(code.contains(".onChange(of: exitPhase, initial: true)"), """
+            sin `initial: true`, montar el step con la fase terminal ya puesta deja el Welcome delante del
+            cover terminal para siempre.
+            """)
     }
 
     @Test("la puerta decide con la lógica pura y lee el flag DESPUÉS del refresh")
@@ -527,18 +834,19 @@ struct GroupsOrganizerWiringTests {
         }
     }
 
-    /// **Cada razón de la puerta con SU copy, y ninguna prestada.**
+    /// **Cada pantalla de la puerta con SU copy, y ninguna prestada.**
     ///
-    /// `.blockedForeignData` pintaba `welcome.cloud.blocked*`, el copy del guard cross-cuenta del
-    /// sign-in: «Este dispositivo tiene datos de otra cuenta … no podemos conectar una cuenta distinta
-    /// aquí». Dicho a la DUEÑA de esos datos, que no está conectando ninguna cuenta sino intentando
-    /// crear un grupo, es una acusación falsa por partida doble. El bloqueo es correcto; lo que estaba
-    /// mal era lo que se decía al bloquear.
+    /// Hasta el 2026-08-12 la rama de datos existentes pintaba `welcome.cloud.blocked*`, el copy del guard
+    /// cross-cuenta del sign-in: «Este dispositivo tiene datos de otra cuenta … no podemos conectar una
+    /// cuenta distinta aquí». Dicho a la DUEÑA de esos datos, que no está conectando ninguna cuenta sino
+    /// intentando crear un grupo, era una acusación falsa por partida doble. **Y desde el 2026-09-11 esa
+    /// rama ya no bloquea**: vuelve al neutro, así que su copy propio (`existingData*`) también se retiró —
+    /// describía una puerta cerrada que ya no existe.
     ///
-    /// El escáner es por CONTENIDO y no por conteo de casos: lo que hay que impedir es que dos ramas
-    /// compartan key, no que existan tres ramas (eso ya lo cubre la tabla de `Gate.decide`).
-    @Test("las TRES razones de la puerta tienen copy propio, sin préstamos entre ellas")
-    func eachBlockReasonHasItsOwnCopy() throws {
+    /// El escáner es por CONTENIDO y no por conteo de casos: lo que hay que impedir es que dos pantallas
+    /// compartan key, no que existan N ramas (eso ya lo cubre la tabla de `Gate.decide`).
+    @Test("cada pantalla de la puerta tiene copy propio, sin préstamos entre ellas")
+    func eachGateScreenHasItsOwnCopy() throws {
         let view = try Self.code(Self.gateView)
 
         // El copy del guard de SIGN-IN no puede volver a esta pantalla: aquí nadie conecta una cuenta.
@@ -549,34 +857,54 @@ struct GroupsOrganizerWiringTests {
             y esos datos son suyos, y no está conectando nada.
             """)
 
-        // Una key por razón, y cada una distinta de las otras dos.
-        let porRazon: [(String, String)] = [
+        // Y tampoco el de la puerta que se retiró: si vuelve, es que alguien repuso el bloqueo.
+        #expect(!view.contains("L10n.Welcome.Groups.existingData"), """
+            `existingData*` es el copy del BLOQUEO que este ticket retiró («Aquí ya hay datos guardados … \
+            crea el grupo desde la app que ya usas» — que es ésta). Sus keys ya no existen en los .strings.
+            """)
+
+        // Ni el del cierre de sesión de Ajustes: allí el verbo es «cerrar sesión» y aquí «empezar tu grupo».
+        #expect(!view.contains("L10n.Settings.signOutExportPending"), """
+            el aviso de Ajustes habla de cerrar sesión, y quien lee esta pantalla no ha pedido cerrar nada.
+            """)
+
+        // Una familia de keys por pantalla, y cada una distinta de las demás.
+        let porPantalla: [(String, String)] = [
             ("blockedChannelOff", "L10n.Welcome.Groups.channelOff"),
             ("blockedSecondarySession", "L10n.Welcome.Groups.secondary"),
-            ("blockedForeignData", "L10n.Welcome.Groups.existingData"),
+            ("confirmingNoBackup", "L10n.Welcome.Groups.neutralNoBackup"),
         ]
         // Una rama de `switch` no abre llaves, así que `bodyOf` no vale aquí: se corta desde el `case`
-        // hasta el siguiente `case .`, que es el límite real de lo que pinta cada razón.
-        func rama(_ caso: String) -> String? {
-            guard let start = view.range(of: "case .\(caso):") else { return nil }
+        // hasta el siguiente `case .` con la MISMA indentación, que es el límite real de cada rama.
+        func rama(_ caso: String, sangria: String) -> String? {
+            guard let start = view.range(of: "\(sangria)case .\(caso):") else { return nil }
             let resto = view[start.upperBound...]
-            guard let next = resto.range(of: "\n                case .") else { return String(resto) }
+            guard let next = resto.range(of: "\n\(sangria)case ") else { return String(resto) }
             return String(resto[..<next.lowerBound])
         }
 
-        for (caso, prefijo) in porRazon {
-            let rama = try #require(
-                rama(caso), "La puerta dejó de tener la rama `.\(caso)`.")
-            #expect(rama.contains(prefijo), """
-                La rama `.\(caso)` ya no pinta su propio copy (`\(prefijo)*`). Las tres razones son \
-                hechos distintos y con salidas distintas: un copy compartido describe una acción que \
-                la persona no está haciendo.
+        for (caso, prefijo) in porPantalla {
+            let cuerpo = try #require(
+                rama(caso, sangria: "        "), "La puerta dejó de tener la rama `.\(caso)`.")
+            #expect(cuerpo.contains(prefijo), """
+                La rama `.\(caso)` ya no pinta su propio copy (`\(prefijo)*`). Son hechos distintos y con \
+                salidas distintas: un copy compartido describe una acción que la persona no está haciendo.
                 """)
-            for (otro, otroPrefijo) in porRazon where otro != caso {
-                #expect(!rama.contains(otroPrefijo), """
+            for (otro, otroPrefijo) in porPantalla where otro != caso {
+                #expect(!cuerpo.contains(otroPrefijo), """
                     La rama `.\(caso)` está pintando el copy de `.\(otro)`.
                     """)
             }
+        }
+
+        // Las tres pantallas de la vuelta al neutro, que viven en el SUB-switch de la fase del cierre y
+        // por eso no se pueden cortar con la misma sangría. Se comprueban por presencia: son tres hechos
+        // distintos (trabajando · la espera se agotó · quedan grupos sin subir) y cada uno tiene su familia.
+        for key in ["L10n.Welcome.Groups.neutralWorking",
+                    "L10n.Welcome.Groups.neutralStalledTitle",
+                    "L10n.Welcome.Groups.neutralStalledBodyUnknown",
+                    "L10n.Welcome.Groups.neutralBlockedTitle"] {
+            #expect(view.contains(key), "la vuelta al neutro perdió su copy `\(key)`")
         }
     }
 

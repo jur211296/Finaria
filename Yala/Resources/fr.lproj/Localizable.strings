@@ -5447,12 +5447,6 @@
 /* Body of the alert shown when the fresh-start wipe throws */
 "welcome.freshStart.failedMessage" = "Tes données sont toujours là, alors on s'est arrêtés. Ferme Yala et rouvre-la ; si ça se reproduit, écris-nous.";
 
-/* Organizer gate: the device already holds data, so creating a group here would sign an account on top of it */
-"welcome.groups.existingDataTitle" = "Il y a déjà des données sur cet appareil";
-
-/* Organizer gate body for existing data */
-"welcome.groups.existingDataBody" = "Créer un groupe depuis ici connecterait un compte par-dessus, et on préfère ne pas les mélanger. Reviens en arrière : tout est intact. Si ce sont tes données, crée le groupe depuis l'app que tu utilises déjà.";
-
 /* Título del aviso cuando Restaurar compras no encuentra Yala Pro */
 "subscription.restoreEmptyTitle" = "Aucun abonnement";
 
@@ -5782,3 +5776,42 @@
 "groups.fullActivation.blockedSessionBody" = "Reconnecte-toi dans Groupes et active de nouveau Yala complet. Rien n'a changé.";
 "groups.fullActivation.reinstallTitle" = "Réinstalle d'abord Yala";
 "groups.fullActivation.reinstallBody" = "Tu as commencé à utiliser Groupes sur cet appareil avec une ancienne version de Yala. Pour choisir où garder tes finances, supprime l'app et réinstalle-la : tes groupes restent dans ton compte et tes données iCloud ne sont pas touchées.";
+
+/* Vuelta al neutro: progreso mientras se espera al export y se prepara el borrado */
+"welcome.groups.neutralWorking" = "Nous envoyons tes dernières modifications vers iCloud et préparons ce téléphone pour ton groupe…";
+
+/* Vuelta al neutro sin copia: titulo del segundo gesto */
+"welcome.groups.neutralNoBackupTitle" = "Nous n'avons trouvé aucune copie dans iCloud";
+
+/* Vuelta al neutro sin copia: cuerpo del segundo gesto */
+"welcome.groups.neutralNoBackupBody" = "Pour créer ton groupe, ce téléphone doit être vide. Ce qui est enregistré ici n'est pas dans iCloud : si tu continues, ce sera perdu.";
+
+/* Vuelta al neutro sin copia: boton destructivo del segundo gesto */
+"welcome.groups.neutralNoBackupCta" = "Continuer et effacer";
+
+/* Vuelta al neutro: la espera del export se agoto */
+"welcome.groups.neutralStalledTitle" = "Certaines modifications ne sont pas encore dans iCloud";
+
+/* Vuelta al neutro: cuantos cambios quedan sin subir (%d = numero) */
+"welcome.groups.neutralStalledBody" = "Modifications de cet appareil qui ne sont pas encore dans iCloud : %d. Si tu continues maintenant, elles seront perdues.";
+
+/* Vuelta al neutro: la espera se agoto sin poder contar */
+"welcome.groups.neutralStalledBodyUnknown" = "Nous n'avons pas pu confirmer que tes dernières modifications sont arrivées dans iCloud. Si tu continues maintenant, elles pourraient être perdues.";
+
+/* Vuelta al neutro: salida de emergencia tras la espera agotada */
+"welcome.groups.neutralStalledContinue" = "Continuer quand même";
+
+/* Vuelta al neutro: seguir esperando al export */
+"welcome.groups.neutralStalledWait" = "Attendre";
+
+/* Vuelta al neutro bloqueada: outbox de grupos de una sesion caducada */
+"welcome.groups.neutralBlockedTitle" = "Des modifications de groupe restent à envoyer";
+
+/* Vuelta al neutro bloqueada: como desbloquearlo */
+"welcome.groups.neutralBlockedBody" = "Ce téléphone contient des modifications de groupe qui ne sont pas encore sur le serveur. Reconnecte-toi avec ce compte pour qu'elles soient envoyées, puis tu pourras créer ton groupe ici.";
+
+/* Vuelta al neutro imposible en esta celda: titulo */
+"welcome.groups.neutralUnavailableTitle" = "Nous ne pouvons pas préparer ce téléphone pour l'instant";
+
+/* Vuelta al neutro imposible en esta celda: cuerpo */
+"welcome.groups.neutralUnavailableBody" = "Ce téléphone a une session ouverte qu'il faut fermer depuis les Réglages avant de créer un groupe ici. Reviens en arrière : rien n'a été touché.";

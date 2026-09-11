@@ -5458,12 +5458,6 @@
 /* Body of the alert shown when the fresh-start wipe throws */
 "welcome.freshStart.failedMessage" = "你的数据还在，所以我们没有继续。请关闭 Yala 再重新打开；如果还是这样，请联系我们。";
 
-/* Organizer gate: the device already holds data, so creating a group here would sign an account on top of it */
-"welcome.groups.existingDataTitle" = "这台设备上已经有数据了";
-
-/* Organizer gate body for existing data */
-"welcome.groups.existingDataBody" = "从这里创建群组会在这些数据之上连接一个账户，我们不想把它们混在一起。返回上一步，数据都还在。如果这些数据是你的，就从你平时用的 Yala 里创建群组。";
-
 /* Título del aviso cuando Restaurar compras no encuentra Yala Pro */
 "subscription.restoreEmptyTitle" = "未找到订阅";
 
@@ -5793,3 +5787,42 @@
 "groups.fullActivation.blockedSessionBody" = "请在群组中重新登录，然后再次激活完整 Yala。未做任何更改。";
 "groups.fullActivation.reinstallTitle" = "请先重新安装 Yala";
 "groups.fullActivation.reinstallBody" = "你在这台设备上是用旧版本的 Yala 开始使用群组的。要选择财务数据的存放位置，请删除此应用后重新安装：你的群组会保留在账户中，iCloud 数据也不会被改动。";
+
+/* Vuelta al neutro: progreso mientras se espera al export y se prepara el borrado */
+"welcome.groups.neutralWorking" = "我们正在把你最近的更改上传到 iCloud，并为你的群组准备这台手机…";
+
+/* Vuelta al neutro sin copia: titulo del segundo gesto */
+"welcome.groups.neutralNoBackupTitle" = "我们没有在 iCloud 中找到副本";
+
+/* Vuelta al neutro sin copia: cuerpo del segundo gesto */
+"welcome.groups.neutralNoBackupBody" = "要开始你的群组，这台手机需要清空。这里保存的内容不在 iCloud 中，如果继续就会丢失。";
+
+/* Vuelta al neutro sin copia: boton destructivo del segundo gesto */
+"welcome.groups.neutralNoBackupCta" = "继续并清除";
+
+/* Vuelta al neutro: la espera del export se agoto */
+"welcome.groups.neutralStalledTitle" = "还有一些更改尚未同步到 iCloud";
+
+/* Vuelta al neutro: cuantos cambios quedan sin subir (%d = numero) */
+"welcome.groups.neutralStalledBody" = "此设备上尚未同步到 iCloud 的更改：%d 项。如果现在继续，这些更改会丢失。";
+
+/* Vuelta al neutro: la espera se agoto sin poder contar */
+"welcome.groups.neutralStalledBodyUnknown" = "我们无法确认你最近的更改已同步到 iCloud。如果现在继续，可能会丢失。";
+
+/* Vuelta al neutro: salida de emergencia tras la espera agotada */
+"welcome.groups.neutralStalledContinue" = "仍要继续";
+
+/* Vuelta al neutro: seguir esperando al export */
+"welcome.groups.neutralStalledWait" = "等待";
+
+/* Vuelta al neutro bloqueada: outbox de grupos de una sesion caducada */
+"welcome.groups.neutralBlockedTitle" = "还有群组更改尚未上传";
+
+/* Vuelta al neutro bloqueada: como desbloquearlo */
+"welcome.groups.neutralBlockedBody" = "这台手机上有尚未上传到服务器的群组更改。请重新登录该账号让它们上传，之后就可以在这里创建群组了。";
+
+/* Vuelta al neutro imposible en esta celda: titulo */
+"welcome.groups.neutralUnavailableTitle" = "暂时无法准备这台手机";
+
+/* Vuelta al neutro imposible en esta celda: cuerpo */
+"welcome.groups.neutralUnavailableBody" = "这台手机上有一个未关闭的会话，需要先在“设置”中关闭，才能在这里创建群组。请返回：我们没有改动任何内容。";

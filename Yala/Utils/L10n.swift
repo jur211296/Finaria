@@ -5230,16 +5230,51 @@ enum L10n {
             /// invitado y volver desde el dispositivo propio.
             static var secondaryTitle: String { ls("welcome.groups.secondaryTitle", comment: "") }
             static var secondaryBody: String { ls("welcome.groups.secondaryBody", comment: "") }
-            /// El dispositivo ya tiene datos. Copy PROPIO desde el 2026-08-12: antes se pedía prestado el
-            /// del guard cross-cuenta del sign-in (`welcome.cloud.blocked*`), que dice «este dispositivo
-            /// tiene datos de otra cuenta … no podemos conectar una cuenta distinta aquí» — dicho a la
-            /// DUEÑA de esos datos, que no está conectando ninguna cuenta sino intentando crear un grupo.
-            /// El detector (`checkHasExistingData`) cuenta filas y **no puede saber de quién son**, así que
-            /// el copy nombra el hecho que sí es cierto: aquí ya hay datos, y crear un grupo desde esta
-            /// pantalla conectaría una cuenta encima.
-            static var existingDataTitle: String { ls("welcome.groups.existingDataTitle", comment: "") }
-            static var existingDataBody: String { ls("welcome.groups.existingDataBody", comment: "") }
-            /// CTA de las TRES pantallas de bloqueo: vuelta al step con las otras vías intactas.
+            /// **La vuelta al neutro (2026-09-11).** Sustituye a `existingData*`, que era el copy de un
+            /// BLOQUEO —«Aquí ya hay datos guardados … crea el grupo desde la app que ya usas»— dicho a la
+            /// dueña de esos datos, y con «la app que ya usas» siendo ÉSTA. Ahora la app no bloquea: deja
+            /// el dispositivo en blanco y sigue. Se informa mientras se hace, en vez de preguntar (decisión
+            /// de Jürgen en el ticket padre).
+            ///
+            /// **Describe la ACCIÓN, no promete el resultado**, y eso es una corrección de la review: la
+            /// primera versión decía «tus datos personales siguen a salvo en tu iCloud», que es una
+            /// afirmación categórica sobre algo que este momento todavía no sabe — la espera del export
+            /// puede agotarse. Quien no tiene cuenta de iCloud llega igual aquí (el canal solo dice «no hay
+            /// copia» **con prueba**, que es lo correcto), y a ése la frase le mentía. Ahora dice qué se está
+            /// haciendo; el aviso de la espera agotada dice lo que de verdad pasó.
+            static var neutralWorking: String { ls("welcome.groups.neutralWorking", comment: "") }
+            /// El ÚNICO punto de este flujo donde se pregunta, y se llega solo **con prueba** de que no hay
+            /// copia (`PrivateSignOutExportGateLogic.CopyChannel.none`): informar diría «tus datos siguen a
+            /// salvo en iCloud», y sin copia eso sería mentira.
+            static var neutralNoBackupTitle: String { ls("welcome.groups.neutralNoBackupTitle", comment: "") }
+            static var neutralNoBackupBody: String { ls("welcome.groups.neutralNoBackupBody", comment: "") }
+            static var neutralNoBackupCta: String { ls("welcome.groups.neutralNoBackupCta", comment: "") }
+            /// La espera del export agotó su presupuesto. Copy PROPIO y no el de Ajustes
+            /// (`settings.signOutExportPending*`): allí el verbo es «cerrar sesión» y aquí es «empezar tu
+            /// grupo», y quien lee esto no ha pedido cerrar nada. La cifra sí dice lo mismo, porque es el
+            /// mismo hecho y sale del mismo contador.
+            static var neutralStalledTitle: String { ls("welcome.groups.neutralStalledTitle", comment: "") }
+            /// Accessor-FUNCIÓN, como su hermano de Ajustes (`Settings.signOutExportPendingMessage`) y por la
+            /// misma razón: formatear en la vista deja la key fuera de `L10nFormatAccessorsTests`, que enumera
+            /// accessors-función a mano — y una key con `%d` que desaparece de un locale sale cruda, con el
+            /// número al lado, sin que ningún test lo vea. El número va tras dos puntos para no arrastrar la
+            /// concordancia de plural a los 16 idiomas.
+            static func neutralStalledBody(_ count: Int) -> String {
+                String(format: ls("welcome.groups.neutralStalledBody", comment: "Vuelta al neutro con cambios sin subir a iCloud; %d = cuántos"), count)
+            }
+            /// Sin cifra: el historial no se pudo leer, así que no hay número honesto que dar.
+            static var neutralStalledBodyUnknown: String { ls("welcome.groups.neutralStalledBodyUnknown", comment: "") }
+            static var neutralStalledContinue: String { ls("welcome.groups.neutralStalledContinue", comment: "") }
+            static var neutralStalledWait: String { ls("welcome.groups.neutralStalledWait", comment: "") }
+            /// Quedaron cambios de GRUPOS sin subir de una sesión que caducó. No se descartan nunca, así
+            /// que la única salida honesta es volver a entrar con esa cuenta.
+            static var neutralBlockedTitle: String { ls("welcome.groups.neutralBlockedTitle", comment: "") }
+            static var neutralBlockedBody: String { ls("welcome.groups.neutralBlockedBody", comment: "") }
+            /// Este arranque no puede volver al neutro por el cierre privado: su celda es la de la nube o la
+            /// de una visita, que hacen OTRO borrado. Se dice y se vuelve; cero escrituras.
+            static var neutralUnavailableTitle: String { ls("welcome.groups.neutralUnavailableTitle", comment: "") }
+            static var neutralUnavailableBody: String { ls("welcome.groups.neutralUnavailableBody", comment: "") }
+            /// CTA de las pantallas con una sola salida: vuelta al step con las otras vías intactas.
             static var gateBack: String { ls("welcome.groups.gateBack", comment: "") }
             /// G3 · el único dato que el alta del organizador pide (decisión del owner: solo nombre).
             static var nameTitle: String { ls("welcome.groups.nameTitle", comment: "") }

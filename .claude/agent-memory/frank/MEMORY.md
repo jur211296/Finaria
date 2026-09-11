@@ -48,6 +48,9 @@
 - [El generador regenera lo que edito](feedback_el_generador_regenera_lo_que_edito.md) — re-corre el script DESPUÉS de editar a mano; dos locales se quedaron con el texto viejo.
 - [El mutante compilado zanja hipótesis](feedback_mutante_compilado_zanja_hipotesis.md) — si un ticket dice que no hay dato para elegir, recompila el código anterior y reproduce: ese es el dato.
 - [El orden del enum se ve fuera](feedback_el_orden_del_enum_se_ve_fuera.md) — un case nuevo en medio cambia el número del alert que se usa para diagnosticar; va al final.
+- [El testigo global miente en el host de test](feedback_el_testigo_global_miente_en_el_host_de_test.md) — mide qué vale bajo `-uitest` ANTES de cablearlo; y una purga que no cubre su caso es peor que ninguna.
+- [El mecanismo que reuso trae sus precondiciones](feedback_el_mecanismo_que_reuso_trae_sus_precondiciones.md) — si no las cumples, entra por el COORDINADOR que sí las cumple, no adaptes el `arm*`.
+- [Una premisa corregida no reabre el camino](feedback_una_premisa_corregida_no_reabre_el_camino.md) — las razones de un `blocked` son una conjunción: se refutan TODAS, con su coordenada, antes de escribir.
 - [Mis mediciones fallan por el filtro](feedback_mis_mediciones_fallan_por_el_filtro.md) — control positivo siempre; el negativo va PRIMERO y en transacción fresca; y ojo con la exención que ciega al banco.
 - [zsh no divide variables](feedback_zsh_no_divide_variables.md) — «SUCCEEDED» con cero tests; y el exit del wrapper es del `echo`, no de xcodebuild.
 - [Revertir sin commit destruye](feedback_revertir_sin_commit_destruye.md) — en árbol sucio `git checkout -- <f>` borra el trabajo; los mutantes se revierten con `cp`.
@@ -59,6 +62,7 @@
 - [«Cero warnings» se mide en TODOS los logs](feedback_cero_warnings_se_mide_en_todos_los_logs.md) — el gate no mira los tests y lee un build incremental; dos míos iban al commit el 10-sep.
 
 ## Estado del trabajo
+- [«Vengo por un grupo» ya no bloquea al dueño](project_puerta_grupos_vuelve_al_neutro.md) — mitad 2, PR #139; el relanzamiento ya estaba decidido en la fila B; la INVITACIÓN queda fuera con ticket `high`; device-QA NO simulable.
 - [Paso 9: un verbo por sesión](project_paso9_un_verbo_por_sesion.md) — PR #138; M15 sobrevive y es hallazgo; el único rojo de XCUITest lo zanjó el árbol base; falta device-QA y NO es simulable.
 - [«Activar Yala completo» ya pregunta privado / nube](project_activacion_pregunta_donde_viven.md) — paso 8, PR #137; la review cazó 14 MÍOS; device-QA NO simulable (reinstalar antes); no reordenar «completo antes de converger».
 - [La card «Grupos» del propósito ya no existe](project_paso7_card_grupos_retirada.md) — paso 7, PR #136; la puerta B se fue entera; `organizerBranchHasOneEntry` saltará si el paso 10 añade entrada.

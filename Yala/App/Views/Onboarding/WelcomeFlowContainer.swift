@@ -29,10 +29,11 @@ enum WelcomeFlowStep {
     /// entrar con la invitación—. La rama `.invite` del chooser deja de salir por el portal para venir
     /// aquí; el que ya tiene enlace sale por el MISMO `Destination .inviteRecovery` desde la card.
     case groupsChooser
-    /// G3 · la PUERTA de la rama organizador: re-mide el canal de Grupos con `force` y comprueba que el
-    /// device no tenga datos de otro humano. Es un step y no un alert porque el source-scan de W1 prohíbe
-    /// `.alert(` en este fichero, y porque una pantalla de bloqueo con salida no es un camino muerto.
-    /// **Nada se escribe hasta que esta puerta dice que sí.**
+    /// G3 · la PUERTA de la rama organizador: re-mide el canal de Grupos con `force` y comprueba en qué
+    /// estado está el store personal de este arranque. Es un step y no un alert porque el source-scan de
+    /// W1 prohíbe `.alert(` en este fichero, y porque una pantalla con salida no es un camino muerto.
+    /// **Nada se escribe hasta que esta puerta dice que sí** — salvo la vuelta al neutro, que sí escribe
+    /// porque su trabajo ES borrar, y solo después de haberlo dicho.
     case groupsGate
     /// La rama privada, en sesión secundaria: **informa y sigue**. No es una puerta como `.groupsGate` —no
     /// hay nada que impedir desde que el dominio de preferencias por sesión cerró las escrituras al dueño—
@@ -75,6 +76,12 @@ struct WelcomeFlowContainer: View {
     /// terminal y ContentView PERSISTE el destino para retomarlo tras el relanzamiento. Se separa en dos
     /// responsabilidades porque el container no debe tocar `UserDefaults` ni los flags de onboarding.
     var onNeedsMirrorRelaunch: (WelcomeMirrorRelaunchLogic.Destination) -> Void
+    /// Mitad 2 del paso 5 · la vuelta al neutro de la puerta de Grupos armó el borrado. **No es un
+    /// `Destination` más y por eso no pasa por `leaveWelcome`**: aquí el relanzamiento no lo pide el
+    /// destino elegido sino el borrado que acaba de armarse, y el terminal que lo cuenta es el del cierre
+    /// de sesión, que vive fuera de este cover. El container solo reenvía: persistir el destino y cerrar
+    /// el Welcome es de `ContentView`, por la misma razón que el callback de arriba.
+    var onGroupsGateNeutralReturnArmed: () -> Void
     /// G3: fetch VIVO del corpus local para la puerta (mismo closure que alimenta el guard cross-cuenta
     /// del sign-in de nube — un snapshot no vale, el mirror puede estar re-importando).
     var hasLocalDataNow: @MainActor @Sendable () -> Bool
@@ -96,6 +103,7 @@ struct WelcomeFlowContainer: View {
         onSelectGroupsOrganizer: @escaping () -> Void,
         onBeaconRoutesToCloudSignIn: @escaping (CloudSignInProvider?) -> Void,
         onNeedsMirrorRelaunch: @escaping (WelcomeMirrorRelaunchLogic.Destination) -> Void,
+        onGroupsGateNeutralReturnArmed: @escaping () -> Void,
         hasLocalDataNow: @escaping @MainActor @Sendable () -> Bool,
         performICloudCorpusWipe: @escaping @MainActor () async -> String?
     ) {
@@ -107,6 +115,7 @@ struct WelcomeFlowContainer: View {
         self.onBeaconRoutesToCloudSignIn = onBeaconRoutesToCloudSignIn
         self.onSelectGroupsOrganizer = onSelectGroupsOrganizer
         self.onNeedsMirrorRelaunch = onNeedsMirrorRelaunch
+        self.onGroupsGateNeutralReturnArmed = onGroupsGateNeutralReturnArmed
         self.hasLocalDataNow = hasLocalDataNow
         self.performICloudCorpusWipe = performICloudCorpusWipe
         self._step = State(initialValue: initialStep)
@@ -185,7 +194,8 @@ struct WelcomeFlowContainer: View {
                     onProceed: {
                         leaveWelcome(to: .groupsOrganizer) { onSelectGroupsOrganizer() }
                     },
-                    onBack: { goTo(.groupsChooser) }
+                    onBack: { goTo(.groupsChooser) },
+                    onNeutralReturnArmed: onGroupsGateNeutralReturnArmed
                 )
                 .transition(.opacity)
             case .existingChooser:

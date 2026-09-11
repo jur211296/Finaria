@@ -23,20 +23,17 @@
 //
 //  **El segundo término es la enmienda del punto de control (spec M1-revival §6.1).** La rama reusa
 //  `GroupsSignInView`, que NO consulta el guard cross-cuenta (regla dura de su docblock). Sobre un
-//  device CON DATOS de otro humano —la ventana M1: Welcome visible tras un `.privateReset` (el cierre privado anterior al paso 9) con el corpus
-//  del dueño vivo; desde el paso 9 del rediseño (2026-09-11) cerrar sesión ya no la abre, porque borra lo
-//  local, pero un store que importó por otra rama sigue llegando aquí— la rama firmaría a la invitada
-//  solo-grupos SOBRE el store personal del dueño: su
-//  bridge metería los gastos de ella en el Panel de él, y el trío del paso 7
+//  device en sesión SECUNDARIA la rama firmaría a la invitada solo-grupos SOBRE el store personal del
+//  dueño: su bridge metería los gastos de ella en el Panel de él, y el trío del paso 7
 //  (`onboardingMode = .groupInvite`) viajaría al iKV del Apple ID del dueño por never-downgrade,
 //  contaminando sus otros devices. Aquí solo se BLOQUEA; ofrecer la sesión secundaria es de la ola M.
 //
 //  **El orden de los tres términos es load-bearing y no estético:** el canal va primero porque es el que
 //  el `force` acaba de re-medir, y porque su copy («ahora mismo no puedo abrirte grupos») describe un
 //  estado transitorio, mientras que los otros dos describen estados del dispositivo. Invertirlos le
-//  diría a la invitada de la ventana M1 que el problema es la conexión.
+//  diría a la invitada de una sesión secundaria que el problema es la conexión.
 //
-//  **El TERCER término (C3, 2026-08-12) es la sesión secundaria, y va DELANTE de los datos ajenos.** No
+//  **El TERCER término (C3, 2026-08-12) es la sesión secundaria, y va DELANTE del estado del store.** No
 //  es una variante del segundo: en secundaria el detector de corpus mide el store de la INVITADA
 //  (`YalaModel-Secondary`), que en una sesión recién montada está VACÍO ⇒ `hasExistingData` da `false` y
 //  la puerta abría. Y detrás de la puerta el alta escribe SEIS preferencias por
@@ -48,18 +45,28 @@
 //  es distinto —«estás de visita», no «hay datos de otro humano»— y la salida también, porque aquí sí
 //  la hay (cerrar la sesión de invitado y volver desde su propio dispositivo).
 //
-//  **El CUARTO término (D2, 2026-09-02) no es una razón más para bloquear: es la que impide bloquear
-//  mal.** El detector de corpus cuenta filas y no puede saber QUIÉN las está escribiendo, así que a la
-//  dueña que acaba de cambiar de móvil y está restaurando de SU iCloud la clasificaba como «datos de
-//  otro humano» — y el copy le ofrecía crear el grupo «desde la app que ya usas», que es ÉSTA,
-//  montándose delante de ella. Una salida imposible de seguir, que es la definición de camino muerto.
-//  La señal (`ICloudRestoreSessionSignal.isRestoringNow`) corrige el TÉRMINO de los datos, no el
-//  veredicto: por eso va DENTRO de la condición de `hasExistingData` y no como una cuarta rama, y por
-//  eso el canal y la sesión secundaria siguen bloqueando igual mientras se restaura. Es la misma
-//  enmienda, con la misma señal y sobre el mismo detector, que `CrossAccountEntryGuardLogic` ya
-//  aplicaba desde el 2026-08-13: eran dos consumidores del mismo hecho y sólo uno lo clasificaba bien.
-//  Decisión del owner; el contra que se aceptó es que cada puerta que hereda la señal es una
-//  superficie más donde un fallo de la señal sale caro.
+//  **El CUARTO término dejó de BLOQUEAR el 2026-09-11 (mitad 2 del paso 5 del rediseño).** Hasta ese día
+//  `hasExistingData && !restoreInProgress` devolvía `.blockedForeignData`, una pantalla con un único
+//  botón «Volver» y un copy que ofrecía «crea el grupo desde la app que ya usas» — que es ÉSTA. Jürgen
+//  lo midió en su móvil el 2026-09-09 sobre su PROPIO corpus: la puerta bloqueaba al dueño de los datos
+//  y no había salida. Lo que manda es la **fila B de la matriz del ADR**
+//  (`docs/sessions/2026-09-09-matriz-escenarios-sesiones.md`: «Vengo por un grupo → **sin bloqueo**: vuelta
+//  al neutro (borra local, iCloud intacto, relanza) y sigue»), y se cita ella y no el §2 a propósito: el §2
+//  declara VÁLIDA la celda «privada + grupos asociados», cuyo camino de asociación no borra nada, así que
+//  apoyar «hay corpus ⇒ borrar» en el §2 invitaría a extenderlo a una puerta donde sería destructivo.
+//  ⇒ la respuesta aquí no es bloquear sino **volver al neutro**: esperar el export, borrar lo local por
+//  ARCHIVOS, dejar iCloud intacto y relanzar. Con eso, `restoreInProgress` salió de la firma: corregía el
+//  veredicto de un bloqueo que ya no existe, y ahora las dos ramas —restaurando o no— acaban en el mismo
+//  sitio. **Y el latch NO se apaga**: dos lentes midieron que apagarlo antes de saber si el cierre va a
+//  poder correr deja al guard cross-cuenta clasificando el corpus propio de la dueña como ajeno si el
+//  cierre se aborta. Vive en memoria y muere con el relanzamiento, que es lo que este camino hace.
+//
+//  **Y el término se ENSANCHÓ al eje ancho del mount, que es lo que arregla el otro medio bug.** No basta
+//  con mirar si hay filas: `PersonalStoreDecision.attachesCloudKitMirror` es `true` también para
+//  `.localNoMirror` —`.automatic` adjunta el espejo aunque no haya cuenta de iCloud, medido en la
+//  auditoría R1(c)— así que un store VACÍO con el espejo puesto dejaba pasar al recién llegado y sus
+//  gastos de grupo acababan exportados al iCloud del dueño del teléfono. `false` para `.neutralNoMirror`,
+//  que es el mount de toda instalación fresca: la población limpia no paga nada por este término.
 //
 
 import Foundation
@@ -68,7 +75,7 @@ import Foundation
 nonisolated enum GroupsOrganizerGateLogic {
 
     enum Decision: Equatable {
-        /// Canal encendido y device sin corpus ajeno → seguir al sign-in.
+        /// Canal encendido y el store de este arranque no tiene ni corpus ni espejo → seguir al sign-in.
         case proceed
         /// El canal de Grupos sigue apagado DESPUÉS del refresh forzado. Copy honesto, vuelta al step y
         /// **cero escrituras** — ni `onboardingMode`, ni `groupsBetaUnlocked`, ni `hasCompletedOnboarding`.
@@ -76,42 +83,42 @@ nonisolated enum GroupsOrganizerGateLogic {
         /// C3 · sesión secundaria M1 viva: estás de visita en el móvil de otra persona. Copy propio y
         /// **cero escrituras** — las seis del alta caerían en el `UserDefaults` del DUEÑO.
         case blockedSecondarySession
-        /// Hay datos de otro humano en este dispositivo. Se bloquea con el copy que ya existe para ese
-        /// hecho (`welcome.cloud.blocked*`), también sin escribir nada.
-        case blockedForeignData
+        /// El store personal de ESTE arranque tiene corpus, o espeja a iCloud, o las dos cosas ⇒ antes de
+        /// entrar a Grupos hay que devolver el dispositivo al neutro. **No es un bloqueo**: la rama sigue,
+        /// con una pantalla en medio. Tampoco escribe nada por sí sola — quien borra es el cierre de sesión
+        /// privado (`CloudSessionSignOut`), y quien lo dispara es la vista tras informar a la persona.
+        case returnsToNeutral
     }
 
     /// - Parameters:
     ///   - channelEnabled: `CloudSyncFlags.groupsBackendEnabled` **leído después** del
     ///     `refreshIfDue(force: true)`. Leerlo antes es el no-op que el bug describe.
-    ///   - isSecondarySession: `SecondarySessionStore.isActive()`. C3 · va ANTES de `hasExistingData`
+    ///   - isSecondarySession: `SecondarySessionStore.isActive()`. C3 · va ANTES del estado del store
     ///     porque el detector mide el store de la INVITADA, que puede estar vacío: sin este término la
     ///     puerta abre justo en el caso que más caro sale.
     ///   - hasExistingData: el detector del guard cross-cuenta (`ContentView.checkHasExistingData`),
     ///     que cuenta también grupos y filas bridgeadas — un dueño anterior que venía de «Solo Grupos»
     ///     no tiene cuentas ni categorías propias y daría `false` con el detector estrecho.
-    ///   - restoreInProgress: ESTA sesión pidió restaurar de iCloud y ese import no ha terminado
-    ///     (`ICloudRestoreSessionSignal.isRestoringNow`). **SIN valor por defecto a propósito**, igual
-    ///     que en `CrossAccountEntryGuardLogic.decide`: un default sería `false` y cualquier call-site
-    ///     nuevo heredaría el bug en silencio. Sin él, añadir una puerta obliga a decidir, y lo
-    ///     comprueba el compilador y no un escáner.
+    ///   - mountAttachesMirror: `SwiftDataConfiguration.personalStoreMountedDecision.attachesCloudKitMirror`,
+    ///     el EJE ANCHO. **Sin valor por defecto a propósito**, por la misma razón por la que
+    ///     `restoreInProgress` no lo tenía: un default sería `false` y cualquier call-site nuevo heredaría
+    ///     en silencio el medio bug que este término existe para cerrar (entrar a Grupos con el espejo
+    ///     puesto y exportar los gastos del recién llegado al iCloud del dueño del teléfono).
     static func decide(channelEnabled: Bool,
                        isSecondarySession: Bool,
                        hasExistingData: Bool,
-                       restoreInProgress: Bool) -> Decision {
+                       mountAttachesMirror: Bool) -> Decision {
         guard channelEnabled else { return .blockedChannelOff }
         guard !isSecondarySession else { return .blockedSecondarySession }
-        // Las filas que la propia dueña está bajando de SU iCloud ahora mismo no son «datos de otro
-        // humano»: son el resultado, a medias, de lo que ella acaba de pedir. El detector cuenta filas y
-        // no puede saber quién las está escribiendo, así que sin este término la puerta la acusa a ella
-        // — y la salida que le ofrece el copy («crea el grupo desde la app que ya usas») es literalmente
-        // esta app, montándose delante de ella. Imposible de seguir.
-        //
-        // Corrige el TÉRMINO de los datos, no el veredicto: es la misma forma que ya tiene el guard
-        // gemelo (`CrossAccountEntryGuardLogic`, que consume el mismo detector), y por eso va DENTRO de
-        // esta condición y no como una cuarta rama. Todo lo demás de la puerta sigue mandando: con el
-        // canal apagado o en sesión secundaria se bloquea igual, esté restaurando o no.
-        guard !(hasExistingData && !restoreInProgress) else { return .blockedForeignData }
+        // Los dos términos van en OR y cada uno cierra una mitad distinta del mismo daño:
+        //  · `hasExistingData` — hay corpus de alguien debajo, y el alta de Grupos escribiría encima.
+        //  · `mountAttachesMirror` — aunque el store esté VACÍO: con el espejo adjunto, lo que el recién
+        //    llegado escriba se exporta al iCloud del Apple ID de este teléfono. Es el medio bug que el
+        //    detector de filas no puede ver, porque no hay filas todavía.
+        // Ninguno de los dos es «datos de otro humano»: el detector cuenta filas y no sabe de quién son.
+        // Por eso la respuesta dejó de ser un bloqueo — quien está delante puede perfectamente ser el
+        // dueño, y en el modelo del ADR §2 un Welcome visible significa que no hay sesión privada viva.
+        guard !(hasExistingData || mountAttachesMirror) else { return .returnsToNeutral }
         return .proceed
     }
 }
