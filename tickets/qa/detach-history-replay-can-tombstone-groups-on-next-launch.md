@@ -1,9 +1,10 @@
 ---
 id: detach-history-replay-can-tombstone-groups-on-next-launch
-status: backlog
+status: qa
 priority: high
 area: "modo-nube, groups, settings"
 created: 2026-09-11
+updated: 2026-09-11
 source: "review adversarial del paso 10 (`groups-account-association-in-storage-row`), lente de sync"
 ---
 
@@ -51,3 +52,38 @@ Con el andamio de `CloudSyncEngineTests` (containers on-disk con los tres stores
 por-CONTAINER): desasociar con filas de grupo vivas, forzar el fallo del primer `drainOnce`, re-asociar y
 **contar filas de `GroupSyncOutbox` tras el ciclo**. Con el agujero abierto salen tombstones de cada
 `SplitExpense` borrado; con el arreglo, cero.
+
+
+---
+
+## Cerrado en código (2026-09-11)
+
+**El arreglo no es ninguna de las dos vías que este ticket proponía, y el porqué está medido.** El boot-wipe
+por ARCHIVOS exigiría relanzar la app, y el desasociar es un gesto in-session de Ajustes: convertirlo en
+«reabre Yala» es un cambio de producto que ni el ADR ni este ticket piden. Y conservar el ancla del drain
+—la alternativa que el ticket ofrecía— se implementó, se midió en la review y **se retiró**: el ancla que
+sobreviviría es la del último drain ANTERIOR al desasociar, y estos deletes son POSTERIORES, así que
+`fetchHistory($0.token > token)` los devuelve igual; encima clavaba `lastDrainedTxAt`, uno de los cuatro
+suelos del corte de purga del History, sin canal que volviera a avanzarlo.
+
+**Lo que se hizo:** el borrado local del dominio Grupos va **firmado con el autor del canal**
+(`GroupsSyncClient.outboxSaveAuthor`). El drain descarta por autor ANTES de traducir, así que esos deletes
+dejan de ser traducibles **mire el History desde donde lo mire** — no depende del cursor, ni de
+`backendGroupZoneIDs`, ni del orden de `syncCycleOnce`, que era el requisito duro.
+
+La firma vive DENTRO de `DataWipeService.deleteLocalGroupsRows`, no en los llamadores, y por eso esa función
+hace SIEMPRE el `save()`: con el autor restaurado antes de un save ajeno la firma no serviría de nada. Lo que
+el llamador quiera meter en la misma transacción va en `alsoDeleting`. Consecuencia buscada: **el otro
+call-site, el «Empiezo de cero» del Welcome, queda cubierto por construcción** — sus deletes eran
+igualmente traducibles, a tombstones de los grupos del humano anterior.
+
+Verificado en simulador con `YalaTests/CloudSync/GroupsDetachHistoryReplayTests` (5 casos, containers
+on-disk con los tres stores y History real): el escenario completo del ticket —desasociar con filas vivas,
+primer drain que no ancla, re-asociar, relanzar— encola **cero escrituras**; con el agujero abierto salen
+**2 tombstones de `SplitExpense`** (el grupo no cuenta: su emisión es `updateOnly`, y `SplitMember` es
+pull-only). Tres mutantes verificados. La regla de área lleva la entrada nueva.
+
+**Lo que falta:** device-QA con dos personas — recorrido 8 de
+`tickets/qa/device-qa-groups-account-association.md`. **NO es simulable:** el unit test llega hasta «el
+teléfono no encola la escritura»; que el servidor no la reciba y que el otro miembro no pierda sus gastos
+solo se ve en device.

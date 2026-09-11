@@ -141,7 +141,10 @@ final class CloudSessionSignOut {
     ///     borrarían de verdad, para todos los miembros. Es la trampa que documenta la regla «Un borrado
     ///     tiene DOS mitades», y aquí sería peor que allí.
     ///  3. Las filas se borran **después** del teardown y del `signOut`, con el canal ya cortado y sin
-    ///     credenciales: nada de lo que este borrado local genere puede salir del teléfono.
+    ///     credenciales: nada de lo que este borrado local genere puede salir del teléfono **en este
+    ///     proceso**. Esa acotación es literal y hay que leerla entera: el SwiftData History sobrevive al
+    ///     relanzamiento, así que lo que protege el arranque SIGUIENTE no es el teardown sino cómo se
+    ///     escribe el borrado — ver `purgeGroupsDomainForDetach`.
     ///
     /// El bloqueo por cambios sin subir se comporta como el del cierre —«nunca descarta»—: si el push-all
     /// no vacía, la fase queda en `.blocked` y **no se suelta nada**. Reintentar es seguro porque hasta el
@@ -194,37 +197,76 @@ final class CloudSessionSignOut {
         await CloudAuthService.shared.signOut()
 
         // (3) Con el canal cortado y sin credenciales: las filas, el outbox y el cursor, de una vez.
-        do {
-            // **Las filas y el estado de sync, en UNA sola transacción.** Morir entre los dos `save()`
-            // dejaba el par incoherente «cursor borrado + filas vivas», y con él el primer drain del
-            // arranque siguiente escanea el History entero con las zonas todavía presentes y re-emite
-            // upserts de todo el corpus con HLC nuevos, pisando por LWW lo que otros miembros hayan
-            // cambiado. El par que vale en una frontera de CUENTA es «filas borradas + cursor borrado»,
-            // y atómico.
-            //
-            // **Sin `GroupBridgePreference`**: esa tabla vive en el schema PERSONAL, que sí espeja a
-            // iCloud, así que borrarla exportaría el delete al Apple ID y se la quitaría también al iPad
-            // del mismo dueño, donde puede haber una sesión de grupos viva. Y además es suya: cómo quiere
-            // que se puenteen sus gastos no deja de ser cierto porque suelte esta cuenta.
-            try DataWipeService.deleteLocalGroupsRows(
-                in: context, save: false, includingBridgePreferences: false)
-            for row in try context.fetch(FetchDescriptor<GroupSyncOutbox>()) { context.delete(row) }
-            for cursor in try context.fetch(FetchDescriptor<GroupSyncCursor>()) { context.delete(cursor) }
-            SaveBreadcrumb.willSave("CloudSessionSignOut.detachGroupsAccount")
-            try context.save()
-            SaveBreadcrumb.didSave("CloudSessionSignOut.detachGroupsAccount")
-        } catch {
-            #if DEBUG
-            print("CloudSessionSignOut: borrado local del dominio de grupos falló: \(error)")
-            #endif
-            context.rollback()
-        }
+        Self.purgeGroupsDomainForDetach(context: context)
 
         GroupsAccountAssociation.shared.clear()
         GroupsSessionHistoryMarker.markSessionSeen()  // siguió siendo cierto: este device tuvo sesión.
         SessionState.shared.incrementDataVersion()
         WidgetDataCache.updateCache(context: context)
         phase = .idle
+    }
+
+    /// El borrado local del dominio Grupos del desasociar: las filas `Split*`, el outbox y la mitad del
+    /// cursor que es del PULL. **En UNA sola transacción** — morir entre dos `save()` dejaba el par
+    /// incoherente «cursor reseteado + filas vivas».
+    ///
+    /// `static` y separada del coordinador para ser directamente testeable, como `purgeGroupsSyncState`:
+    /// lo que la envuelve (credenciales, asociación, widgets) no lo es en unit test, y este borrado es
+    /// justo la parte cuyo efecto sobre el SwiftData History hay que poder medir.
+    ///
+    /// **Tres cosas que parecen detalles y son el arreglo entero** (ticket
+    /// `detach-history-replay-can-tombstone-groups-on-next-launch`):
+    ///
+    ///  1. **El `save()` lo hace `deleteLocalGroupsRows`, firmado con el autor del canal.** Cortar el
+    ///     canal antes (lo que hace el paso 3 del desasociar) protege ESTE proceso, no el siguiente: el
+    ///     History sobrevive al relanzamiento, y un drain posterior que re-barra esa ventana traduciría
+    ///     estos deletes a tombstones y borraría los gastos **para todos los miembros del grupo**.
+    ///     Firmados, el drain los descarta antes de traducir, mire desde donde mire.
+    ///
+    ///  2. **El cursor se borra ENTERO —filas y cursor en el mismo `save()`— y la firma es la ÚNICA defensa
+    ///     de estos deletes. Conservar el ancla del drain se probó y se retiró, medido** (review adversarial
+    ///     del 2026-09-11, tres lentes):
+    ///      - **No los protege.** El ancla que sobreviviría es la del último drain ANTERIOR al desasociar, y
+    ///        estos deletes son posteriores: `fetchHistory($0.token > token)` los devuelve igual. Lo único
+    ///        que los descarta es el autor.
+    ///      - **Lo que evitaría —re-barrer el History viejo— no produce nada aquí.** Con las filas ya
+    ///        borradas, el `case` de insert/update no resuelve ninguna fila viva por `PersistentIdentifier`
+    ///        y no emite. Medido: 0 filas. (Con las filas VIVAS sí re-emite, 1 upsert con HLC nuevo por
+    ///        fila — ése es el par «cursor borrado + filas vivas» que esta transacción única impide, y lo
+    ///        fija `GroupsDetachHistoryReplayTests`.)
+    ///      - **Y cuesta.** `lastDrainedTxAt` es uno de los cuatro suelos del corte de purga del History
+    ///        (`CloudSyncEngine.groupDrainedBoundary`). Conservarlo sin canal que lo avance —tras soltar la
+    ///        cuenta no hay sesión, así que el loop no arranca— lo deja congelado en el instante del
+    ///        desasociar: hoy es inocuo porque la purga solo corre con el runtime personal, que es de
+    ///        `.cloud`, pero clavaría el corte para siempre en cuanto esa persona migrara a la nube.
+    ///     ⇒ el par coherente en esta frontera de CUENTA sigue siendo **«filas borradas + cursor borrado»,
+    ///     atómico** — lo mismo que antes del arreglo, con el borrado ahora firmado.
+    ///
+    ///  3. **Nada de esto se apoya en que el drain corra ANTES del pull dentro de `syncCycleOnce`.** Eso
+    ///     era lo único que cerraba el agujero hasta el 2026-09-11 —con las zonas sin repoblar,
+    ///     `backendGroupZoneIDs` sale vacío y el drain no emite— y era un efecto colateral del orden, no
+    ///     una defensa: bastaba con que ese primer drain lanzara (su `catch` traga) para que el ciclo
+    ///     siguiera al pull, repoblara las zonas y el drain de después sí emitiera.
+    ///
+    /// **Sin `GroupBridgePreference`**: esa tabla vive en el schema PERSONAL, que sí espeja a iCloud, así
+    /// que borrarla exportaría el delete al Apple ID y se la quitaría también al iPad del mismo dueño,
+    /// donde puede haber una sesión de grupos viva. Y además es suya: cómo quiere que se puenteen sus
+    /// gastos no deja de ser cierto porque suelte esta cuenta.
+    static func purgeGroupsDomainForDetach(context: ModelContext) {
+        do {
+            SaveBreadcrumb.willSave("CloudSessionSignOut.detachGroupsAccount")
+            try DataWipeService.deleteLocalGroupsRows(in: context, includingBridgePreferences: false) {
+                for row in try context.fetch(FetchDescriptor<GroupSyncOutbox>()) { context.delete(row) }
+                for cursor in try context.fetch(FetchDescriptor<GroupSyncCursor>()) { context.delete(cursor) }
+            }
+            SaveBreadcrumb.didSave("CloudSessionSignOut.detachGroupsAccount")
+        } catch {
+            #if DEBUG
+            print("CloudSessionSignOut: borrado local del dominio de grupos falló: \(error)")
+            #endif
+            // `deleteLocalGroupsRows` ya hizo rollback antes de propagar: sin él los deletes quedarían
+            // sucios y el siguiente `save()` de cualquier camino los comitearía bajo el autor por defecto.
+        }
     }
 
     // MARK: - Los tres cierres que borran por ARCHIVOS: privada (C), «equipo» (D) y solo grupos (F)

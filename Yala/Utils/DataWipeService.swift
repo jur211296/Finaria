@@ -336,8 +336,6 @@ final class DataWipeService {
             throw GroupsWipeGuardError.mountedStoreBelongsToOwner
         }
 
-        try deleteLocalGroupsRows(in: context, save: false)
-
         // 2.7 · El outbox de GRUPOS muere aquí; el CURSOR sobrevive A PROPÓSITO. Los dos viven en
         // `syncMetaSchema` —el store que `wipeAllUserData` no toca— pero tienen signos OPUESTOS en una
         // frontera de USUARIO:
@@ -349,9 +347,13 @@ final class DataWipeService {
         // acota su uso al camino solo-grupos «tras el teardown (generación cortada)», y este camino no
         // corta ninguna generación. La otra mitad —el espejo del App Group— va en `resetSyncState`,
         // porque es disco y los tests lo sustituyen.
-        for row in try context.fetch(FetchDescriptor<GroupSyncOutbox>()) { context.delete(row) }
-
-        try context.save()
+        //
+        // Va DENTRO de `deleteLocalGroupsRows` (2026-09-11) para seguir siendo UNA sola transacción ahora
+        // que el `save()` vive ahí: es esa función la que la firma con el autor del canal, y un save propio
+        // aquí volvería a escribir los deletes bajo el autor por defecto — traducibles a tombstones.
+        try deleteLocalGroupsRows(in: context) {
+            for row in try context.fetch(FetchDescriptor<GroupSyncOutbox>()) { context.delete(row) }
+        }
 
         removeGroupsDomainPreferenceKeys(from: defaults)
         clearHandoverOnboardingMode(from: defaults, iKV: iKV)
@@ -376,11 +378,25 @@ final class DataWipeService {
     /// mismo humano que vuelve a asociar, y el barrido de preferencias le quitaría la adopción de Grupos
     /// de este dispositivo. Dos listas de entidades en dos sitios es exactamente como divergen.
     ///
-    /// **Los cinco `Split*` son borrado LOCAL, jamás remoto** — ver el porqué completo en
-    /// `wipeLocalGroupsDomain`: ese store monta `cloudKitDatabase: .none` y su único camino de export es
-    /// el enqueue explícito. Lo que sí tiene que garantizar el LLAMADOR es que el canal backend esté
-    /// cortado: con el drain vivo, estos deletes se traducirían a tombstones y borrarían los grupos
-    /// **para todos los miembros**.
+    /// **Los cinco `Split*` son borrado LOCAL, jamás remoto, y lo que lo garantiza es el AUTOR del save.**
+    /// Ese store monta `cloudKitDatabase: .none` (no hay espejo que exporte nada), así que su único camino
+    /// de salida es el drain del canal, que traduce el SwiftData History a filas de outbox. El drain
+    /// descarta por autor antes de traducir (`GroupsSyncClient.performDrain`, `tx.author !=
+    /// outboxSaveAuthor`), así que esta transacción va firmada con `GroupsSyncClient.outboxSaveAuthor` y
+    /// deja de ser traducible **mire el drain el History desde donde lo mire**.
+    ///
+    /// **Cortar el canal antes de llamar NO basta, y ésa era la garantía delegada al llamador hasta el
+    /// 2026-09-11.** El History sobrevive al proceso: en un arranque POSTERIOR, con el canal ya de vuelta,
+    /// un drain que re-barra esa ventana traduciría estos deletes a tombstones y borraría los grupos **para
+    /// todos los miembros**. Lo único que lo impedía era un efecto colateral del orden dentro de
+    /// `syncCycleOnce` (el drain corre antes del pull, así que las zonas aún no están repobladas), y un
+    /// reordenamiento futuro de ese método reabría el agujero sin que nadie lo notara. Ticket
+    /// `detach-history-replay-can-tombstone-groups-on-next-launch`.
+    ///
+    /// Por eso la firma vive AQUÍ dentro y no en los dos llamadores: un tercer camino que borre estas filas
+    /// nace firmado sin tener que acordarse. Y por eso la función hace SIEMPRE el `save()` — con el autor
+    /// restaurado antes de un save ajeno, la firma no serviría de nada. Lo que el llamador quiera meter en
+    /// la MISMA transacción va en `alsoDeleting`.
     ///
     /// **`GroupBridgePreference` NO cumple esa frase, y por eso es opcional.** Vive en el
     /// `personalSchema` (`SwiftDataConfiguration.swift:112`), que sí lleva el espejo de CloudKit: con el
@@ -390,28 +406,50 @@ final class DataWipeService {
     /// del mismo Apple ID, donde puede haber una sesión de grupos viva.
     ///
     /// - Parameters:
-    ///   - save: `false` cuando el llamador va a acumular más borrados en la misma transacción.
     ///   - includingBridgePreferences: ver arriba. `true` solo en el relevo de humano.
+    ///   - alsoDeleting: lo que el llamador quiere borrar en la MISMA transacción (su outbox, su cursor).
+    ///     Corre con el autor del canal ya puesto y antes del único `save()`.
     static func deleteLocalGroupsRows(
-        in context: ModelContext, save: Bool = true, includingBridgePreferences: Bool = true
+        in context: ModelContext, includingBridgePreferences: Bool = true,
+        alsoDeleting extra: () throws -> Void = {}
     ) throws {
-        // Los 5 `Split*` se vinculan por IDs planos (`groupZoneID`/`expenseID`/`memberID`), NO por
-        // `@Relationship` ⇒ sin orden de dependencias que respetar y sin cascadas que disparar.
-        for group in try context.fetch(FetchDescriptor<SplitGroup>()) { context.delete(group) }
-        for member in try context.fetch(FetchDescriptor<SplitMember>()) { context.delete(member) }
-        for expense in try context.fetch(FetchDescriptor<SplitExpense>()) { context.delete(expense) }
-        for share in try context.fetch(FetchDescriptor<SplitShare>()) { context.delete(share) }
-        for settlement in try context.fetch(FetchDescriptor<SplitSettlement>()) { context.delete(settlement) }
+        // El autor se fija ANTES del primer `delete` y se restaura pase lo que pase. Es propiedad del
+        // CONTEXTO en el instante del save —un autosave que se colara a mitad también quedaría firmado—,
+        // así que el par fijar/restaurar tiene que envolver la transacción entera, no solo el `save()`.
+        let previousAuthor = context.author
+        context.author = GroupsSyncClient.outboxSaveAuthor
+        defer { context.author = previousAuthor }
 
-        // `GroupBridgePreference` vive en el `personalSchema` pero `wipeAllUserData` no la nombra
-        // (junto con `CloudMigrationMarker`, los 2 modelos personales que no borra). Es el override
-        // por-grupo del bridge: dejarla haría que el bridge del usuario nuevo heredara las
-        // decisiones «TX real sí/no» del anterior.
-        if includingBridgePreferences {
-            for pref in try context.fetch(FetchDescriptor<GroupBridgePreference>()) { context.delete(pref) }
+        // El `do` abarca desde el PRIMER `delete`, no solo el `save()`: un `fetch` que lance a mitad
+        // —`SplitShare` tras haber borrado ya los grupos, por ejemplo— deja los deletes anteriores SUCIOS
+        // en el contexto, y el siguiente `save()` de cualquier otro camino los comitea bajo el autor POR
+        // DEFECTO. Esa es exactamente la transacción traducible a tombstones que esta función existe para
+        // no escribir, así que el rollback tiene que cubrir el cuerpo entero.
+        do {
+            // Los 5 `Split*` se vinculan por IDs planos (`groupZoneID`/`expenseID`/`memberID`), NO por
+            // `@Relationship` ⇒ sin orden de dependencias que respetar y sin cascadas que disparar.
+            for group in try context.fetch(FetchDescriptor<SplitGroup>()) { context.delete(group) }
+            for member in try context.fetch(FetchDescriptor<SplitMember>()) { context.delete(member) }
+            for expense in try context.fetch(FetchDescriptor<SplitExpense>()) { context.delete(expense) }
+            for share in try context.fetch(FetchDescriptor<SplitShare>()) { context.delete(share) }
+            for settlement in try context.fetch(FetchDescriptor<SplitSettlement>()) { context.delete(settlement) }
+
+            // `GroupBridgePreference` vive en el `personalSchema` pero `wipeAllUserData` no la nombra
+            // (junto con `CloudMigrationMarker`, los 2 modelos personales que no borra). Es el override
+            // por-grupo del bridge: dejarla haría que el bridge del usuario nuevo heredara las
+            // decisiones «TX real sí/no» del anterior.
+            if includingBridgePreferences {
+                for pref in try context.fetch(FetchDescriptor<GroupBridgePreference>()) {
+                    context.delete(pref)
+                }
+            }
+
+            try extra()
+            try context.save()
+        } catch {
+            context.rollback()
+            throw error
         }
-
-        if save { try context.save() }
     }
 
     /// Barrido de las preferencias del dominio Grupos. Separado de `wipeLocalGroupsDomain` para

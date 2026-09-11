@@ -88,6 +88,14 @@ patrón que el primer eslabón, pero por otra puerta: allí la tautología la po
 `abs()`; aquí la pone **el escenario**, porque comparar el valor final contra el que el fixture ya
 dejó no distingue «lo recomputó» de «no lo tocó».
 
+**Variante del mismo eslabón, y la más barata de todas: el DEFAULT DEL MODELO.** El 2026-09-11 aserté
+`#expect(after.groupCursorsJSON == "{}")` para fijar que el desasociar soltaba los cursores del pull.
+`GroupSyncCursor.groupCursorsJSON` **nace valiendo `"{}"`** y mi fixture nunca ejecutaba un pull: la línea
+de producción se podía borrar entera con los cinco tests en verde. Aquí la tautología no la pone ni
+producción ni el fixture — la pone la **declaración del `@Model`**. ⇒ cuando aserjes que algo «se limpió»,
+`git show HEAD:<modelo>` y mira su default; si coincide con lo que esperas, hay que sembrar contenido real
+primero (el molde estaba al lado, en `HandoverGroupsDomainTests`, que siembra `{"g1":5}`).
+
 ⇒ **La cura es ENSUCIAR con centinelas imposibles justo antes de la operación medida** (`-999_999`,
 `"XXX"`, un `true` donde se espera `false`), que es lo que ya hacía el test hermano de
 `bulkUpdateAmount` con su `-999`. Con eso las cuatro pasan a medir «esta operación REESCRIBIÓ la
