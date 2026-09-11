@@ -5826,3 +5826,63 @@
 
 /* Vuelta al neutro imposible en esta celda: cuerpo */
 "welcome.groups.neutralUnavailableBody" = "这台手机上有一个未关闭的会话，需要先在“设置”中关闭，才能在这里创建群组。请返回：我们没有改动任何内容。";
+
+/* Título de la sección Grupos dentro de «Dónde viven tus datos» */
+"storage.groups.title" = "群组";
+
+/* Cuerpo cuando no hay cuenta de grupos asociada */
+"storage.groups.noAccountBody" = "你的群组保存在 Yala 账户中，与这台 iPhone 上的数据分开。";
+
+/* Botón para asociar una cuenta de grupos */
+"storage.groups.associateButton" = "关联一个用于群组的账户";
+
+/* Cuerpo cuando hay cuenta asociada pero no se sabe su nombre */
+"storage.groups.associatedUnnamedBody" = "你的群组使用一个 Yala 账户。";
+
+/* Cuerpo en un segundo dispositivo, sin nombre de cuenta */
+"storage.groups.needsSignInUnnamedBody" = "你的群组在你的 Yala 账户中。登录后就能在这台 iPhone 上看到。";
+
+/* Botón para entrar con la cuenta de grupos ya asociada */
+"storage.groups.signInButton" = "用该账户登录";
+
+/* Botón para desasociar la cuenta de grupos */
+"storage.groups.detachButton" = "取消关联";
+
+/* Cuerpo cuando los datos personales ya viven en la cuenta de Yala */
+"storage.groups.sameAccountBody" = "你的群组用的就是这个账户。";
+
+/* Título de la confirmación de desasociar */
+"storage.groups.detachTitle" = "要取消关联群组账户吗？";
+
+/* Botón: conservar en el Panel los gastos de grupo */
+"storage.groups.detachKeep" = "保留我付的支出";
+
+/* Botón: quitar del Panel los gastos de grupo */
+"storage.groups.detachRemove" = "从「首页」移除全部";
+
+/* Progreso mientras se desasocia */
+"storage.groups.detachWorking" = "正在取消关联…";
+
+/* Progreso mientras se suben los cambios de grupos */
+"storage.groups.detachWaiting" = "正在保存你待处理的更改…";
+
+/* Cuerpo con el nombre de la cuenta de grupos asociada */
+"storage.groups.associatedBody" = "你的群组使用 %@。";
+
+/* Cuerpo en un segundo dispositivo, con el nombre de la cuenta */
+"storage.groups.needsSignInBody" = "你的群组在 %@ 中。登录后就能在这台 iPhone 上看到。";
+
+/* Mensaje de la confirmación de desasociar */
+"storage.groups.detachBody" = "你的群组会从这台 iPhone 上移除，但仍留在你的账户里：再次关联就会回来。别人欠你和你欠别人的账目两种情况下都会消失；你能选的是自己付的那些支出怎么处理。";
+
+/* Título del aviso cuando el desasociar se bloquea */
+"storage.groups.detachBlockedTitle" = "无法取消关联";
+
+/* Aviso: bloqueo temporal al desasociar */
+"storage.groups.detachBlockedTransient" = "你的群组还有更改尚未上传。请稍后再试。";
+
+/* Aviso: bloqueo permanente al desasociar */
+"storage.groups.detachBlockedPermanent" = "你的群组还有更改尚未上传，而且我们无法连接。请检查网络连接后重试。";
+
+/* Aviso: sesión caducada al desasociar */
+"storage.groups.detachBlockedSession" = "你的群组登录已过期。请重新登录后再试。";

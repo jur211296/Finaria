@@ -37,6 +37,7 @@
 - [Un gate falla ABIERTO por su entrada](feedback_un_gate_falla_abierto_por_su_entrada.md) — lista vacía por error = «no hay»; y el snapshot se congela durante el `await`.
 - [El avisador que se rescata no vigila](feedback_el_avisador_que_se_rescata_no_vigila.md) — el respaldo ciega al vigilante; y `always()` en un job de aviso dispara al cancelar el run A MANO.
 - [La corrección de la lente reintroduce el bug](feedback_la_correccion_de_la_lente_reintroduce_el_bug.md) — el 10-sep, dos veces en el mismo predicado; lo que escribes DESPUÉS de la review no está revisado.
+- [El ancla que no existe](feedback_el_ancla_que_no_existe.md) — antes de diseñar un «vuelve a enlazarse», comprueba que el objeto TIENE identidad serializable; si no, el ticket pide algo imposible.
 - [La review adversarial caza lo MÍO](feedback_review_adversarial_caza_lo_mio.md) — 8 el 7-sep, 7 el 8-sep; puede refutar la PREMISA del ticket, y un camino muerto que revives trae sus bugs intactos.
 - [La rule de área es una lente más](feedback_la_rule_de_area_es_una_lente_mas.md) — leerla CONTRA el diff: cazó lo que las tres lentes no vieron el 8-sep y otras dos cosas el 10-sep.
 - [Las lentes se contradicen entre sí](feedback_lentes_adversariales_se_contradicen.md) — cuando dos discrepan, mídelo; y la CORRECCIÓN de una lente también puede venir incompleta.
@@ -62,6 +63,7 @@
 - [«Cero warnings» se mide en TODOS los logs](feedback_cero_warnings_se_mide_en_todos_los_logs.md) — el gate no mira los tests y lee un build incremental; dos míos iban al commit el 10-sep.
 
 ## Estado del trabajo
+- [La cuenta de grupos ya se ve y se suelta en Ajustes](project_asociacion_cuenta_de_grupos.md) — paso 10, PR #140; el «enlace dormido» del ticket era IMPOSIBLE (sin ancla) y se sustituyó; device-QA NO simulable; deja dos tickets `high`.
 - [«Vengo por un grupo» ya no bloquea al dueño](project_puerta_grupos_vuelve_al_neutro.md) — mitad 2, PR #139; el relanzamiento ya estaba decidido en la fila B; la INVITACIÓN queda fuera con ticket `high`; device-QA NO simulable.
 - [Paso 9: un verbo por sesión](project_paso9_un_verbo_por_sesion.md) — PR #138; M15 sobrevive y es hallazgo; el único rojo de XCUITest lo zanjó el árbol base; falta device-QA y NO es simulable.
 - [«Activar Yala completo» ya pregunta privado / nube](project_activacion_pregunta_donde_viven.md) — paso 8, PR #137; la review cazó 14 MÍOS; device-QA NO simulable (reinstalar antes); no reordenar «completo antes de converger».

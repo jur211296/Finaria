@@ -1,0 +1,69 @@
+---
+id: device-qa-groups-account-association
+status: qa
+priority: high
+area: "settings, groups, modo-nube"
+created: 2026-09-11
+source: "paso 10 del rediseño de sesiones (`groups-account-association-in-storage-row`)"
+---
+
+# Device-QA · asociar y desasociar la cuenta de grupos
+
+**NO es simulable.** Hacen falta CloudKit real, una cuenta de Yala real en el backend y —para el
+recorrido 5— un segundo dispositivo con el mismo Apple ID. El simulador no tiene sesión de nube: los
+XCUITest fingen el predicado `hasSession` y no crean ninguna cuenta.
+
+## Montaje
+
+- iPhone con **sesión privada** (datos en iCloud) y onboarding completado.
+- Una cuenta de Google o Apple que en el backend sea `groups_only` o no exista todavía.
+- Para el 5: iPad o segundo iPhone con el MISMO Apple ID y la app instalada.
+
+## Recorridos
+
+**1 · Asociar (AC 1).** Ajustes → «¿Dónde viven tus datos?». Bajo **Grupos** tiene que salir «Asociar una
+cuenta para grupos». Tócalo: Ajustes se cierra y aparece el sign-in de Grupos. Entra con Google. Termina
+el alta. Vuelve a Ajustes → la sección dice **tu correo**. Abre la pestaña Grupos: tus grupos están.
+→ Comprueba además que al volver de Ajustes NO se ha quedado nada bloqueado: crea una transacción y
+  comprueba que el aviso de la bandeja o el paywall siguen saliendo cuando toquen.
+
+**2 · Desasociar CONSERVANDO (AC 2).** Antes: crea 3 gastos de grupo que pagues TÚ, y comprueba que los 3
+salen en tu Panel. Ajustes → Grupos → «Desasociar» → «Conservar los gastos que pagué».
+→ Los 3 siguen en el Panel **sin marca de grupo**, y ahora se pueden **editar y borrar** (ábrelos y
+  compruébalo: es la mitad que el diseño anterior rompía).
+→ Los apuntes de «presté X» / «debo Y» desaparecen — es lo que el copy anuncia.
+→ La pestaña Grupos ya no tiene tus grupos.
+→ **Desde otro dispositivo o desde la web**, la cuenta y sus grupos siguen vivos en el backend.
+
+**3 · Re-asociar la MISMA cuenta (AC 3).** Vuelve a asociar la misma cuenta. Los grupos vuelven.
+→ **Cuenta los movimientos del Panel: los 3 gastos tienen que seguir siendo 3, no 6.** Es el criterio que
+  el libro de conservados existe para cumplir.
+→ Residual conocido y esperado: los 3 NO vuelven a estar enlazados al gasto de grupo (ticket
+  `groups-reassociation-does-not-restore-the-bridge-link`). Editar el gasto en el grupo no los cambia.
+
+**4 · Asociar OTRA cuenta (AC 4).** Desasocia conservando y asocia una cuenta DISTINTA.
+→ Los 3 movimientos de antes se quedan como estaban.
+→ Los gastos de los grupos de la cuenta nueva llegan limpios y se puentean normal.
+
+**5 · Segundo dispositivo (AC 6).** Con la cuenta asociada en el iPhone, abre la app en el iPad del mismo
+Apple ID y restaura desde iCloud.
+→ Ajustes → «¿Dónde viven tus datos?» tiene que decir **«Tus grupos están en \<tu correo\>»** con el botón
+  «Entrar con esa cuenta» (la sesión no viaja; la asociación sí).
+→ La pestaña Grupos tiene que ofrecer **entrar**, no «crear una cuenta».
+→ **Y la prueba que más importa:** desasocia en el iPhone, deja pasar un rato, y **abre el iPad**. Al
+  volver al iPhone, la asociación tiene que seguir soltada. Si reaparece, el tombstone no está llegando.
+
+**6 · Nube completa (AC 5).** En un dispositivo con la sesión personal ya en la nube, la sección tiene que
+decir «Tus grupos usan esta misma cuenta» y **no** ofrecer desasociar.
+
+**7 · Bloqueo.** Pon el teléfono en modo avión con un gasto de grupo recién creado (sin subir) y toca
+«Desasociar».
+→ Tiene que salir **el aviso de esta pantalla** («No pudimos soltar la cuenta»), no el del cierre de
+  sesión, y nada tiene que soltarse.
+→ Cierra el aviso y vuelve a tocar «Desasociar»: **tiene que responder**. Si el segundo toque no hace
+  nada, la fase se quedó bloqueada.
+
+## Lo que NO entra aquí
+
+La promoción de la asociada a `complete` desde «Migrar a la nube»: su cableado es del ticket
+`settings-migrate-to-cloud-adopts-silently-instead-of-migrating`. Este paso solo entrega el dato.

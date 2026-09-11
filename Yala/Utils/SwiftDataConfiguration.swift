@@ -716,6 +716,13 @@ extension SwiftDataConfiguration {
             // «recién instalado»: la persona siguiente no tiene grupos esperándola en ninguna cuenta.
             // `removeUserPreferenceKeys` no lo nombra (es del dominio Grupos), así que sin esto sobrevivía.
             defaults.removeObject(forKey: GroupsSessionHistoryMarker.key)
+            // Paso 10 · el espejo local de la cuenta de grupos asociada se va con ellos, y por lo mismo:
+            // tras este borrado el dispositivo es «recién instalado», y quien re-onboardee aquí leería en
+            // Ajustes el CORREO de quien cerró la sesión. La copia del iCloud-KV SÍ se queda a propósito
+            // —es del Apple ID, y quien restaure quiere su cuenta de grupos de vuelta—, así que este
+            // borrado no es un desasociar: es olvidar lo que este teléfono sabía.
+            defaults.removeObject(forKey: GroupsAccountAssociation.localKey)
+            defaults.removeObject(forKey: GroupsDetachedBridgeLedger.userDefaultsKey)
         }
 
         StorageModePersistence.write(.icloud, defaults: defaults)

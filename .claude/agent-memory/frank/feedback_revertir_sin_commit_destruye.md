@@ -34,5 +34,19 @@ revertir, en bucle, y «revertir» en git es lo primero que viene a la mano. El 
 - **Y el aviso del entorno sigue en pie:** el stash es compartido entre worktrees, así que tampoco
   es la salida. Un commit WIP en la rama o una copia en la scratchpad; nada más.
 
+**Me volvió a pasar el 2026-09-11, con la memoria ya escrita y el `cp` ya hecho.** En la tanda de
+mutantes del paso 10 tenía copias en la scratchpad de siete ficheros, reverti seis con `cp`, y para el
+séptimo —`GroupsBackendInviteModifier.swift`, el único que no estaba en la lista porque lo empecé a
+mutar más tarde— escribí `git checkout --`. Se llevó la rama nueva del destino `.associateGroupsAccount`,
+que era el cambio de producción del que el mutante era una variación. Lo detecté en el acto porque
+encadené un `git diff --stat` detrás y salió vacío; sin esa comprobación, el mutante habría salido
+«muerto» y el árbol se habría quedado sin la feature.
+
+⇒ **Dos añadidos que salen de la repetición:** (1) el `cp` de la tanda se hace de TODOS los ficheros
+que se puedan tocar, y si aparece uno nuevo a mitad, se copia ANTES de mutarlo — la lista de siete
+estaba hecha al principio y el octavo entró sin copia; (2) **detrás de cada reversión va un
+`git diff --stat` del fichero**: vacío significa «volvió a HEAD», que es exactamente lo que no se
+quería. Un mutante revertido de más deja el test verde por la razón equivocada.
+
 Relacionado: [[mis-mediciones-fallan-por-el-filtro]] — la verificación por mutantes es lo que le da
 valor a un test, y por eso conviene que su bucle no sea el paso donde se pierde el trabajo.

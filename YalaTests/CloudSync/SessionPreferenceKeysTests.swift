@@ -273,7 +273,11 @@ struct SessionPreferenceKeysSpellingTests {
         // SessionDefaults×1
         KeySpelling(key: "hasCompletedOnboarding",
                     spellings: ["\"hasCompletedOnboarding\"", "Keys.hasCompletedOnboarding"],
-                    expectedSites: 26),
+                    // +1 (2026-09-11, paso 10): `AppBootstrapper` la lee para derivar el
+                    // `DeviceSessionState` que decide si hay sesión privada a la que asociar una cuenta
+                    // de grupos. Por el CAJÓN (`SessionDefaults.current`), que es lo que pide esta misma
+                    // suite para un consumidor in-session.
+                    expectedSites: 27),
     ]
 
     /// Cuenta ocurrencias de una grafía en el CÓDIGO (sin comentarios) de todo `Yala/`, **excluyendo
@@ -365,7 +369,8 @@ struct HasCompletedOnboardingDomainTests {
     /// Es la vía 7 del ticket aplicada un nivel más arriba: «el inventario que el escáner mira tiene
     /// que ser el inventario que la función escribe».
     private static let cajonEsperado: [String: Int] = [
-        "AppBootstrapper.swift": 3,                  // restart-alert · seed de avisos · imagen compartida
+        // +1 (2026-09-11, paso 10): el `DeviceSessionState` del registrador de la cuenta de grupos.
+        "AppBootstrapper.swift": 4,                  // restart-alert · seed de avisos · imagen compartida · asociación de grupos
         "ContentView.swift": 2,                      // gate del organizador · el skip de restauración
         "RouterEntryGate.swift": 1,                  // readiness del router
         // 2026-09-05 · el consumidor SE MOVIÓ, no desapareció: `GroupBackendInviteEntryHandler` decidía

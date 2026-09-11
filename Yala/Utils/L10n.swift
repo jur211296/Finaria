@@ -6890,6 +6890,36 @@ enum L10n {
         static var title: String { ls("storage.title", comment: "") }
         static var waitingForLeader: String { ls("storage.waitingForLeader", comment: "") }
 
+        /// Paso 10 · la sección «Grupos»: qué cuenta usa esta sesión privada para grupos, y su desenlace.
+        enum Groups {
+            static var title: String { ls("storage.groups.title", comment: "") }
+            static var noAccountBody: String { ls("storage.groups.noAccountBody", comment: "") }
+            static var associateButton: String { ls("storage.groups.associateButton", comment: "") }
+            /// "Tus grupos usan %@." — el correo, o el proveedor cuando no hay correo capturado.
+            static func associatedBody(_ cuenta: String) -> String {
+                String(format: ls("storage.groups.associatedBody", comment: ""), cuenta)
+            }
+            static var associatedUnnamedBody: String { ls("storage.groups.associatedUnnamedBody", comment: "") }
+            /// "Tus grupos están en %@. Entra para verlos en este iPhone."
+            static func needsSignInBody(_ cuenta: String) -> String {
+                String(format: ls("storage.groups.needsSignInBody", comment: ""), cuenta)
+            }
+            static var needsSignInUnnamedBody: String { ls("storage.groups.needsSignInUnnamedBody", comment: "") }
+            static var signInButton: String { ls("storage.groups.signInButton", comment: "") }
+            static var detachButton: String { ls("storage.groups.detachButton", comment: "") }
+            static var sameAccountBody: String { ls("storage.groups.sameAccountBody", comment: "") }
+            static var detachTitle: String { ls("storage.groups.detachTitle", comment: "") }
+            static var detachBody: String { ls("storage.groups.detachBody", comment: "") }
+            static var detachKeep: String { ls("storage.groups.detachKeep", comment: "") }
+            static var detachRemove: String { ls("storage.groups.detachRemove", comment: "") }
+            static var detachWorking: String { ls("storage.groups.detachWorking", comment: "") }
+            static var detachWaiting: String { ls("storage.groups.detachWaiting", comment: "") }
+            static var detachBlockedTitle: String { ls("storage.groups.detachBlockedTitle", comment: "") }
+            static var detachBlockedTransient: String { ls("storage.groups.detachBlockedTransient", comment: "") }
+            static var detachBlockedPermanent: String { ls("storage.groups.detachBlockedPermanent", comment: "") }
+            static var detachBlockedSession: String { ls("storage.groups.detachBlockedSession", comment: "") }
+        }
+
         enum Status {
             static var icloudTitle: String { ls("storage.status.icloudTitle", comment: "") }
             static var icloudBody: String { ls("storage.status.icloudBody", comment: "") }

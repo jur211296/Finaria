@@ -1,9 +1,10 @@
 ---
 id: groups-account-association-in-storage-row
-status: backlog
+status: qa
 priority: high
 area: "settings, groups, modo-nube"
 created: 2026-09-09
+updated: 2026-09-11
 source: "ADR 2026-09-09 «Sesiones — dos ejes» §4"
 ---
 
@@ -99,3 +100,89 @@ Jürgen contestó cuando se le preguntó de frente.
   salda nada, así que no hay aviso especial ni bloqueo. Copy sin caso particular.
 - **Para cambiar de cuenta hay que desasociar primero.** Mientras haya una asociada, la fila solo ofrece
   «Desasociar»; no existe un «Cambiar cuenta» que haga las dos cosas de un gesto.
+
+
+---
+
+## Estado (2026-09-11) — implementado, a la espera del device-QA
+
+En `2.1` por el PR del paso 10. Lo que hace hoy, en lenguaje de usuario: **en Ajustes → «¿Dónde viven tus
+datos?» aparece una sección «Grupos»** que dice qué cuenta usa este iPhone para los grupos, deja asociar
+una si no hay, y deja soltarla — preguntando antes qué pasa con los gastos de grupo que ya están en el
+Panel, que es lo que Jürgen decidió el 2026-09-09.
+
+### Lo que cambió respecto al alcance escrito arriba, y por qué
+
+**El enlace «dormido» no es el `splitExpenseID` de la fila.** Medido: dejar ese puntero puesto con las
+filas del grupo ya borradas deja el movimiento **atrapado** —`NewTransactionView.resolveBridgedPointer`
+calcula que sigue siendo de grupo, así que Borrar y Duplicar quedan deshabilitados sobre un gasto que ya
+no existe— y ni el barrido de huérfanas puede repararlo después, porque exige un veredicto de zona que se
+construye de filas vivas. Es el mismo bug que `LegacyGroupsRetirement` documenta.
+
+Y el ancla que haría falta para devolverlo **no existe**: `TransactionItem` no tiene identidad propia
+serializable (`syncID` es opcional y en sesión privada es `nil`). El campo nuevo que la daría cuesta un
+deploy de schema a CloudKit Production del container personal.
+
+⇒ Al conservar, los tres punteros se liberan (molde del barredor) y lo que se guarda es el **conjunto de
+gastos conservados, sellado con el `sub` de la cuenta**. Con eso, re-asociar la misma cuenta **no
+duplica** —que es lo que el AC persigue— y asociar otra no toca nada. **Lo que no vuelve es el ENLACE**, y
+está declarado en `groups-reassociation-does-not-restore-the-bridge-link`.
+
+### Criterios de aceptación
+
+- [x] Sesión privada sin cuenta → la sección ofrece asociar; el CTA lleva al sign-in de Grupos y al alta.
+      *(XCUITest `GroupsAssociationRowUITests`; el recorrido con cuenta real, device-QA 1.)*
+- [x] Desasociar con gastos puenteados → **se pregunta**, y las dos salidas están implementadas y
+      probadas: conservar los gastos que pagó el usuario (liberando los punteros, así que vuelven a ser
+      editables y borrables) o quitarlo todo. *(unit `GroupsAssociationDetachSweepTests`; device-QA 2.)*
+- [x] Re-asociar la misma cuenta → **0 duplicados**. *(unit `GroupsDetachedBridgeLedgerTests` + el guard
+      del puente; device-QA 3.)* El re-ENLACE queda en su ticket.
+- [x] Asociar otra cuenta → las conservadas no se tocan; sus grupos llegan limpios. *(el sello por `sub`.)*
+- [x] Sesión nube completa → informa y no ofrece desasociar. *(tabla + XCUITest de la celda F.)*
+- [x] Segundo móvil del mismo Apple ID → la asociación viaja por el iCloud-KV y la fila ofrece entrar con
+      esa cuenta; el empty state de Grupos dice «vuelve a tu cuenta» y no «crea una».
+      *(unit; el recorrido real, device-QA 5.)*
+- [ ] «Migrar a la nube» desde D → la asociada pasa a `complete`. **Este paso entrega el DATO**
+      (`isAssociatedGroupsAccount` ya se sirve desde la puerta de Grupos); el cableado de esa puerta es
+      `settings-migrate-to-cloud-adopts-silently-instead-of-migrating`, ticket propio por decisión del
+      paso 3 y así lo dice la celda «C · migrar» de la matriz.
+- [x] Tests: unit de la tabla, del registro, del registrador, del des-puenteo y del libro (**73 casos en
+      10 suites**), XCUITest de la fila en tres celdas, y **20 mutantes, 20 muertos**.
+
+### Lo que la review adversarial cambió (tres lentes + la rule de área)
+
+Doce defectos míos, todos corregidos. Los que cambiaban el producto:
+
+1. **Desasociar no era durable.** El otro dispositivo del Apple ID con sesión viva reponía la asociación
+   en su siguiente arranque y la desasociación se deshacía sola. Ahora `clear()` deja un **tombstone** en
+   el iCloud-KV y el registrador lo respeta.
+2. **El puente se soltaba antes de que la asociación estuviera escrita.** La escritura vivía en el
+   `onDismiss` del sheet, y `startIfEligible` arranca el canal en el acto: si el primer pull ganaba la
+   carrera, cada gasto conservado se duplicaba. La escritura se movió al callback del sign-in.
+3. **`.remove` se llevaba por delante puentes de grupos de la era CloudKit**, que no son de la cuenta que
+   se suelta — dinero real, en un store sin mirror que lo reponga. Ahora el barrido solo toca zonas del
+   canal backend (ANY-row, la primitiva compartida).
+4. **El aviso de bloqueo era el del cierre de sesión**, presentado desde la pantalla de debajo, y el
+   segundo toque de «Desasociar» quedaba mudo para siempre. La sección tiene ahora su propio aviso, que
+   suelta la fase al cerrarse.
+5. **El CTA de asociar apostaba a un `sleep` de 350 ms.** El flag que enciende es blocker de la matriz de
+   readiness: una presentación que no monta dejaba el router muerto el resto de la sesión. Ahora el
+   intent va por el router sin espera, que es quien retiene la cola.
+6. **Borrar `GroupBridgePreference` se exportaba a iCloud** (vive en el schema personal) y se la quitaba
+   al usuario en su iPad. El desasociar ya no la toca.
+7. **La sección desaparecía en `.failed` y `.waitingForLeader`**, que son estados DURABLES: quien dejaba
+   una migración fallida para más adelante se quedaba sin poder desasociar.
+8. **En sesión secundaria la invitada escribía su correo en la asociación del dueño.** Guard de
+   secundaria en el registrador, el mismo que ya tienen sus vecinos del dominio.
+9. **El sello del handover cerraba la lectura del iCloud-KV pero no la escritura**, así que el humano
+   nuevo metía su correo en la cuenta de iCloud del anterior.
+
+Y cuatro tickets que la review abrió y no entran aquí: `detach-history-replay-can-tombstone-groups-on-next-launch`
+(**high**), `cloud-killswitch-hides-the-only-door-to-detach-groups` (**high**),
+`groups-detach-ledger-has-no-exit`, `detach-saves-the-personal-graph-outside-the-quiescence-window` y
+`detach-does-not-verify-the-cloud-session-actually-closed`.
+
+### Lo que falta
+
+**Device-QA con CloudKit y backend reales** — guion en `tickets/qa/device-qa-groups-account-association.md`.
+No es simulable: el simulador no tiene sesión de nube, y el recorrido 5 necesita dos dispositivos.

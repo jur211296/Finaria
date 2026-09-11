@@ -220,6 +220,11 @@ struct OwnerKeyValueWiringTests {
             "DataWipeService.swift",                  // handover del onboardingMode
             "CloudBeacon.swift",                      // el faro del Modo Nube
             "ScheduledPaymentNotificationService.swift",  // flip del maestro (8ª vía, tampoco estaba)
+            // Paso 10 · la cuenta de grupos asociada a una sesión privada. Viaja por el iCloud-KV a
+            // propósito: es lo que hace que el segundo móvil del mismo Apple ID —y este mismo tras
+            // «Restaurar desde iCloud»— sepa que existe, aunque la SESIÓN no viaje. Pasa por la puerta,
+            // así que en sesión secundaria no escribe en el dominio del dueño.
+            "GroupsAccountAssociation.swift",
             // 9ª vía (2026-09-04): el bloque de `-uitest-reset` borra del iKV las claves de
             // los predeterminados del Panel. Va por la puerta y solo bajo `-uitest`; sin ese
             // borrado, `hasRemotePanelPreferences()` ve las claves de la corrida anterior,

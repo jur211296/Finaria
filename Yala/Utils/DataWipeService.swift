@@ -336,19 +336,7 @@ final class DataWipeService {
             throw GroupsWipeGuardError.mountedStoreBelongsToOwner
         }
 
-        // Los 5 `Split*` se vinculan por IDs planos (`groupZoneID`/`expenseID`/`memberID`), NO por
-        // `@Relationship` ⇒ sin orden de dependencias que respetar y sin cascadas que disparar.
-        for group in try context.fetch(FetchDescriptor<SplitGroup>()) { context.delete(group) }
-        for member in try context.fetch(FetchDescriptor<SplitMember>()) { context.delete(member) }
-        for expense in try context.fetch(FetchDescriptor<SplitExpense>()) { context.delete(expense) }
-        for share in try context.fetch(FetchDescriptor<SplitShare>()) { context.delete(share) }
-        for settlement in try context.fetch(FetchDescriptor<SplitSettlement>()) { context.delete(settlement) }
-
-        // `GroupBridgePreference` vive en el `personalSchema` pero `wipeAllUserData` no la nombra
-        // (junto con `CloudMigrationMarker`, los 2 modelos personales que no borra). Es el override
-        // por-grupo del bridge: dejarla haría que el bridge del usuario nuevo heredara las
-        // decisiones «TX real sí/no» del anterior.
-        for pref in try context.fetch(FetchDescriptor<GroupBridgePreference>()) { context.delete(pref) }
+        try deleteLocalGroupsRows(in: context, save: false)
 
         // 2.7 · El outbox de GRUPOS muere aquí; el CURSOR sobrevive A PROPÓSITO. Los dos viven en
         // `syncMetaSchema` —el store que `wipeAllUserData` no toca— pero tienen signos OPUESTOS en una
@@ -377,6 +365,53 @@ final class DataWipeService {
         // el barrido de prefs de arriba no lo nombra, pero el orden lo deja explícito ante un
         // futuro añadido a esa lista.
         defaults.set(true, forKey: AppPreferences.Keys.groupsDomainSealedForFreshStart)
+    }
+
+    /// Borra las filas locales del dominio Grupos: los 5 `Split*` y el override por-grupo del bridge.
+    /// **Solo filas** — ni preferencias, ni sello, ni estado del motor, ni el `onboardingMode` del iKV.
+    ///
+    /// Extraída de `wipeLocalGroupsDomain` para que el desasociar del paso 10
+    /// (`CloudSessionSignOut.detachGroupsAccount`) borre exactamente el mismo conjunto sin heredar lo que
+    /// es propio del handover: el **sello** `groupsDomainSealedForFreshStart` cerraría el bridge para el
+    /// mismo humano que vuelve a asociar, y el barrido de preferencias le quitaría la adopción de Grupos
+    /// de este dispositivo. Dos listas de entidades en dos sitios es exactamente como divergen.
+    ///
+    /// **Los cinco `Split*` son borrado LOCAL, jamás remoto** — ver el porqué completo en
+    /// `wipeLocalGroupsDomain`: ese store monta `cloudKitDatabase: .none` y su único camino de export es
+    /// el enqueue explícito. Lo que sí tiene que garantizar el LLAMADOR es que el canal backend esté
+    /// cortado: con el drain vivo, estos deletes se traducirían a tombstones y borrarían los grupos
+    /// **para todos los miembros**.
+    ///
+    /// **`GroupBridgePreference` NO cumple esa frase, y por eso es opcional.** Vive en el
+    /// `personalSchema` (`SwiftDataConfiguration.swift:112`), que sí lleva el espejo de CloudKit: con el
+    /// modo `.icloud` su borrado SE EXPORTA al Apple ID. Para el relevo de humano eso es lo que se
+    /// quiere —el dispositivo cambia de dueño—; para un desasociar **no**: es una preferencia PERSONAL
+    /// sobre cómo puentear, sobrevive a la cuenta de grupos, y borrarla se la quitaría también en el iPad
+    /// del mismo Apple ID, donde puede haber una sesión de grupos viva.
+    ///
+    /// - Parameters:
+    ///   - save: `false` cuando el llamador va a acumular más borrados en la misma transacción.
+    ///   - includingBridgePreferences: ver arriba. `true` solo en el relevo de humano.
+    static func deleteLocalGroupsRows(
+        in context: ModelContext, save: Bool = true, includingBridgePreferences: Bool = true
+    ) throws {
+        // Los 5 `Split*` se vinculan por IDs planos (`groupZoneID`/`expenseID`/`memberID`), NO por
+        // `@Relationship` ⇒ sin orden de dependencias que respetar y sin cascadas que disparar.
+        for group in try context.fetch(FetchDescriptor<SplitGroup>()) { context.delete(group) }
+        for member in try context.fetch(FetchDescriptor<SplitMember>()) { context.delete(member) }
+        for expense in try context.fetch(FetchDescriptor<SplitExpense>()) { context.delete(expense) }
+        for share in try context.fetch(FetchDescriptor<SplitShare>()) { context.delete(share) }
+        for settlement in try context.fetch(FetchDescriptor<SplitSettlement>()) { context.delete(settlement) }
+
+        // `GroupBridgePreference` vive en el `personalSchema` pero `wipeAllUserData` no la nombra
+        // (junto con `CloudMigrationMarker`, los 2 modelos personales que no borra). Es el override
+        // por-grupo del bridge: dejarla haría que el bridge del usuario nuevo heredara las
+        // decisiones «TX real sí/no» del anterior.
+        if includingBridgePreferences {
+            for pref in try context.fetch(FetchDescriptor<GroupBridgePreference>()) { context.delete(pref) }
+        }
+
+        if save { try context.save() }
     }
 
     /// Barrido de las preferencias del dominio Grupos. Separado de `wipeLocalGroupsDomain` para
@@ -414,6 +449,20 @@ final class DataWipeService {
         // superviviente podría puentear al store personal del usuario nuevo gastos que no son suyos en
         // cuanto adopte Grupos y el sello deje de cortar.
         defaults.removeObject(forKey: GroupsPendingBridgeIntent.userDefaultsKey)
+
+        // Paso 10 · el espejo local de la cuenta de grupos asociada, y el libro de lo que una
+        // desasociación anterior conservó en el Panel. Los dos son del humano ANTERIOR: el primero le
+        // enseñaría al nuevo el CORREO del anterior en la fila de Ajustes, y el segundo frenaría el
+        // puente de gastos que para el nuevo no existen.
+        //
+        // **La copia del iCloud-KV NO se borra aquí, y no es un olvido.** La invariante de este camino
+        // —pinneada en `HandoverGroupsDomainTests.wipeLocalGroupsDomain_touchesOnlyTheOnboardingModeKeyInTheIKV`—
+        // es que al iKV va UNA sola key: lo que se escriba o se borre ahí viaja a TODOS los dispositivos
+        // del Apple ID, y este camino solo declara el relevo de humano en ESTE teléfono. Borrarla le
+        // quitaría al dueño su asociación en el iPad. Quien cierra la puerta al humano nuevo es el SELLO
+        // que se escribe abajo: `GroupsAccountAssociation` no lee el iCloud-KV con el dominio sellado.
+        defaults.removeObject(forKey: GroupsAccountAssociation.localKey)
+        defaults.removeObject(forKey: GroupsDetachedBridgeLedger.userDefaultsKey)
 
         // Prefijos: preferencias por-grupo (cuenta de liquidación por moneda) y dedup de
         // notificaciones de grupo. Ambos llevan el zoneID del grupo de la sesión anterior en la

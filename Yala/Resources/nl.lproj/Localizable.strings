@@ -5826,3 +5826,63 @@
 
 /* Vuelta al neutro imposible en esta celda: cuerpo */
 "welcome.groups.neutralUnavailableBody" = "Op deze telefoon staat een sessie open die je eerst via Instellingen moet afsluiten voordat je hier een groep start. Ga terug: er is niets aangeraakt.";
+
+/* Título de la sección Grupos dentro de «Dónde viven tus datos» */
+"storage.groups.title" = "Groepen";
+
+/* Cuerpo cuando no hay cuenta de grupos asociada */
+"storage.groups.noAccountBody" = "Je groepen staan in een Yala-account, los van de gegevens op deze iPhone.";
+
+/* Botón para asociar una cuenta de grupos */
+"storage.groups.associateButton" = "Een account voor groepen koppelen";
+
+/* Cuerpo cuando hay cuenta asociada pero no se sabe su nombre */
+"storage.groups.associatedUnnamedBody" = "Je groepen gebruiken een Yala-account.";
+
+/* Cuerpo en un segundo dispositivo, sin nombre de cuenta */
+"storage.groups.needsSignInUnnamedBody" = "Je groepen staan in je Yala-account. Meld je aan om ze op deze iPhone te zien.";
+
+/* Botón para entrar con la cuenta de grupos ya asociada */
+"storage.groups.signInButton" = "Aanmelden met dat account";
+
+/* Botón para desasociar la cuenta de grupos */
+"storage.groups.detachButton" = "Ontkoppelen";
+
+/* Cuerpo cuando los datos personales ya viven en la cuenta de Yala */
+"storage.groups.sameAccountBody" = "Je groepen gebruiken ditzelfde account.";
+
+/* Título de la confirmación de desasociar */
+"storage.groups.detachTitle" = "Account voor groepen ontkoppelen?";
+
+/* Botón: conservar en el Panel los gastos de grupo */
+"storage.groups.detachKeep" = "Uitgaven bewaren die ik heb betaald";
+
+/* Botón: quitar del Panel los gastos de grupo */
+"storage.groups.detachRemove" = "Alles uit Start verwijderen";
+
+/* Progreso mientras se desasocia */
+"storage.groups.detachWorking" = "Wordt ontkoppeld…";
+
+/* Progreso mientras se suben los cambios de grupos */
+"storage.groups.detachWaiting" = "Je openstaande wijzigingen worden opgeslagen…";
+
+/* Cuerpo con el nombre de la cuenta de grupos asociada */
+"storage.groups.associatedBody" = "Je groepen gebruiken %@.";
+
+/* Cuerpo en un segundo dispositivo, con el nombre de la cuenta */
+"storage.groups.needsSignInBody" = "Je groepen staan in het account %@. Meld je aan om ze op deze iPhone te zien.";
+
+/* Mensaje de la confirmación de desasociar */
+"storage.groups.detachBody" = "Je groepen verdwijnen van deze iPhone en blijven in je account: koppel je het opnieuw, dan staan ze er weer. De posten van wat jij tegoed hebt of schuldig bent verdwijnen in beide gevallen; je kiest alleen wat er gebeurt met de uitgaven die jij hebt betaald.";
+
+/* Título del aviso cuando el desasociar se bloquea */
+"storage.groups.detachBlockedTitle" = "Ontkoppelen is niet gelukt";
+
+/* Aviso: bloqueo temporal al desasociar */
+"storage.groups.detachBlockedTransient" = "Een paar wijzigingen uit je groepen zijn nog niet geüpload. Probeer het zo meteen opnieuw.";
+
+/* Aviso: bloqueo permanente al desasociar */
+"storage.groups.detachBlockedPermanent" = "Een paar wijzigingen uit je groepen zijn nog niet geüpload en we konden geen verbinding maken. Controleer je verbinding en probeer het opnieuw.";
+
+/* Aviso: sesión caducada al desasociar */
+"storage.groups.detachBlockedSession" = "Je sessie voor groepen is verlopen. Log opnieuw in en probeer het nog eens.";

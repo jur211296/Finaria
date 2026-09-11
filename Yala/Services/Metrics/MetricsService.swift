@@ -187,6 +187,16 @@ enum MetricsCanary: String {
     /// cola = hay una población que ninguna tasa disponible puede convertir, y el proveedor no cubre
     /// esa divisa en esas fechas: la cola no se va a vaciar sola y necesita mirarse.
     case fxRepairQueueStuck
+
+    // Asociación de la cuenta de grupos (paso 10 del rediseño de sesiones)
+    /// El usuario desasoció su cuenta de grupos de una sesión privada y el puente personal se soltó.
+    /// `detail` lleva la salida que eligió (`keep` / `remove`) y los recuentos, sin PII.
+    ///
+    /// **Lo que hay que mirar es el REPARTO, no el total**: `remove` sostenido y muy por encima de `keep`
+    /// significa que la gente no entiende que conservar deja el dinero en su Panel, y el copy de la
+    /// confirmación es lo que hay que arreglar. Un `released=0|deleted=0` con la salida `keep` es otra
+    /// cosa: el puente no tenía nada que soltar, o el fetch falló cerrado.
+    case groupsAssociationDetached
 }
 
 // MARK: - Servicio

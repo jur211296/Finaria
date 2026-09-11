@@ -5826,3 +5826,63 @@
 
 /* Vuelta al neutro imposible en esta celda: cuerpo */
 "welcome.groups.neutralUnavailableBody" = "Na tym telefonie jest otwarta sesja, którą trzeba zamknąć w Ustawieniach, zanim założysz tu grupę. Wróć: nic nie zostało ruszone.";
+
+/* Título de la sección Grupos dentro de «Dónde viven tus datos» */
+"storage.groups.title" = "Grupy";
+
+/* Cuerpo cuando no hay cuenta de grupos asociada */
+"storage.groups.noAccountBody" = "Twoje grupy są na koncie Yala, osobno od danych na tym iPhonie.";
+
+/* Botón para asociar una cuenta de grupos */
+"storage.groups.associateButton" = "Powiąż konto z grupami";
+
+/* Cuerpo cuando hay cuenta asociada pero no se sabe su nombre */
+"storage.groups.associatedUnnamedBody" = "Twoje grupy używają konta Yala.";
+
+/* Cuerpo en un segundo dispositivo, sin nombre de cuenta */
+"storage.groups.needsSignInUnnamedBody" = "Twoje grupy są na Twoim koncie Yala. Zaloguj się, żeby zobaczyć je na tym iPhonie.";
+
+/* Botón para entrar con la cuenta de grupos ya asociada */
+"storage.groups.signInButton" = "Zaloguj się tym kontem";
+
+/* Botón para desasociar la cuenta de grupos */
+"storage.groups.detachButton" = "Odłącz";
+
+/* Cuerpo cuando los datos personales ya viven en la cuenta de Yala */
+"storage.groups.sameAccountBody" = "Twoje grupy używają tego samego konta.";
+
+/* Título de la confirmación de desasociar */
+"storage.groups.detachTitle" = "Odłączyć konto grup?";
+
+/* Botón: conservar en el Panel los gastos de grupo */
+"storage.groups.detachKeep" = "Zachowaj wydatki opłacone przeze mnie";
+
+/* Botón: quitar del Panel los gastos de grupo */
+"storage.groups.detachRemove" = "Usuń wszystko z sekcji Start";
+
+/* Progreso mientras se desasocia */
+"storage.groups.detachWorking" = "Odłączanie…";
+
+/* Progreso mientras se suben los cambios de grupos */
+"storage.groups.detachWaiting" = "Zapisywanie Twoich oczekujących zmian…";
+
+/* Cuerpo con el nombre de la cuenta de grupos asociada */
+"storage.groups.associatedBody" = "Twoje grupy używają konta %@.";
+
+/* Cuerpo en un segundo dispositivo, con el nombre de la cuenta */
+"storage.groups.needsSignInBody" = "Twoje grupy są na koncie %@. Zaloguj się, żeby zobaczyć je na tym iPhonie.";
+
+/* Mensaje de la confirmación de desasociar */
+"storage.groups.detachBody" = "Twoje grupy znikną z tego iPhone'a i zostaną na Twoim koncie: jeśli znów je powiążesz, będą na miejscu. Zapisy o tym, co Ci się należy i co jesteś winien, znikają w obu przypadkach; wybierasz tylko, co stanie się z wydatkami opłaconymi przez Ciebie.";
+
+/* Título del aviso cuando el desasociar se bloquea */
+"storage.groups.detachBlockedTitle" = "Nie udało się odłączyć konta";
+
+/* Aviso: bloqueo temporal al desasociar */
+"storage.groups.detachBlockedTransient" = "Część zmian z Twoich grup nie została jeszcze przesłana. Spróbuj ponownie za chwilę.";
+
+/* Aviso: bloqueo permanente al desasociar */
+"storage.groups.detachBlockedPermanent" = "Część zmian z Twoich grup nie została przesłana i nie udało się połączyć. Sprawdź połączenie i spróbuj ponownie.";
+
+/* Aviso: sesión caducada al desasociar */
+"storage.groups.detachBlockedSession" = "Twoja sesja grup wygasła. Zaloguj się ponownie i spróbuj jeszcze raz.";

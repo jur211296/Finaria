@@ -17,6 +17,12 @@
 import SwiftUI
 
 struct StorageSettingsView: View {
+
+    /// Paso 10 · qué hace el CTA de «Asociar una cuenta para grupos». Lo cablea `ProfileView`, que es
+    /// quien puede cerrar su propio sheet: el sheet del sign-in de Grupos tiene dueño único en
+    /// `ContentView` y presentarlo desde aquí sería un segundo anchor del mismo sheet. Opcional para que
+    /// los demás call-sites y las previews no cambien.
+    var onAssociateGroupsAccount: (() -> Void)?
     /// El controller de producción (SSOT del runner). `nil` solo si el backend no está configurado — en
     /// ese caso la fila de Profile ni aparece, pero se degrada elegante por si se navega directo.
     private var controller: CloudMigrationController? { CloudMigrationController.shared }
@@ -134,9 +140,16 @@ struct StorageSettingsView: View {
         switch controller.uiState {
         case .idle:
             statusCard(controller)
+            // Paso 10 · la asociación de grupos va DEBAJO del estado y ENCIMA de migrar: pertenece a
+            // «dónde viven tus datos», pero lo que la persona viene a hacer aquí casi siempre es lo
+            // personal. La propia sección se oculta cuando no aplica (`notApplicable`).
+            GroupsAssociationSection(onAssociate: onAssociateGroupsAccount)
             migrateCard(controller)
         case .cloudActive:
             statusCard(controller)
+            // En la nube completa la sección solo informa («tus grupos usan esta misma cuenta») y no
+            // ofrece desasociar: ADR §4.
+            GroupsAssociationSection(onAssociate: onAssociateGroupsAccount)
             syncStatusSection(controller)
             revertCard(controller)
         case .migrating(let step):
@@ -147,8 +160,14 @@ struct StorageSettingsView: View {
             relaunchCard(direction)
         case .waitingForLeader:
             waitingCard()
+            // `.waitingForLeader` y `.failed` salen del journal PERSISTIDO: sobreviven al relanzamiento y
+            // solo los cierra un reintento con éxito. No son tránsitos como `.migrating`, así que ocultar
+            // aquí la sección dejaría sin poder desasociar —indefinidamente— a quien deja una migración
+            // fallida para más adelante.
+            GroupsAssociationSection(onAssociate: onAssociateGroupsAccount)
         case .failed(let kind):
             failedCard(controller, kind: kind)
+            GroupsAssociationSection(onAssociate: onAssociateGroupsAccount)
         }
     }
 

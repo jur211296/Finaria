@@ -121,6 +121,112 @@ final class CloudSessionSignOut {
         }
     }
 
+    // MARK: - Desasociar la cuenta de grupos (paso 10)
+
+    /// Suelta la cuenta de grupos de una sesión privada **sin tocar nada personal**.
+    ///
+    /// No es un cierre de sesión y no entra por `signOut`: el ADR §5 dice que la sesión privada y su cuenta
+    /// de grupos se mueven juntas, y esto es la excepción que el §4 nombra —«la asociación se ve, se deshace
+    /// y se rehace»—. Vive aquí, y no en un coordinador nuevo, porque las cuatro piezas que necesita ya
+    /// están escritas y probadas en este tipo: la quiescencia del store personal, el push-all verificado con
+    /// su presupuesto de reintentos, el teardown del canal y la purga del estado de sync. Reescribirlas
+    /// aparte sería una quinta polaridad de un subsistema que ya tiene cinco.
+    ///
+    /// **El orden carga peso, y tres de sus pasos son la diferencia entre soltar y destruir:**
+    ///
+    ///  1. El `sub` asociado se lee **antes** de cerrar la sesión: después ya no hay de dónde.
+    ///  2. El puente se suelta **antes** de borrar las filas `Split*`. Al revés, el `save()` del
+    ///     des-puenteo comitearía esos deletes todavía dirty bajo el autor POR DEFECTO, que es justo lo
+    ///     que el drain captura (`author != outboxSaveAuthor`) y **re-empuja al servidor**: los grupos se
+    ///     borrarían de verdad, para todos los miembros. Es la trampa que documenta la regla «Un borrado
+    ///     tiene DOS mitades», y aquí sería peor que allí.
+    ///  3. Las filas se borran **después** del teardown y del `signOut`, con el canal ya cortado y sin
+    ///     credenciales: nada de lo que este borrado local genere puede salir del teléfono.
+    ///
+    /// El bloqueo por cambios sin subir se comporta como el del cierre —«nunca descarta»—: si el push-all
+    /// no vacía, la fase queda en `.blocked` y **no se suelta nada**. Reintentar es seguro porque hasta el
+    /// paso 2 no se ha escrito nada.
+    ///
+    /// - Parameter choice: qué pasa con los movimientos que el puente metió en el Panel. Lo elige el
+    ///   usuario en la confirmación (decisión de Jürgen, 2026-09-09).
+    func detachGroupsAccount(context: ModelContext, choice: GroupsAssociationDetach.BridgedRowsChoice) async {
+        guard phase == .idle else { return }
+        phase = .working
+        defer { waitingForPending = false }
+
+        // (1) Antes de tocar credenciales.
+        let associatedSub = GroupsAccountAssociation.shared.associatedSub ?? CloudAuthService.shared.currentUserID
+
+        // Lo pendiente sube ANTES de cortar nada, con la generación intacta. Mismo presupuesto de
+        // reintentos que el cierre: el bloqueo típico es transitorio.
+        guard await pushGroupsForSignOut(context: context) else { return }
+
+        // Canal fuera + espejo del outbox del App Group purgado. Idempotente.
+        GroupsSyncClient.shared.teardownForSignOut()
+
+        // Molde S2 del cierre: una fila encolada entre el push-all y el teardown ya no puede subir, así
+        // que es `.permanent`. Es el ÚLTIMO punto en el que abortar no deja nada a medias.
+        let residual = Self.liveGroupsPendingCount(context: context)
+        guard residual == 0 else {
+            phase = .blocked(pendingCount: residual, reason: .permanent)
+            CloudSyncBreadcrumb.signOutPushBlocked(pending: residual)
+            return
+        }
+
+        // ── Punto de no retorno ──
+
+        // (2) El puente, con las filas `Split*` todavía limpias. **Si no se pudo ni mirarlo, se ABORTA**:
+        // seguir adelante borraría las filas de los grupos dejando las transacciones puenteadas
+        // apuntando a una zona que ya no existe, y a ésas no las recoge ningún barrido — el veredicto de
+        // zona que `OrphanedBridgedTxSweeper` exige se construye de filas vivas. Sería dinero atrapado
+        // para siempre, y hasta aquí no se ha escrito nada irreversible.
+        guard GroupsAssociationDetach.detachBridge(
+            context: context, choice: choice, associatedSub: associatedSub) != nil else {
+            phase = .blocked(pendingCount: 0, reason: .transient)
+            return
+        }
+
+        // El consent de Grupos NO se limpia aquí, a diferencia del cierre de sesión. Es un snapshot
+        // SELLADO con el `userID` (`GroupsConsentState`), así que no puede colarse en la cuenta
+        // siguiente: si vuelve la misma, casa y no se le vuelve a preguntar algo que ya aceptó; si entra
+        // otra, el sello no casa y se le pregunta igual. Borrarlo solo costaría una pantalla de más a
+        // quien re-asocia.
+        await CloudAuthService.shared.signOut()
+
+        // (3) Con el canal cortado y sin credenciales: las filas, el outbox y el cursor, de una vez.
+        do {
+            // **Las filas y el estado de sync, en UNA sola transacción.** Morir entre los dos `save()`
+            // dejaba el par incoherente «cursor borrado + filas vivas», y con él el primer drain del
+            // arranque siguiente escanea el History entero con las zonas todavía presentes y re-emite
+            // upserts de todo el corpus con HLC nuevos, pisando por LWW lo que otros miembros hayan
+            // cambiado. El par que vale en una frontera de CUENTA es «filas borradas + cursor borrado»,
+            // y atómico.
+            //
+            // **Sin `GroupBridgePreference`**: esa tabla vive en el schema PERSONAL, que sí espeja a
+            // iCloud, así que borrarla exportaría el delete al Apple ID y se la quitaría también al iPad
+            // del mismo dueño, donde puede haber una sesión de grupos viva. Y además es suya: cómo quiere
+            // que se puenteen sus gastos no deja de ser cierto porque suelte esta cuenta.
+            try DataWipeService.deleteLocalGroupsRows(
+                in: context, save: false, includingBridgePreferences: false)
+            for row in try context.fetch(FetchDescriptor<GroupSyncOutbox>()) { context.delete(row) }
+            for cursor in try context.fetch(FetchDescriptor<GroupSyncCursor>()) { context.delete(cursor) }
+            SaveBreadcrumb.willSave("CloudSessionSignOut.detachGroupsAccount")
+            try context.save()
+            SaveBreadcrumb.didSave("CloudSessionSignOut.detachGroupsAccount")
+        } catch {
+            #if DEBUG
+            print("CloudSessionSignOut: borrado local del dominio de grupos falló: \(error)")
+            #endif
+            context.rollback()
+        }
+
+        GroupsAccountAssociation.shared.clear()
+        GroupsSessionHistoryMarker.markSessionSeen()  // siguió siendo cierto: este device tuvo sesión.
+        SessionState.shared.incrementDataVersion()
+        WidgetDataCache.updateCache(context: context)
+        phase = .idle
+    }
+
     // MARK: - Los tres cierres que borran por ARCHIVOS: privada (C), «equipo» (D) y solo grupos (F)
 
     /// El cierre parado en la espera del export, a la espera de lo que decida la persona: «Cerrar sesión

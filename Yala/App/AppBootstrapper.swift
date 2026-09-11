@@ -576,6 +576,24 @@ final class AppBootstrapper {
         // esperar.
         Task { @MainActor in
             await AccountKindService.shared.refresh()
+            // Paso 10 · el SEGUNDO armador de la asociación, y no es un cinturón defensivo: cubre a quien
+            // ya tenía sesión de grupos ANTES de que la asociación existiera como estado. Para esa
+            // población no va a ocurrir ningún sign-in futuro, así que sin esto su fila de Ajustes diría
+            // «no tienes cuenta de grupos» mientras la tiene, y la puerta de migrar no sabría cuál
+            // promover. Mismo razonamiento —y mismo reparto de poblaciones— que el segundo armador de
+            // `GroupsSessionHistoryMarker`.
+            //
+            // Va DESPUÉS del refresco a propósito: así el `kind` que se guarda es el corregido y no el
+            // que el Welcome dedujo sin `kind` en la respuesta.
+            GroupsAssociationRegistrar.syncFromLiveSessionIfNeeded(
+                deviceState: CloudIdentityRoutingLogic.deviceState(
+                    hasCompletedOnboarding: SessionDefaults.current.bool(
+                        forKey: AppPreferences.Keys.hasCompletedOnboarding),
+                    storageMode: StorageModePersistence.read(),
+                    onboardingMode: OnboardingMode.current()),
+                identity: .live(CloudAuthService.shared),
+                kind: AccountKindService.shared.current,
+                store: GroupsAccountAssociation.shared)
         }
 
         // 17. Initialize Group Notification Service (GC-06)
