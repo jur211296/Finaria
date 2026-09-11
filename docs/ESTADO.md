@@ -5,32 +5,36 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-11 (Lima)
 
-**Rama** `2.1` — Merge #138: **un verbo por sesión — «Cerrar sesión» espera a que iCloud confirme.**
+**Rama** `2.1` — Merge #139: **«Vengo por un grupo» deja de bloquear al dueño de los datos.**
 TestFlight build **13** (CPV 13). **Subida Yala (TF/store) = solo Mini.**
 
-## Esta sesión (el paso 9: un verbo por sesión)
+## Esta sesión (la mitad 2 del paso 5: la puerta de Grupos deja de bloquear)
 
-**Ajustes queda con dos botones en las cuatro celdas: «Cerrar sesión» y «Vaciar datos».** «Eliminar mi
-cuenta» vive ahora dentro de «Tu cuenta de Yala», y se fueron «Salir de Yala en este dispositivo»,
-«Cerrar sesión de grupos» y la pantalla «Seguir con mis grupos».
+**«Vengo por un grupo → Crear mi primer grupo» ya no deja tirado al dueño de sus datos.** Hasta hoy, en un
+teléfono con datos guardados, salía «Aquí ya hay datos guardados… si son tuyos, crea el grupo desde la app
+que ya usas» con un único botón «Volver» — y la app que ya usas es ésa. Ahora Yala sube a iCloud lo último
+que guardaste, deja el teléfono en blanco, pide reabrir la app una vez y **te devuelve a la misma puerta**,
+listo para crear tu grupo. Tu iCloud no se toca: «Restaurar desde iCloud» lo encuentra todo.
 
-**Cerrar sesión en una sesión privada ya no deja los datos donde estaban**: Yala espera a que lo último
-que guardaste llegue a iCloud, borra lo de este teléfono y vuelve al Welcome, donde «Restaurar desde
-iCloud» lo trae todo. Si iCloud no confirma en 45 s, un aviso dice **cuántos cambios** no llegaron y
-ofrece «Cerrar sesión igualmente» o «Esperar» —que retoma donde estaba—. Sin iCloud, y solo con prueba
-de que no lo hay, pide un segundo gesto. Una sesión solo-grupos cierra dejando el teléfono como nuevo, y
-ahora **puede borrar su cuenta**, que antes no podía.
+**También pasa con el teléfono VACÍO** si todavía sincroniza con un iCloud: antes te dejaba entrar y los
+gastos de tu grupo acababan en la cuenta del dueño del móvil. Sin copia en iCloud —y solo con prueba— se
+pide un segundo gesto; si algo no sube en 45 s, un aviso dice cuántos cambios faltan y deja elegir.
 
-**Lo que costó el testigo del export.** Cuenta los cambios locales del historial de SwiftData contra el
-INICIO del último export con éxito; el ancla solo avanza con un evento `succeeded` —un error que no era
-de CloudKit la movía y el cierre borraba lo que no estaba subido— y un ancla en el futuro se descarta.
+**El verbo se CONSUME, no se reinventa.** La pasada del 10-sep encalló intentando armar el boot-wipe por su
+cuenta: declara tres precondiciones que un call-site suelto no cumple. Entrando por el coordinador del
+cierre privado se cumplen las tres y se heredan sus redes. **Y el relanzamiento no era una decisión
+pendiente**: la matriz del ADR, fila B, ya decía «vuelta al neutro (borra local, iCloud intacto, relanza) y
+sigue».
 
-**Verificado sobre el árbol final**: unit 6848/701 en verde, los dos builds sin warnings nuevos, XCUITest
-**62/62 clases** (139 casos) y 14 de 15 mutantes muertos. El que sobrevive (M15) es un hallazgo, no un
-hueco: el historial de SwiftData **no registra** una reescritura idéntica, así que el filtro que decía
-producir ese cero no es quien lo produce — corregido en la regla y en los dos docblocks. El único rojo
-de XCUITest era el flaky conocido del helper de guardar, **bisecado contra el árbol base**, donde cae
-igual.
+**Lo que costó la review** (tres lentes, 10 defectos míos): el peor es que **el testigo del mount MIENTE en
+los hosts de test** — sale por la rama del store de UITest antes de capturarse, así que manda su default
+`.iCloudMirror`. Sin seam, la puerta volvía siempre al neutro en XCUITest y **cada corrida armaba un
+borrado real** cuya key sobrevive a `-uitest-reset`. Está en la rule de área. Los otros dos graves: los
+tres `return` mudos de `signOut` dejaban un progreso eterno sin botón, y apagar el latch de restauración
+resultó peor que no apagarlo.
+
+**Verificado sobre el árbol final**: unit **6861/701** en verde, XCUITest **34 casos en 10 clases**, los dos
+builds con `clean` y **cero warnings nuevos** (13, los mismos del árbol base), **15 mutantes y 15 muertos**.
 
 ## Tu cola
 
@@ -68,6 +72,12 @@ igual.
    salida de emergencia diciendo «1 cambio»** —falla seguro, pero inservible—. Y una decisión tuya
    dentro: qué hacer con cambios de grupos que ya no tienen a dónde subir
    (`groups-outbox-rows-without-a-live-session-have-no-exit`).
+2-octies. **Device-QA de la mitad 2 del paso 5** (`groups-entry-on-a-mirrored-store-still-blocks-the-owner`,
+   guion de cinco recorridos dentro). **NO es simulable**: sin cuenta de iCloud no hay espejo. El que más
+   caro sale si falla es el **segundo**: después de que la puerta devuelva el teléfono al neutro,
+   «Restaurar desde iCloud» tiene que traerte TODO el histórico. Y el quinto es el que prueba la otra
+   mitad del bug: con el teléfono vacío pero aún espejando, crea el grupo tras el relanzamiento y
+   comprueba en otro dispositivo del mismo Apple ID que ese gasto **no aparece** en tu Panel personal.
 2-ter. **Device-QA de la reversa born-cloud → iCloud** (`reverse-cutover-cerrado-para-cuentas-born-cloud`).
    Dos cosas: el **contador de testigos con `ckRecordName`** del panel DEBUG tiene que pasar de 0 a cubrir
    tus filas vivas —ése es el único testigo real de que la subida ocurrió—, y **borra 2-3 transacciones
@@ -80,8 +90,8 @@ igual.
 
 ## Siguiente
 
-**El paso 10** del rediseño. Pasos 0-9 cerrados; el 11 sigue vacante a propósito. **El board: 298 en
-disco = 298 en `docs/TICKETS.md`**, cero desajustes de estado.
+**El paso 10** del rediseño. Pasos 0-9 cerrados y la mitad 2 del 5 también; el 11 sigue vacante a
+propósito. **El board: 304 en disco = 304 en `docs/TICKETS.md`**, cero desajustes de estado.
 
 ## Bloqueo
 
@@ -100,14 +110,24 @@ introdujo esa sesión): `reverse-upload-has-no-ceiling-and-no-exit` —la subida
 salida, y ahí el backend ya está congelado— y `reverse-claim-rejection-has-no-way-out-in-the-client`. Los
 dos son la misma forma: una fase de la reversa sin salida.
 
-**La mitad 2 del paso 5, y es decisión tuya** (`groups-entry-on-a-mirrored-store-still-blocks-the-owner`,
-**high**): cuando el store YA lleva espejo, la puerta «datos ajenos» te sigue bloqueando. **El paso 9 ya
-le da el verbo que le faltaba**; lo que queda es tu decisión de aceptar el relanzamiento en el alta de
-Grupos, anotada en su ticket. Lo medido: el
-desmontaje en caliente que pediste lo rechaza su propio guard, y borrar lo local con el espejo montado
-**exporta los borrados a iCloud** — destruiría justo lo que el criterio promete conservar. La salida que
-sí existe cuesta un relanzamiento. **Conviene decidirlo junto al residual del paso 4**, que converge en
-el mismo mecanismo.
+**Lo que deja la mitad 2 del paso 5, y hay una decisión tuya dentro**
+(`groups-invite-on-a-mirrored-store-crosses-data`, **high**): la puerta de CREAR ya no bloquea, pero la
+entrada por **invitación** sigue sin puerta — aceptar un enlace en un teléfono que ya espeja manda los
+gastos del invitado al iCloud del dueño. Se midió por qué no se cerró de paso: su embudo lo llama también
+el reconciler **en el arranque, sin pantalla**, y el intent de la invitación muere en el borrado. Hacen
+falta dos piezas nuevas. **Lo que decides tú** es si eso entra antes o después del paso 10.
+
+**Y tres residuales de esa misma sesión**, los tres con ticket y ninguno bloqueante:
+`invite-recovery-relaunches-for-a-mirror-it-never-uses` (**medium** — al invitado se le cobra un
+relanzamiento para encender un espejo que su camino no usa, y encima lo deja entrando con él),
+`sign-out-wipe-abort-loops-the-groups-gate` (**medium**) y
+`superseding-intent-can-strand-the-sign-out-coordinator` (**medium** — un enlace de grupo que llegue a
+mitad del borrado puede dejar mudo el «Cerrar sesión» de Ajustes del resto del proceso).
+
+**Dos tickets rescatados de una rama sin PR** (`encargo/2026-09-10-…`, que queda superada y se puede
+borrar): `forcesync-returns-ok-without-touching-the-network` e `icloud-export-error-latch-never-clears`.
+Se midieron el 10-sep, nunca llegaron a `2.1` y los dos siguen vivos — el segundo lo comprobé hoy:
+`lastExportError` no se limpia en ningún camino de producción.
 
 **Y una regresión que encontró la review del paso 5** (`groups-only-private-restart-skips-the-wipe-alert`,
 **high**): desde solo-grupos, «Primera vez → privado» se salta el aviso de datos existentes. Mitigada
