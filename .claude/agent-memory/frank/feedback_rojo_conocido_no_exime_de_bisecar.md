@@ -40,3 +40,14 @@ cruza. Y si la máquina no aguanta, córrela en tandas — pero córrela.
 
 Relacionado: [[el-arbol-base-contesta-si-es-mio]] · [[review-adversarial-caza-lo-mio]] ·
 [[el-orden-del-enum-se-ve-fuera]]
+
+**Y un flaky documentado puede dejar de comportarse como flaky (2026-09-11).** El ticket del helper que
+guarda transacciones decía «un rojo por corrida y la víctima cambia», así que la comprobación barata era
+re-correrlo y ver si se mudaba. Ese día **no se mudó**: `TransactionsCrudUITests.test_createTransaction`
+falló en su lote y volvió a fallar a solas. Con la firma del ticket rota, lo único que clasificaba el rojo
+era **correr esa clase sola en un worktree desde el commit base** — cayó igual, con la misma duración, y
+quedó probado que no era mío. Cuesta 90 s y un `git worktree add`.
+
+**How to apply:** la prueba que zanja «¿es mío?» es el ÁRBOL BASE, no la estadística del flaky. Y cuando
+midas algo que contradiga la descripción del ticket, escríbelo ahí: la próxima sesión va a aplicar su
+receta vieja.

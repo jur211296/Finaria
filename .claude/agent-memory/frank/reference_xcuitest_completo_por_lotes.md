@@ -44,4 +44,17 @@ medias.
    verifica el árbol final, por mucho que el cambio «no pueda afectarle»: eso es un razonamiento, no una
    medición. Lo honesto es repasar las áreas plausibles sobre el código final y escribir la distinción.
 
+**Tres cosas más, medidas el 2026-09-11 corriendo las 62 clases enteras:**
+
+- **El timeout de la herramienta Bash tiene un tope real de 600 s**, aunque le pases 3 000 000 ms: pasado
+  ese minuto y medio de más, la llamada se va a background igual. O sea que «lotes en primer plano» no es
+  una opción del que llama — un lote de 6 clases dura ~12 min y SIEMPRE acaba de fondo. Lo que sí se puede
+  es lanzar **un solo** proceso de fondo y esperar su notificación, que es lo que evita la muerte por
+  memoria de la tanda del 10-sep: el problema nunca fue el background, fue acumular cuatro.
+- **`Failed to create a bundle instance representing …` es un fallo del RUNNER, no un rojo.** Sale con
+  `passed=0 failed=0` y `clases=0/N`: cero casos ejecutados. Repetir el lote lo arregló entero, con el
+  disco en 26 GB. Clasifícalo con `BUILD INTERRUPTED`, no con un test en rojo.
+- **Cuenta los rojos con `Test Case.*' failed`, no con `' failed`.** El segundo también casa con las
+  líneas `Test Suite '…' failed` y convierte UN caso rojo en «4 fallos» en tu propio informe.
+
 Relacionado: [[dos-corridas-un-simulador]], [[el-arbol-base-contesta-si-es-mio]].

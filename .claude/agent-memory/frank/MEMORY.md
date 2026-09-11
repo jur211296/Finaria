@@ -20,18 +20,19 @@
 - [El CI se verifica en LOCAL](feedback_el_ci_se_verifica_en_local.md) — el `run:` de un paso se extrae del YAML y se corre con matriz de escenarios; actionlint con control negativo; y el comentario con que justifiqué mi diseño era falso.
 - [El paso 3 del gate no detecta cero casos](feedback_gate_paso3_no_detecta_cero_casos.md) — XCUITest es XCTest: cuenta «Test Suite» y «Executed», no «Test run with».
 - [Mi docblock también es una premisa](feedback_mi_docblock_tambien_es_una_premisa.md) — describo la intención como si fuera el comportamiento; y «esto lo fija <suite>» exige que la suite TOQUE el fichero.
-- [El source-scan de dos literales no es una red](feedback_el_source_scan_de_dos_literales_no_es_una_red.md) — si el target es inalcanzable, fija el cuerpo ENTERO; y vigila las pasarelas, los swaps y el escenario que no recorre su rama.
+- [El source-scan de dos literales no es una red](feedback_el_source_scan_de_dos_literales_no_es_una_red.md) — si el target es inalcanzable, fija el cuerpo ENTERO; vigila pasarelas, swaps y la rama no recorrida; tu literal lo lee otro escáner.
 - [El denominador de una resta es el número que se ve](feedback_el_denominador_de_una_resta_es_el_numero_que_se_ve.md) — numerador en magnitudes, denominador en lo que se muestra; y una decisión escrita gana a dos lentes que coinciden.
 - [La aserción que no puede fallar](feedback_la_asercion_que_no_puede_fallar.md) — el mutante valida el CASO, no cada `#expect`; ensucia la columna quieta; la MÁQUINA y el dominio que ENCOGE, tampoco.
 - [El pre-filtro tapa al criterio](feedback_el_prefiltro_tapa_al_criterio.md) — misma condición en el fetch y en la lógica: el mutante de la lógica sale VERDE. Me pasó dos veces el 8-sep.
 - [La tabla del ticket nombra un sitio por pantalla](feedback_la_tabla_del_ticket_nombra_un_sitio_por_pantalla.md) — 7 superficies eran 21; el mismo número marcado y exacto en la misma vista; los punteros a tickets en docblocks caducan.
 - [Ticket nuevo: busca el duplicado primero](feedback_ticket_nuevo_busca_el_duplicado_primero.md) — dos de tres ya existían el 10-sep, y el que existía era MEJOR; leer el motivo del descarte antes de reabrir.
+- [Ramas aparcadas tocan tu ticket](feedback_ramas_aparcadas_tocan_tu_ticket.md) — `git log --all -- 'tickets/*/<id>.md'` antes de diseñar: una rama sin PR le había escrito requisitos al paso 9.
 - [El mecanismo que existe se probó con OTRO corpus](feedback_el_mecanismo_existente_se_probo_con_otro_corpus.md) — reusar un barrido sobre un corpus nuevo puede destruir datos buenos; el AC dice QUÉ, no CÓMO.
 - [Mi arreglo rompe la premisa de OTRO guard](feedback_mi_arreglo_rompe_la_premisa_de_otro_guard.md) — ensanchar un predicado deja mentirosos a los guards que se apoyaban en su forma vieja, a varios ficheros de distancia.
 - [El guard va DENTRO del escritor](feedback_el_guard_va_dentro_del_escritor.md) — repetido en vistas SwiftUI solo lo prueba un grep, y un grep no ve un guard invertido.
 - [Mi fix hereda la forma del bug](feedback_mi_fix_hereda_la_forma_del_bug.md) — el arreglo repite el error del bug; enuncia el bug en una frase y aplícasela al arreglo.
 - [El alert de SwiftUI compite con su propio botón](feedback_el_alert_de_swiftui_compite_con_su_propio_boton.md) — el `set` del binding corre al pulsar CUALQUIER botón; si la acción es async, pierde.
-- [Un gate derivado de una AUSENCIA falla abierto](feedback_un_gate_derivado_de_una_ausencia_falla_abierto.md) — la marca va POSITIVA; y la puerta que nadie usa puede ser el camino del 2.º device.
+- [Un gate derivado de una AUSENCIA falla abierto](feedback_un_gate_derivado_de_una_ausencia_falla_abierto.md) — la marca va POSITIVA; la puerta que nadie usa puede ser el camino del 2.º device; y un `as? CKError` fabrica la ausencia.
 - [Un timeout no distingue lento de colgado](feedback_un_timeout_no_distingue_lento_de_colgado.md) — 5010 ms clavados no son un cuelgue: súbelo y mide. Refutó un ticket entero.
 - [Un gate falla ABIERTO por su entrada](feedback_un_gate_falla_abierto_por_su_entrada.md) — lista vacía por error = «no hay»; y el snapshot se congela durante el `await`.
 - [El avisador que se rescata no vigila](feedback_el_avisador_que_se_rescata_no_vigila.md) — el respaldo ciega al vigilante; y `always()` en un job de aviso dispara al cancelar el run A MANO.
@@ -58,6 +59,7 @@
 - [«Cero warnings» se mide en TODOS los logs](feedback_cero_warnings_se_mide_en_todos_los_logs.md) — el gate no mira los tests y lee un build incremental; dos míos iban al commit el 10-sep.
 
 ## Estado del trabajo
+- [Paso 9: un verbo por sesión — SIN COMMITEAR](project_paso9_un_verbo_por_sesion.md) — el traspaso vive en su ticket (`tickets/qa/`); faltan unit final, XCUITest ×62, gate, PR y merge.
 - [«Activar Yala completo» ya pregunta privado / nube](project_activacion_pregunta_donde_viven.md) — paso 8, PR #137; la review cazó 14 MÍOS; device-QA NO simulable (reinstalar antes); no reordenar «completo antes de converger».
 - [La card «Grupos» del propósito ya no existe](project_paso7_card_grupos_retirada.md) — paso 7, PR #136; la puerta B se fue entera; `organizerBranchHasOneEntry` saltará si el paso 10 añade entrada.
 - [El faro solo encamina: «Crear otra cuenta» y mismatch con dos salidas](project_faro_solo_encamina.md) — paso 6, PR #135; el huérfano se limpia con PRUEBA (Apple+Apple); device-QA pendiente; `restore-beacon…` NO cerrado.
