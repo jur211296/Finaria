@@ -59,7 +59,7 @@
 - [«Cero warnings» se mide en TODOS los logs](feedback_cero_warnings_se_mide_en_todos_los_logs.md) — el gate no mira los tests y lee un build incremental; dos míos iban al commit el 10-sep.
 
 ## Estado del trabajo
-- [Paso 9: un verbo por sesión — SIN COMMITEAR](project_paso9_un_verbo_por_sesion.md) — el traspaso vive en su ticket (`tickets/qa/`); faltan unit final, XCUITest ×62, gate, PR y merge.
+- [Paso 9: un verbo por sesión](project_paso9_un_verbo_por_sesion.md) — PR #138; M15 sobrevive y es hallazgo; el único rojo de XCUITest lo zanjó el árbol base; falta device-QA y NO es simulable.
 - [«Activar Yala completo» ya pregunta privado / nube](project_activacion_pregunta_donde_viven.md) — paso 8, PR #137; la review cazó 14 MÍOS; device-QA NO simulable (reinstalar antes); no reordenar «completo antes de converger».
 - [La card «Grupos» del propósito ya no existe](project_paso7_card_grupos_retirada.md) — paso 7, PR #136; la puerta B se fue entera; `organizerBranchHasOneEntry` saltará si el paso 10 añade entrada.
 - [El faro solo encamina: «Crear otra cuenta» y mismatch con dos salidas](project_faro_solo_encamina.md) — paso 6, PR #135; el huérfano se limpia con PRUEBA (Apple+Apple); device-QA pendiente; `restore-beacon…` NO cerrado.

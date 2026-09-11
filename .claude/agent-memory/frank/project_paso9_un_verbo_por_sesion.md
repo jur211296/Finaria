@@ -5,7 +5,7 @@ metadata:
   type: project
 ---
 
-**El paso 9 (`session-exits-one-verb-per-session`) está COMMITEADO y verificado (PR {{PR}}, 2026-09-11); lo único que falta es el
+**El paso 9 (`session-exits-one-verb-per-session`) está COMMITEADO y verificado (PR #138, 2026-09-11); lo único que falta es el
 device-QA, y NO es simulable**: sin cuenta de iCloud en el simulador no hay espejo, así que el testigo del
 export (historial de SwiftData contra el `startDate` del último export con éxito) solo se prueba en device.
 
