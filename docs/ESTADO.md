@@ -5,36 +5,40 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-11 (Lima)
 
-**Rama** `2.1` — Merge #139: **«Vengo por un grupo» deja de bloquear al dueño de los datos.**
+**Rama** `2.1` — Merge #140: **la cuenta de grupos se ve, se suelta y se vuelve a poner.**
 TestFlight build **13** (CPV 13). **Subida Yala (TF/store) = solo Mini.**
 
-## Esta sesión (la mitad 2 del paso 5: la puerta de Grupos deja de bloquear)
+## Esta sesión (el paso 10: la cuenta de grupos deja de ser invisible)
 
-**«Vengo por un grupo → Crear mi primer grupo» ya no deja tirado al dueño de sus datos.** Hasta hoy, en un
-teléfono con datos guardados, salía «Aquí ya hay datos guardados… si son tuyos, crea el grupo desde la app
-que ya usas» con un único botón «Volver» — y la app que ya usas es ésa. Ahora Yala sube a iCloud lo último
-que guardaste, deja el teléfono en blanco, pide reabrir la app una vez y **te devuelve a la misma puerta**,
-listo para crear tu grupo. Tu iCloud no se toca: «Restaurar desde iCloud» lo encuentra todo.
+**Tu cuenta de grupos ya tiene una pantalla.** Hasta hoy, quien usa Grupos con sus finanzas en su iCloud
+privado no tenía forma de saber CON QUÉ cuenta las usa, ni de soltarla sin cerrar la sesión entera. Ahora,
+en Ajustes → «¿Dónde viven tus datos?», una sección **Grupos** dice el correo de esa cuenta, ofrece
+asociar una si no hay, y deja **desasociarla** — preguntando antes qué pasa con los gastos de grupo que ya
+están en el Panel: conservar los que pagaste tú, o quitarlo todo. **Las dos salidas, decisión tuya del
+9-sep, implementadas y probadas.**
 
-**También pasa con el teléfono VACÍO** si todavía sincroniza con un iCloud: antes te dejaba entrar y los
-gastos de tu grupo acababan en la cuenta del dueño del móvil. Sin copia en iCloud —y solo con prueba— se
-pide un segundo gesto; si algo no sube en 45 s, un aviso dice cuántos cambios faltan y deja elegir.
+**Y la asociación viaja contigo**: va al iCloud-KV de tu Apple ID, así que tu segundo móvil —o éste tras
+«Restaurar desde iCloud»— sabe que existe aunque la sesión no viaje, y te ofrece **entrar** con ella en vez
+de proponerte crear la cuenta que ya tienes. Era el hueco de la fila «D · N» de la matriz.
 
-**El verbo se CONSUME, no se reinventa.** La pasada del 10-sep encalló intentando armar el boot-wipe por su
-cuenta: declara tres precondiciones que un call-site suelto no cumple. Entrando por el coordinador del
-cierre privado se cumplen las tres y se heredan sus redes. **Y el relanzamiento no era una decisión
-pendiente**: la matriz del ADR, fila B, ya decía «vuelta al neutro (borra local, iCloud intacto, relanza) y
-sigue».
+**El «enlace dormido» que pedía el ticket era IMPOSIBLE tal cual, y esa es la decisión que más pesa.**
+`TransactionItem` **no tiene identidad propia serializable** (ni `id`, ni UUID estable: `syncID` es
+opcional y en sesión privada es `nil`), así que «devuélvele el puntero a ESA fila» no se puede escribir sin
+inventar un ancla. Y dejarlo puesto —la lectura literal del ticket— deja el movimiento **ATRAPADO**: ni
+editable ni borrable, sobre un gasto que ya no existe, y ningún barrido lo repara. ⇒ Se entrega la mitad
+que el criterio persigue de verdad (**cero duplicados**, con un libro sellado por el `sub` de la cuenta) y
+el re-ENLACE queda con ticket y con su vía real: campo nuevo **con deploy de schema coordinado**.
 
-**Lo que costó la review** (tres lentes, 10 defectos míos): el peor es que **el testigo del mount MIENTE en
-los hosts de test** — sale por la rama del store de UITest antes de capturarse, así que manda su default
-`.iCloudMirror`. Sin seam, la puerta volvía siempre al neutro en XCUITest y **cada corrida armaba un
-borrado real** cuya key sobrevive a `-uitest-reset`. Está en la rule de área. Los otros dos graves: los
-tres `return` mudos de `signOut` dejaban un progreso eterno sin botón, y apagar el latch de restauración
-resultó peor que no apagarlo.
+**Lo que costó la review** (tres lentes, 12 defectos míos): el peor es que **desasociar no era durable** —
+el otro dispositivo del Apple ID, con su sesión viva, reponía la asociación en su siguiente arranque y el
+gesto se deshacía solo; ahora hay tombstone. Los otros tres graves: la asociación se escribía DESPUÉS de
+arrancar el canal, así que un pull rápido duplicaba cada gasto conservado; `.remove` se llevaba por delante
+puentes de grupos de la era CloudKit —dinero real, en un store sin espejo que lo reponga—; y el CTA
+apostaba a un `sleep` de 350 ms sobre un flag que bloquea el router de toda la app.
 
-**Verificado sobre el árbol final**: unit **6861/701** en verde, XCUITest **34 casos en 10 clases**, los dos
-builds con `clean` y **cero warnings nuevos** (13, los mismos del árbol base), **15 mutantes y 15 muertos**.
+**Verificado sobre el árbol final**: unit **6918/709** en verde, XCUITest **18 casos en 4 suites**, los dos
+builds con `clean` y **cero warnings nuevos** (los 8 mismos ficheros del árbol base), **20 mutantes y 20
+muertos**.
 
 ## Tu cola
 
@@ -78,6 +82,12 @@ builds con `clean` y **cero warnings nuevos** (13, los mismos del árbol base), 
    «Restaurar desde iCloud» tiene que traerte TODO el histórico. Y el quinto es el que prueba la otra
    mitad del bug: con el teléfono vacío pero aún espejando, crea el grupo tras el relanzamiento y
    comprueba en otro dispositivo del mismo Apple ID que ese gasto **no aparece** en tu Panel personal.
+2-nonies. **Device-QA del paso 10** (`device-qa-groups-account-association`, guion de siete recorridos
+   dentro). **NO es simulable**: el simulador no tiene sesión de nube. El que más caro sale es el
+   **quinto**: desasocia en un teléfono, abre el otro del mismo Apple ID, y comprueba que la asociación
+   **sigue soltada**. Si reaparece, el tombstone no está llegando y el gesto se deshace solo. El tercero
+   es el que prueba lo demás: re-asocia la misma cuenta y **cuenta los movimientos del Panel** — tres
+   gastos tienen que seguir siendo tres, no seis.
 2-ter. **Device-QA de la reversa born-cloud → iCloud** (`reverse-cutover-cerrado-para-cuentas-born-cloud`).
    Dos cosas: el **contador de testigos con `ckRecordName`** del panel DEBUG tiene que pasar de 0 a cubrir
    tus filas vivas —ése es el único testigo real de que la subida ocurrió—, y **borra 2-3 transacciones
@@ -90,15 +100,30 @@ builds con `clean` y **cero warnings nuevos** (13, los mismos del árbol base), 
 
 ## Siguiente
 
-**El paso 10** del rediseño. Pasos 0-9 cerrados y la mitad 2 del 5 también; el 11 sigue vacante a
-propósito. **El board: 304 en disco = 304 en `docs/TICKETS.md`**, cero desajustes de estado.
+**El paso 12** del rediseño (`shell-derives-from-two-session-axes`): el barrido de las 19 vistas y la
+retirada de M1. Pasos 0-10 cerrados; el 11 sigue vacante a propósito. **El board: 311 en disco = 311 en
+`docs/TICKETS.md`**, cero desajustes de estado.
 
 ## Bloqueo
+
+**Lo que deja el paso 10, y el primero es el que más caro sale**
+(`detach-history-replay-can-tombstone-groups-on-next-launch`, **high**): desasociar borra las filas de los
+grupos por FILAS, y en un arranque posterior el canal puede leer esos borrados del historial y
+**convertirlos en tombstones que borren los gastos para todos los miembros del grupo**. Hoy solo lo frena
+un efecto colateral del orden de `syncCycleOnce`, no una defensa: la forma correcta —borrar ARCHIVOS antes
+del mount, como hacen los tres cierres del paso 9— está escrita en el ticket.
+
+**Y el segundo es de producto** (`cloud-killswitch-hides-the-only-door-to-detach-groups`, **high**): si
+bajas el kill-switch de la nube por un incidente, la fila «¿Dónde viven tus datos?» desaparece — pero
+Grupos sigue encendido, porque tiene su propio interruptor. Quien tenga cuenta asociada se queda sin
+ninguna pantalla desde la que soltarla. Hasta este paso esconder esa fila era inocuo. **Decisión tuya**
+entre las dos salidas del ticket.
 
 **Un bug vivo medido el 10-sep** (`settings-migrate-to-cloud-adopts-silently-instead-of-migrating`,
 **high**): «Ajustes → migrar a la nube» sobre una cuenta que ya tiene datos **no migra: adopta en
 silencio**, y te cobra dos confirmaciones destructivas antes. Tus datos locales se quedan donde están, sin
-aviso.
+aviso. **El paso 10 le entregó la mitad que le faltaba**: ya se sabe cuál es la cuenta de grupos asociada
+(`isAssociatedGroupsAccount`), que es lo que esa puerta necesitaba para promover la correcta.
 
 **Los goldens de grupos** (`corpus-de-test-de-staging-crece-sin-limite`, **high**): seguían sin dar señal
 por timeout, con 702 grupos de un usuario de test. **Dato nuevo:** el deploy de staging subió `f84620b5`
