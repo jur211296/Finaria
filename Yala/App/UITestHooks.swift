@@ -52,6 +52,26 @@ final class UITestHooks {
     /// Solo NAVEGACIÓN determinista: el test jamás tapea el botón de sign-in real.
     nonisolated static var forceCloudChooser: Bool { hasArg("-uitest-cloud-chooser") }
 
+    /// Valor de `-uitest-fake-beacon <apple|google|…>`: finge que el faro de iCloud-KV dice que este Apple ID
+    /// YA tiene una cuenta en la nube creada con ese método (el `#if DEBUG` vive en las lecturas de
+    /// `CloudBeacon`). Existe para el XCUITest de «Crear otra cuenta» (ticket
+    /// `beacon-routes-only-never-blocks`): sin él, el encaminamiento por faro solo se veía en un teléfono
+    /// con una cuenta real detrás.
+    ///
+    /// **Finge la ENTRADA, no la decisión**: `WelcomeAccountChoiceLogic.routeNewBranch` sigue decidiendo
+    /// entero con el faro fingido y la disponibilidad REAL de la entrada nube, que bajo `-uitest` exige
+    /// además `-uitest-cloud-chooser`. Y **no persiste**: no escribe en el iCloud-KV del simulador. Un valor
+    /// que no sea un método conocido se pasa tal cual, que es justo el caso del faro con método
+    /// desconocido. Solo DEBUG.
+    nonisolated static var fakeBeaconProvider: String? {
+        #if DEBUG
+        guard isActive else { return nil }
+        return parseValue(after: "-uitest-fake-beacon", from: ProcessInfo.processInfo.arguments)
+        #else
+        return nil
+        #endif
+    }
+
     /// `-uitest-fake-icloud`: fuerza `iCloudSyncService.isAccountAvailable = true` en el
     /// simulador (que NO tiene cuenta iCloud). Desbloquea los flujos cuyo único obstáculo
     /// es el guard de disponibilidad de cuenta —onboarding "Solo grupos", prompts de

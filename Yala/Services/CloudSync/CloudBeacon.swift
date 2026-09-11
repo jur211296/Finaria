@@ -61,6 +61,10 @@ final class CloudBeacon {
     /// TEMPRANO — en el efecto `.writeBeacon` del claim). `accountSub` nil/vacío → sin hash (el faro sigue
     /// siendo útil: linked + provider). `now` inyectado para determinismo.
     func writeCloudAccountLinked(provider: String, accountSub: String?, now: Date) {
+        #if DEBUG
+        // Seam `-uitest-fake-beacon`: con el faro fingido, la corrida no escribe en el iCloud-KV real.
+        if UITestHooks.fakeBeaconProvider != nil { return }
+        #endif
         store.setBool(true, forKey: Keys.linked)
         store.setString(provider, forKey: Keys.provider)
         if let sub = accountSub, !sub.isEmpty {
@@ -75,6 +79,10 @@ final class CloudBeacon {
     /// ya NO tiene una cuenta nube vinculada: dejar el faro puesto haría que un 2º device firmara "cuenta nube
     /// activa" para un Apple ID que ya volvió a CloudKit.
     func clearCloudAccountLinked() {
+        #if DEBUG
+        // Seam `-uitest-fake-beacon`: con el faro fingido, la corrida tampoco borra el iCloud-KV real.
+        if UITestHooks.fakeBeaconProvider != nil { return }
+        #endif
         for key in [Keys.linked, Keys.provider, Keys.accountHash, Keys.linkedAt] {
             store.removeObject(forKey: key)
         }
@@ -82,9 +90,32 @@ final class CloudBeacon {
     }
 
     // Lecturas (para el consumidor de variante-B / panel).
-    var isCloudAccountLinked: Bool { store.bool(forKey: Keys.linked) }
-    var linkedProvider: String? { store.string(forKey: Keys.provider) }
-    var accountHash: String? { store.string(forKey: Keys.accountHash) }
+    //
+    // Seam DEBUG-only `-uitest-fake-beacon <método>` (paso 6): finge un faro LEÍDO —linked, con ese método y
+    // sin hash— para el XCUITest de «Crear otra cuenta». Molde de `CloudAuthService.hasSession`: en release
+    // el `#if` no existe y el cuerpo es byte-idéntico. **No persiste nada, a propósito**: con el seam activo
+    // la escritura y el borrado de arriba son no-op, así que la corrida ni deja un faro en el iCloud-KV del
+    // simulador ni le borra el que tuviera (la regla del seam que persiste, `.claude/rules/testing.md`). Alcanza
+    // a TODOS los lectores del faro, no solo al Welcome: por eso vive detrás de un arg que solo pasa su test.
+    // Ver `UITestHooks.fakeBeaconProvider`.
+    var isCloudAccountLinked: Bool {
+        #if DEBUG
+        if UITestHooks.fakeBeaconProvider != nil { return true }
+        #endif
+        return store.bool(forKey: Keys.linked)
+    }
+    var linkedProvider: String? {
+        #if DEBUG
+        if let fingido = UITestHooks.fakeBeaconProvider { return fingido }
+        #endif
+        return store.string(forKey: Keys.provider)
+    }
+    var accountHash: String? {
+        #if DEBUG
+        if UITestHooks.fakeBeaconProvider != nil { return nil }
+        #endif
+        return store.string(forKey: Keys.accountHash)
+    }
 
     /// Hash SHA-256 del `sub`, truncado a 16 hex chars (no reversible, sin PII).
     static func hash(_ sub: String) -> String {

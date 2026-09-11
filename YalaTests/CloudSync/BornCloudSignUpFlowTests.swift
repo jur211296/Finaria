@@ -89,12 +89,14 @@ struct BornCloudSignUpFlowTableTests {
 
     /// Hoy INALCANZABLE desde `.bornCloud` (medido en A2: la variante B es `returningUser`-only,
     /// `AccountClaimDecision.swift:83`). Se mapea igual porque la tabla que decide vive allí.
-    @Test("`providerMismatch` → el copy R9 existente, con el provider conocido intacto")
+    @Test("`providerMismatch` → la pantalla R9 con sus DOS salidas intactas (paso 6)")
     func mismatch_showsR9() {
-        #expect(BornCloudSignUpFlow.step(for: .providerMismatch(knownProvider: "google"))
-                == .show(.providerMismatch(knownProvider: "google")))
-        #expect(BornCloudSignUpFlow.step(for: .providerMismatch(knownProvider: nil))
-                == .show(.providerMismatch(knownProvider: nil)))
+        let conMetodo = ProviderMismatchLogic.Exits(accountProvider: .google, signInWith: .google, createWith: .apple)
+        #expect(BornCloudSignUpFlow.step(for: .providerMismatch(conMetodo))
+                == .show(.providerMismatch(conMetodo)))
+        let sinMetodo = ProviderMismatchLogic.Exits(accountProvider: nil, signInWith: .google, createWith: .apple)
+        #expect(BornCloudSignUpFlow.step(for: .providerMismatch(sinMetodo))
+                == .show(.providerMismatch(sinMetodo)))
     }
 
     /// El 401 no es un error más: si no se suelta la sesión, `runSignInFlow`/`runBornCloudFlow` la
@@ -198,8 +200,8 @@ struct BornCloudCancellationMatrixTests {
 
     /// FILA 3 — cancelar DESPUÉS de `created`. La cuenta ya existe server-side y el faro está
     /// escrito: el estado es RE-ENTRANTE por diseño, no un leak. El próximo paso por «Soy nuevo» ve
-    /// el faro y encamina al returning-user (A26) en vez de ofrecer la elección otra vez.
-    @Test("fila 3 · tras `created`: faro escrito ⇒ el siguiente «Soy nuevo» encamina al returning-user")
+    /// el faro y encamina a entrar con esa cuenta (ADR §10), con «Crear otra cuenta» a un toque (paso 6).
+    @Test("fila 3 · tras `created`: faro escrito ⇒ el siguiente «Soy nuevo» encamina a entrar con ella")
     func row3_afterCreated_isReentrantByDesign() async {
         let (sut, _, beacon, claimStore, _, storage) = makeSUT(consentRegistered: true)
 
@@ -217,7 +219,7 @@ struct BornCloudCancellationMatrixTests {
             beaconLinked: beacon.bool(forKey: CloudBeacon.Keys.linked),
             beaconProvider: beacon.string(forKey: CloudBeacon.Keys.provider),
             cloudEntryAvailable: true,
-            options: [.privateAccount, .cloudAccount]) == .cloudSignIn(.apple))
+            options: [.privateAccount, .cloudAccount]) == .cloudSignIn(accountProvider: .apple))
     }
 }
 
@@ -312,6 +314,8 @@ struct BornCloudSignUpOrderWiringTests {
         #expect(path.contains("case .bornCloud: return .bornCloud"))
         #expect(path.contains("case .reentry:   return .adopt"),
                 "la re-entrada conserva su path: A5 no cambia la telemetría del adopt")
+        #expect(path.contains("case .beaconRouted: return .adopt"),
+                "la entrada que encamina el faro (paso 6) es una re-entrada: no puede contar como alta")
 
         let sheet = try Self.body(of: ".sheet(isPresented: $showConsent) {", in: src)
         // Sin el paréntesis de cierre: M0 le añadió `persistsOnAccept:` (quién ESCRIBE el epoch, que en

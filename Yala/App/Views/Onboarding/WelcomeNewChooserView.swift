@@ -30,11 +30,16 @@
 //  ⚠️ Corolario para el yo-futuro: reordenar el array de `visibleNewOptions` NO cambia nada
 //  de lo que se ve — cámbialo aquí.
 //
-//  Solo se monta con MÁS de una opción visible: con una sola (percent remoto en 0 o aún sin snapshot,
-//  backend no configurado, o uitest sin el opt-in) el container hace bypass directo
+//  Desde «Soy nuevo» solo se monta con MÁS de una opción visible: con una sola (percent remoto en 0 o aún
+//  sin snapshot, backend no configurado, o uitest sin el opt-in) el container hace bypass directo
 //  (`WelcomeAccountChoiceLogic.bypass`) y este screen ni se construye. **En producción SÍ se monta**:
 //  el percent de la elección nube está en 100 (medido el 2026-09-09). Esta lista decía «producción con
 //  el percent remoto en 0», y con ese 0 prod nunca llegaba hasta aquí.
+//
+//  **La otra entrada, sin bypass (paso 6):** «Crear otra cuenta», desde el sign-in al que encamina el
+//  faro, abre este screen DIRECTAMENTE (`WelcomeFlowStep.newChooser` como step inicial). La persona pidió
+//  elegir y la decisión de Jürgen (2026-09-09) es enseñarle el chooser ENTERO; si en ese momento solo
+//  hubiera una card visible, se ve esa una — `evenCardHeight` ya contempla el caso.
 //
 
 import SwiftUI

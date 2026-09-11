@@ -51,9 +51,19 @@ struct WelcomeCloudSignInView: View {
     /// Qué está haciendo el usuario en esta pantalla. Decide el `ConsentPath`, el intro y qué pasa
     /// después del sign-in — el resto de fases son comunes.
     enum Entry: Equatable {
-        /// Re-entrada a una cuenta que ya existe. El provider lo eligió la card del chooser (o lo
-        /// dictó el faro) y se setea EXPLÍCITO por el productor: jamás se hereda el del intento previo.
+        /// Re-entrada a una cuenta que ya existe. El provider lo eligió la card del chooser (o la salida
+        /// «Iniciar sesión con…» del mismatch) y se setea EXPLÍCITO por el productor: jamás se hereda el del
+        /// intento previo.
         case reentry(CloudSignInProvider)
+        /// **Paso 6 · «Soy nuevo» con el faro puesto** (ADR 2026-09-09 §10). El faro dice que este Apple ID
+        /// ya tiene una cuenta en la nube y la pantalla ENCAMINA a entrar con ella, sin decidir por la
+        /// persona: el intro dice de dónde viene («Este Apple ID ya tiene una cuenta de Yala creada con …»)
+        /// y ofrece «Crear otra cuenta». `accountProvider` es el método SEGÚN EL FARO; `nil` = no lo dice.
+        ///
+        /// Caso propio y no un `.reentry` con un flag: su productor es otro (el faro, no una card) y cada
+        /// productor del cover escribe su `Entry` EXPLÍCITO — un `Bool` aparte en `ContentView` se heredaría
+        /// del intento anterior. Después del sign-in es una re-entrada como la otra.
+        case beaconRouted(accountProvider: CloudSignInProvider?)
         /// Alta born-cloud desde la card «nube» de «Soy nuevo». El provider NO viene decidido: se
         /// elige aquí, con los dos botones de prominencia equivalente (guideline 4.8).
         case bornCloud
@@ -100,6 +110,12 @@ struct WelcomeCloudSignInView: View {
     /// cadena de Grupos, cuyo anchor es de `GroupsBackendInviteModifier`. Presentarla desde aquí sería el
     /// segundo anchor que la regla (4) de Presentaciones prohíbe.
     var onEnterGroupsOnly: () -> Void
+    /// **Paso 6** · «Crear otra cuenta» desde la entrada encaminada por el faro: cerrar este cover y volver
+    /// a «Elige dónde quieres guardar tus datos» ENTERO —las dos cards, privado incluido (decisión de
+    /// Jürgen 2026-09-09, que deroga el «card nube activa» del ticket)—. Es un callback y no una fase propia
+    /// porque ese chooser es un step del `WelcomeFlowContainer`, que es OTRO cover: presentarlo desde aquí
+    /// sería el segundo anchor de la regla (4) de Presentaciones.
+    var onCreateAnotherAccount: () -> Void
     /// Volver al chooser (solo en fases no comprometidas: intro/notFound/blocked/error).
     var onBack: () -> Void
 
@@ -118,7 +134,9 @@ struct WelcomeCloudSignInView: View {
     /// provider lo trae el `Entry`). Se fija ANTES de abrir el consent y de ahí sale el `provider`
     /// que ve `CloudAuthService`.
     @State private var chosenProvider: CloudSignInProvider?
-    /// Bloque [I] · la pantalla se reencaminó a sí misma (hoy: `.notFound` → alta). `nil` = manda `entry`.
+    /// Bloque [I] + paso 6 · la pantalla se reencaminó a sí misma: al alta (desde «No encontramos una cuenta»
+    /// o desde el «Crear cuenta con…» del mismatch) o a entrar con otro método (el «Iniciar sesión con…» del
+    /// mismatch). `nil` = manda `entry`.
     @State private var entryOverride: Entry?
     /// Bloque [I] · latch del auto-arranque en el consent (ver el `onAppear`). Sin él, cancelar el consent
     /// lo reabre en bucle: sus condiciones vuelven a cumplirse todas.
@@ -187,9 +205,10 @@ struct WelcomeCloudSignInView: View {
 
     /// La entrada que manda AHORA. Es `entry` salvo que la pantalla se haya reencaminado a sí misma.
     ///
-    /// **El único reencaminamiento que existe es `.notFound` → alta** (bloque [I]): quien entró por «Ya
-    /// tengo cuenta» y no tiene ninguna consigue un botón que le crea la cuenta con el proveedor que ya
-    /// eligió. Se hace con un `@State` y no re-presentando el cover con otro `entry` a propósito: el cover
+    /// **Los reencaminamientos son tres, y los tres salen de una pantalla sin nada comprometido.** El del bloque
+    /// [I], `.notFound` → alta: quien entró por «Ya tengo cuenta» y no tiene ninguna consigue un botón que le
+    /// crea la cuenta con el proveedor que ya eligió. Y los dos del paso 6, las salidas del mismatch: alta con
+    /// el método que la persona usó, o re-entrada con el del faro. Se hace con un `@State` y no re-presentando el cover con otro `entry` a propósito: el cover
     /// es el mismo, así que cambiarlo desde fuera dejaría la `phase` de esta pantalla en `.notFound` —el
     /// `@State` no se reinicia porque la identidad de la vista no cambia— y el usuario vería el mismo
     /// callejón. Y una vista hermana sería un segundo anchor, que es lo que el docblock de arriba prohíbe.
@@ -200,6 +219,10 @@ struct WelcomeCloudSignInView: View {
     private var identityGate: CloudIdentityRoutingLogic.Gate {
         switch activeEntry {
         case .reentry:   return .welcomeExistingAccount
+        // Paso 6: la persona tocó «Soy nuevo», y ésa es la puerta física. Hoy da los mismos destinos que la
+        // de «Ya tengo cuenta» —la cuenta nueva se resuelve ANTES de la tabla, con el faro—; cuando el
+        // ticket 8 separe los dos «solo grupos», le ofrecerá Yala completo a quien venía a estrenarlo.
+        case .beaconRouted: return .welcomeFirstTimeCloud
         case .bornCloud: return .welcomeFirstTimeCloud
         }
     }
@@ -210,6 +233,8 @@ struct WelcomeCloudSignInView: View {
     private var provider: CloudSignInProvider {
         switch activeEntry {
         case .reentry(let p): return p
+        case .beaconRouted(let accountProvider):
+            return WelcomeAccountChoiceLogic.signInProvider(forBeaconAccount: accountProvider)
         case .bornCloud:      return chosenProvider ?? .apple
         }
     }
@@ -219,6 +244,9 @@ struct WelcomeCloudSignInView: View {
     private var consentPath: CloudMigrationController.ConsentPath {
         switch activeEntry {
         case .reentry:   return .adopt
+        // La entrada que encamina el faro es una re-entrada: su consentimiento es el del adopt, y el
+        // dashboard la cuenta con quien entra a una cuenta que ya tenía, no con las altas.
+        case .beaconRouted: return .adopt
         case .bornCloud: return .bornCloud
         }
     }
@@ -231,6 +259,9 @@ struct WelcomeCloudSignInView: View {
         switch activeEntry {
         case .bornCloud: true
         case .reentry:   false
+        // La entrada que encamina el faro ES una re-entrada: su ruta también la decide el guard DESPUÉS del
+        // sign-in, así que tampoco escribe al aceptar.
+        case .beaconRouted: false
         }
     }
 
@@ -252,8 +283,8 @@ struct WelcomeCloudSignInView: View {
     /// Qué corre al aceptar el consent. Es el ÚNICO punto donde el flujo se bifurca por entrada.
     private func runFlowAfterConsent() async {
         switch activeEntry {
-        case .reentry:   await runSignInFlow()
-        case .bornCloud: await runBornCloudFlow()
+        case .reentry, .beaconRouted: await runSignInFlow()
+        case .bornCloud:              await runBornCloudFlow()
         }
     }
 
@@ -303,12 +334,8 @@ struct WelcomeCloudSignInView: View {
             secondaryRelaunchContent
         case .notFound:
             notFoundContent
-        case .providerMismatch(let knownProvider):
-            messageContent(
-                icon: "person.crop.circle.badge.exclamationmark",
-                title: L10n.Welcome.Cloud.providerMismatchTitle,
-                body: providerMismatchBody(knownProvider: knownProvider))
-                .accessibilityIdentifier("welcome_cloud_provider_mismatch")
+        case .providerMismatch(let exits):
+            providerMismatchContent(exits)
         case .blockedForeignData:
             // La pantalla describe DOS mundos porque el detector no sabe distinguirlos: `hasLocalDataNow`
             // cuenta filas, así que dice «hay datos», nunca «hay datos de otro». El cuerpo habla del caso
@@ -373,8 +400,8 @@ struct WelcomeCloudSignInView: View {
     @ViewBuilder
     private var introContent: some View {
         switch activeEntry {
-        case .reentry:   reentryIntro
-        case .bornCloud: bornCloudIntro
+        case .reentry, .beaconRouted: reentryIntro
+        case .bornCloud:              bornCloudIntro
         }
     }
 
@@ -443,13 +470,12 @@ struct WelcomeCloudSignInView: View {
                     .font(DS.Typography.title2)
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
-                Text(provider == .google
-                    ? L10n.Welcome.Cloud.subtitleGoogle
-                    : L10n.Welcome.Cloud.subtitle)
+                Text(reentrySubtitle.text)
                     .font(DS.Typography.subheadline)
                     .foregroundStyle(.white.opacity(0.7))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, DS.Spacing.lg)
+                    .accessibilityIdentifier(reentrySubtitle.identifier)
             }
             // W4: aquí la cuenta YA existe ⇒ el verbo es iniciar sesión, en los dos botones.
             switch provider {
@@ -477,16 +503,157 @@ struct WelcomeCloudSignInView: View {
                 .foregroundStyle(.white.opacity(0.6))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, DS.Spacing.xl)
+            // **Paso 6 · el faro ENCAMINA, no decide** (ADR §10). Solo en la entrada a la que llevó el faro:
+            // quien entró por la card «Ya tengo cuenta» dijo que tenía una, y si no la tiene, «No encontramos
+            // una cuenta» ya le ofrece crearla. Botón secundario, en el tono de «Continuar a la app»:
+            // encaminar sigue siendo lo que se propone.
+            if isBeaconRouted {
+                Button(L10n.Welcome.Cloud.createAnother) {
+                    DS.Haptic.selection()
+                    onCreateAnotherAccount()
+                }
+                .font(DS.Typography.subheadline)
+                .foregroundStyle(.white.opacity(0.8))
+                .accessibilityIdentifier("welcome_cloud_create_another")
+            }
+        }
+    }
+
+    /// ¿Esta pantalla la abrió el faro? Se lee de `activeEntry` y no de `entry`: si la pantalla se reencaminó
+    /// a sí misma (al alta, o a entrar con otro método desde el mismatch), la oferta ya no aplica.
+    private var isBeaconRouted: Bool {
+        if case .beaconRouted = activeEntry { return true }
+        return false
+    }
+
+    /// El subtítulo del intro de re-entrada. **El encaminado por el faro dice de dónde viene** (decisión de
+    /// Jürgen 2026-09-09: «nombra el proveedor y nada más», sin correo); con el método desconocido, la variante
+    /// genérica — jamás se afirma un método que el faro no dice.
+    ///
+    /// El nombre sale de `accountProvider` —lo que dice el FARO— y nunca de `provider`, que ya lleva el
+    /// fallback a Apple del botón: tomarlo de ahí haría decir «creada con Apple» a un faro sin método. El
+    /// identificador separa las dos variantes para que el XCUITest pueda verlo sin leer texto localizado.
+    private var reentrySubtitle: (text: String, identifier: String) {
+        if case .beaconRouted(let accountProvider) = activeEntry {
+            guard let name = ProviderMismatchLogic.displayName(forProvider: accountProvider?.rawValue) else {
+                return (L10n.Welcome.Cloud.beaconOriginGeneric, "welcome_cloud_beacon_origin_generic")
+            }
+            return (L10n.Welcome.Cloud.beaconOrigin(name), "welcome_cloud_beacon_origin")
+        }
+        let subtitle = provider == .google ? L10n.Welcome.Cloud.subtitleGoogle : L10n.Welcome.Cloud.subtitle
+        return (subtitle, "welcome_cloud_reentry_subtitle")
+    }
+
+    /// **Paso 6 · el mismatch ya no es una pared** (ADR 2026-09-09 §10). Informa con qué método se creó la
+    /// cuenta que recuerda el faro y ofrece las DOS salidas del veredicto: entrar con ese método, o crear una
+    /// cuenta con el que la persona acaba de usar. La flecha de atrás sigue (`canGoBack`), pero ya no es la
+    /// única forma de avanzar.
+    ///
+    /// Botones de MARCA con su verbo por salida: el del método del faro dice INICIAR SESIÓN (esa cuenta
+    /// existe) y el del método usado dice CREAR (con él no la hay). Es la única pantalla del Welcome con un
+    /// verbo distinto en cada botón, y a propósito: son dos acciones distintas.
+    ///
+    /// El identificador del mensaje va SOLO en su bloque: puesto en el contenedor pisaría el de los botones
+    /// (`.claude/rules/testing.md`).
+    private func providerMismatchContent(_ exits: ProviderMismatchLogic.Exits) -> some View {
+        VStack(spacing: DS.Spacing.lg) {
+            messageContent(
+                icon: "person.crop.circle.badge.exclamationmark",
+                title: L10n.Welcome.Cloud.providerMismatchTitle,
+                body: providerMismatchBody(accountProvider: exits.accountProvider))
+                .accessibilityIdentifier("welcome_cloud_provider_mismatch")
+            VStack(spacing: DS.Spacing.md) {
+                // Las acciones toman el método de `exits` y no un literal por `case`: así un botón no puede firmar
+                // con un método distinto del que pinta (lente C de la review).
+                switch exits.signInWith {
+                case .apple:
+                    AppleSignInButton(type: .signIn) {
+                        DS.Haptic.selection()
+                        signInWithAccountMethod(exits.signInWith, from: exits)
+                    }
+                    .frame(height: 50)
+                    .accessibilityIdentifier("welcome_cloud_mismatch_sign_in")
+                case .google:
+                    GoogleSignInButton(variant: .light, purpose: .signIn) {
+                        DS.Haptic.selection()
+                        signInWithAccountMethod(exits.signInWith, from: exits)
+                    }
+                    .frame(height: 50)
+                    .accessibilityIdentifier("welcome_cloud_mismatch_sign_in")
+                }
+                switch exits.createWith {
+                case .apple:
+                    AppleSignInButton(type: .signUp) {
+                        DS.Haptic.selection()
+                        switchToSignUp(with: exits.createWith)
+                    }
+                    .frame(height: 50)
+                    .accessibilityIdentifier("welcome_cloud_mismatch_create")
+                case .google:
+                    GoogleSignInButton(variant: .light, purpose: .signUp) {
+                        DS.Haptic.selection()
+                        switchToSignUp(with: exits.createWith)
+                    }
+                    .frame(height: 50)
+                    .accessibilityIdentifier("welcome_cloud_mismatch_create")
+                }
+            }
+            .padding(.horizontal, DS.Spacing.xl)
         }
     }
 
     /// Body del mismatch R9: con provider CONOCIDO interpola su nombre visible; nil o
     /// desconocido → copy genérico (jamás interpolar un rawValue del wire en UI).
-    private func providerMismatchBody(knownProvider: String?) -> String {
-        if let name = ProviderMismatchLogic.displayName(forProvider: knownProvider) {
+    private func providerMismatchBody(accountProvider: CloudSignInProvider?) -> String {
+        if let name = ProviderMismatchLogic.displayName(forProvider: accountProvider?.rawValue) {
             return L10n.Welcome.Cloud.providerMismatchBody(name)
         }
         return L10n.Welcome.Cloud.providerMismatchBodyGeneric
+    }
+
+    /// «Iniciar sesión con <método del faro>», desde el mismatch. **Sin volver a pedir el consentimiento**
+    /// (Paso 0, D6): es la MISMA ruta —entrar a una cuenta que existe— que la persona acaba de consentir, y
+    /// su registro sigue pendiente hasta que el guard cross-cuenta decida (`consentPendingPersistence`). Solo
+    /// cambia el método: la pantalla pasa a una re-entrada EXPLÍCITA con él y relanza el flujo, que empieza
+    /// por firmar.
+    ///
+    /// **Si la persona cancela la hoja de Apple o de Google, vuelve a ESTA pantalla** (lente A de la review):
+    /// `ensureSignedIn` la dejaría en el intro de una re-entrada normal, sin «Crear cuenta con…» y pidiéndole
+    /// otra vez el consentimiento.
+    ///
+    /// Dos defensas para un mismatch que llegara desde el ALTA, hoy inalcanzable (la variante B del claim es
+    /// solo de la re-entrada) pero mapeado por `BornCloudSignUpFlow`: el alta NO suelta la sesión, así que se
+    /// suelta aquí antes de firmar —si no, `ensureSignedIn` reusaría la de Google para «entrar con Apple»—; y
+    /// su consentimiento se escribió al aceptar, para OTRA ruta, así que el del adopt se vuelve a pedir.
+    private func signInWithAccountMethod(_ method: CloudSignInProvider, from exits: ProviderMismatchLogic.Exits) {
+        entryOverride = .reentry(method)
+        let consentStillPending = consentPendingPersistence
+        launchFlow {
+            if CloudAuthService.shared.hasSession { await CloudAuthService.shared.signOut() }
+            guard consentStillPending else {
+                phase = .intro
+                showConsent = true
+                return
+            }
+            await runSignInFlow()
+            if phase == .intro { phase = .providerMismatch(exits) }
+        }
+    }
+
+    /// **Bloque [I] + paso 6** · reencamina ESTA pantalla al alta con el método ya elegido y abre su
+    /// consentimiento. La usan las dos salidas que crean cuenta —el CTA de «No encontramos una cuenta» y el
+    /// «Crear cuenta con…» del mismatch— y es UNA función para que no diverjan.
+    ///
+    /// La sesión ya se soltó en las dos (`signOut()` en la rama de cuenta nueva) y **se queda soltada**: lo
+    /// que viaja al alta es el método, no la sesión — dejarla viva haría que un «atrás» + otra card la
+    /// reusara (`ensureSignedIn` salta con `hasSession`) y la persona entraría con una cuenta que no eligió.
+    /// La fase vuelve al intro para que cerrar el consentimiento aterrice en el intro del ALTA, con sus dos
+    /// botones, y no otra vez en la pantalla de la que se sale.
+    private func switchToSignUp(with signUpProvider: CloudSignInProvider) {
+        chosenProvider = signUpProvider
+        entryOverride = .bornCloud
+        phase = .intro
+        showConsent = true
     }
 
     private func progressContent(_ text: String, hint: String?) -> some View {
@@ -559,8 +726,8 @@ struct WelcomeCloudSignInView: View {
                 // `created`). Llamar a `pollLeader()` aquí conduciría una máquina que born-cloud no
                 // tiene y dejaría la pantalla clavada.
                 switch activeEntry {
-                case .reentry:   launchFlow { await retryLeaderPoll() }
-                case .bornCloud: launchFlow { await runBornCloudFlow() }
+                case .reentry, .beaconRouted: launchFlow { await retryLeaderPoll() }
+                case .bornCloud:              launchFlow { await runBornCloudFlow() }
                 }
             }
             .padding(.horizontal, DS.Spacing.xl)
@@ -710,16 +877,11 @@ struct WelcomeCloudSignInView: View {
                 body: L10n.Welcome.Cloud.notFoundBody)
             YalaPrimaryButton(L10n.Welcome.Cloud.notFoundCta) {
                 DS.Haptic.selection()
-                // El proveedor se captura ANTES de reencaminar: `provider` se deriva de `activeEntry`, y
-                // en cuanto el override dice `.bornCloud` pasa a leer `chosenProvider`. Sin esta línea
-                // caería en el `?? .apple` y mandaría a Apple a quien acababa de entrar con Google.
-                let proveedorFirmado = provider
-                chosenProvider = proveedorFirmado
-                entryOverride = .bornCloud
-                // La fase vuelve al intro para que cerrar el consent aterrice en el chooser de proveedor
-                // del ALTA y no otra vez en este mismo callejón.
-                phase = .intro
-                showConsent = true
+                // El proveedor se captura ANTES de reencaminar —el argumento se evalúa antes de que la función
+                // toque nada—: `provider` se deriva de `activeEntry`, y en cuanto el override dice `.bornCloud`
+                // pasa a leer `chosenProvider`. Leído después, caería en el `?? .apple` y mandaría a Apple a
+                // quien acababa de entrar con Google.
+                switchToSignUp(with: provider)
             }
             .padding(.horizontal, DS.Spacing.xl)
             .accessibilityIdentifier("welcome_cloud_not_found_cta")
@@ -840,26 +1002,38 @@ struct WelcomeCloudSignInView: View {
         // así que la tabla que traduce el wire sigue siendo la misma y sus tests siguen valiendo. Y sigue
         // construyendo `CloudAccountClient` SIN `attestProvider` a propósito: `/account/exists` va por
         // `requireUser` y es PRE-SESIÓN por definición (`.claude/rules/gateway-attest.md`).
-        switch await CloudIdentityDiscovery().discover(gate: identityGate) {
+        //
+        // Paso 6: el método se le pasa al motor desde AQUÍ, que acaba de firmar con él, y no se deja que lo lea
+        // del Keychain: una escritura fallida de `storedProvider` dejaría el de una sesión anterior, y con él la
+        // prueba de Apple del faro huérfano podría borrar el faro de una cuenta viva (lente B de la review).
+        let firmadoCon = provider
+        switch await CloudIdentityDiscovery(sessionProviderName: { firmadoCon.rawValue }).discover(gate: identityGate) {
         case .discovered(.newAccount, _):
             // Guard R9 SUB-FIRST (sesión 2, H4): antes del `.notFound` engañoso, consultar el
             // faro del device — si la cuenta nube de este Apple ID se creó con OTRO método y
             // este sub NO la matchea, lo probable es "método equivocado", no "sin cuenta".
+            //
+            // Paso 6: si el faro apuntaba a una cuenta que esta respuesta PRUEBA borrada, el motor ya lo
+            // limpió (`CloudIdentityDiscovery`), así que aquí se lee apagado y sale el `.notFound` honesto. Y
+            // el mismatch que queda ya no es una pared: lleva sus dos salidas.
             let beacon = CloudBeacon()
+            // Con una sesión secundaria viva el faro es el del DUEÑO del teléfono: el mismatch le hablaría a la
+            // visita de la cuenta de otra persona («Tu cuenta de Yala se creó con Apple») y le ofrecería firmar
+            // con su Apple ID. Mismo criterio que `WelcomeRestorePauseLogic`: la visita nunca lee ese faro.
             let verdict = ProviderMismatchLogic.decide(
                 accountExists: false,
-                beaconLinked: beacon.isCloudAccountLinked,
+                beaconLinked: beacon.isCloudAccountLinked && !SecondarySessionStore.isActive(),
                 beaconAccountHash: beacon.accountHash,
                 beaconProvider: beacon.linkedProvider,
                 sessionSubHash: CloudBeacon.hash(userID),
-                sessionProvider: provider.rawValue)
+                sessionProvider: provider)
             // Sin claim no se creó NADA server-side; soltar la sesión SIEMPRE (no dejar el
             // sign-in colgado) — también en mismatch (jamás dejar un sub huérfano vivo).
             await CloudAuthService.shared.signOut()
             switch verdict {
-            case .mismatch(let knownProvider):
+            case .mismatch(let exits):
                 MetricsService.cloudSignInProviderMismatch()
-                phase = .providerMismatch(knownProvider: knownProvider)
+                phase = .providerMismatch(exits)
             case .proceed:
                 phase = .notFound
             }

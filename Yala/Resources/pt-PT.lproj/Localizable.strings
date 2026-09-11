@@ -4228,10 +4228,19 @@
 "welcome.cloud.providerMismatchTitle" = "Essa conta usa outro método";
 
 /* R9 provider mismatch body; %@ = Apple/Google */
-"welcome.cloud.providerMismatchBody" = "A tua conta Yala foi criada com %@. Volta atrás e inicia sessão com esse método.";
+"welcome.cloud.providerMismatchBody" = "A tua conta Yala foi criada com %@.";
 
 /* R9 provider mismatch body when known provider is unavailable */
-"welcome.cloud.providerMismatchBodyGeneric" = "A tua conta Yala foi criada com outro método de acesso. Volta atrás e usa o da primeira vez.";
+"welcome.cloud.providerMismatchBodyGeneric" = "A tua conta Yala foi criada com outro método de acesso.";
+
+/* Paso 6: origin line on the sign-in screen the iCloud beacon routes to; %@ = Apple/Google */
+"welcome.cloud.beaconOrigin" = "Este ID Apple já tem uma conta Yala criada com %@.";
+
+/* Paso 6: same origin line when the beacon does not know the sign-in method */
+"welcome.cloud.beaconOriginGeneric" = "Este ID Apple já tem uma conta Yala.";
+
+/* Paso 6: secondary button on the beacon-routed sign-in screen; opens the full account-type chooser */
+"welcome.cloud.createAnother" = "Criar outra conta";
 
 /* Caption on the storage progress card while migration resume waits for CloudKit import quiescence */
 "storage.progress.waitingImport" = "A aguardar que o iCloud termine de sincronizar…";

@@ -156,6 +156,19 @@ estado. Cuesta un `grep -rl`. Y si al medirla sale otra, dilo en el sitio donde 
 corrige el documento de origen**: dejarlo pasar es lo que hace que la próxima sesión herede el mismo
 número.
 
+## La LETRA de una decisión puede no cumplir su propósito con los datos reales (2026-09-10, paso 6)
+
+Jürgen decidió «un faro que apunta a una cuenta inexistente se limpia solo en cuanto [I] lo descubre», y
+el motivo era el fresh start de producción. La lectura literal —«el hash del faro es el de la sesión y el
+backend dice que no existe»— **no habría disparado nunca en ese caso**: el hash es del uuid de Supabase, y
+al borrarse `auth.users` volver a firmar da OTRO uuid. Lo que sí lo probaba era el método (Sign in with
+Apple solo firma con el Apple ID del teléfono, que es el mismo cuyo iCloud-KV guarda el faro).
+
+**How to apply:** antes de implementar el mecanismo que una decisión nombra, pasa **el escenario que la
+motivó** por el modelo de datos, paso a paso. Si el mecanismo literal no lo cubre, la decisión describe el
+QUÉ y el CÓMO hay que buscarlo — y se dice en el Paso 0 con la medición que lo prueba, para que Jürgen pueda
+discrepar leyendo.
+
 ## La cara B, y da más vergüenza: la premisa era buena y el que leía mal era yo (2026-09-10)
 
 En el paso 0 del rediseño (`retire-guest-vocabulary-for-session-terms`) el ticket decía: «los dos

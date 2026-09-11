@@ -5289,6 +5289,15 @@ enum L10n {
                 String(format: ls("welcome.cloud.providerMismatchBody", comment: ""), providerName)
             }
             static var providerMismatchBodyGeneric: String { ls("welcome.cloud.providerMismatchBodyGeneric", comment: "") }
+            /// Paso 6 · el intro al que encamina el faro dice de dónde viene. Solo el nombre VISIBLE del
+            /// método («Apple»/«Google»), nunca un correo (decisión de Jürgen, 2026-09-09).
+            static func beaconOrigin(_ providerName: String) -> String {
+                String(format: ls("welcome.cloud.beaconOrigin", comment: ""), providerName)
+            }
+            /// Paso 6 · la misma línea cuando el faro no dice con qué método se creó la cuenta.
+            static var beaconOriginGeneric: String { ls("welcome.cloud.beaconOriginGeneric", comment: "") }
+            /// Paso 6 · la salida de la entrada encaminada por el faro: vuelve al chooser entero.
+            static var createAnother: String { ls("welcome.cloud.createAnother", comment: "") }
             static var checking: String { ls("welcome.cloud.checking", comment: "") }
             static var adopting: String { ls("welcome.cloud.adopting", comment: "") }
             static var adoptingHint: String { ls("welcome.cloud.adoptingHint", comment: "") }

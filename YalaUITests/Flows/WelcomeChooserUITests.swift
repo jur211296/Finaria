@@ -51,6 +51,12 @@ final class WelcomeChooserUITests: XCTestCase {
             .matching(identifier: "welcome_cloud_signin_button_google").firstMatch
         XCTAssertTrue(googleButton.waitForExistence(timeout: 10), "No apareció el botón de Google en el intro.")
 
+        // Paso 6 · CONTROL del test del faro de abajo: «Crear otra cuenta» es SOLO de la entrada a la que
+        // encamina el faro. Quien entra por «Ya tengo cuenta» dijo que tenía una; si no la tiene, «No
+        // encontramos una cuenta» ya le ofrece crearla.
+        XCTAssertFalse(app.buttons["welcome_cloud_create_another"].exists,
+                       "«Crear otra cuenta» apareció en la re-entrada normal: se coló fuera del faro.")
+
         // Back → de vuelta al chooser (nivel 1, por el onBack del cover).
         let backButton = app.buttons["welcome_back_button"].firstMatch
         XCTAssertTrue(backButton.waitForExistence(timeout: 10), "No apareció el botón Volver del intro.")
@@ -109,6 +115,85 @@ final class WelcomeChooserUITests: XCTestCase {
         backButton.tap()
         XCTAssertTrue(app.buttons["welcome_chooser_new"].waitForExistence(timeout: 10),
                       "El back no volvió al chooser.")
+    }
+
+    /// **Paso 6 · el faro solo encamina** (ADR 2026-09-09 §10, ticket `beacon-routes-only-never-blocks`).
+    /// Con el faro diciendo que este Apple ID ya tiene cuenta —creada con GOOGLE, para que el test distinga
+    /// el método del faro del fallback a Apple—, «Soy nuevo» encamina a entrar con esa cuenta, y esa
+    /// pantalla ofrece «Crear otra cuenta», que abre el chooser ENTERO: las dos cards, privado incluido
+    /// (decisión de Jürgen 2026-09-09).
+    ///
+    /// El faro se finge con `-uitest-fake-beacon`, que solo toca las LECTURAS de `CloudBeacon`: la ruta la
+    /// sigue decidiendo `routeNewBranch` con la entrada nube real, y por eso hace falta además
+    /// `-uitest-cloud-chooser`. Los dos controles viven en los hermanos: sin faro, «Soy nuevo» ve el chooser
+    /// directo; y la re-entrada por «Ya tengo cuenta» no ofrece «Crear otra cuenta». Nada de sign-in real.
+    func testNewBranch_withBeacon_routesToSignIn_andCreateAnotherOpensTheFullChooser() throws {
+        let app = XCUIApplication()
+        app.launchForUITest(
+            reset: true,
+            skipOnboarding: false,
+            seed: nil,
+            fakeBeacon: "google",
+            extraArguments: ["-uitest-cloud-chooser"]
+        )
+        let heroCTA = app.buttons["welcome_hero_cta"]
+        XCTAssertTrue(heroCTA.waitForExistence(timeout: 60), "No apareció el CTA del Hero.")
+        heroCTA.tap()
+
+        let newBranch = app.buttons["welcome_chooser_new"]
+        XCTAssertTrue(newBranch.waitForExistence(timeout: 10), "No apareció la card 'Soy nuevo'.")
+        newBranch.tap()
+
+        // El faro ENCAMINA: el intro de entrar, con el método DEL FARO (Google) y no el fallback.
+        let googleSignIn = app.descendants(matching: .any)
+            .matching(identifier: "welcome_cloud_signin_button_google").firstMatch
+        XCTAssertTrue(googleSignIn.waitForExistence(timeout: 10),
+                      "Con faro, «Soy nuevo» no encaminó a entrar con el método del faro.")
+        // Y el origen NOMBRA el método del faro: la variante genérica es solo para el faro sin método.
+        XCTAssertTrue(app.staticTexts["welcome_cloud_beacon_origin"].exists,
+                      "El intro no dice de dónde viene: falta «Este Apple ID ya tiene una cuenta de Yala creada con …».")
+
+        // …pero no decide: «Crear otra cuenta» está ahí.
+        let createAnother = app.buttons["welcome_cloud_create_another"]
+        XCTAssertTrue(createAnother.waitForExistence(timeout: 5),
+                      "La pantalla a la que encamina el faro no ofrece «Crear otra cuenta»: sigue siendo una pared.")
+        createAnother.tap()
+
+        // El chooser ENTERO, con sus dos cards: ni preseleccionado ni recortado.
+        let privateCard = app.buttons["welcome_new_private"]
+        XCTAssertTrue(privateCard.waitForExistence(timeout: 10),
+                      "«Crear otra cuenta» no llegó al chooser, o lo recortó sin la card privada.")
+        XCTAssertTrue(app.buttons["welcome_new_cloud"].exists,
+                      "«Crear otra cuenta» abrió el chooser sin la card de la nube.")
+    }
+
+    /// **Paso 6 · el origen no afirma lo que el faro no sabe.** Un faro con un método desconocido —aquí
+    /// «microsoft», que ningún escritor produce— encamina con el fallback de siempre (el botón de Apple), pero
+    /// la línea de origen es la GENÉRICA. Si tomara el nombre del botón en vez del faro, diría «creada con
+    /// Apple» sin saberlo: la mutación que ningún unit test puede ver, porque vive en la vista (lente C).
+    func testNewBranch_withUnknownBeaconMethod_saysTheGenericOrigin() throws {
+        let app = XCUIApplication()
+        app.launchForUITest(
+            reset: true,
+            skipOnboarding: false,
+            seed: nil,
+            fakeBeacon: "microsoft",
+            extraArguments: ["-uitest-cloud-chooser"]
+        )
+        let heroCTA = app.buttons["welcome_hero_cta"]
+        XCTAssertTrue(heroCTA.waitForExistence(timeout: 60), "No apareció el CTA del Hero.")
+        heroCTA.tap()
+
+        let newBranch = app.buttons["welcome_chooser_new"]
+        XCTAssertTrue(newBranch.waitForExistence(timeout: 10), "No apareció la card 'Soy nuevo'.")
+        newBranch.tap()
+
+        let genericOrigin = app.staticTexts["welcome_cloud_beacon_origin_generic"]
+        XCTAssertTrue(genericOrigin.waitForExistence(timeout: 10),
+                      "Con un faro sin método conocido el origen no es el genérico: afirma un método que el faro no dice.")
+        XCTAssertFalse(app.staticTexts["welcome_cloud_beacon_origin"].exists)
+        XCTAssertTrue(app.buttons["welcome_cloud_create_another"].exists,
+                      "«Crear otra cuenta» tiene que estar también con un faro sin método.")
     }
 
     /// G2 de Grupos-first: la card «Vengo por un grupo» ya no sale disparada a la recuperación de

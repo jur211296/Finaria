@@ -63,9 +63,10 @@ struct WelcomeFlowContainer: View {
     /// A5: "Soy nuevo" con la opción NUBE elegida ⇒ alta born-cloud (consent → sign-in → claim →
     /// par → relanzamiento). El destino es el MISMO cover que la re-entrada, con `Entry.bornCloud`.
     var onSelectCloudAccount: () -> Void
-    /// A26 (§k.2): el faro de iCloud-KV dice que este Apple ID YA tiene cuenta nube ⇒ el Welcome
-    /// NO ofrece la elección y encamina al returning-user con el provider del propio faro.
-    var onBeaconRoutesToCloudSignIn: (CloudSignInProvider) -> Void
+    /// ADR 2026-09-09 §10: el faro de iCloud-KV dice que este Apple ID YA tiene cuenta nube ⇒ «Soy nuevo»
+    /// ENCAMINA a entrar con ella, y la pantalla de destino ofrece «Crear otra cuenta» (paso 6). El
+    /// argumento es el método según el faro; `nil` = el faro no lo sabe.
+    var onBeaconRoutesToCloudSignIn: (CloudSignInProvider?) -> Void
     /// G3: «Crear mi primer grupo» con la puerta ya CONFIRMADA abierta (canal encendido y sin datos de
     /// otro humano en el device). El container no comprueba nada aquí: eso es del step `.groupsGate`, que
     /// es el único que puede llamarlo.
@@ -93,7 +94,7 @@ struct WelcomeFlowContainer: View {
         onSelectPrivateAccount: @escaping () -> Void,
         onSelectCloudAccount: @escaping () -> Void,
         onSelectGroupsOrganizer: @escaping () -> Void,
-        onBeaconRoutesToCloudSignIn: @escaping (CloudSignInProvider) -> Void,
+        onBeaconRoutesToCloudSignIn: @escaping (CloudSignInProvider?) -> Void,
         onNeedsMirrorRelaunch: @escaping (WelcomeMirrorRelaunchLogic.Destination) -> Void,
         hasLocalDataNow: @escaping @MainActor @Sendable () -> Bool,
         performICloudCorpusWipe: @escaping @MainActor () async -> String?
@@ -135,7 +136,7 @@ struct WelcomeFlowContainer: View {
             remoteOnboardingChoiceEnabled: CloudRemoteFlags.cloudOnboardingChoiceEnabled)
     }
 
-    /// El encaminamiento por faro (A26) va a la MISMA pantalla que la card `.cloudSignIn` del
+    /// El encaminamiento por faro (ADR §10) va a la MISMA pantalla que la card `.cloudSignIn` del
     /// sub-chooser de "Ya tengo cuenta" ⇒ su disponibilidad se DERIVA de ahí en vez de re-escribir
     /// los tres términos, que es como dos gates que deberían coincidir empiezan a divergir.
     private var cloudEntryAvailable: Bool {
@@ -305,17 +306,22 @@ struct WelcomeFlowContainer: View {
         leaveWelcome(to: destination) { onSelectExistingOption(option) }
     }
 
-    /// "Soy nuevo" (A4). **El faro se consulta ANTES de ofrecer nada** (§k.2 / A26) y, por tanto,
-    /// antes de que `ContentView` limpie las prefs residuales del fresh-start: ese orden es el
-    /// contrato. Medido el 2026-08-09: `OnboardingResetHelper.safeKeysToClear` son SOLO `userName`
-    /// y `defaultCurrencyCode`, así que la limpieza no toca las `yala.cloud.*` del faro — no hay
-    /// bug ahí, y el orden se respeta igual para que siga sin haberlo.
+    /// "Soy nuevo" (A4). **El faro se consulta ANTES de ofrecer nada** —encaminar es el default del ADR
+    /// §10— y, por tanto, antes de que `ContentView` limpie las prefs residuales del fresh-start: ese
+    /// orden es el contrato. Medido el 2026-08-09: `OnboardingResetHelper.safeKeysToClear` son SOLO
+    /// `userName` y `defaultCurrencyCode`, así que la limpieza no toca las `yala.cloud.*` del faro — no
+    /// hay bug ahí, y el orden se respeta igual para que siga sin haberlo.
+    ///
+    /// **Encaminar ya no es decidir** (paso 6): la pantalla a la que lleva `.cloudSignIn` ofrece «Crear
+    /// otra cuenta», que vuelve a este container en `.newChooser` —el chooser ENTERO, sin bypass—. Esa
+    /// vuelta no pasa por aquí a propósito: el faro la volvería a encaminar.
     ///
     /// Con una sola opción visible NO se muestra pantalla intermedia: en producción (percent
     /// remoto en 0) y bajo uitest el recorrido es byte-idéntico al de hoy.
     private func handleNewBranch() {
         switch WelcomeNewBranchRouter.route(
             beacon: CloudBeacon(),
+            isSecondarySessionActive: SecondarySessionStore.isActive(),
             cloudEntryAvailable: cloudEntryAvailable,
             options: visibleNewOptions
         ) {

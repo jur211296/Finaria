@@ -284,6 +284,16 @@ tests y goldens · las rules leídas contra el diff) en vez de cuatro genéricas
 MIS afirmaciones del prompt**, no solo el código — la lente del backend refutó la premisa con la que yo
 justificaba media decisión, y la del cliente me corrigió una frase del docblock que era falsa en general.
 
+**2026-09-10 (paso 6, el faro): 4 lentes, NINGÚN grave, ~16 hallazgos — y lo que valió fue la dirección
+peligrosa.** La lente de tests encontró que ningún test del motor distinguía el método de la sesión: con un
+`?? "apple"` (que el repo usa en otros dos sitios) un Google sin cuenta habría borrado el faro de una cuenta
+Apple viva en todos los dispositivos, con la suite verde. Dos lentes (flujo y producto) convergieron, sin
+verse, en el mismo defecto de un flag que el faro deja puesto — señal de que era estructural. Dos cosas de
+método que repito: **no apliqué mutantes mientras las lentes leían** (les habría enseñado código mutado), y
+**un test que fija varias defensas no puede validar varias mutaciones a la vez: se tapan entre sí** — partí
+los scans en un test por defensa antes de mutar, y los 19 mutantes unitarios cayeron cada uno en un test que
+solo él tumbaba (tres tandas: las mutaciones del motor que se tapaban entre sí fueron por separado).
+
 Y un aviso de método: **la lente de tests dijo que dos de mis aserciones nuevas eran decorado, y tenía
 razón** (sobrevivían a reordenar los guards, y el cableado no tenía NINGÚN test). La forma de zanjarlo no
 fue discutirlo: fue escribir el mutante y verlo caer. Tres mutantes, uno por aserción, cada uno cayendo

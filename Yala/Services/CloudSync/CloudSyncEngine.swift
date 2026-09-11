@@ -504,6 +504,14 @@ enum CloudSyncBreadcrumb {
         logger.error("CloudSecondary beacon write SUPPRESSED — migration claim path ran under secondary session (bug)")
     }
 
+    /// Paso 6 del rediseño de sesiones: [I] PROBÓ que la cuenta del faro de iCloud-KV ya no existe y lo
+    /// limpió (`CloudIdentityDiscovery`). Es irreversible y cross-device, así que va FUERA de `#if DEBUG`:
+    /// si algún día limpiara de más, esta línea sería el único rastro. `proof` = la prueba que lo disparó
+    /// (`BeaconOrphanLogic.Proof`), sin PII.
+    static func beaconOrphanCleared(proof: String) {
+        logger.notice("CloudBeacon orphan CLEARED proof=\(proof, privacy: .public)")
+    }
+
     /// GUARD de mount-mismatch (M1, crítico): el runtime intentó arrancar con el descriptor
     /// secundario activo pero el proceso montó el store del DUEÑO (ventana de entrada pre-relaunch)
     /// → bloqueado. Sin el guard, el drain pushearía la History del dueño a la cuenta entrante.
