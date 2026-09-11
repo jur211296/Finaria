@@ -109,7 +109,11 @@ struct WelcomeCloudSignInView: View {
     /// Es un callback y no un `phase` propio porque lo que sigue no es una pantalla de este flujo: es la
     /// cadena de Grupos, cuyo anchor es de `GroupsBackendInviteModifier`. Presentarla desde aquí sería el
     /// segundo anchor que la regla (4) de Presentaciones prohíbe.
-    var onEnterGroupsOnly: () -> Void
+    ///
+    /// `offersFullActivation` (paso 8) distingue los dos destinos de [I] que llegan aquí: quien entró por
+    /// «Primera vez → nube» venía a estrenar Yala entero y su cuenta resultó ser de grupos, así que cuando su
+    /// sesión solo-grupos quede montada se le pone delante «Activar Yala completo» (ADR §7).
+    var onEnterGroupsOnly: (_ offersFullActivation: Bool) -> Void
     /// **Paso 6** · «Crear otra cuenta» desde la entrada encaminada por el faro: cerrar este cover y volver
     /// a «Elige dónde quieres guardar tus datos» ENTERO —las dos cards, privado incluido (decisión de
     /// Jürgen 2026-09-09, que deroga el «card nube activa» del ticket)—. Es un callback y no una fase propia
@@ -1061,10 +1065,10 @@ struct WelcomeCloudSignInView: View {
             case .enterGroupsOnly, .enterGroupsOnlyOfferingFullActivation:
                 // La cuenta existe y solo lleva grupos: **no se adopta**. La sesión se queda VIVA —es la
                 // suya y la mini-app la necesita— y el recorrido sigue por la cadena de Grupos, que ya
-                // sabe pedir lo que falte en este dispositivo. La oferta de «Activar Yala completo» que
-                // distingue los dos destinos la construye `full-mode-activation-must-ask-where-personal-
-                // data-lives`; hoy los dos van al mismo sitio, y por eso comparten rama.
-                onEnterGroupsOnly()
+                // sabe pedir lo que falte en este dispositivo. Los dos destinos comparten rama porque van al
+                // mismo sitio; lo único que los separa es la oferta de «Activar Yala completo» al terminar
+                // (paso 8), y viaja como argumento.
+                onEnterGroupsOnly(destino == .enterGroupsOnlyOfferingFullActivation)
                 return
             // `.adoptAsComplete` es el destino NORMAL de esta puerta: sigue al guard cross-cuenta y al
             // adopt de abajo, intactos. Los demás son inalcanzables aquí con `exists == true` —lo afirma

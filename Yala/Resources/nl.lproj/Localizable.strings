@@ -5819,3 +5819,25 @@
 
 /* Private branch iCloud gate: secondary button on the wipe-failed screen, gives up the deletion */
 "welcome.privateICloud.wipeFailedBack" = "Laat maar even";
+
+/* Paso 8 · «Activar Yala completo» pregunta dónde viven los datos personales */
+"groups.fullActivation.chooserTitle" = "Waar bewaren we je financiën?";
+"groups.fullActivation.chooserSubtitle" = "Je groepen blijven zoals ze zijn. Kies waar je persoonlijke gegevens komen te staan.";
+"groups.fullActivation.cloudBody" = "We gebruiken hetzelfde account dat je al voor je groepen gebruikt, geen nieuw. Je gegevens staan op onze servers en ons team kan ze inzien om je te helpen.";
+"groups.fullActivation.historyTitle" = "Zullen we je groepsuitgaven meenemen?";
+"groups.fullActivation.historyBody" = "Je groepsuitgaven kunnen ook verschijnen in Start, in Boekingen en in Statistieken.";
+"groups.fullActivation.historyShow" = "Ja, toon ze";
+"groups.fullActivation.historyKeepInGroups" = "Nee, laat ze in Groepen";
+"groups.fullActivation.historyFootnote" = "Dit geldt ook voor de uitgaven die je later toevoegt. Je kunt dit altijd wijzigen in Groepsinstellingen.";
+"groups.fullActivation.promoting" = "Je account wordt geactiveerd…";
+"groups.fullActivation.failedTitle" = "We konden je account niet activeren";
+"groups.fullActivation.failedBody" = "Controleer je verbinding en probeer het opnieuw. Er is nog niets veranderd.";
+"groups.fullActivation.unavailableBody" = "Je account is op dit moment niet beschikbaar. Er is nog niets veranderd.";
+"groups.fullActivation.blockedPersonalDataTitle" = "Je account heeft al persoonlijke financiën";
+"groups.fullActivation.blockedPersonalDataBody" = "Dit account bevat al persoonlijke gegevens, waarschijnlijk van een ander apparaat. Log uit en log opnieuw in met dit account om ze hier te gebruiken. Er is niets veranderd.";
+"groups.fullActivation.blockedBusyTitle" = "Een ander apparaat verplaatst je gegevens";
+"groups.fullActivation.blockedBusyBody" = "Wacht tot het klaar is en probeer het over een paar minuten opnieuw. Er is niets veranderd.";
+"groups.fullActivation.blockedSessionTitle" = "Je sessie is verlopen";
+"groups.fullActivation.blockedSessionBody" = "Log opnieuw in bij Groepen en activeer volledige Yala nog een keer. Er is niets veranderd.";
+"groups.fullActivation.reinstallTitle" = "Installeer Yala eerst opnieuw";
+"groups.fullActivation.reinstallBody" = "Je bent op dit apparaat met Groepen begonnen in een oudere versie van Yala. Verwijder de app en installeer hem opnieuw om te kiezen waar we je financiën bewaren: je groepen blijven in je account en je iCloud-gegevens blijven onaangeroerd.";

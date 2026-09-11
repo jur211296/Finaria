@@ -263,6 +263,12 @@ nonisolated enum StorageModePersistence {
 
     static func armGroupsOnlyNeutralMount(_ defaults: UserDefaults = .standard) {
         defaults.set(true, forKey: groupsOnlyNeutralMountKey)
+        // Paso 8 · armar esta marca es EMPEZAR (o volver a) una sesión solo-grupos en este dispositivo, así que
+        // ninguna activación de Yala completo a medias sigue en pie. Va aquí, en el escritor, porque la marca de
+        // reanudación sobrevive a un cierre de sesión solo-grupos y a vaciar los datos: sin esto, quien vuelve
+        // a entrar por «Vengo por un grupo» retomaría una activación de su sesión anterior, con una puerta de
+        // iCloud que ya no mide nada de lo que tiene hoy.
+        FullModeActivationResumeStore.clear(defaults)
     }
 
     static func isGroupsOnlyNeutralMountArmed(_ defaults: UserDefaults = .standard) -> Bool {
@@ -362,6 +368,17 @@ nonisolated enum StorageModePersistence {
     static func clearICloudCorpusWipeArm(_ defaults: UserDefaults = .standard) {
         defaults.removeObject(forKey: icloudCorpusWipeArmedKey)
         clearNeutralMountArm(defaults)
+    }
+
+    /// Paso 8 · el desarme desde la activación de Yala completo, con la frontera M1 DENTRO del escritor (molde
+    /// de `clearGroupsOnlyNeutralMountIfPrimary`): el arm vive en el `UserDefaults` del DUEÑO, y una sesión
+    /// secundaria que activara Yala completo no puede retirarle un borrado que él pidió.
+    static func clearICloudCorpusWipeArmIfPrimary(
+        _ defaults: UserDefaults = .standard,
+        isSecondary: Bool = SecondarySessionStore.isActive()
+    ) {
+        guard !isSecondary else { return }
+        clearICloudCorpusWipeArm(defaults)
     }
 
     /// **Marker «este device eligió privado SIN poder preguntarle a iCloud» (estado K de la matriz).**

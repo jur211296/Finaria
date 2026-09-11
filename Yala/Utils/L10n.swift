@@ -2511,6 +2511,32 @@ enum L10n {
             static var done: String { ls("groups.activate.done", comment: "") }
         }
 
+        /// Paso 8 del rediseño de sesiones · «Activar Yala completo» pregunta dónde viven los datos personales.
+        enum FullActivation {
+            static var chooserTitle: String { ls("groups.fullActivation.chooserTitle", comment: "") }
+            static var chooserSubtitle: String { ls("groups.fullActivation.chooserSubtitle", comment: "") }
+            /// La card de nube en este contexto: LA MISMA cuenta que ya usa para grupos (decisión de Jürgen).
+            static var cloudBody: String { ls("groups.fullActivation.cloudBody", comment: "") }
+            static var historyTitle: String { ls("groups.fullActivation.historyTitle", comment: "") }
+            static var historyBody: String { ls("groups.fullActivation.historyBody", comment: "") }
+            static var historyShow: String { ls("groups.fullActivation.historyShow", comment: "") }
+            static var historyKeepInGroups: String { ls("groups.fullActivation.historyKeepInGroups", comment: "") }
+            static var historyFootnote: String { ls("groups.fullActivation.historyFootnote", comment: "") }
+            static var promoting: String { ls("groups.fullActivation.promoting", comment: "") }
+            static var failedTitle: String { ls("groups.fullActivation.failedTitle", comment: "") }
+            static var failedBody: String { ls("groups.fullActivation.failedBody", comment: "") }
+            static var unavailableBody: String { ls("groups.fullActivation.unavailableBody", comment: "") }
+            static var blockedPersonalDataTitle: String { ls("groups.fullActivation.blockedPersonalDataTitle", comment: "") }
+            static var blockedPersonalDataBody: String { ls("groups.fullActivation.blockedPersonalDataBody", comment: "") }
+            static var blockedBusyTitle: String { ls("groups.fullActivation.blockedBusyTitle", comment: "") }
+            static var blockedBusyBody: String { ls("groups.fullActivation.blockedBusyBody", comment: "") }
+            static var blockedSessionTitle: String { ls("groups.fullActivation.blockedSessionTitle", comment: "") }
+            static var blockedSessionBody: String { ls("groups.fullActivation.blockedSessionBody", comment: "") }
+            /// Instalación solo-grupos anterior al paso 5, con el espejo ya adjunto: se reinstala antes.
+            static var reinstallTitle: String { ls("groups.fullActivation.reinstallTitle", comment: "") }
+            static var reinstallBody: String { ls("groups.fullActivation.reinstallBody", comment: "") }
+        }
+
         // MARK: iCloud Availability Gate (§i.8(c)2 — endurecimiento Grupos-v1)
 
         enum ICloudGate {

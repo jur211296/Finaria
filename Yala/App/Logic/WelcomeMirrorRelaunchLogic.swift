@@ -52,6 +52,13 @@ nonisolated enum WelcomeMirrorRelaunchLogic {
         /// G3 · «Vengo por un grupo» → «Crear mi primer grupo»: el alta del ORGANIZADOR (sign-in de
         /// grupos → consent → nombre → formulario). Solo se alcanza con la puerta ya confirmada abierta.
         case groupsOrganizer
+        /// Paso 8 · «Activar Yala completo» → privado, desde una sesión solo-grupos. **No es una salida del
+        /// Welcome** y no la consume `presentNextOnboardingScreen`: la produce la activación y la consume el
+        /// arranque de un returning user (`FullModeActivationResumeStore.resolveAtBoot`). Vive aquí porque de
+        /// este almacén cuelga la salida a segundo plano del terminal «reabre Yala» (`RelaunchNetLogic`).
+        case fullActivationPrivate
+        /// Paso 8 · lo mismo, por la tercera salida de la puerta privada: «Restaurar mis datos».
+        case fullActivationRestore
     }
 
     /// ¿Este destino necesita que el mirror de CloudKit esté ADJUNTO al store personal?
@@ -78,7 +85,10 @@ nonisolated enum WelcomeMirrorRelaunchLogic {
     ///    una pantalla por un mirror que su camino no usa.
     static func requiresMirror(_ destination: Destination) -> Bool {
         switch destination {
-        case .privateOnboarding, .restoreICloud, .inviteRecovery:
+        // Las dos de la activación caen con sus gemelas del Welcome por la misma razón: lo personal va a
+        // vivir en el iCloud privado, y el onboarding o el restore tienen que correr con el espejo puesto.
+        case .privateOnboarding, .restoreICloud, .inviteRecovery,
+             .fullActivationPrivate, .fullActivationRestore:
             return true
         case .cloudAccount, .cloudSignIn, .groupsOrganizer:
             return false

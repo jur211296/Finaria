@@ -5807,3 +5807,25 @@
 
 /* Private branch iCloud gate: secondary button on the wipe-failed screen, gives up the deletion */
 "welcome.privateICloud.wipeFailedBack" = "Deixar para depois";
+
+/* Paso 8 · «Activar Yala completo» pregunta dónde viven los datos personales */
+"groups.fullActivation.chooserTitle" = "Onde guardamos suas finanças?";
+"groups.fullActivation.chooserSubtitle" = "Seus grupos continuam iguais. Escolha onde seus dados pessoais vão ficar.";
+"groups.fullActivation.cloudBody" = "Vamos usar a mesma conta que você já usa nos seus grupos, não uma nova. Seus dados ficam nos nossos servidores e nosso time pode vê-los para te dar suporte.";
+"groups.fullActivation.historyTitle" = "Trazemos seus gastos de grupo?";
+"groups.fullActivation.historyBody" = "Seus gastos de grupo também podem aparecer no Inicio, em Registros e em Estatisticas.";
+"groups.fullActivation.historyShow" = "Sim, mostrar";
+"groups.fullActivation.historyKeepInGroups" = "Não, deixar em Grupos";
+"groups.fullActivation.historyFootnote" = "Vale também para os que você registrar depois. Você pode mudar isso quando quiser em Ajustes de Grupos.";
+"groups.fullActivation.promoting" = "Ativando sua conta…";
+"groups.fullActivation.failedTitle" = "Não conseguimos ativar sua conta";
+"groups.fullActivation.failedBody" = "Verifique sua conexão e tente de novo. Nada mudou ainda.";
+"groups.fullActivation.unavailableBody" = "Sua conta não está disponível no momento. Nada mudou ainda.";
+"groups.fullActivation.blockedPersonalDataTitle" = "Sua conta já tem finanças pessoais";
+"groups.fullActivation.blockedPersonalDataBody" = "Esta conta já guarda dados pessoais, provavelmente de outro dispositivo. Para usá-los aqui, saia e entre de novo com ela. Nada mudou.";
+"groups.fullActivation.blockedBusyTitle" = "Outro dispositivo está movendo seus dados";
+"groups.fullActivation.blockedBusyBody" = "Espere terminar e tente de novo em alguns minutos. Nada mudou.";
+"groups.fullActivation.blockedSessionTitle" = "Sua sessão expirou";
+"groups.fullActivation.blockedSessionBody" = "Entre de novo em Grupos e ative o Yala completo outra vez. Nada mudou.";
+"groups.fullActivation.reinstallTitle" = "Antes, reinstale o Yala";
+"groups.fullActivation.reinstallBody" = "Você começou a usar Grupos neste dispositivo com uma versão anterior do Yala. Para escolher onde guardamos suas finanças, apague o app e instale de novo: seus grupos continuam na sua conta e seus dados do iCloud não são tocados.";

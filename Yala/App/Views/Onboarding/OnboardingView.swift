@@ -125,18 +125,29 @@ struct OnboardingView: View {
     /// Chevron back en step 1. Solo se setea cuando el OnboardingView viene
     /// del flow Welcome — descarta state silenciosamente y vuelve al Hero.
     var onCancelFromStep1: (() -> Void)? = nil
+    /// Paso 8 · el último botón ENTREGA la escritura en vez de ejecutarla. Con este gancho puesto,
+    /// «Empezar a usar Yala» no persiste nada: le pasa a quien lo puso un `commit` que persiste lo que hay en
+    /// memoria, y es él quien decide cuándo llamarlo. Lo usa la activación de Yala completo, cuya decisión de
+    /// Jürgen es que la cuenta en la nube se promocione DESPUÉS de terminar [P] y ANTES de escribir nada: si la
+    /// promoción falla o el usuario abandona, no queda ni una fila. `nil` (el Welcome) = el camino de siempre.
+    ///
+    /// El `commit` lee el `@State` de esta vista, así que solo vale mientras siga montada: quien lo recibe
+    /// tiene que tapar el onboarding, no sustituirlo.
+    var beforeCommit: ((_ commit: @escaping () -> Void) -> Void)? = nil
 
     init(prefilledData: ICloudAccountSummary? = nil,
          backgroundStyle: OnboardingBackgroundStyle = .heroFlow,
          mode: OnboardingFlowMode = .initial,
          onCancel: (() -> Void)? = nil,
          onCancelFromStep1: (() -> Void)? = nil,
+         beforeCommit: ((_ commit: @escaping () -> Void) -> Void)? = nil,
          onComplete: @escaping () -> Void) {
         self.prefilledData = prefilledData
         self.backgroundStyle = backgroundStyle
         self.mode = mode
         self.onCancel = onCancel
         self.onCancelFromStep1 = onCancelFromStep1
+        self.beforeCommit = beforeCommit
         self.onComplete = onComplete
 
         // Reconciliar el paso inicial con los pasos saltados por prefill: si el
@@ -1693,7 +1704,11 @@ struct OnboardingView: View {
         if currentStep == .confirmation {
             // Sync currency before completing
             selectedCurrency = accountCurrency
-            completeOnboarding()
+            if let beforeCommit {
+                beforeCommit { completeOnboarding() }
+            } else {
+                completeOnboarding()
+            }
             return
         }
 

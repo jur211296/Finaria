@@ -9,11 +9,17 @@
 //  ─────────────────────────────────────────────────────────────────────────────────────────────────────
 //  CABLEADO (A5, 2026-08-09): el aviso DARK de A2 se cumplió y por eso ya no está aquí.
 //
-//  Su ÚNICO call-site de producción es `WelcomeCloudSignInView.runBornCloudFlow()` (entrada
-//  `Entry.bornCloud`, la card «nube» de «Soy nuevo»): consent → sign-in → `signUp()` →
-//  `activateBornCloudStorage()` → terminal de relanzamiento. Ese orden lo pinnea un source-scan en
-//  `BornCloudSignUpFlowTests`, porque lo que decide es QUIÉN llama y en qué orden y ningún test de
-//  comportamiento lo caza.
+//  Tiene DOS call-sites de producción, y los dos llaman en el mismo orden `signUp()` →
+//  `activateBornCloudStorage()`:
+//   · `WelcomeCloudSignInView.runBornCloudFlow()` (entrada `Entry.bornCloud`, la card «nube» de «Soy
+//     nuevo»): consent → sign-in → claim → par → terminal. Ese orden lo pinnea un source-scan en
+//     `BornCloudSignUpFlowTests`, porque lo que decide es QUIÉN llama y en qué orden y ningún test de
+//     comportamiento lo caza.
+//   · `FullModeActivationView` (paso 8, «Activar Yala completo → nube» desde solo-grupos): la sesión ya está
+//     viva, y el claim sobre la fila ligera de grupos la PROMOCIONA y contesta `created`, así que `.seeded`
+//     significa «la cuenta acaba de pasar a completa». Aquí el claim va DESPUÉS del onboarding personal y
+//     antes de escribirlo (decisión de Jürgen: la promoción es el último paso); el orden lo fija
+//     `FullModeActivationFlowLogic.commitPlan`.
 //  ─────────────────────────────────────────────────────────────────────────────────────────────────────
 //
 //  Lo que NO hace, y no por olvido:

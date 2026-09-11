@@ -5819,3 +5819,25 @@
 
 /* Private branch iCloud gate: secondary button on the wipe-failed screen, gives up the deletion */
 "welcome.privateICloud.wipeFailedBack" = "今はやめておく";
+
+/* Paso 8 · «Activar Yala completo» pregunta dónde viven los datos personales */
+"groups.fullActivation.chooserTitle" = "家計のデータをどこに保存しますか？";
+"groups.fullActivation.chooserSubtitle" = "グループはそのままです。個人データの保存場所を選んでください。";
+"groups.fullActivation.cloudBody" = "グループで使っているアカウントをそのまま使います。新しいアカウントは作りません。データは私たちのサーバーに保存され、サポートのために私たちのチームが見ることがあります。";
+"groups.fullActivation.historyTitle" = "グループの支出も表示しますか？";
+"groups.fullActivation.historyBody" = "グループの支出を「ホーム」「記録」「統計」にも表示できます。";
+"groups.fullActivation.historyShow" = "はい、表示する";
+"groups.fullActivation.historyKeepInGroups" = "いいえ、グループだけにする";
+"groups.fullActivation.historyFootnote" = "今後登録する支出にも適用されます。グループ設定からいつでも変更できます。";
+"groups.fullActivation.promoting" = "アカウントを有効にしています…";
+"groups.fullActivation.failedTitle" = "アカウントを有効にできませんでした";
+"groups.fullActivation.failedBody" = "接続を確認して、もう一度お試しください。まだ何も変更していません。";
+"groups.fullActivation.unavailableBody" = "現在、アカウントを利用できません。まだ何も変更していません。";
+"groups.fullActivation.blockedPersonalDataTitle" = "このアカウントにはすでに個人の家計データがあります";
+"groups.fullActivation.blockedPersonalDataBody" = "このアカウントには、おそらく別のデバイスで作成された個人データがすでにあります。ここで使うには、いったんログアウトしてから、このアカウントで再度ログインしてください。何も変更していません。";
+"groups.fullActivation.blockedBusyTitle" = "別のデバイスがデータを移行中です";
+"groups.fullActivation.blockedBusyBody" = "完了するまで待ってから、数分後にもう一度お試しください。何も変更していません。";
+"groups.fullActivation.blockedSessionTitle" = "セッションの有効期限が切れました";
+"groups.fullActivation.blockedSessionBody" = "グループでもう一度ログインして、Yalaの全機能をもう一度有効にしてください。何も変更していません。";
+"groups.fullActivation.reinstallTitle" = "先にYalaを再インストールしてください";
+"groups.fullActivation.reinstallBody" = "このデバイスでは、以前のバージョンのYalaでグループを使い始めています。家計データの保存場所を選ぶには、アプリを削除してからもう一度インストールしてください。グループはアカウントに残り、iCloudのデータには手を付けません。";

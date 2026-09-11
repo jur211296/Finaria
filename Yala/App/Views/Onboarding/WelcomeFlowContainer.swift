@@ -126,14 +126,10 @@ struct WelcomeFlowContainer: View {
 
     /// A4: espejo EXACTO de los argumentos del existing (mismo opt-in de uitest, mismo kill-switch)
     /// más los dos términos propios del born-cloud: la constante COMPILADA (hoy `true`) y el
-    /// sub-flag remoto de la elección, que es el que sirve `"0"` en producción.
+    /// sub-flag remoto de la elección. Desde el paso 8 los lee `WelcomeNewOptionsGate`, que comparte con la
+    /// activación de Yala completo: el chooser es el mismo y su gate también tiene que serlo.
     private var visibleNewOptions: [WelcomeAccountChoiceLogic.NewOption] {
-        WelcomeAccountChoiceLogic.visibleNewOptions(
-            isConfigured: CloudBackendConfig.isConfigured,
-            isUITest: SwiftDataConfiguration.isUITesting && !UITestHooks.forceCloudChooser,
-            bornCloudEnabled: CloudSyncFlags.bornCloudChoiceEnabled,
-            remoteCloudEnabled: CloudRemoteFlags.cloudModeEnabled,
-            remoteOnboardingChoiceEnabled: CloudRemoteFlags.cloudOnboardingChoiceEnabled)
+        WelcomeNewOptionsGate.live
     }
 
     /// El encaminamiento por faro (ADR §10) va a la MISMA pantalla que la card `.cloudSignIn` del

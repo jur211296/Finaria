@@ -229,8 +229,12 @@ struct GroupsOnlyNeutralMountBoundariesTests {
                 .joined(separator: "\n") ?? ""
             if code.contains("armGroupsOnlyNeutralMount") { armadores.append(url.lastPathComponent) }
         }
+        // Paso 8 · `FullModeActivationView` RE-arma la marca, y solo en un sitio: cancelar una activación que
+        // ya relanzó para adjuntar el espejo es volver a solo-grupos, y la marca es lo que su rama privada
+        // había levantado. No es un alta nueva ni un restore: es deshacer el primer paso de la activación. Que
+        // ocurra SOLO ahí lo fija `FullModeActivationWiringTests.cancel_afterRelaunch_reArmsTheNeutralMount`.
         #expect(Set(armadores) == ["GroupsOrganizerOnboarding.swift", "GroupInviteOnboardingView.swift",
-                                   "CloudSyncFlags.swift"], """
+                                   "CloudSyncFlags.swift", "FullModeActivationView.swift"], """
             cambió quién ARMA el neutro de solo-grupos: \(armadores.sorted()). Si el camino nuevo es un \
             restore, una adopción o un cutover, le estás apagando el espejo a alguien que sí lo necesita \
             — que es el daño CONTRARIO al de este ticket. `CloudSyncFlags` es la definición.

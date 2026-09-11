@@ -5819,3 +5819,25 @@
 
 /* Private branch iCloud gate: secondary button on the wipe-failed screen, gives up the deletion */
 "welcome.privateICloud.wipeFailedBack" = "暂时先这样";
+
+/* Paso 8 · «Activar Yala completo» pregunta dónde viven los datos personales */
+"groups.fullActivation.chooserTitle" = "你的财务数据存放在哪里？";
+"groups.fullActivation.chooserSubtitle" = "你的群组保持不变。选择你的个人数据存放在哪里。";
+"groups.fullActivation.cloudBody" = "我们会使用你在群组中已经在用的同一个账户，而不是新建一个。数据保存在我们的服务器上，我们的团队可以查看，用于为你提供支持。";
+"groups.fullActivation.historyTitle" = "要带上你的群组支出吗？";
+"groups.fullActivation.historyBody" = "你的群组支出也可以显示在「首页」「记录」和「统计」中。";
+"groups.fullActivation.historyShow" = "是，显示";
+"groups.fullActivation.historyKeepInGroups" = "不，只留在群组中";
+"groups.fullActivation.historyFootnote" = "这也适用于之后记录的支出。你随时可以在群组设置中更改。";
+"groups.fullActivation.promoting" = "正在激活你的账户…";
+"groups.fullActivation.failedTitle" = "无法激活你的账户";
+"groups.fullActivation.failedBody" = "请检查网络连接后重试。目前还没有做任何更改。";
+"groups.fullActivation.unavailableBody" = "你的账户暂时不可用。目前还没有做任何更改。";
+"groups.fullActivation.blockedPersonalDataTitle" = "你的账户已有个人财务数据";
+"groups.fullActivation.blockedPersonalDataBody" = "此账户已保存个人数据，可能来自另一台设备。要在这里使用，请退出登录后再用此账户重新登录。未做任何更改。";
+"groups.fullActivation.blockedBusyTitle" = "另一台设备正在迁移你的数据";
+"groups.fullActivation.blockedBusyBody" = "请等它完成后，几分钟后再试。未做任何更改。";
+"groups.fullActivation.blockedSessionTitle" = "你的登录已过期";
+"groups.fullActivation.blockedSessionBody" = "请在群组中重新登录，然后再次激活完整 Yala。未做任何更改。";
+"groups.fullActivation.reinstallTitle" = "请先重新安装 Yala";
+"groups.fullActivation.reinstallBody" = "你在这台设备上是用旧版本的 Yala 开始使用群组的。要选择财务数据的存放位置，请删除此应用后重新安装：你的群组会保留在账户中，iCloud 数据也不会被改动。";
