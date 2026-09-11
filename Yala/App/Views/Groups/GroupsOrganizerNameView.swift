@@ -7,8 +7,7 @@
 //
 //  **Pantalla mínima propia y NO `OnboardingView`**, por lo medido en el spec: reusar aquella para pedir
 //  un campo arrastra sus 8 steps, el planner (`skippedSteps` decide por `selectedUsageMode`, que solo se
-//  fija en el step `.purpose`), el `OnboardingPrefillResolver` y el gate de la card de propósito; y su
-//  `completeGroupsOnlyOnboarding` es un método privado. El molde es `GroupInviteOnboardingView`, que ya
+//  fija en el step `.purpose`) y el `OnboardingPrefillResolver`. El molde es `GroupInviteOnboardingView`, que ya
 //  pide el nombre igual — pero tampoco se reusa: aquella deriva su step de la fase REAL de un join intent
 //  (`GroupJoinIntentTracker`) y aquí no hay ninguna zona a la que unirse.
 //

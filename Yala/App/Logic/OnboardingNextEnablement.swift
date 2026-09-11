@@ -4,17 +4,15 @@
 //
 //  SSOT de la habilitación del botón "Siguiente"/"Continuar" del onboarding.
 //  Pure-logic (sin SwiftUI): decide si el CTA de un paso está deshabilitado a
-//  partir del estado de los campos + el modo de uso. Reusado por `OnboardingView`
-//  vía la computed `isNextDisabled`.
+//  partir del estado de sus campos. Reusado por `OnboardingView` vía la computed
+//  `isNextDisabled`.
 //
-//  Nace del bug del botón "Continuar" muerto en modo "Solo grupos": el paso
-//  `.currencyName` es combinado (moneda + nombre de cuenta), pero en Solo Grupos
-//  el campo de nombre de cuenta está OCULTO y NUNCA se autosugiere (no hay cuenta
-//  personal, solo se elige la moneda) → `accountName` queda "" por diseño →
-//  exigirlo dejaba el botón deshabilitado permanentemente, atascando el onboarding.
-//  Solo reproduce en device con iCloud (en simulador el guard de iCloud del paso
-//  Propósito bloquea ANTES de llegar a moneda), por eso escapó al QA — de ahí que
-//  la decisión viva ahora en pure-logic testeable en vez de una computed de View.
+//  Nació del bug del botón "Continuar" muerto en el modo "Solo grupos" del
+//  onboarding (fix 2.0.5): en ese modo el nombre de cuenta del paso `.currencyName`
+//  estaba oculto por diseño, y exigirlo atascaba el flujo. Ese modo se retiró el
+//  2026-09-10 (paso 7 del rediseño de sesiones: solo-grupos es una sesión que se
+//  abre desde el Welcome, no un propósito del onboarding) y con él su excepción.
+//  La decisión sigue en pure-logic porque es donde la alcanza un unitario.
 //
 //  Patrón análogo a `OnboardingStepPlan` (misma carpeta): namespace enum con
 //  funciones estáticas puras sobre `OnboardingStep`.
@@ -31,18 +29,14 @@ enum OnboardingNextEnablement {
     ///
     /// - Parameters:
     ///   - step: paso actual del flujo.
-    ///   - groupsOnly: modo "Solo grupos" (`UsageMode.groupsOnly`). En este modo
-    ///     el paso `.currencyName` NO muestra campo de nombre de cuenta (no hay
-    ///     cuenta personal, solo se elige la moneda) → no exigirlo.
     ///   - userName: nombre del usuario (paso `.name`).
-    ///   - accountName: nombre de la cuenta (paso `.currencyName`, modo normal).
+    ///   - accountName: nombre de la cuenta (paso `.currencyName`).
     ///   - isAccountTypeValid: si el tipo de cuenta seleccionado es uno válido de
     ///     control total (paso `.accountType`); en el callsite es
     ///     `fullControlAccountTypes.contains(selectedAccountType)`.
     ///   - initialBalanceText: texto del saldo inicial (paso `.balance`).
     static func isNextDisabled(
         step: OnboardingStep,
-        groupsOnly: Bool,
         userName: String,
         accountName: String,
         isAccountTypeValid: Bool,
@@ -54,10 +48,6 @@ enum OnboardingNextEnablement {
         case .accountType:
             return !isAccountTypeValid
         case .currencyName:
-            // Solo grupos: no hay cuenta personal, solo se elige la moneda → el
-            // campo de nombre está oculto y nunca se autosugiere. Exigirlo dejaba
-            // el botón "Continuar" muerto (bug 2.0.4, fix 2.0.5).
-            if groupsOnly { return false }
             return accountName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         case .balance:
             return initialBalanceText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty

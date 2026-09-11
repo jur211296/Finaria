@@ -103,6 +103,11 @@ Preguntadas una a una antes de soltar la cola autónoma. **Mandan sobre lo escri
 - **`GroupsRetentionView` escribe `UsageFocus.groupsOnly`** (`GroupsRetentionView.swift:64`), uno de los
   tres flags que este ticket retira. Viene del ticket 7, que lo dejó explícitamente para este barrido.
   (El ticket 9 además retira esa vista entera; comprueba cuál llega antes.)
-- **El docblock de `OnboardingGroupsPurposeGateLogic:15` es falso**: dice que `GroupsRetentionView:64`
-  escribe `OnboardingUsageMode`, y lo que escribe es `UsageFocus` — otro enum con un case homónimo. Si
-  ese fichero sigue vivo cuando llegues aquí, corrígelo.
+- ~~**El docblock de `OnboardingGroupsPurposeGateLogic:15` es falso**~~ — **resuelto el 2026-09-10 en el
+  paso 7**: el fichero se borró entero con la card, así que no queda nada que corregir.
+- **Del paso 7 (2026-09-10): el guard de sesión secundaria de `ContentView.advanceGroupsOrganizerFlow`
+  ya solo es defensa en profundidad.** Existía por la segunda puerta a la rama del organizador —la card
+  «Solo grupos» del onboarding, que no pasaba por `WelcomeGroupsGateView`— y esa puerta se retiró. Se
+  dejó en pie porque retirar un guard M1 era ampliar a otro objeto; cae con M1 en este barrido (su
+  `showOnboarding = false` solo servía a la card). Lo pinnea
+  `GroupsOrganizerBranchTests.organizerFlowStopsUnderASecondarySession`: retíralos juntos.

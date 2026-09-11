@@ -39,7 +39,7 @@ nonisolated enum GroupsEmptyStateLogic {
         /// el estado COMPLETO (educativo visto + sesión + consent): ahí no falta nada, solo el grupo.
         case standard
         /// C2 · nunca vio el educativo. Antes de pedirle identidad se le cuenta qué es un grupo — es el
-        /// mismo primer escalón que `GroupsGateLogic` antepone en las puertas A y B.
+        /// mismo primer escalón que `GroupsGateLogic` antepone en la puerta del organizador.
         case needsEducational
         /// Flag ON, sin sesión, pero SÍ tuvo cuenta alguna vez → "tus grupos están en tu cuenta", CTA
         /// iniciar sesión. Es el caso original H-2026-07-18-7, ahora acotado a quien es verdad.

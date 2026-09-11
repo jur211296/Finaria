@@ -105,59 +105,6 @@ struct OnboardingStepPlanTests {
         #expect(skip == [.name, .accounts, .accountType, .balance])
     }
 
-    // MARK: - skippedSteps: modo "Solo grupos"
-
-    @Test func skippedSteps_groupsOnly_skipsAccountsBalanceAndCategories() {
-        // Solo grupos: sin cuentas/tipo/saldo Y sin el paso de categorías (se
-        // siembran en silencio). Conserva `.name`, `.purpose`, `.currencyName`,
-        // `.confirmation`.
-        let skip = OnboardingStepPlan.skippedSteps(
-            prefilledUserName: nil, prefilledAccountsCount: 0,
-            prefilledCurrencyCode: nil, prefilledCategoriesCount: 0,
-            hasPrefill: false, expensesOnly: false, dayToDay: false,
-            groupsOnly: true
-        )
-        #expect(skip == [.accounts, .accountType, .balance, .categories])
-        #expect(OnboardingStepPlan.effectiveSteps(skipping: skip) == [
-            .name, .purpose, .currencyName, .confirmation
-        ])
-    }
-
-    @Test func skippedSteps_groupsOnly_defaultsToFalse_unchanged() {
-        // El parámetro nuevo tiene default false → no altera el comportamiento
-        // de los callsites que no lo pasan (expensesOnly sigue igual).
-        let skip = OnboardingStepPlan.skippedSteps(
-            prefilledUserName: nil, prefilledAccountsCount: 0,
-            prefilledCurrencyCode: nil, prefilledCategoriesCount: 0,
-            hasPrefill: false, expensesOnly: true, dayToDay: false
-        )
-        #expect(skip == [.accounts, .accountType, .balance])
-    }
-
-    @Test func skippedSteps_groupsOnly_combinesWithPrefillName() {
-        // Solo grupos + prefill con nombre → también salta `.name`.
-        let skip = OnboardingStepPlan.skippedSteps(
-            prefilledUserName: "Pia", prefilledAccountsCount: 0,
-            prefilledCurrencyCode: nil, prefilledCategoriesCount: 0,
-            hasPrefill: true, expensesOnly: false, dayToDay: false,
-            groupsOnly: true
-        )
-        #expect(skip == [.name, .accounts, .accountType, .balance, .categories])
-        #expect(OnboardingStepPlan.firstStep(skipping: skip) == .purpose)
-    }
-
-    @Test func skippedSteps_groupsOnly_takesPrecedenceOverExpensesOnly() {
-        // groupsOnly y expensesOnly son mutuamente excluyentes en la UI, pero si
-        // ambos llegaran true, groupsOnly gana (rama primero) y añade `.categories`.
-        let skip = OnboardingStepPlan.skippedSteps(
-            prefilledUserName: nil, prefilledAccountsCount: 0,
-            prefilledCurrencyCode: nil, prefilledCategoriesCount: 0,
-            hasPrefill: false, expensesOnly: true, dayToDay: false,
-            groupsOnly: true
-        )
-        #expect(skip == [.accounts, .accountType, .balance, .categories])
-    }
-
     // MARK: - skippedSteps: sesión secundaria (la visita en el móvil de otra persona)
 
     @Test func skippedSteps_secondarySession_skipsCategories() {
@@ -177,9 +124,8 @@ struct OnboardingStepPlanTests {
     }
 
     @Test func skippedSteps_secondarySession_defaultsToFalse_unchanged() {
-        // Molde de `skippedSteps_groupsOnly_defaultsToFalse_unchanged`: el parámetro nuevo con default
-        // `false` no altera a los callsites que no lo pasan. Es lo que hace seguro tener default aquí
-        // — el término solo AÑADE un skip, nunca invierte un veredicto.
+        // El parámetro con default `false` no altera a los callsites que no lo pasan. Es lo que hace
+        // seguro tener default aquí — el término solo AÑADE un skip, nunca invierte un veredicto.
         let skip = OnboardingStepPlan.skippedSteps(
             prefilledUserName: nil, prefilledAccountsCount: 0,
             prefilledCurrencyCode: nil, prefilledCategoriesCount: 0,
@@ -200,18 +146,6 @@ struct OnboardingStepPlanTests {
         )
         #expect(skip == [.name, .accounts, .accountType, .balance, .categories])
         #expect(OnboardingStepPlan.firstStep(skipping: skip) == .purpose)
-    }
-
-    @Test func skippedSteps_secondarySession_withGroupsOnly_isIdempotent() {
-        // `groupsOnly` ya salta `.categories` por su cuenta. Sumar la visita no puede añadirlo dos veces
-        // ni quitar nada: el skip es un Set y los dos términos coinciden en ese paso.
-        let skip = OnboardingStepPlan.skippedSteps(
-            prefilledUserName: nil, prefilledAccountsCount: 0,
-            prefilledCurrencyCode: nil, prefilledCategoriesCount: 0,
-            hasPrefill: false, expensesOnly: false, dayToDay: false,
-            groupsOnly: true, isSecondarySession: true
-        )
-        #expect(skip == [.accounts, .accountType, .balance, .categories])
     }
 
     // MARK: - effectiveSteps orden

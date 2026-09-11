@@ -301,10 +301,11 @@ enum SwiftDataConfiguration {
     /// hecho distinto con su propia evidencia y su propia vida.
     ///
     /// **Por qué `hasShownWelcomeChooser` no puede gatearlo.** `onSelectPrivateAccount` marca ese flag en
-    /// el acto, antes de escribir nada, y desde ahí se alcanza el alta solo-grupos sin volver al Welcome:
-    /// el onboarding privado ofrece la card «Solo grupos», que entra por `startGroupsOnlyBranch` a la
-    /// misma cadena del organizador. Ese recorrido llega a `writePreferences` con el flag ya en `true`, y
-    /// gatear aquí dejaría su neutro inerte y el bug del ticket vivo. El anti-bucle que la
+    /// el acto, antes de escribir nada, y desde ahí se alcanzaba el alta solo-grupos sin volver al
+    /// Welcome: el onboarding privado ofrecía la card «Solo grupos», que entraba a la misma cadena del
+    /// organizador. Ese recorrido llegaba a `writePreferences` con el flag ya en `true`, y gatear aquí
+    /// dejaba su neutro inerte y el bug del ticket vivo. (Ese recorrido desapareció el 2026-09-10 con la
+    /// card, ADR 2026-09-09 §7; el término no se re-evaluó con eso.) El anti-bucle que la
     /// caducidad daba se sustituye por el desarme explícito en `onNeedsMirrorRelaunch` — ver el docblock
     /// de `StorageModePersistence.groupsOnlyNeutralMountKey`, que lo desarrolla entero.
     /// **El término nuevo va CONFINADO a `.icloud` sin armar, igual que sus dos hermanos, y no es

@@ -33,7 +33,7 @@ paths:
 | `L108` | Se finge la sesión, no se relajan las aserciones | 485 B |
 | `L110` | Crear grupo necesita ADEMÁS `-uitest-groups-consent` | 551 B |
 | `L112` | `-uitest-fake-cloud-session` ≠ `-uitest-fake-backend-session` | 476 B |
-| `L114` | `-uitest-fake-icloud` no sirve para esto | 246 B |
+| `L114` | `-uitest-fake-icloud` no sirve para esto | 245 B |
 | `L118` | DOS corridas de XCUITest sobre el MISMO simulador se derriban entre sí, y el síntoma NO se parece a un fallo de test (me | 1.4 KB |
 | `L120` | Corolario, y es el que ahorra el diagnóstico entero: la presencia o ausencia de la línea de fallo CLASIFICA el rojo. | 828 B |
 | `L123` | El device DEBE casar con el runtime del SDK contra el que se compila. | 832 B |
@@ -111,7 +111,7 @@ Desde el flip compilado `5490544d`, `CloudSyncFlags.groupsBackendEnabled` está 
 
 - **`-uitest-fake-cloud-session` ≠ `-uitest-fake-backend-session`**, pese al parecido tipográfico: el segundo es un fake LOCAL de dos filas de Perfil y NO toca el predicado global. Promoverlo a global rompe `YalaAccountUITests` (depende de que el path de cierre siga siendo `.privateReset`) y el layout de `DeleteAccountDialogUITests`. Van por parámetro nombrado de `launchForUITest`, nunca por `extraArguments:` crudo: un typo en un string suelto se ignora en silencio.
 
-- **`-uitest-fake-icloud` no sirve para esto**: habla de la cuenta iCloud del OS, no crea sesión backend. Son gates distintos y el happy-path del onboarding solo-grupos necesitaba los dos.
+- **`-uitest-fake-icloud` no sirve para esto**: habla de la cuenta iCloud del OS, no crea sesión backend. Son gates distintos, y un recorrido que necesite los dos tiene que pedir los dos.
 
 ### Entorno del simulador (antes de culpar a un test)
 

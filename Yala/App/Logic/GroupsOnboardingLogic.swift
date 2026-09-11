@@ -48,7 +48,7 @@ enum GroupsOnboardingLogic {
     ///
     /// - Parameters:
     ///   - hasSeenEducational: el resultado de `hasSeenAnyGroupsEducational`. **Es la MISMA señal que
-    ///     alimenta a `GroupsGateLogic`**: el tab y las cuatro puertas no pueden discrepar sobre si a esta
+    ///     alimenta a `GroupsGateLogic`**: el tab y las puertas de Grupos no pueden discrepar sobre si a esta
     ///     persona ya se le contó qué es un grupo.
     ///   - hasPendingGroupDeeplink: `sessionState.pendingGroupID != nil`. Si hay
     ///     deeplink hacia un grupo específico, abrir el detail tiene prioridad UX
@@ -67,7 +67,7 @@ enum GroupsOnboardingLogic {
     ///
     /// Va en lógica pura y NO como un `if` dentro del `body`: un predicado enterrado en un
     /// `@ViewBuilder` es invisible para los unitarios y se puede borrar con la suite entera en
-    /// verde (lección de `965a4d86`, molde exacto de `OnboardingGroupsPurposeGateLogic`). El
+    /// verde (lección de `965a4d86`). El
     /// CABLEADO —que la vista pase los valores REALES y no literales— lo pinnea el source-scan
     /// de `GroupsOnboardingSignInCTAWiringTests`.
     ///

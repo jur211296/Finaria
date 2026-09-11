@@ -22,7 +22,7 @@
 - [Mi docblock también es una premisa](feedback_mi_docblock_tambien_es_una_premisa.md) — describo la intención como si fuera el comportamiento; y «esto lo fija <suite>» exige que la suite TOQUE el fichero.
 - [El source-scan de dos literales no es una red](feedback_el_source_scan_de_dos_literales_no_es_una_red.md) — si el target es inalcanzable, fija el cuerpo ENTERO; y vigila las pasarelas, los swaps y el escenario que no recorre su rama.
 - [El denominador de una resta es el número que se ve](feedback_el_denominador_de_una_resta_es_el_numero_que_se_ve.md) — numerador en magnitudes, denominador en lo que se muestra; y una decisión escrita gana a dos lentes que coinciden.
-- [La aserción que no puede fallar](feedback_la_asercion_que_no_puede_fallar.md) — el mutante valida el CASO, no cada `#expect`; ensucia la columna que no cambia; y la que depende de la MÁQUINA no la caza ningún mutante.
+- [La aserción que no puede fallar](feedback_la_asercion_que_no_puede_fallar.md) — el mutante valida el CASO, no cada `#expect`; ensucia la columna quieta; la MÁQUINA y el dominio que ENCOGE, tampoco.
 - [El pre-filtro tapa al criterio](feedback_el_prefiltro_tapa_al_criterio.md) — misma condición en el fetch y en la lógica: el mutante de la lógica sale VERDE. Me pasó dos veces el 8-sep.
 - [La tabla del ticket nombra un sitio por pantalla](feedback_la_tabla_del_ticket_nombra_un_sitio_por_pantalla.md) — 7 superficies eran 21; el mismo número marcado y exacto en la misma vista; los punteros a tickets en docblocks caducan.
 - [Ticket nuevo: busca el duplicado primero](feedback_ticket_nuevo_busca_el_duplicado_primero.md) — dos de tres ya existían el 10-sep, y el que existía era MEJOR; leer el motivo del descarte antes de reabrir.
@@ -58,6 +58,7 @@
 - [«Cero warnings» se mide en TODOS los logs](feedback_cero_warnings_se_mide_en_todos_los_logs.md) — el gate no mira los tests y lee un build incremental; dos míos iban al commit el 10-sep.
 
 ## Estado del trabajo
+- [La card «Grupos» del propósito ya no existe](project_paso7_card_grupos_retirada.md) — paso 7, PR #136; la puerta B se fue entera; `organizerBranchHasOneEntry` saltará si el paso 10 añade entrada.
 - [El faro solo encamina: «Crear otra cuenta» y mismatch con dos salidas](project_faro_solo_encamina.md) — paso 6, PR #135; el huérfano se limpia con PRUEBA (Apple+Apple); device-QA pendiente; `restore-beacon…` NO cerrado.
 - [Una sesión solo-grupos ya no baja el iCloud del teléfono](project_neutro_durable_solo_grupos.md) — PR #134; la review cazó 12 defectos MÍOS, dos graves; la mitad 2 la paró Jürgen y falta device-QA NO simulable.
 - [«Primera vez → privado» ya valida iCloud antes de reiniciar](project_puerta_icloud_rama_privada.md) — PR #133; la review cazó 19 defectos MÍOS y el peor dejaba el bug vivo; falta device-QA y NO es simulable.

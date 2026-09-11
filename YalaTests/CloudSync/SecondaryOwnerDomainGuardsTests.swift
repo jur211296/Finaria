@@ -236,9 +236,9 @@ struct SecondaryOwnerDomainWiringTests {
         }
 
         // C2 · bajaron de 3 a 2: `OnboardingView.completeGroupsOnlyOnboarding` fue ELIMINADA. Escribía el
-        // trío en el paso 8 del onboarding sin sesión, sin consent y sin canal comprobado; hoy la card
-        // «Solo grupos» entra en la cadena y su alta la ejecuta `GroupsOrganizerOnboarding`, que heredó su
-        // guard M1 justamente porque heredó su camino.
+        // trío en el paso 8 del onboarding sin sesión, sin consent y sin canal comprobado; C2 llevó su alta
+        // a `GroupsOrganizerOnboarding`, que heredó su guard M1 justamente porque heredó su camino. (La card
+        // «Solo grupos» se retiró del onboarding el 2026-09-10; el conteo no cambia.)
         #expect(Set(writers) == ["FullModeActivationView.swift",
                                  "GroupsOrganizerOnboarding.swift"], """
             Cambió el conjunto de escritores del modo por el canal de prefs (hoy: \(Set(writers).sorted())). \

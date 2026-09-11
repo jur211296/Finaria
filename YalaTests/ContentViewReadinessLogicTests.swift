@@ -113,7 +113,7 @@ struct ContentViewReadinessLogicTests {
             state: make(showGroupsAccountIsCompleteBlock: true)))
     }
 
-    /// C2 · el educativo es el PRIMER escalón de las puertas A y B, y su cover cuelga del mismo anchor.
+    /// C2 · el educativo es el PRIMER escalón de la rama del organizador, y su cover cuelga del mismo anchor.
     /// Que bloquee no es defensa genérica: el paso SIGUIENTE de la cadena es `GroupsSignInView`, un sheet
     /// de ESTE anchor, así que sin blocker el drain lo montaría encima del educativo aún puesto — y SwiftUI
     /// descarta la segunda presentación en silencio, dejando el intent ya consumido.

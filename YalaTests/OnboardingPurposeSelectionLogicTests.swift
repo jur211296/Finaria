@@ -2,21 +2,24 @@
 //  OnboardingPurposeSelectionLogicTests.swift
 //  YalaTests
 //
-//  Tabla del selector de propósito del onboarding (molde OnboardingGroupsPurposeGateLogicTests,
-//  que es el resultado de `9c66c528`).
+//  Tabla del selector de propósito del onboarding.
 //
 //  Dos mitades y ninguna cubre a la otra:
-//    1. La DECISIÓN — qué card se marca en cada uno de los CUATRO modos, y qué hace tocar
+//    1. La DECISIÓN — qué card se marca en cada uno de los TRES modos, y qué hace tocar
 //       «Llevar el control» desde cada uno.
-//    2. El CABLEADO — source-scan de que `OnboardingView` deriva las tres marcas y el closure
+//    2. El CABLEADO — source-scan de que `OnboardingView` deriva las dos marcas y el closure
 //       de esta lógica. Sin él, devolver el call-site a `isSelected: !expensesOnlyMode` /
-//       `if expensesOnlyMode` reintroduce el bug ENTERO con toda la tabla en VERDE: el predicado
-//       vive dentro del `body`, donde ningún unitario llega (la lección de `965a4d86`).
+//       `if expensesOnlyMode` reintroduce la forma del bug de C5 con toda la tabla en VERDE: el
+//       predicado vive dentro del `body`, donde ningún unitario llega (la lección de `965a4d86`).
 //
-//  Y por qué tampoco basta el XCUITest del área (`OnboardingGroupsOnlyGuardUITests`): `binaryCard`
+//  Y por qué tampoco basta el XCUITest del área (`OnboardingPurposeStepUITests`): `binaryCard`
 //  solo expone `accessibilityIdentifier` — el estado de selección es un `stroke`, no un trait de
-//  accesibilidad — así que desde XCUITest la MARCA no es afirmable hoy. Ese test cubre la otra
-//  mitad del defecto, el tap de vuelta, que sí es observable por el paso al que lleva.
+//  accesibilidad — así que desde XCUITest la MARCA no es afirmable hoy. Ese test cubre lo que sí
+//  es observable: qué cards hay, y el tap de vuelta por el paso al que lleva.
+//
+//  DESDE EL 2026-09-10 son dos cards (ADR 2026-09-09 §7): «Dividir gastos con amigos» se retiró
+//  junto con su modo `.groupsOnly`, que era la celda del bug de C5. La tabla conserva la forma
+//  del bug que sigue siendo posible: el predicado de igualdad, que deja a `.dayToDay` sin card.
 //
 
 import Foundation
@@ -35,7 +38,7 @@ struct OnboardingPurposeSelectionLogicTests {
         let porque: String
     }
 
-    /// Los CUATRO modos, no tres. `.dayToDay` no es teórico: `OnboardingView` lo escribe en el
+    /// Los TRES modos, no dos. `.dayToDay` no es teórico: `OnboardingView` lo escribe en el
     /// paso `.accounts` («Una sola cuenta»), ese paso no se salta con ese modo y el flujo tiene
     /// botón atrás hasta `.purpose` — más la migración legacy del `.task`.
     static let tabla: [Caso] = [
@@ -45,8 +48,6 @@ struct OnboardingPurposeSelectionLogicTests {
              porque: "«una sola cuenta» es llevar el control con una cuenta, no otro propósito"),
         Caso(modo: .expensesOnly, cardMarcada: .expenses, tocarControlCambia: true,
              porque: "solo anotar gastos es un propósito distinto; volver al control tiene que cambiar el modo"),
-        Caso(modo: .groupsOnly, cardMarcada: .groups, tocarControlCambia: true,
-             porque: "LA CELDA DEL BUG: con solo-grupos se marcaba ADEMÁS «Llevar el control», y tocarla no hacía nada"),
     ]
 
     @Test(arguments: tabla)
@@ -64,10 +65,10 @@ struct OnboardingPurposeSelectionLogicTests {
         )
     }
 
-    /// La invariante que el bug rompía por los dos lados a la vez: EXACTAMENTE una card marcada.
-    /// Con `.groupsOnly` había dos; con el arreglo ingenuo (`== .fullControl`) `.dayToDay` habría
-    /// quedado con cero. Recorre `allCases` para que añadir una card cuarta sin decidir su celda
-    /// caiga aquí.
+    /// La invariante que el bug de C5 rompía por los dos lados a la vez: EXACTAMENTE una card
+    /// marcada. Con el `.groupsOnly` de entonces había dos; con el arreglo ingenuo (`== .fullControl`)
+    /// `.dayToDay` se quedaría con cero. Recorre `allCases` para que añadir una card sin decidir su
+    /// celda caiga aquí.
     @Test(arguments: tabla)
     func exactamenteUnaCardMarcadaPorModo(_ caso: Caso) {
         let marcadas = OnboardingPurposeCard.allCases.filter {
@@ -77,27 +78,13 @@ struct OnboardingPurposeSelectionLogicTests {
                 "modo=\(caso.modo) → cards marcadas \(marcadas), se esperaba solo [\(caso.cardMarcada)]")
     }
 
-    /// MITAD 1, nombrada aparte: con «Dividir gastos con amigos» elegido, «Llevar el control» NO
-    /// puede pintarse marcada. Era el síntoma visible — dos propósitos marcados en el primer
-    /// contacto con la app de toda la población born-cloud, que desde `9c66c528` sí alcanza este
-    /// estado (antes el muro iCloud se lo cerraba).
-    @Test func conSoloGrupos_noSeMarcaLlevarElControl() {
-        #expect(
-            OnboardingPurposeSelectionLogic.isSelected(.control, mode: .groupsOnly) == false,
-            "Volvieron las dos cards marcadas a la vez en el paso Propósito."
-        )
-        #expect(OnboardingPurposeSelectionLogic.isSelected(.groups, mode: .groupsOnly))
-    }
-
-    /// MITAD 2, la que no es cosmética: el tap de vuelta. Con `.groupsOnly` activo, tocar «Llevar
-    /// el control» tiene que cambiar el modo. Con el predicado viejo (`expensesOnlyMode`) el tap
-    /// se perdía y el usuario solo podía volver pasando por «Solo anotar gastos» — sin motivo
-    /// para sospecharlo, porque la card ya se pintaba marcada.
-    @Test func conSoloGrupos_tocarLlevarElControl_surteEfecto() {
-        #expect(
-            OnboardingPurposeSelectionLogic.shouldSelectFullControl(from: .groupsOnly),
-            "El tap de «Llevar el control» volvió a morir con solo-grupos elegido."
-        )
+    /// El criterio del paso 7 del rediseño, a nivel de tipo: el paso ofrece EXACTAMENTE dos
+    /// propósitos. Solo-grupos es una sesión que se abre desde el Welcome («Vengo por un grupo»), no
+    /// un propósito de quien ya eligió llevar sus finanzas (ADR 2026-09-09 §7). Una card nueva cae
+    /// aquí antes que en el XCUITest, y obliga a decidir su celda en la tabla de arriba.
+    @Test func elPasoOfreceDosPropositos() {
+        #expect(OnboardingPurposeCard.allCases == [.control, .expenses],
+                "El paso Propósito volvió a ofrecer otra card: \(OnboardingPurposeCard.allCases).")
     }
 
     /// El caso que el arreglo ingenuo habría roto, y que no estaba en el reporte del chip:
@@ -127,7 +114,7 @@ struct OnboardingPurposeSelectionLogicTests {
     /// El pin del CALL SITE. Los conteos no son decoración: sin ellos, un método renombrado o un
     /// fichero movido dejarían al escáner sin encontrar nada y la suite pasaría en verde sin
     /// comprobar nada — la familia de "Executed 0 tests".
-    @Test func onboardingViewDerivaLasTresMarcasYElTapDeLaLogica() throws {
+    @Test func onboardingViewDerivaLasDosMarcasYElTapDeLaLogica() throws {
         let onboardingView = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()  // YalaTests/
             .deletingLastPathComponent()  // repo root
@@ -144,35 +131,53 @@ struct OnboardingPurposeSelectionLogicTests {
             source.components(separatedBy: needle).count - 1
         }
 
-        #expect(veces("OnboardingPurposeSelectionLogic.isSelected(") == 3,
-                "Se esperaban las 3 cards del selector derivando su marca de la lógica pura.")
+        #expect(veces("OnboardingPurposeSelectionLogic.isSelected(") == 2,
+                "Se esperaban las 2 cards del selector derivando su marca de la lógica pura.")
 
-        for card in ["control", "expenses", "groups"] {
+        for card in ["control", "expenses"] {
             #expect(
                 veces("OnboardingPurposeSelectionLogic.isSelected(.\(card), mode: selectedUsageMode)") == 1,
                 """
                 La card `onboarding_purpose_\(card)` ya no deriva su marca de la lógica pura, o no le pasa \
-                el modo VIVO. Un predicado propio ahí devuelve el selector de tres cards expresado con \
-                booleanos, y las celdas de la tabla siguen en VERDE.
+                el modo VIVO. Un predicado propio ahí devuelve el selector expresado con booleanos, y las \
+                celdas de la tabla siguen en VERDE.
                 """
             )
         }
+
+        // Las cards que PINTA la vista, contadas por su identificador: el enum de arriba puede tener
+        // dos casos y la vista una tercera card cableada a mano con otro modo.
+        #expect(veces("accessibilityId: \"onboarding_purpose_") == 2, """
+            El paso Propósito pinta un número de cards distinto de dos. «Solo grupos» se retiró de aquí \
+            (ADR 2026-09-09 §7): se entra por «Vengo por un grupo» en el Welcome.
+            """)
+
+        // Y contadas en el CUERPO del paso, no solo por prefijo de id: una card nueva con otro id también
+        // tiene que caer.
+        let inicio = try #require(source.range(of: "private var purposeStep: some View {"),
+                                  "`purposeStep` desapareció o cambió de firma")
+        let fin = try #require(source.range(of: "private var accountsStep: some View {",
+                                            range: inicio.upperBound..<source.endIndex),
+                               "`accountsStep` desapareció o cambió de firma")
+        let cuerpo = source[inicio.upperBound..<fin.lowerBound]
+        #expect(cuerpo.components(separatedBy: "binaryCard(").count - 1 == 2,
+                "El cuerpo de `purposeStep` construye un número de cards distinto de dos.")
 
         #expect(
             veces("OnboardingPurposeSelectionLogic.shouldSelectFullControl(from: selectedUsageMode)") == 1,
             """
             El closure de «Llevar el control» ya no consulta la lógica pura. Ésta es la mitad que NO es \
-            cosmética: con `if expensesOnlyMode` el tap se pierde entero cuando el modo es `.groupsOnly`.
+            cosmética: con `if expensesOnlyMode` la marca y el tap vuelven a salir de predicados distintos.
             """
         )
 
-        // Las tres formas EXACTAS del bug, prohibidas por separado. `wantsSeparateAccounts` (el
-        // otro selector binario del flujo, el paso `.accounts`) no colisiona con ninguna.
+        // Las dos formas EXACTAS del bug de C5 que siguen siendo escribibles, prohibidas por separado.
+        // `wantsSeparateAccounts` (el otro selector binario del flujo, el paso `.accounts`) no
+        // colisiona con ninguna.
         for forma in ["isSelected: !expensesOnlyMode",
-                      "isSelected: expensesOnlyMode",
-                      "isSelected: groupsOnlyMode"] {
+                      "isSelected: expensesOnlyMode"] {
             #expect(veces(forma) == 0,
-                    "`\(forma)` volvió al selector de propósito: es una de las tres formas del bug de C5.")
+                    "`\(forma)` volvió al selector de propósito: es una de las formas del bug de C5.")
         }
     }
 }

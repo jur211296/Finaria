@@ -113,14 +113,10 @@ struct ContentView: View {
     /// en su lugar** aunque el alta lo escriba: ese `@AppStorage` se refresca por notificación y depender
     /// de su timing dentro del `onDismiss` es una carrera; el flag es la señal directa.
     @State private var organizerSetupCompleted: Bool = false
-    /// C2 · el educativo como PRIMER escalón de las puertas A y B. Blocker propio de la matriz de
-    /// readiness, igual que su hermana de arriba y por la misma regla.
+    /// C2 · el educativo como PRIMER escalón de la rama del organizador (la puerta A; la B, la card «Solo
+    /// grupos», se retiró el 2026-09-10). Blocker propio de la matriz de readiness, igual que su hermana de
+    /// arriba y por la misma regla.
     @State private var showGroupsEducational: Bool = false
-    /// C2 · lo que la card «Solo grupos» del onboarding ya preguntó (nombre y divisa), **en memoria y sin
-    /// persistir**. Esa es la invariante entera del chip: hasta que haya identidad y consent no se escribe
-    /// nada, y cuando se escribe va todo junto en `GroupsOrganizerOnboarding.completeSetup`. Que viaje en
-    /// un `@State` y no en `UserDefaults` es lo que hace la afirmación comprobable.
-    @State private var pendingGroupsOnlyPayload: GroupsOnlyOnboardingPayload?
     @State private var showFullModeActivation: Bool = false
     /// D1: acción elegida en la pantalla de retención; se EJECUTA en el `onDismiss` del cover
     /// (con el cover YA fuera — anti-carrera toolbar-muerta). `nil` = ninguna elegida aún.
@@ -368,7 +364,6 @@ struct ContentView: View {
             showGroupsEducational: $showGroupsEducational,
             pendingGroupsJoinZone: $pendingGroupsJoinZone,
             groupsOrganizerFlowActive: $groupsOrganizerFlowActive,
-            pendingGroupsOnlyPayload: $pendingGroupsOnlyPayload,
             onGroupsOrganizerCancelled: { returnToGroupsChooser() },
             onAdoptCompleteAccount: { adoptCompleteAccountFromGroups() }
         ))
@@ -732,9 +727,10 @@ struct ContentView: View {
     }
 
     /// El onboarding de 8 pasos. Extraído del `body` a una property porque la cadena de ese `body` está en
-    /// el límite del type-checker: con este `OnboardingView` inline —y su callback de C2— la compilación
-    /// muere con «unable to type-check this expression in reasonable time». Es el mismo motivo por el que
-    /// la mitad de las presentaciones de esta vista viven en `ViewModifier`s separados.
+    /// el límite del type-checker: con este `OnboardingView` inline —medido cuando además llevaba el
+    /// callback de la card «Solo grupos», retirada el 2026-09-10— la compilación muere con «unable to
+    /// type-check this expression in reasonable time». Es el mismo motivo por el que la mitad de las
+    /// presentaciones de esta vista viven en `ViewModifier`s separados.
     @ViewBuilder
     private var onboardingCover: some View {
         OnboardingView(
@@ -746,9 +742,7 @@ struct ContentView: View {
                 hasShownWelcomeChooser = false
                 prefilledOnboardingData = nil
                 presentNextOnboardingScreen()
-            },
-            // C2 · la card «Solo grupos» no completa aquí: cede a la cadena sin escribir nada.
-            onGroupsOnlyComplete: { startGroupsOnlyBranch(payload: $0) }
+            }
         ) {
             // Set flag BEFORE dismiss — onChange picks it up reliably
             // El alta REAL: aquí sí van los dos efectos de primera vez (ver `EntryOnboardingEffects`).
@@ -761,30 +755,6 @@ struct ContentView: View {
         .environment(SessionState.shared)
     }
 
-    /// C2 · la card «Solo grupos» del onboarding entra en la MISMA cadena que la rama organizador del
-    /// Welcome, con el nombre y la divisa que ya preguntó viajando **en memoria**.
-    ///
-    /// **Lo que este método NO hace es la mitad del chip:** no escribe `hasCompletedOnboarding`, ni
-    /// `onboardingMode`, ni `groupsBetaUnlocked`, ni la divisa. Todo eso lo escribía
-    /// `OnboardingView.completeGroupsOnlyOnboarding` —ya eliminado— aquí mismo y sin cuenta; ahora se
-    /// escribe junto y al final, en `GroupsOrganizerOnboarding.completeSetup`.
-    ///
-    /// `hasShownWelcomeChooser` tampoco se marca, igual que en `onSelectGroupsOrganizer` y por lo mismo:
-    /// esta rama todavía no ha escrito nada, así que un abandono a mitad tiene que poder reintentarlo en
-    /// vez de caer al onboarding completo.
-    @MainActor
-    private func startGroupsOnlyBranch(payload: GroupsOnlyOnboardingPayload) {
-        pendingGroupsOnlyPayload = payload
-        showOnboarding = false
-        prefilledOnboardingData = nil
-        // Mismo par que `WelcomeFlowModifier.startGroupsOrganizerBranch` (que vive allí porque su productor
-        // es el chooser): encender el discriminador y SUBMITEAR, sin presentar nada a pelo — el gate ve el
-        // cover del onboarding todavía bajando y no drena hasta que se vaya. Presentar en esta misma vuelta
-        // es la carrera clásica de dos presentaciones sobre el mismo anchor.
-        groupsOrganizerFlowActive = true
-        RouterEntryGate.shared.submit(.presentGroupsOrganizerStep)
-    }
-
     /// G3 · devuelve al organizador al step de los dos caminos. Es la salida de todo abandono de la rama
     /// (cancelar el educativo, el sign-in, el consent o el cover del nombre): el usuario ya salió del
     /// Welcome y debajo no hay shell —su alta no ha corrido—, así que dejarlo ahí sería el camino muerto
@@ -792,13 +762,6 @@ struct ContentView: View {
     /// desde ahí puede reintentar o irse a la otra vía sin volver a recorrer el Hero.
     @MainActor
     private func returnToGroupsChooser() {
-        // C2 · choke-point de TODA cancelación de la cadena (educativo, sign-in, consent y el cover del
-        // nombre pasan por aquí), así que es el sitio donde el payload de la card «Solo grupos» se descarta
-        // — un payload superviviente haría que el siguiente intento saltara la pantalla del nombre con
-        // datos de una sesión abandonada. Y para la card B esta salida es además la que evita la pantalla
-        // muerta: el onboarding de 8 pasos ya se cerró, así que el chooser de Grupos es el sitio vivo más
-        // cercano desde el que reintentar o irse por la otra vía.
-        pendingGroupsOnlyPayload = nil
         welcomeFlowInitialStep = .groupsChooser
         showWelcomeFlow = true
     }
@@ -1045,19 +1008,18 @@ struct ContentView: View {
         // (cancel de un sheet), y entonces no hay nada que avanzar.
         guard groupsOrganizerFlowActive else { return }
 
-        // C3 · **la rama entera no existe en sesión secundaria, y este es el único sitio por el que pasan
-        // sus DOS puertas.** La del Welcome (`WelcomeGroupsGateView`) ya lo comprueba por su cuenta; la de
-        // la card «Solo grupos» del onboarding NO pasa por esa puerta —`startGroupsOnlyBranch` enciende el
-        // discriminador y submitea directo— y su camino SÍ existe con un descriptor vivo: la invitada entra
-        // con el onboarding ya marcado, pero un borrado de datos en sesión lo reabre. Sin esto, el alta
-        // escribiría sus seis preferencias en el `UserDefaults.standard` del DUEÑO.
+        // C3 · **la rama entera no existe en sesión secundaria.** La puerta del Welcome
+        // (`WelcomeGroupsGateView`) ya lo comprueba por su cuenta, así que esto es defensa en profundidad,
+        // y así hay que leerlo. Nació por una segunda puerta que no pasaba por la del Welcome —la card
+        // «Solo grupos» del onboarding—, retirada el 2026-09-10 (ADR 2026-09-09 §7); el guard se queda
+        // hasta que M1 se retire entera. Sin él, un alta que llegara hasta aquí escribiría sus seis
+        // preferencias en el `UserDefaults.standard` del DUEÑO.
         //
         // Se manda a la PUERTA en vez de inventar aquí una superficie de bloqueo: es la que ya sabe pintar
         // este veredicto, y así el usuario recibe la misma respuesta honesta viniendo por donde venga —un
         // `return` mudo le dejaría un botón que no hace nada, que es el «camino muerto» que el spec prohíbe.
         if SecondarySessionStore.isActive() {
             groupsOrganizerFlowActive = false
-            pendingGroupsOnlyPayload = nil
             showOnboarding = false
             welcomeFlowInitialStep = .groupsGate
             showWelcomeFlow = true
@@ -1072,16 +1034,16 @@ struct ContentView: View {
                 hasCompletedSetup: hasCompletedOnboarding),
             hasSession: CloudAuthService.shared.hasSession,
             isConsented: GroupsConsentState.isAccepted,
-            // Se lee del `UserDefaults` y NO del `@AppStorage` a propósito: cuando la card B escribe el trío
-            // unas líneas más abajo y re-submitea para que la máquina re-decida, el espejo observable puede
-            // no haberse refrescado todavía (se actualiza por notificación) y la cadena volvería a
-            // `.presentName` — un alta repetida. El `UserDefaults` es la verdad inmediata.
+            // Se lee del `UserDefaults` y NO del `@AppStorage` a propósito: el espejo observable se actualiza
+            // por notificación y puede ir un paso por detrás justo después de un alta; si aún dijera `false`,
+            // la cadena volvería a `.presentName` — un alta repetida. El `UserDefaults` es la verdad
+            // inmediata. (El caso medido era la card «Solo grupos», que escribía el trío en esta misma
+            // función y re-submitía; se retiró el 2026-09-10 y la lectura se queda.)
             // Y es el CAJÓN de esta sesión (decisión del owner 2026-09-03), no `.standard`: quien escribe
-            // ese trío unas líneas más abajo es `GroupsOrganizerOnboarding`, que ya va por la puerta
+            // ese trío es `GroupsOrganizerOnboarding`, que ya va por la puerta
             // (`writer.setLocal` → `PreferenceSyncService.local`). Leerlo de `.standard` preguntaba por la
             // dueña justo después de haber escrito en el cajón de la visita.
-            hasCompletedSetup: SessionDefaults.current.bool(forKey: AppPreferences.Keys.hasCompletedOnboarding),
-            entry: pendingGroupsOnlyPayload == nil ? .organizer : .onboardingCard
+            hasCompletedSetup: SessionDefaults.current.bool(forKey: AppPreferences.Keys.hasCompletedOnboarding)
         ) {
         case .presentEducational:
             showGroupsEducational = true
@@ -1092,22 +1054,7 @@ struct ContentView: View {
             pendingGroupsJoinZone = nil
             showGroupsConsent = true
         case .presentName:
-            // C2 · la card «Solo grupos» ya preguntó nombre y divisa en sus steps 1 y 5, así que aquí no se
-            // vuelve a preguntar: se ESCRIBE, que es lo que la invariante pedía —con la identidad y el
-            // consent ya en mano, y todo junto—. La rama del Welcome, que no preguntó nada, sí pasa por la
-            // pantalla del nombre.
-            guard let payload = pendingGroupsOnlyPayload else {
-                showGroupsOrganizerName = true
-                return
-            }
-            pendingGroupsOnlyPayload = nil
-            GroupsOrganizerOnboarding.completeSetup(
-                displayName: payload.displayName,
-                context: modelContext,
-                explicitCurrencyCode: payload.currencyCode)
-            // Re-decidir en vez de encadenar a mano el terminal: es la regla del repo («cada llamada
-            // re-evalúa condiciones VIVAS») y evita duplicar aquí lo que ya hace `.presentGroupForm`.
-            RouterEntryGate.shared.submit(.presentGroupsOrganizerStep)
+            showGroupsOrganizerName = true
         case .presentGroupForm:
             // La rama termina aquí: el form lo abre `GroupsContainerView` al montar el tab (molde de
             // `pendingNewGroupExpense`). Y si el usuario lo cancela, aterriza en el empty state estándar

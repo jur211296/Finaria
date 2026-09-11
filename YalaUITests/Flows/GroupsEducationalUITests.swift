@@ -2,7 +2,7 @@
 //  GroupsEducationalUITests.swift
 //  YalaUITests
 //
-//  C2 · **la red determinista del PRIMER escalón de las cuatro puertas de Grupos.**
+//  C2 · **la red determinista del PRIMER escalón de las puertas de Grupos.**
 //
 //  El educativo era, medido, inalcanzable desde XCUITest: `GroupsContainerView.evaluateGroupsOnboarding`
 //  abre con `if UITestHooks.isActive { return }` («interceptaría taps») y `qa/coverage-index.json` ya

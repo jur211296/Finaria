@@ -53,7 +53,7 @@ enum OnboardingStepPlan {
     ///   estado: `seedCategoriesIfNeeded` retorna en su primera línea con el cinturón M1, así que el paso
     ///   preguntaba «¿quieres estas categorías?», la visita decía que sí y el store quedaba vacío.
     ///   Ofrecer lo que no se va a hacer es exactamente el tipo de detalle que le hace creer que la app
-    ///   está rota. Lleva `= false` como `groupsOnly` —y a diferencia de `restoreInProgress` en
+    ///   está rota. Lleva `= false` —a diferencia de `restoreInProgress` en
     ///   `GroupsOrganizerGateLogic.decide`, que lo prohíbe— porque aquí el término solo AÑADE un skip:
     ///   un call-site que lo olvide se comporta como antes en vez de heredar un veredicto invertido.
     static func skippedSteps(
@@ -64,7 +64,6 @@ enum OnboardingStepPlan {
         hasPrefill: Bool,
         expensesOnly: Bool,
         dayToDay: Bool,
-        groupsOnly: Bool = false,
         isSecondarySession: Bool = false
     ) -> Set<OnboardingStep> {
         var skip: Set<OnboardingStep> = []
@@ -77,13 +76,7 @@ enum OnboardingStepPlan {
         }
 
         // Skips por modo de uso (elección única del usuario en `.purpose`).
-        if groupsOnly {
-            // "Solo grupos": sin cuentas ni balance personales, y sin el paso de
-            // personalización de categorías (se siembran en silencio para tener
-            // subcategorías disponibles en los gastos de grupo). `.currencyName`
-            // se conserva (adaptado a solo-moneda) y `.name`/`.purpose` también.
-            skip.formUnion([.accounts, .accountType, .balance, .categories])
-        } else if expensesOnly {
+        if expensesOnly {
             skip.formUnion([.accounts, .accountType, .balance])
         } else if dayToDay {
             skip.insert(.accountType)

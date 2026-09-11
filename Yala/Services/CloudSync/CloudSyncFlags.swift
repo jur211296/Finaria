@@ -226,10 +226,14 @@ nonisolated enum StorageModePersistence {
     /// arriba caduca con `hasShownWelcomeChooser`, y esa caducidad es su anti-bucle: sin ella, un destino
     /// que necesita el mirror pediría reabrir y el arranque siguiente volvería a montar neutro. Aquí la
     /// caducidad **no puede aplicarse**, y no es una preferencia: `onSelectPrivateAccount`
-    /// (`ContentView`) marca el chooser en el acto, ANTES de escribir nada. El recorrido MEDIDO que llega
-    /// al alta con el flag ya en `true` es éste: «Primera vez → privado» sin datos ⇒ flag `true` y
-    /// onboarding montado; dentro del onboarding, la card «Solo grupos» ⇒ `onGroupsOnlyComplete` →
-    /// `startGroupsOnlyBranch` → `writePreferences`. Con la key de arriba, ese neutro nacería INERTE.
+    /// (`ContentView`) marca el chooser en el acto, ANTES de escribir nada. El recorrido MEDIDO que llegaba
+    /// al alta con el flag ya en `true` era éste: «Primera vez → privado» sin datos ⇒ flag `true` y
+    /// onboarding montado; dentro del onboarding, la card «Solo grupos» cedía a la cadena del organizador
+    /// ⇒ `writePreferences`. Con la key de arriba, ese neutro nacía INERTE.
+    ///
+    /// **Ese recorrido ya no existe (2026-09-10):** la card se retiró del onboarding (ADR 2026-09-09 §7) y
+    /// hoy el alta solo se alcanza por «Vengo por un grupo». Este párrafo no se re-evaluó con eso, y la key
+    /// se queda como está.
     ///
     /// **Volver al Welcome NO es ese recorrido, y conviene saberlo antes de re-verificar esto**:
     /// `onCancelFromStep1` repone `hasShownWelcomeChooser` a `false`, así que por ahí se llega limpio. Es

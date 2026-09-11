@@ -3862,18 +3862,6 @@
 "scheduled.groupExpense.sharedBadge" = "Partilhado";
 
 
-/* Solo Grupos — entrada onboarding (groupsOnly) */
-"onboarding.purpose.groups" = "Dividir despesas com amigos";
-"onboarding.purpose.groupsDesc" = "Viagens, jantares e contas partilhadas";
-"onboarding.currencyName.titleGroups" = "Vamos escolher a tua moeda";
-"onboarding.currencyName.subtitleGroups" = "Vamos usá-la nos teus gastos partilhados";
-"groups.errors.iCloudRequiredTitle" = "Ativa o iCloud para usar grupos";
-"groups.errors.iCloudRequiredBody" = "Os grupos sincronizam pelo iCloud. Ativa-o nas Definições para criar um grupo ou entrar num.";
-
-
-/* Solo Grupos — entrada onboarding (groupsOnly) */
-"onboarding.confirm.motivationGroups" = "Pronto para dividir despesas com amigos!";
-
 /* Botón en el editor de un borrador de la bandeja: redirige el gasto personal a un grupo compartido */
 "inbox.convertToShared" = "Converter em despesa partilhada";
 

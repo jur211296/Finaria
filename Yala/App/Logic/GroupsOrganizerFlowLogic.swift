@@ -42,9 +42,10 @@ nonisolated enum GroupsOrganizerFlowLogic {
         case presentGroupForm
     }
 
-    /// Deriva de `GroupsGateLogic.nextStep`. **La rama organizador y la card «Solo grupos» comparten la
-    /// cadena entera** (`entry` solo las separa para la telemetría y para el payload que la card arrastra),
-    /// así que las dos entran por aquí.
+    /// Deriva de `GroupsGateLogic.nextStep` con `entry: .organizer`, que es la única puerta de esta
+    /// fachada. Hasta el 2026-09-10 la card «Solo grupos» del onboarding compartía la cadena entera y
+    /// entraba con un `entry` propio; el rediseño de sesiones la retiró (ADR 2026-09-09 §7: solo-grupos es
+    /// una sesión que se abre desde el Welcome, no un propósito del onboarding), y con ella el parámetro.
     ///
     /// - Parameters:
     ///   - hasSeenEducational: `AppPreferences.hasShownGroupsOnboarding`.
@@ -52,15 +53,12 @@ nonisolated enum GroupsOrganizerFlowLogic {
     ///   - isConsented: `GroupsConsentState.isAccepted`.
     ///   - hasCompletedSetup: `hasCompletedOnboarding` — lo marca el propio alta (paso 7), así que es el
     ///     testigo de que el trío ya está escrito y de que este proceso no debe volver a pedir el nombre.
-    ///   - entry: `.organizer` (Welcome) o `.onboardingCard` (card «Solo grupos»). Cualquier otro valor es
-    ///     un error del llamador y cae al mismo camino: los dos terminales de esta fachada son los suyos.
     static func nextStep(hasSeenEducational: Bool,
                          hasSession: Bool,
                          isConsented: Bool,
-                         hasCompletedSetup: Bool,
-                         entry: GroupsGateLogic.Entry = .organizer) -> Step {
+                         hasCompletedSetup: Bool) -> Step {
         switch GroupsGateLogic.nextStep(
-            entry: entry,
+            entry: .organizer,
             hasSeenEducational: hasSeenEducational,
             hasSession: hasSession,
             isConsented: isConsented,
@@ -70,9 +68,9 @@ nonisolated enum GroupsOrganizerFlowLogic {
         case .presentSignIn:      return .presentSignIn
         case .presentConsent:     return .presentConsent
         case .presentName:        return .presentName
-        // Inalcanzables para `.organizer`/`.onboardingCard` — la tabla única solo los produce con
-        // `entry: .invite`. Se mapean al formulario en vez de a un `fatalError` porque un llamador que
-        // pasara la entry equivocada merece aterrizar en la pantalla que la rama sabe usar, no un crash.
+        // Inalcanzables para `.organizer` — la tabla única solo los produce con `entry: .invite`. Se
+        // mapean al formulario en vez de a un `fatalError` porque, si la tabla cambiara mañana, la rama
+        // merece aterrizar en la pantalla que sabe usar, no un crash.
         case .presentGroupForm, .presentInviteOnboarding, .join:
             return .presentGroupForm
         }

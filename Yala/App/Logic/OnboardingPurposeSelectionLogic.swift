@@ -5,8 +5,13 @@
 //  Pure decision logic del paso «Propósito» del onboarding: qué card se pinta MARCADA para
 //  cada modo de uso, y qué hace tocar la card «Llevar el control de mi dinero».
 //
+//  DOS CARDS DESDE EL 2026-09-10 (paso 7 del rediseño de sesiones, ADR 2026-09-09 §7). La tercera,
+//  «Dividir gastos con amigos», se retiró junto con su modo `.groupsOnly`: solo-grupos es una SESIÓN
+//  —se entra por «Vengo por un grupo» en el Welcome, y solo por ahí—, no un propósito de quien ya
+//  eligió llevar sus finanzas personales.
+//
 //  EL DEFECTO QUE ORIGINA ESTE FICHERO (chip C5) es uno solo, con dos síntomas: el selector
-//  ofrece TRES cards y `OnboardingView` expresaba la selección con un booleano de DOS
+//  ofrecía entonces TRES cards y `OnboardingView` expresaba la selección con un booleano de DOS
 //  (`expensesOnlyMode`). Con `.groupsOnly` elegido:
 //    1. «Llevar el control» se pintaba marcada (`isSelected: !expensesOnlyMode`) A LA VEZ que
 //       «Dividir gastos con amigos» ⇒ dos propósitos marcados.
@@ -18,10 +23,11 @@
 //  POR QUÉ LAS DOS SALEN DE LA MISMA FUNCIÓN. La causa no es que los dos predicados fueran
 //  incorrectos por separado, es que eran DISTINTOS (`!expensesOnlyMode` para pintar,
 //  `expensesOnlyMode` para decidir). Aquí la marca y el tap se derivan ambos de `selectedCard`,
-//  así que volver a divergir exige cambiar la SSOT y eso cae en la tabla.
+//  así que volver a divergir exige cambiar la SSOT y eso cae en la tabla. Con dos cards la SSOT
+//  sigue haciendo falta, y el motivo es el párrafo siguiente.
 //
-//  EL MODO `.dayToDay` NO ES UN DETALLE: `OnboardingUsageMode` tiene CUATRO casos, no tres, y
-//  `.dayToDay` es ALCANZABLE desde este mismo paso (medido en el árbol de este commit):
+//  EL MODO `.dayToDay` NO ES UN DETALLE: `OnboardingUsageMode` tiene TRES casos, no dos, y
+//  `.dayToDay` es ALCANZABLE desde este mismo paso (medido en el árbol de C5):
 //  `OnboardingView` lo escribe en el paso `.accounts` («Una sola cuenta», `:585`), ese paso NO
 //  se salta con `.dayToDay` (`OnboardingStepPlan.skippedSteps` solo le quita `.accountType`) y
 //  el flujo tiene botón atrás (`OnboardingView.goBack()`), cuyo `previousStep(before: .accounts)`
@@ -41,21 +47,24 @@ import Foundation
 /// Modo de uso elegido en el onboarding. Movido fuera de `OnboardingView` (era un enum privado
 /// anidado) para que la selección del paso «Propósito» sea pure-logic y testeable — mismo
 /// movimiento que hizo `OnboardingStep`, que la vista referencia vía `typealias Step`.
+///
+/// No se persiste: vive en un `@State` del onboarding. Por eso retirar `.groupsOnly` (2026-09-10) no
+/// necesitó migración de preferencias.
 nonisolated enum OnboardingUsageMode: String {
-    case expensesOnly, dayToDay, fullControl, groupsOnly
+    case expensesOnly, dayToDay, fullControl
 }
 
-/// Las tres cards del paso «Propósito», por su `accessibilityIdentifier`:
-/// `onboarding_purpose_control` · `onboarding_purpose_expenses` · `onboarding_purpose_groups`.
+/// Las dos cards del paso «Propósito», por su `accessibilityIdentifier`:
+/// `onboarding_purpose_control` · `onboarding_purpose_expenses`.
 nonisolated enum OnboardingPurposeCard: String, CaseIterable {
-    case control, expenses, groups
+    case control, expenses
 }
 
 nonisolated enum OnboardingPurposeSelectionLogic {
 
-    /// SSOT: la ÚNICA card marcada para un modo dado. Total (devuelve una card para los cuatro
-    /// modos) y única (devuelve UNA), que juntas son la invariante que el bug rompía por los dos
-    /// lados a la vez — con `.groupsOnly` había dos marcadas.
+    /// SSOT: la ÚNICA card marcada para un modo dado. Total (devuelve una card para los tres
+    /// modos) y única (devuelve UNA), que juntas son la invariante que el bug de C5 rompía por los
+    /// dos lados a la vez — con el `.groupsOnly` de entonces había dos marcadas.
     ///
     /// `.dayToDay` cae en `.control` a propósito: es «llevar el control» con una sola cuenta, no
     /// un propósito distinto. Ver el encabezado del fichero para por qué ese modo llega aquí.
@@ -63,7 +72,6 @@ nonisolated enum OnboardingPurposeSelectionLogic {
         switch mode {
         case .fullControl, .dayToDay: return .control
         case .expensesOnly:           return .expenses
-        case .groupsOnly:             return .groups
         }
     }
 
@@ -75,10 +83,10 @@ nonisolated enum OnboardingPurposeSelectionLogic {
     /// Si tocar «Llevar el control de mi dinero» debe cambiar el modo a `.fullControl`.
     ///
     /// La condición existe y no se sustituye por una asignación incondicional (que es lo que
-    /// hacen las otras dos cards): desde `.dayToDay` el usuario YA eligió este propósito, y
-    /// reasignar `.fullControl` le cambiaría en silencio la respuesta del paso siguiente de «Una
-    /// sola cuenta» a «Varias cuentas». Lo que el bug hacía era usar el predicado equivocado
-    /// (`expensesOnlyMode`), que además dejaba fuera `.groupsOnly`.
+    /// hace la otra card): desde `.dayToDay` el usuario YA eligió este propósito, y reasignar
+    /// `.fullControl` le cambiaría en silencio la respuesta del paso siguiente de «Una sola
+    /// cuenta» a «Varias cuentas». Lo que el bug de C5 hacía era usar el predicado equivocado
+    /// (`expensesOnlyMode`), que además dejaba fuera al `.groupsOnly` de entonces.
     static func shouldSelectFullControl(from mode: OnboardingUsageMode) -> Bool {
         !isSelected(.control, mode: mode)
     }

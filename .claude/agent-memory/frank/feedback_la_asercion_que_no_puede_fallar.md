@@ -163,6 +163,25 @@ algo. Cuanto mejor va el repo, menos mide.
 - Vale para cualquier barrido sobre historia, logs o ficheros: la pregunta gemela de siempre —
   **¿qué tendría que pasar para que esto saliera rojo, y hay algo así en lo que estoy mirando?**
 
+## Octavo eslabón: RETIRAR un caso del dominio deja al test que lo usaba probando el caso degenerado
+
+**2026-09-10, paso 7 del rediseño de sesiones.** El XCUITest del tap de vuelta del chip C5 salía de la
+card «Solo grupos» porque ahí vivía el bug: con tres cards y un booleano de dos, `if expensesOnlyMode`
+perdía el tap solo desde el TERCER modo. Retiré la card y cambié el escenario a mano: saliendo de «Solo
+anotar gastos». El test siguió verde y yo dejé el docblock diciendo que cubría «la mitad no cosmética de
+C5». Una lente midió que ya no podía: desde `.expensesOnly` la forma exacta del bug y el arreglo dan el
+MISMO resultado. El test solo cazaba ya un tap muerto.
+
+**Why:** el escenario de un test no es intercambiable. Se eligió porque era el ÚNICO donde la versión
+buena y la mala divergían; al quitar ese caso del dominio, el sustituto «equivalente» puede ser uno donde
+no divergen.
+
+**How to apply:** al retirar un caso de un enum, una tabla o un flujo, para cada test que lo usaba de
+escenario pregunta **¿con los casos que quedan, la forma del bug sigue dando otro resultado?** Si no,
+baja lo que el docblock promete y señala la red que sí lo cubre (aquí, el source-scan del cableado).
+Es la pregunta de siempre —¿qué haría falta para que esto saliera rojo?— aplicada a un dominio que acaba
+de encoger.
+
 ## Y dos formas de mutante que no demuestran nada
 
 Del mismo día, las dos me costaron una vuelta entera:

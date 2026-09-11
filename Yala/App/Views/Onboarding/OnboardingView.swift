@@ -44,10 +44,6 @@ struct OnboardingView: View {
 
     private var expensesOnlyMode: Bool { selectedUsageMode == .expensesOnly }
 
-    /// "Solo grupos": activa el modo `.groupInvite` sin crear cuentas personales.
-    /// Salta cuentas/tipo/saldo/categorías; conserva nombre + moneda + confirmación.
-    private var groupsOnlyMode: Bool { selectedUsageMode == .groupsOnly }
-
     /// La visita está usando Yala en el móvil de otra persona. Se lee del descriptor y no del corpus:
     /// el store de la invitada está VACÍO en una sesión recién montada, así que contar filas diría que
     /// no. Es el mismo predicado que consulta la puerta de la rama organizador del Welcome.
@@ -96,8 +92,6 @@ struct OnboardingView: View {
     @State private var initialBalanceText: String = ""
     @State private var balanceIsPositive: Bool = true
     @State private var showCurrencyPicker: Bool = false
-    /// Aviso cuando el usuario elige "Solo grupos" sin iCloud activo (grupos lo exige).
-    @State private var showGroupsICloudAlert: Bool = false
     @State private var showBalanceGuide: Bool = false
     @State private var balanceMode: BalanceMode = .manual
     @State private var calcFieldState = BalanceCalculatorFieldState()
@@ -131,34 +125,18 @@ struct OnboardingView: View {
     /// Chevron back en step 1. Solo se setea cuando el OnboardingView viene
     /// del flow Welcome — descarta state silenciosamente y vuelve al Hero.
     var onCancelFromStep1: (() -> Void)? = nil
-    /// C2 · la card «Solo grupos» terminó de recoger sus datos y **esta vista no escribe nada**: entrega el
-    /// nombre y la divisa en memoria y cede a la cadena (educativo → login → consent → alta).
-    ///
-    /// Antes de C2, esta rama llamaba a un `completeGroupsOnlyOnboarding()` privado que escribía aquí mismo
-    /// `userName`, `defaultCurrencyCode`, `defaultPeriod`, `onboardingMode = .groupInvite` EMPUJADO al iKV,
-    /// `groupsBetaUnlocked` y `hasCompletedOnboarding` — sin sesión, sin consent y sin canal comprobado. El
-    /// modo es never-downgrade cross-device: se propagaba al Apple ID y dejaba al usuario con la app
-    /// recortada a Grupos, vacía y sin cuenta en ninguna parte, en todos sus dispositivos.
-    ///
-    /// Opcional porque la card solo existe en el flujo INICIAL
-    /// (`OnboardingGroupsPurposeGateLogic.shouldShowGroupsCard(isInitialFlow:)`) y `FullModeActivationView`
-    /// monta esta vista con `mode: .fullActivation` ⇒ ahí la rama es inalcanzable. Lo que impide que un
-    /// flujo nuevo muestre la card sin cablearlo es un source-scan, no el compilador.
-    var onGroupsOnlyComplete: ((GroupsOnlyOnboardingPayload) -> Void)? = nil
 
     init(prefilledData: ICloudAccountSummary? = nil,
          backgroundStyle: OnboardingBackgroundStyle = .heroFlow,
          mode: OnboardingFlowMode = .initial,
          onCancel: (() -> Void)? = nil,
          onCancelFromStep1: (() -> Void)? = nil,
-         onGroupsOnlyComplete: ((GroupsOnlyOnboardingPayload) -> Void)? = nil,
          onComplete: @escaping () -> Void) {
         self.prefilledData = prefilledData
         self.backgroundStyle = backgroundStyle
         self.mode = mode
         self.onCancel = onCancel
         self.onCancelFromStep1 = onCancelFromStep1
-        self.onGroupsOnlyComplete = onGroupsOnlyComplete
         self.onComplete = onComplete
 
         // Reconciliar el paso inicial con los pasos saltados por prefill: si el
@@ -220,7 +198,6 @@ struct OnboardingView: View {
             hasPrefill: prefilledData != nil,
             expensesOnly: expensesOnlyMode,
             dayToDay: selectedUsageMode == .dayToDay,
-            groupsOnly: groupsOnlyMode,
             isSecondarySession: isSecondarySession
         )
     }
@@ -555,42 +532,9 @@ struct OnboardingView: View {
                             selectedMindset = "cashFlow"
                         }
 
-                        // Dos motivos para que la card NO exista, y los dos viven en lógica pura
-                        // (`OnboardingGroupsPurposeGateLogic.shouldShowGroupsCard`) porque aquí,
-                        // dentro del `body`, ningún unitario los alcanza:
-                        //   · "Solo grupos" solo en el onboarding inicial — NO en la
-                        //     reutilización de FullModeActivation (un groupInvite activando Yala
-                        //     completo no debe poder volver a "solo grupos" aquí).
-                        //   · En modo NUBE desaparece (A6 de D-A7): el modo solo-grupos no usa el
-                        //     store personal y dejaría vacío el backend recién estrenado.
-                        if OnboardingGroupsPurposeGateLogic.shouldShowGroupsCard(
-                            isInitialFlow: mode == .initial,
-                            storageMode: CloudSyncFlags.storageMode
-                        ) {
-                            binaryCard(
-                                isSelected: OnboardingPurposeSelectionLogic.isSelected(.groups, mode: selectedUsageMode),
-                                icon: "person.3.fill",
-                                iconColor: .hotPink,
-                                title: L10n.Onboarding.purposeGroups,
-                                description: L10n.Onboarding.purposeGroupsDesc,
-                                accessibilityId: "onboarding_purpose_groups"
-                            ) {
-                                // El muro iCloud solo aplica con el canal de Grupos APAGADO: con
-                                // el canal ON los grupos ya no viven en CloudKit y la cuenta del
-                                // OS deja de ser requisito. La decisión vive en lógica pura
-                                // (`OnboardingGroupsPurposeGateLogic`) porque aquí, dentro del
-                                // `body`, ningún unitario la alcanza — la lección de `965a4d86`.
-                                if OnboardingGroupsPurposeGateLogic.shouldBlockSelection(
-                                    isAccountAvailable: iCloudSyncService.shared.isAccountAvailable,
-                                    isBackendChannelEnabled: CloudSyncFlags.groupsBackendEnabled
-                                ) {
-                                    showGroupsICloudAlert = true
-                                } else {
-                                    selectedUsageMode = .groupsOnly
-                                    selectedMindset = "cashFlow"
-                                }
-                            }
-                        }
+                        // Dos cards y no tres: «solo grupos» no es un propósito de quien ya eligió
+                        // llevar sus finanzas, es una sesión que se abre desde el Welcome («Vengo por
+                        // un grupo»). Se retiró el 2026-09-10 (ADR 2026-09-09 §7) junto con su modo.
                     }
                     .padding(.horizontal, DS.Spacing.xl)
 
@@ -599,11 +543,6 @@ struct OnboardingView: View {
                 .frame(minHeight: geometry.size.height)
             }
             .scrollBounceBehavior(.basedOnSize)
-            .alert(L10n.Groups.Errors.iCloudRequiredTitle, isPresented: $showGroupsICloudAlert) {
-                Button(L10n.Common.ok, role: .cancel) {}
-            } message: {
-                Text(L10n.Groups.Errors.iCloudRequiredBody)
-            }
         }
     }
 
@@ -815,28 +754,24 @@ struct OnboardingView: View {
         ScrollView {
             VStack(spacing: DS.Spacing.xxl) {
                 VStack(spacing: DS.Spacing.md) {
-                    Image(systemName: groupsOnlyMode ? "dollarsign.circle" : (wantsSeparateAccounts ? "pencil.circle" : "star.circle"))
+                    Image(systemName: wantsSeparateAccounts ? "pencil.circle" : "star.circle")
                         .font(.system(size: heroIconSize))
                         .foregroundStyle(primaryTextStyle)
                         .dynamicTypeSize(...DynamicTypeSize.accessibility1)
                         .accessibilityHidden(true)
 
-                    Text(groupsOnlyMode
-                         ? L10n.Onboarding.currencyNameTitleGroups
-                         : (wantsSeparateAccounts
-                            ? L10n.Onboarding.currencyNameTitleSeparate
-                            : L10n.Onboarding.currencyNameTitleSingle))
+                    Text(wantsSeparateAccounts
+                         ? L10n.Onboarding.currencyNameTitleSeparate
+                         : L10n.Onboarding.currencyNameTitleSingle)
                         .font(DS.Typography.title)
                         .fontWeight(.bold)
                         .foregroundStyle(primaryTextStyle)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, DS.Spacing.xl)
 
-                    Text(groupsOnlyMode
-                         ? L10n.Onboarding.currencyNameSubtitleGroups
-                         : (wantsSeparateAccounts
-                            ? L10n.Onboarding.currencyNameSubtitleSeparate
-                            : L10n.Onboarding.currencyNameSubtitleSingle))
+                    Text(wantsSeparateAccounts
+                         ? L10n.Onboarding.currencyNameSubtitleSeparate
+                         : L10n.Onboarding.currencyNameSubtitleSingle)
                         .font(DS.Typography.subheadline)
                         .foregroundStyle(secondaryTextStyle)
                         .multilineTextAlignment(.center)
@@ -844,26 +779,24 @@ struct OnboardingView: View {
                 }
                 .padding(.top, DS.Spacing.md)
 
-                // Account name — oculto en Solo Grupos (no hay cuenta personal).
-                if !groupsOnlyMode {
-                    OnboardingFieldSection(
-                        title: L10n.Onboarding.accountNameLabel,
-                        titleStyle: secondaryTextStyle,
-                        cardFill: cardFill,
-                        cardStroke: cardStroke
-                    ) {
-                        HStack(spacing: DS.Spacing.md) {
-                            Image(systemName: "pencil")
-                                .foregroundStyle(secondaryTextStyle)
-                            TextField(L10n.Onboarding.accountNamePlaceholder, text: $accountName)
-                                .focused($accountNameFocused)
-                                .accessibilityIdentifier("onboarding_account_name")
-                                .foregroundStyle(primaryTextStyle)
-                        }
-                        .padding()
+                // Account name
+                OnboardingFieldSection(
+                    title: L10n.Onboarding.accountNameLabel,
+                    titleStyle: secondaryTextStyle,
+                    cardFill: cardFill,
+                    cardStroke: cardStroke
+                ) {
+                    HStack(spacing: DS.Spacing.md) {
+                        Image(systemName: "pencil")
+                            .foregroundStyle(secondaryTextStyle)
+                        TextField(L10n.Onboarding.accountNamePlaceholder, text: $accountName)
+                            .focused($accountNameFocused)
+                            .accessibilityIdentifier("onboarding_account_name")
+                            .foregroundStyle(primaryTextStyle)
                     }
-                    .padding(.horizontal, DS.Spacing.lg)
+                    .padding()
                 }
+                .padding(.horizontal, DS.Spacing.lg)
 
                 // Currency
                 OnboardingFieldSection(
@@ -902,8 +835,6 @@ struct OnboardingView: View {
         .scrollDismissesKeyboard(.interactively)
         .onAppear {
             accountCurrency = selectedCurrency
-            // En Solo Grupos no hay cuenta → no autosugerir nombre (campo oculto).
-            guard !groupsOnlyMode else { return }
             let suggested = suggestedAccountName
             if accountName.isEmpty || accountName == lastAutoName {
                 accountName = suggested
@@ -1194,7 +1125,6 @@ struct OnboardingView: View {
         case .expensesOnly: return L10n.Onboarding.confirmMotivationExpenses
         case .dayToDay: return L10n.Onboarding.confirmMotivationDayToDay
         case .fullControl: return L10n.Onboarding.confirmMotivationFullControl
-        case .groupsOnly: return L10n.Onboarding.confirmMotivationGroups
         }
     }
 
@@ -1243,62 +1173,51 @@ struct OnboardingView: View {
                 value: userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                     ? L10n.Profile.defaultName : userName
             )
-            if groupsOnlyMode {
-                // Solo Grupos: sin cuenta/saldo/categorías personales — solo el
-                // propósito + la moneda elegida.
+            rowDivider
+            confirmItem(
+                icon: iconName(for: selectedAccountType),
+                color: .hotPink,
+                value: (accountName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        ? selectedAccountType.localizedName : accountName)
+                    + " · \(accountCurrency.rawValue)"
+            )
+
+            if !expensesOnlyMode {
+                rowDivider
+                let amount = AmountInputHelper.parseDecimal(initialBalanceText)
+                let displayAmount = amount > 0 ? (balanceIsPositive ? amount : -amount) : 0.0
+                let formattedBalance = appPreferences.currency(displayAmount,
+                    currencyCode: accountCurrency.rawValue
+                )
+                confirmItem(
+                    icon: "banknote",
+                    color: .priorityNeed,
+                    value: formattedBalance
+                )
+            }
+
+            if expensesOnlyMode {
                 rowDivider
                 confirmItem(
-                    icon: "person.3.fill",
-                    color: .hotPink,
-                    value: L10n.Onboarding.purposeGroups + " · \(accountCurrency.rawValue)"
+                    icon: "list.bullet.clipboard",
+                    color: .essentialNeed,
+                    value: L10n.Onboarding.purposeExpenses
                 )
-            } else {
+            }
+
+            // En visita la fila NO se pinta: el resumen cuenta lo que va a pasar, y ahí no va a pasar
+            // ninguna de las dos cosas. Con `willSeedCategories` habría dicho «categorías
+            // personalizadas», que es igual de falso — la visita no personalizó nada: nunca se le
+            // preguntó.
+            if !isSecondarySession {
                 rowDivider
                 confirmItem(
-                    icon: iconName(for: selectedAccountType),
-                    color: .hotPink,
-                    value: (accountName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                            ? selectedAccountType.localizedName : accountName)
-                        + " · \(accountCurrency.rawValue)"
+                    icon: "folder.fill",
+                    color: .priorityNeed,
+                    value: loadSeedCategories
+                        ? L10n.Onboarding.categoriesDefault
+                        : L10n.Onboarding.categoriesCustom
                 )
-
-                if !expensesOnlyMode {
-                    rowDivider
-                    let amount = AmountInputHelper.parseDecimal(initialBalanceText)
-                    let displayAmount = amount > 0 ? (balanceIsPositive ? amount : -amount) : 0.0
-                    let formattedBalance = appPreferences.currency(displayAmount,
-                        currencyCode: accountCurrency.rawValue
-                    )
-                    confirmItem(
-                        icon: "banknote",
-                        color: .priorityNeed,
-                        value: formattedBalance
-                    )
-                }
-
-                if expensesOnlyMode {
-                    rowDivider
-                    confirmItem(
-                        icon: "list.bullet.clipboard",
-                        color: .essentialNeed,
-                        value: L10n.Onboarding.purposeExpenses
-                    )
-                }
-
-                // En visita la fila NO se pinta, igual que no se pinta en «Solo grupos» y por la misma
-                // razón: el resumen cuenta lo que va a pasar, y ahí no va a pasar ninguna de las dos
-                // cosas. Con `willSeedCategories` habría dicho «categorías personalizadas», que es
-                // igual de falso — la visita no personalizó nada: nunca se le preguntó.
-                if !isSecondarySession {
-                    rowDivider
-                    confirmItem(
-                        icon: "folder.fill",
-                        color: .priorityNeed,
-                        value: loadSeedCategories
-                            ? L10n.Onboarding.categoriesDefault
-                            : L10n.Onboarding.categoriesCustom
-                    )
-                }
             }
         }
         .background(cardFill)
@@ -1706,7 +1625,6 @@ struct OnboardingView: View {
     private var isNextDisabled: Bool {
         OnboardingNextEnablement.isNextDisabled(
             step: currentStep,
-            groupsOnly: groupsOnlyMode,
             userName: userName,
             accountName: accountName,
             isAccountTypeValid: fullControlAccountTypes.contains(selectedAccountType),
@@ -1804,21 +1722,6 @@ struct OnboardingView: View {
     // MARK: - Completion
 
     private func completeOnboarding() {
-        // C2 · Solo Grupos: **esta vista ya no escribe NADA en esta rama**. Entrega lo que preguntó y cede
-        // a la cadena (educativo → login → consent → alta), que termina en
-        // `GroupsOrganizerOnboarding.completeSetup` con identidad y consent en mano. Ver el docblock de
-        // `onGroupsOnlyComplete` para lo que se escribía aquí antes y por qué era irreversible.
-        if groupsOnlyMode {
-            // Inalcanzable con el callback sin cablear: la card solo se pinta en `mode == .initial`, que es
-            // el único flujo que lo pasa. Y si algún día un flujo nuevo mostrara la card sin cablearlo, NO
-            // completar es lo correcto — el fallback de antes era escribir el trío sin cuenta, o sea el bug.
-            guard let onGroupsOnlyComplete else { return }
-            onGroupsOnlyComplete(GroupsOnlyOnboardingPayload(
-                displayName: userName,
-                currencyCode: selectedCurrency.rawValue))
-            return
-        }
-
         let sync = PreferenceSyncService.shared
 
         let finalName = userName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1885,22 +1788,6 @@ struct OnboardingView: View {
 
         onComplete()
     }
-
-    // C2 · `completeGroupsOnlyOnboarding()` vivía AQUÍ y se **ELIMINÓ**. Escribía el trío
-    // (`onboardingMode = .groupInvite` empujado al iKV, `groupsBetaUnlocked`, `hasCompletedOnboarding`) más
-    // `userName`, `defaultCurrencyCode` y `defaultPeriod` en el paso 8 del onboarding: **sin sesión, sin
-    // consent y sin canal comprobado**. El modo es never-downgrade cross-device (rank 1 > 0,
-    // `PreferenceMergeLogic`), así que la escritura viajaba al Apple ID y dejaba al usuario con la app
-    // recortada a Grupos, VACÍA y sin cuenta en ninguna parte, en todos sus dispositivos — y su única
-    // recuperación era restaurar por iCloud.
-    //
-    // Su sustituto es `GroupsOrganizerOnboarding.completeSetup`, que hace lo mismo (mismo modo, mismos
-    // seeds, mismo aterrizaje en el tab, misma métrica de alta) pero **al final de la cadena**, con
-    // identidad y consent en mano. La única diferencia funcional es querida: la divisa que el usuario
-    // eligió en el step 5 viaja como `explicitCurrencyCode` y gana sobre la derivación por región.
-    //
-    // No se dejó como código muerto a propósito: un método privado que sigue compilando es exactamente lo
-    // que alguien vuelve a llamar desde una rama nueva.
 
     private func createOnboardingAccount() {
         let finalName = accountName.trimmingCharacters(in: .whitespacesAndNewlines)

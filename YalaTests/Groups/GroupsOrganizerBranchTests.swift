@@ -503,14 +503,13 @@ struct GroupsOrganizerWiringTests {
                 callSites.append(url.lastPathComponent)
             }
         }
-        // C2 · son DOS, y el segundo NO relaja el invariante: la card «Solo grupos» del onboarding entra
-        // en la MISMA cadena (educativo → login → consent) y su alta se ejecuta en el caso `.presentName`
-        // del router, con identidad y consent ya en mano; lo que cambia es que no vuelve a pedir el nombre
-        // porque ya lo tiene en memoria. Antes de C2 esa puerta no llamaba aquí: escribía el trío ella
-        // misma, en el paso 8 del onboarding y sin cuenta en ninguna parte.
-        #expect(Set(callSites) == Set(["GroupsOrganizerNameView.swift", "ContentView.swift"]), """
+        // UNO desde el 2026-09-10. Hubo un segundo —el caso `.presentName` del router, por donde entraba la
+        // card «Solo grupos» del onboarding (C2)— y se retiró con la card (ADR 2026-09-09 §7): solo-grupos se
+        // abre desde el Welcome, así que el alta solo se escribe detrás de su pantalla del nombre.
+        #expect(Set(callSites) == Set(["GroupsOrganizerNameView.swift"]), """
             el alta se escribe detrás de la cadena y en ningún otro sitio. Un call-site nuevo es, con casi
-            total seguridad, una escritura del trío adelantada. Encontrado: \(callSites)
+            total seguridad, una escritura del trío adelantada. Que la cadena tenga una sola ENTRADA lo fija
+            `GroupsGateWiringTests.organizerBranchHasOneEntry`. Encontrado: \(callSites)
             """)
     }
 
@@ -616,12 +615,13 @@ struct GroupsOrganizerWiringTests {
             """)
     }
 
-    /// **C3 · el choke-point de las DOS puertas, que es lo que hace que la respuesta sea honesta.**
+    /// **C3 · el choke-point de la rama organizador, que es lo que hace que la respuesta sea honesta.**
     ///
-    /// La puerta del Welcome comprueba por su cuenta; la card «Solo grupos» NO pasa por ella
-    /// (`startGroupsOnlyBranch` enciende el discriminador y submitea directo), y su camino SÍ existe con
-    /// un descriptor vivo. Lo que decide aquí es QUIÉN pregunta y qué hace con el `no`: un `return` mudo
-    /// dejaría un botón que no hace nada, y eso es el «camino muerto» que el spec de la rama prohíbe.
+    /// La puerta del Welcome comprueba por su cuenta; esto es la defensa en profundidad de detrás. Nació
+    /// por la card «Solo grupos» del onboarding, que no pasaba por esa puerta y se retiró el 2026-09-10
+    /// (ADR 2026-09-09 §7); se conserva hasta que M1 se retire entera. Lo que decide aquí es QUIÉN
+    /// pregunta y qué hace con el `no`: un `return` mudo dejaría un botón que no hace nada, y eso es el
+    /// «camino muerto» que el spec de la rama prohíbe.
     @Test("MUTACIÓN (d): la rama entera se corta en secundaria, y manda a la PUERTA")
     func organizerFlowStopsUnderASecondarySession() throws {
         let content = try Self.code("Yala/App/ContentView.swift")
@@ -630,18 +630,15 @@ struct GroupsOrganizerWiringTests {
             "`advanceGroupsOrganizerFlow` desapareció o cambió de firma")
 
         #expect(advance.contains("SecondarySessionStore.isActive()"), """
-            el choke-point de la rama organizador dejó de mirar el descriptor. La card «Solo grupos» no \
-            pasa por `WelcomeGroupsGateView`, así que sin esto su camino llega hasta el alta con una \
-            sesión secundaria viva.
+            el choke-point de la rama organizador dejó de mirar el descriptor. Es la defensa en profundidad \
+            detrás de `WelcomeGroupsGateView`: sin ella, un avance que llegara con una sesión secundaria \
+            viva escribiría el alta en el dominio del DUEÑO.
             """)
         #expect(advance.contains("welcomeFlowInitialStep = .groupsGate"), """
             el corte dejó de mandar a la PUERTA. Un `return` mudo es un botón que no hace nada; el spec de \
             esta rama exige que ningún camino muera sin respuesta, y la puerta es la que sabe pintar este \
             veredicto (`.blockedSecondarySession`).
             """)
-        // El payload de la card se descarta al cortar: un payload superviviente haría que el siguiente
-        // intento saltara la pantalla del nombre con datos de una sesión abandonada.
-        #expect(advance.contains("pendingGroupsOnlyPayload = nil"))
     }
 
     @Test("la puerta pregunta por el descriptor, no solo por el corpus")
