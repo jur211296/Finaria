@@ -124,10 +124,11 @@ private final class FakeBeaconStore: BeaconKeyValueStore, @unchecked Sendable {
     @discardableResult func synchronize() -> Bool { true }
 }
 
-/// La lógica NUEVA de A4 y la que carga su peso: sin ella un born-cloud en su 2º device elige
-/// "iCloud privado" y arranca un dataset divergente que no se reúne con nada (A26). El bypass-test
-/// no la cubre — con el faro puesto la elección ni se plantea.
-@Suite("A4 · rama «Soy nuevo»: el faro se consulta ANTES de ofrecer nada (A26)")
+/// La rama «Soy nuevo» consulta el faro ANTES de ofrecer nada, y con él puesto ENCAMINA a entrar con esa
+/// cuenta. **Desde el paso 6 encaminar ya no es decidir** (ADR 2026-09-09 §10): la pantalla de destino ofrece
+/// «Crear otra cuenta» (lo fija el XCUITest de `WelcomeChooserUITests`), y la ruta transporta el método del
+/// faro TAL CUAL, sin fallback, para que el destino no afirme un método que el faro no dice.
+@Suite("rama «Soy nuevo»: el faro se consulta ANTES y ENCAMINA (ADR 2026-09-09 §10)")
 @MainActor
 struct WelcomeNewBranchRouteTests {
 
@@ -142,34 +143,60 @@ struct WelcomeNewBranchRouteTests {
         return CloudBeacon(store: store)
     }
 
-    @Test("faro presente ⇒ returning-user, JAMÁS la elección — aunque las dos cards estén visibles")
+    @Test("faro presente ⇒ ENCAMINA a entrar, aunque las dos cards estén visibles")
     func beaconLinked_routesToCloudSignIn_evenWithBothCardsVisible() {
         let route = WelcomeNewBranchRouter.route(
             beacon: makeBeacon(linked: true, provider: "apple"),
+            isSecondarySessionActive: false,
             cloudEntryAvailable: true,
             options: bothOptions)
-        #expect(route == .cloudSignIn(.apple))
+        #expect(route == .cloudSignIn(accountProvider: .apple))
     }
 
-    @Test("el provider sale del FARO, no de un default: Google encamina a Google")
+    @Test("el método sale del FARO, no de un default: Google encamina a Google")
     func beaconLinked_google_routesWithGoogleProvider() {
         let route = WelcomeNewBranchRouter.route(
             beacon: makeBeacon(linked: true, provider: "google"),
+            isSecondarySessionActive: false,
             cloudEntryAvailable: true,
             options: bothOptions)
-        #expect(route == .cloudSignIn(.google))
+        #expect(route == .cloudSignIn(accountProvider: .google))
+        #expect(WelcomeAccountChoiceLogic.signInProvider(forBeaconAccount: .google) == .google)
     }
 
-    @Test("provider ausente o desconocido ⇒ `.apple` (el faro solo ENCAMINA; el mismatch lo dice el destino)")
-    func beaconLinked_unknownProvider_fallsBackToApple() {
+    /// **La ruta transporta el «no lo sé»; el botón no.** Hasta el paso 6 el fallback a Apple vivía en la
+    /// ruta y el destino no podía distinguir un faro de Apple de uno sin método: ahora el intro dice «creada
+    /// con Apple» solo cuando el faro lo dice, y firma con Apple igual que antes.
+    @Test("método ausente o desconocido ⇒ la ruta dice `nil` y el botón cae a Apple, como siempre")
+    func beaconLinked_unknownProvider_carriesNil_andSignsInWithApple() {
         #expect(WelcomeNewBranchRouter.route(
             beacon: makeBeacon(linked: true, provider: nil),
+            isSecondarySessionActive: false,
             cloudEntryAvailable: true,
-            options: bothOptions) == .cloudSignIn(.apple))
+            options: bothOptions) == .cloudSignIn(accountProvider: nil))
         #expect(WelcomeNewBranchRouter.route(
             beacon: makeBeacon(linked: true, provider: "microsoft"),
+            isSecondarySessionActive: false,
             cloudEntryAvailable: true,
-            options: bothOptions) == .cloudSignIn(.apple))
+            options: bothOptions) == .cloudSignIn(accountProvider: nil))
+        #expect(WelcomeAccountChoiceLogic.signInProvider(forBeaconAccount: nil) == .apple)
+    }
+
+    /// **La visita nunca lee el faro del dueño** (criterio de `WelcomeRestorePauseLogic`): con una sesión
+    /// secundaria viva, el faro del iCloud-KV es el del dueño del teléfono. Encaminarla —y decirle «este Apple ID
+    /// ya tiene una cuenta de Yala creada con Apple»— le contaría la cuenta de otra persona (lente A de la review).
+    @Test("en sesión secundaria el faro (del dueño) no encamina; el control sin visita, sí")
+    func secondarySession_ignoresTheOwnersBeacon() {
+        #expect(WelcomeNewBranchRouter.route(
+            beacon: makeBeacon(linked: true, provider: "apple"),
+            isSecondarySessionActive: true,
+            cloudEntryAvailable: true,
+            options: bothOptions) == .chooser)
+        #expect(WelcomeNewBranchRouter.route(
+            beacon: makeBeacon(linked: true, provider: "apple"),
+            isSecondarySessionActive: false,
+            cloudEntryAvailable: true,
+            options: bothOptions) == .cloudSignIn(accountProvider: .apple))
     }
 
     @Test("faro presente con la entrada nube NO disponible (kill remoto / sin backend / uitest) ⇒ no encamina")
@@ -179,6 +206,7 @@ struct WelcomeNewBranchRouteTests {
         // de "Ya tengo cuenta", ampliado a este camino — no un descuido.
         #expect(WelcomeNewBranchRouter.route(
             beacon: makeBeacon(linked: true, provider: "apple"),
+            isSecondarySessionActive: false,
             cloudEntryAvailable: false,
             options: [.privateAccount]) == .single(.privateAccount))
     }
@@ -187,6 +215,7 @@ struct WelcomeNewBranchRouteTests {
     func beaconAbsent_bothOptions_showsChooser() {
         #expect(WelcomeNewBranchRouter.route(
             beacon: makeBeacon(linked: false, provider: nil),
+            isSecondarySessionActive: false,
             cloudEntryAvailable: true,
             options: bothOptions) == .chooser)
     }
@@ -204,6 +233,7 @@ struct WelcomeNewBranchRouteTests {
         #expect(options == [.privateAccount])
         #expect(WelcomeNewBranchRouter.route(
             beacon: makeBeacon(linked: false, provider: nil),
+            isSecondarySessionActive: false,
             cloudEntryAvailable: true,
             options: options) == .single(.privateAccount))
     }
@@ -262,6 +292,8 @@ struct WelcomeNewChooserWiringTests {
         #expect(body.contains("beacon: CloudBeacon()"),
                 "el faro REAL: leerlo de otro sitio (o no leerlo) reabre A26")
         #expect(body.contains("cloudEntryAvailable: cloudEntryAvailable"))
+        #expect(body.contains("isSecondarySessionActive: SecondarySessionStore.isActive()"),
+                "sin él, la visita leería el faro del DUEÑO y el destino le hablaría de su cuenta")
     }
 
     @Test("`visibleNewOptions` cablea la constante COMPILADA y el sub-flag remoto de la elección")
@@ -282,6 +314,78 @@ struct WelcomeNewChooserWiringTests {
         let body = try Self.body(of: "private var cloudEntryAvailable: Bool {",
                                  in: try Self.source(Self.containerPath))
         #expect(body.contains("visibleExistingOptions.contains(.cloudSignIn)"))
+    }
+
+    /// **Paso 6 · «Crear otra cuenta» abre el chooser ENTERO, no el de nivel 1** (decisión de Jürgen
+    /// 2026-09-09). El XCUITest lo prueba de verdad; esto fija en la suite rápida la mitad que un refactor
+    /// movería sin que nada visible se rompiera hasta el siguiente device-QA: volver a `.chooser` dejaría a
+    /// la persona en «¿qué quieres hacer?», donde «Soy nuevo» la volvería a encaminar.
+    @Test("«Crear otra cuenta» reabre el Welcome en `.newChooser`, y la entrada del faro es la suya propia")
+    func createAnother_reopensTheFullChooser() throws {
+        let content = try Self.source("Yala/App/ContentView.swift")
+        let closure = try Self.body(of: "onCreateAnotherAccount: {", in: content)
+        #expect(closure.contains("welcomeFlowInitialStep = .newChooser"))
+        #expect(!closure.contains("welcomeFlowInitialStep = .chooser"),
+                "el nivel 1 re-encaminaría por el faro: la persona no llegaría nunca a elegir")
+        #expect(closure.contains("showWelcomeCloudSignIn = false"))
+        #expect(closure.contains("showWelcomeFlow = true"))
+
+        let beacon = try Self.body(of: "onBeaconRoutesToCloudSignIn: { provider in", in: content)
+        #expect(beacon.contains("welcomeCloudEntry = .beaconRouted(accountProvider: provider)"),
+                "con `.reentry` el intro no sabría que vino del faro y no ofrecería «Crear otra cuenta»")
+    }
+
+    /// **La persona vuelve a estar ELIGIENDO** (lentes A y D de la review): con el `true` que dejó el faro al
+    /// encaminar, un cierre de la app en ese chooser abriría el onboarding privado directo —sin elegir y sin la
+    /// comprobación de iCloud del paso 4— y el arranque siguiente ya no montaría neutro.
+    @Test("«Crear otra cuenta» devuelve `hasShownWelcomeChooser` a false, como el recorrido normal")
+    func createAnother_resetsTheChooserSeenFlag() throws {
+        let content = try Self.source("Yala/App/ContentView.swift")
+        let closure = try Self.body(of: "onCreateAnotherAccount: {", in: content)
+        #expect(closure.contains("hasShownWelcomeChooser = false"))
+    }
+
+    private static let signInViewPath = "Yala/App/Views/Onboarding/WelcomeCloudSignInView.swift"
+
+    /// **Paso 6 · lo que la entrada del faro y el mismatch hacen DESPUÉS de firmar.** Ningún XCUITest llega ahí
+    /// —hace falta un sign-in real—, así que estas cuatro defensas se fijan una por test: si compartieran test,
+    /// un mutante taparía a otro. La primera es la que más caro sale: si `.beaconRouted` corriera el flujo del
+    /// ALTA, «Iniciar sesión con Apple» crearía una cuenta en vez de entrar.
+    @Test("la entrada del faro ENTRA tras el consentimiento, nunca da de alta")
+    func beaconRoutedEntry_signsIn_afterTheConsent() throws {
+        let afterConsent = try Self.body(of: "private func runFlowAfterConsent() async {",
+                                         in: try Self.source(Self.signInViewPath))
+        let beaconLine = try #require(afterConsent.split(separator: "\n").first { $0.contains(".beaconRouted") })
+        #expect(beaconLine.contains("runSignInFlow()"))
+        #expect(!beaconLine.contains("runBornCloudFlow"), "con el flujo del alta, «Iniciar sesión» crearía una cuenta")
+    }
+
+    /// Lente B: el Keychain puede quedarse con el método de otra sesión, y con él la prueba de Apple del faro
+    /// huérfano borraría el faro de una cuenta viva.
+    @Test("el motor recibe el método que la pantalla ACABA de firmar, no el del Keychain")
+    func signInFlow_passesTheSignedMethodToTheMotor() throws {
+        let signIn = try Self.body(of: "private func runSignInFlow() async {", in: try Self.source(Self.signInViewPath))
+        #expect(signIn.contains("CloudIdentityDiscovery(sessionProviderName: { firmadoCon.rawValue })"))
+        #expect(signIn.contains("let firmadoCon = provider"))
+    }
+
+    /// Lente A: con una sesión secundaria viva, el faro es del dueño del teléfono.
+    @Test("en sesión secundaria el mismatch no lee el faro del dueño")
+    func signInFlow_mismatchIgnoresTheOwnersBeacon() throws {
+        let signIn = try Self.body(of: "private func runSignInFlow() async {", in: try Self.source(Self.signInViewPath))
+        #expect(signIn.contains("beaconLinked: beacon.isCloudAccountLinked && !SecondarySessionStore.isActive()"))
+    }
+
+    /// Lente A: «Iniciar sesión con…» suelta una sesión viva, respeta el consentimiento y, si se cancela,
+    /// vuelve a la pantalla de las dos salidas en vez de al intro.
+    @Test("«Iniciar sesión con…» del mismatch: suelta la sesión, respeta el consentimiento y vuelve si se cancela")
+    func mismatchSignIn_releasesSession_respectsConsent_andReturnsOnCancel() throws {
+        let exit = try Self.body(
+            of: "private func signInWithAccountMethod(_ method: CloudSignInProvider, from exits: ProviderMismatchLogic.Exits) {",
+            in: try Self.source(Self.signInViewPath))
+        #expect(exit.contains("if CloudAuthService.shared.hasSession { await CloudAuthService.shared.signOut() }"))
+        #expect(exit.contains("guard consentStillPending else"))
+        #expect(exit.contains("if phase == .intro { phase = .providerMismatch(exits) }"))
     }
 
     /// A5 SUSTITUYE AL STUB DE A4. La versión anterior de este test exigía

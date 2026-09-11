@@ -77,9 +77,11 @@ nonisolated enum CloudWelcomeSignInPhase: Equatable {
     /// El Apple ID firmado no tiene cuenta Yala en la nube.
     case notFound
     /// R9 (sesión 2 Google): sin cuenta para ESTE sub, pero el faro del device dice que la
-    /// cuenta nube se creó con OTRO método → "vuelve atrás y entra con ese método". La sesión
-    /// ya se soltó (signOut) y NO hubo claim — nada comprometido, back permitido.
-    case providerMismatch(knownProvider: String?)
+    /// cuenta nube se creó con OTRO método. **Desde el paso 6 ya no es una pared** (ADR 2026-09-09 §10):
+    /// lleva las DOS salidas del veredicto —entrar con el método del faro, o crear una cuenta con el que la
+    /// persona acaba de usar—. La sesión ya se soltó (signOut) y NO hubo claim — nada comprometido, back
+    /// permitido.
+    case providerMismatch(ProviderMismatchLogic.Exits)
     /// Fallo de red/sesión del `exists` o de la máquina.
     case error(retryable: Bool)
     /// La cuenta existe pero el backend no la deja entrar (403 en el claim). Caso propio y no un
@@ -228,11 +230,12 @@ nonisolated enum BornCloudSignUpFlow {
             return .continueAsReturningUser
         case .waitForLeader:
             return .show(.waitingLeader)
-        case .providerMismatch(let knownProvider):
+        case .providerMismatch(let exits):
             // Hoy INALCANZABLE desde `.bornCloud` (la variante B es `returningUser`-only,
             // `AccountClaimDecision.swift:83` — medido en A2). Se mapea igual porque la tabla que
-            // decide vive allí: el día que alguien la amplíe, esto ya muestra el copy R9 correcto.
-            return .show(.providerMismatch(knownProvider: knownProvider))
+            // decide vive allí: el día que alguien la amplíe, esto ya muestra la pantalla R9 con sus
+            // dos salidas.
+            return .show(.providerMismatch(exits))
         case .sessionExpired:
             return .releaseSessionAndShowError
         case .accountUnavailable:

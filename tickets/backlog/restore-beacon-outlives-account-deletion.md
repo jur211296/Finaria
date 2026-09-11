@@ -66,6 +66,29 @@ datos viejos). Hoy en producción no existe ningún born-cloud —el percent est
   dice que hay cuenta nube? Ese es el §3 y es el que afecta a usuarios reales hoy.
 - El §2 probablemente solo necesita copy propio para el caso «faro puesto + iCloud apagado».
 
+## Estado tras `beacon-routes-only-never-blocks` (2026-09-10) — NO se cierra
+
+La decisión de Jürgen del 2026-09-09 cubría el faro huérfano en el paso 6 del rediseño y decía que «con
+eso se cierra de paso» este ticket, «cuando lo esté». Medido al implementarlo: **no lo está**, y conviene
+saber qué cerró el paso 6 y qué no.
+
+**Lo que cerró:**
+
+- El faro ya no BLOQUEA nada: encamina, la pantalla de destino ofrece «Crear otra cuenta» y el mismatch
+  tiene dos salidas.
+- Un faro que apunta a una cuenta borrada **se limpia solo** en cuanto [I] lo PRUEBA —mismo hash, o faro
+  de Apple + sesión de Apple sin cuenta— (`BeaconOrphanLogic`, aplicado en `CloudIdentityDiscovery`). Es
+  lo que cubre el fresh start.
+
+**Lo que sigue abierto, y es el cuerpo de este ticket:**
+
+- **§1 ocurre bajo el kill-switch**, y ahí no corre ningún [I]: con las puertas de nube cerradas nadie
+  firma, así que nada descubre el huérfano y «Tus datos siguen a salvo en tu cuenta de Yala» puede seguir
+  afirmando de más. Tampoco se limpia con Google y otro hash, porque ahí no hay prueba.
+- **§2** (`.iCloudDisabled` le pide iCloud a un nacido en la nube) y **§3** (el migrado que ve su copia
+  congelada como `.found`): intactos.
+
 ## Relacionados
 
 - [[reentry-killswitch-closes-both-doors]] — el chip del que sale
+- [[beacon-routes-only-never-blocks]] — cubrió el faro huérfano que [I] puede probar; no el del kill

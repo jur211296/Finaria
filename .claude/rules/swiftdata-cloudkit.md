@@ -40,48 +40,51 @@ paths:
 
 <!-- INDICE:inicio — generado por scripts/indexar_doc.py, no editar a mano -->
 
-## Índice de reglas (33)
+## Índice de reglas (36)
 
-> Este fichero son **49 KB en 33 reglas largas**. No lo leas entero: localiza la regla
+> Este fichero son **54 KB en 36 reglas largas**. No lo leas entero: localiza la regla
 > aquí y lee **solo su tramo** con `sed -n '<linea>,<linea+N>p'`.
 > Los números de línea se desplazan al editar — regenera con
 > `python3 scripts/indexar_doc.py <fichero> --apply`.
 
 | Línea | Regla | Peso |
 |---|---|---|
-| `L92` | CloudKit compat | 119 B |
-| `L94` | Schema del container de GRUPOS — campo nuevo = deploy a Production en el MISMO PR | 1.1 KB |
-| `L96` | `#Predicate` GENÉRICO-PROTOCOLO crashea (`DataUtilities.swift:85`) — usa concreto por tipo | 1.8 KB |
-| `L98` | Acciones post-accept de un CKShare = intent PERSISTENTE reconciliable, nunca one-shot (bug Pia 2026-07-11) | 1.3 KB |
-| `L100` | `context.hasChanges` y lo que llega al canal de sync NO son la misma señal, y confundirlas justifica guards por razones  | 1.7 KB |
-| `L102` | Lazy M2M con CloudKit — CSV mirror | 1020 B |
-| `L104` | CSV mirror — stale ≠ nil al regenerar un UUID de identidad (commit `899c1c25`) | 1.4 KB |
-| `L106` | Sync de Grupos (CKSyncEngine) NO debe arrancar/`save()` sobre el `mainContext` compartido antes de que el primer import  | 403 B |
-| `L108` | Lo que el gate de quiescencia DIFIERE solo se recupera solo si es un evento de CloudKit. Si es una INTENCIÓN, el diferid | 425 B |
-| `L110` | El guard G6-3 es TAMBIÉN lo que impide avisos DUPLICADOS mientras los dos canales conviven (Fase 2, 2026-07-29). No lo d | 1.9 KB |
-| `L112` | [STALE, medido 2026-08-03 — el código que describe ya NO EXISTE: `applyRemoteRecordIfAbsent` y `GroupPullRescueGate` dan | 555 B |
-| `L114` | `DefaultHistoryToken` es POR-STORE, y un drain que ancla su high-water en el store equivocado queda ciego al suyo PARA S | 444 B |
-| `L116` | Un borrado tiene DOS mitades y el camino remoto solo copió una: la fila del grupo se borra, el PUENTE personal se queda  | 398 B |
-| `L118` | Un gate por ZONA calculado sobre filas VIVAS es la herramienta equivocada para un tombstone por FILA — y con un duplicad | 510 B |
-| `L122` | El par que apaga el mirror NO se puede hacer atómico ni invertir: se enforcea en el CONSUMIDOR (C-1, commit `246a6939`). | 1.9 KB |
-| `L124` | Un terminal de fallo DENTRO del cutover tiene que devolver el modo a `.icloud` como PRIMER efecto, o es peor que el limb | 1.1 KB |
-| `L126` | `isMarkerExported()` es necesaria-no-suficiente y su espera necesita TOPE: no hay API de cuota de iCloud. | 3.0 KB |
-| `L154` | El dominio Grupos pertenece al Apple ID, no al humano: toda frontera de «otro usuario en este device» tiene que SELLARLO | 429 B |
-| `L156` | Al ELIMINAR una función, lista lo que hacía ADEMÁS de lo que la sustituye — un guard no viaja solo con el camino que pro | 2.2 KB |
-| `L158` | El dominio de preferencias POR SESIÓN existe desde el 2026-08-13, y su parte difícil no fue el escritor sino el INVENTAR | 2.8 KB |
-| `L165` | Una caché compartida se protege con un SELLO COLGADO DEL DESCRIPTOR, no del propio dato — y ésa es la única diferencia e | 404 B |
-| `L167` | EXCEPCIÓN al punto anterior, y las tres trampas que trae (C-3, 2026-07-27, `612b21ee`) | 2.9 KB |
-| `L169` | `isCurrentUser` es un flag del canal CloudKit y en el BACKEND nace APAGADO para casi todo el mundo — toda resolución de  | 2.4 KB |
-| `L171` | Duplicar un canal duplica sus ESCRITURAS; sus OBSERVACIONES se quedan atrás, y eso no lo caza ningún test de un canal so | 2.5 KB |
-| `L173` | Una señal puede viajar en NEGATIVO — y entonces el `return` que no deja rastro es un bug de LECTURA, no de escritura (S4 | 372 B |
-| `L175` | Un gate de feature NO puede decidir SI se PARSEA la entrada: solo QUÉ hacer con ella. Y «byte-idéntico al camino viejo»  | 435 B |
-| `L177` | En una frontera de USUARIO el outbox de Grupos y su cursor tienen signos OPUESTOS: uno hay que matarlo y el otro hay que | 2.0 KB |
-| `L179` | El cursor del pull de Grupos (`GroupSyncCursor.groupCursorsJSON`) NO se resetea para «forzar una re-entrega» — es dañino | 1.4 KB |
-| `L181` | Un CONSENT no es una preferencia, y por eso el de Grupos SALIÓ del canal de prefs (C1, 2026-08-11). | 2.3 KB |
-| `L183` | `PreferenceSyncService.remove/set` propaga a la CUENTA, no al device — NUNCA limpiar un consent desde un camino con `.cl | 1.8 KB |
-| `L185` | CARGAR una preferencia no puede ESCRIBIRLA — y el eco de eso convertía al receptor en autor LWW de algo que no escribió  | 373 B |
-| `L187` | El resolvedor canónico de identidad NO es un reemplazo mecánico del flag: contesta otra pregunta en DOS ejes (2026-09-05 | 3.7 KB |
-| `L189` | Un campo Codable NUEVO y no opcional en el snapshot del App Group apaga TODOS los widgets, y el DTO está DUPLICADO en do | 1.9 KB |
+| `L95` | CloudKit compat | 119 B |
+| `L97` | Schema del container de GRUPOS — campo nuevo = deploy a Production en el MISMO PR | 1.1 KB |
+| `L99` | `#Predicate` GENÉRICO-PROTOCOLO crashea (`DataUtilities.swift:85`) — usa concreto por tipo | 1.8 KB |
+| `L101` | Acciones post-accept de un CKShare = intent PERSISTENTE reconciliable, nunca one-shot (bug Pia 2026-07-11) | 1.3 KB |
+| `L103` | `context.hasChanges` y lo que llega al canal de sync NO son la misma señal, y confundirlas justifica guards por razones  | 1.7 KB |
+| `L105` | Lazy M2M con CloudKit — CSV mirror | 1020 B |
+| `L107` | CSV mirror — stale ≠ nil al regenerar un UUID de identidad (commit `899c1c25`) | 1.4 KB |
+| `L109` | Sync de Grupos (CKSyncEngine) NO debe arrancar/`save()` sobre el `mainContext` compartido antes de que el primer import  | 403 B |
+| `L111` | Lo que el gate de quiescencia DIFIERE solo se recupera solo si es un evento de CloudKit. Si es una INTENCIÓN, el diferid | 425 B |
+| `L113` | El guard G6-3 es TAMBIÉN lo que impide avisos DUPLICADOS mientras los dos canales conviven (Fase 2, 2026-07-29). No lo d | 1.9 KB |
+| `L115` | [STALE, medido 2026-08-03 — el código que describe ya NO EXISTE: `applyRemoteRecordIfAbsent` y `GroupPullRescueGate` dan | 555 B |
+| `L117` | `DefaultHistoryToken` es POR-STORE, y un drain que ancla su high-water en el store equivocado queda ciego al suyo PARA S | 444 B |
+| `L119` | Un borrado tiene DOS mitades y el camino remoto solo copió una: la fila del grupo se borra, el PUENTE personal se queda  | 398 B |
+| `L121` | Un gate por ZONA calculado sobre filas VIVAS es la herramienta equivocada para un tombstone por FILA — y con un duplicad | 510 B |
+| `L125` | El par que apaga el mirror NO se puede hacer atómico ni invertir: se enforcea en el CONSUMIDOR (C-1, commit `246a6939`). | 1.9 KB |
+| `L127` | Un terminal de fallo DENTRO del cutover tiene que devolver el modo a `.icloud` como PRIMER efecto, o es peor que el limb | 1.1 KB |
+| `L129` | `isMarkerExported()` es necesaria-no-suficiente y su espera necesita TOPE: no hay API de cuota de iCloud. | 1.1 KB |
+| `L131` | El faro de iCloud-KV (`CloudBeacon`) solo se limpia con PRUEBA de que su cuenta no existe, y «el backend dice que no exi | 3.2 KB |
+| `L159` | El dominio Grupos pertenece al Apple ID, no al humano: toda frontera de «otro usuario en este device» tiene que SELLARLO | 429 B |
+| `L161` | Al ELIMINAR una función, lista lo que hacía ADEMÁS de lo que la sustituye — un guard no viaja solo con el camino que pro | 2.2 KB |
+| `L163` | El dominio de preferencias POR SESIÓN existe desde el 2026-08-13, y su parte difícil no fue el escritor sino el INVENTAR | 2.8 KB |
+| `L170` | Una caché compartida se protege con un SELLO COLGADO DEL DESCRIPTOR, no del propio dato — y ésa es la única diferencia e | 404 B |
+| `L172` | EXCEPCIÓN al punto anterior, y las tres trampas que trae (C-3, 2026-07-27, `612b21ee`) | 2.9 KB |
+| `L174` | `isCurrentUser` es un flag del canal CloudKit y en el BACKEND nace APAGADO para casi todo el mundo — toda resolución de  | 2.4 KB |
+| `L176` | Duplicar un canal duplica sus ESCRITURAS; sus OBSERVACIONES se quedan atrás, y eso no lo caza ningún test de un canal so | 2.5 KB |
+| `L178` | Una señal puede viajar en NEGATIVO — y entonces el `return` que no deja rastro es un bug de LECTURA, no de escritura (S4 | 372 B |
+| `L180` | Un gate de feature NO puede decidir SI se PARSEA la entrada: solo QUÉ hacer con ella. Y «byte-idéntico al camino viejo»  | 435 B |
+| `L182` | En una frontera de USUARIO el outbox de Grupos y su cursor tienen signos OPUESTOS: uno hay que matarlo y el otro hay que | 2.0 KB |
+| `L184` | El cursor del pull de Grupos (`GroupSyncCursor.groupCursorsJSON`) NO se resetea para «forzar una re-entrega» — es dañino | 1.4 KB |
+| `L186` | Un CONSENT no es una preferencia, y por eso el de Grupos SALIÓ del canal de prefs (C1, 2026-08-11). | 2.3 KB |
+| `L188` | `PreferenceSyncService.remove/set` propaga a la CUENTA, no al device — NUNCA limpiar un consent desde un camino con `.cl | 1.8 KB |
+| `L190` | CARGAR una preferencia no puede ESCRIBIRLA — y el eco de eso convertía al receptor en autor LWW de algo que no escribió  | 373 B |
+| `L192` | El resolvedor canónico de identidad NO es un reemplazo mecánico del flag: contesta otra pregunta en DOS ejes (2026-09-05 | 3.7 KB |
+| `L194` | `ubiquityIdentityToken` mide iCloud DRIVE, no CloudKit — y `.localNoMirror` adjunta el espejo igual, así que usarlo como | 2.0 KB |
+| `L196` | `CKDatabase.modifyRecordZones` solo LANZA por un fallo de la operación entera: los fallos por ZONA llegan dentro del tup | 1.1 KB |
+| `L198` | Un campo Codable NUEVO y no opcional en el snapshot del App Group apaga TODOS los widgets, y el DTO está DUPLICADO en do | 1.9 KB |
 
 <!-- INDICE:fin -->
 
@@ -124,6 +127,8 @@ paths:
 - **Un terminal de fallo DENTRO del cutover tiene que devolver el modo a `.icloud` como PRIMER efecto, o es peor que el limbo que arregla.** `failedRollback` «pelado» deja `.cloud` persistido, y `MigrationRunner.resetAfterRollback` (el botón «Reintentar» de la UI) journalea `notStarted` — **fase estable** — y además hacía `setPendingEffects([])`, tirando el efecto que iba a reparar el modo. Resultado: motor + mirror sin gate. ⇒ el abort emite `[.persistICloudMode, .deleteCloudKitMarker, .rollback]` **en ese orden** (`.persistICloudMode` es el ÚNICO que no puede lanzar — `UserDefaults` puro — así que la mitad peligrosa se deshace antes de que corra nada que falle; `.deleteCloudKitMarker` sí relanza a propósito y queda journaled-pendiente), y `resetAfterRollback` **drena los pendientes ANTES de limpiar el journal**. Corolario para efectos nuevos de cierre: ordénalos por «qué pasa si el siguiente lanza», no por afinidad temática. El cuarteto de la reversa (§h.4) tiene el orden INVERSO y por eso conserva el mismo bug-class (residual documentado, ticket aparte).
 
 - **`isMarkerExported()` es necesaria-no-suficiente y su espera necesita TOPE: no hay API de cuota de iCloud.** iOS no expone espacio disponible; la única señal real de «iCloud lleno» es el `CKError.quotaExceeded` **post-hoc**, y `iCloudSyncService.isRetriable` la clasifica como no-retriable pero el copy la degrada a «Sin conexión o iCloud no está disponible» (brecha E7-06, viva). ⇒ toda espera por un export del mirror lleva tope, y el tope va **por TIEMPO journaleado, no por intentos**: la cadencia del runner es boot + cada foreground + tap (`MigrationForegroundRekick`), no un timer, así que un contador castiga a quien abre la app muchas veces y premia a quien no la abre. `ICloudCutoverGateLogic` clasifica el atasco (`definitive` = CloudKit ya dictó que no entra → 900 s · `unknown` = aún no se sabe → 259 200 s) con **fail-open**: la ambigüedad nunca aborta una migración. El canario del atasco se emite en **cada** observación, no solo al agotar el presupuesto — así un fallo SISTÉMICO (p. ej. un record type sin desplegar a CloudKit Production) se ve en el dashboard mucho antes de que ningún device degrade.
+
+- **El faro de iCloud-KV (`CloudBeacon`) solo se limpia con PRUEBA de que su cuenta no existe, y «el backend dice que no existe» NO es esa prueba (paso 6 del rediseño de sesiones, 2026-09-10).** El faro vive en el iCloud-KV del Apple ID: limpiarlo es irreversible y viaja a todos sus dispositivos. `BeaconOrphanLogic` acepta dos pruebas y ninguna más: (1) el hash del faro es el de la identidad que acaba de firmar; (2) faro de Apple y sesión de Apple — Sign in with Apple solo firma con el Apple ID del teléfono, que es el mismo cuyo KV guarda el faro (el KV es por bundle: Yala y Yala Dev NO lo comparten, medido en los dos `.entitlements`). **La (2) es la que cubre el fresh start**: el hash es del uuid de Supabase y, al borrarse `auth.users`, volver a firmar da OTRO uuid, así que la (1) sola no dispara nunca. **Google con otro hash no es prueba** (puede ser otra cuenta de Google de la misma persona, y la del faro seguir viva): «simplificar» a «limpia ante cualquier `exists == false`» le quita el encaminamiento a una cuenta que existe. La limpieza vive en el motor de [I] (`CloudIdentityDiscovery`) para que la haga toda puerta, con tres condiciones de cableado y un test cada una en `CloudIdentityDiscoveryTests`: el método de sesión lo pasa el caller que acaba de firmar cuando lo sabe (el Welcome; Grupos cae al Keychain) y nunca con un `?? "apple"`; el `userID` se relee DESPUÉS del `await`; y el faro no puede haber cambiado mientras se preguntaba. **Residuales, escritos para que nadie los dé por cerrados:** si el faro nuevo de otro dispositivo aún no ha llegado a éste, se puede borrar igual (el iCloud-KV no tiene compare-and-delete); y el bundle `.dev` habla con DOS backends —Debug-Dev con staging, Release-Dev con producción—, así que en un móvil de desarrollo que alterne builds la prueba (2) puede limpiar el faro de una cuenta del otro entorno. En sesión secundaria el borrado lo bloquea `OwnerKeyValueStore`, y el rastro de producción (`CloudBeacon orphan CLEARED proof=…`) solo se escribe si el faro de verdad se apagó.
 
 ### Preferencias y fronteras de cuenta
 

@@ -92,16 +92,23 @@ nonisolated enum WelcomeAccountChoiceLogic {
         options.count == 1 ? options.first : nil
     }
 
-    // MARK: - Rama "Soy nuevo": el faro va ANTES de la elección (A26, §k.2)
+    // MARK: - Rama "Soy nuevo": el faro ENCAMINA, y la elección queda a un toque (ADR 2026-09-09 §10)
 
-    /// Destino de la rama "Soy nuevo". El orden de esta función ES el contrato: el faro se
-    /// consulta ANTES de ofrecer nada.
+    /// Destino de la rama "Soy nuevo". El faro se sigue consultando ANTES de ofrecer nada —encaminar es el
+    /// default—, pero ya no decide por la persona: la pantalla de destino lleva «Crear otra cuenta», que
+    /// devuelve al chooser ENTERO (ticket `beacon-routes-only-never-blocks`).
     enum NewBranchRoute: Equatable {
-        /// El faro de iCloud-KV dice que este Apple ID YA tiene una cuenta nube ⇒ se encamina al
-        /// returning-user que ya existe (§k.4), JAMÁS a la elección: un born-cloud en su 2º device
-        /// que eligiera "iCloud privado" arrancaría un dataset divergente que no se reúne con nada
-        /// (A26). El provider sale del propio faro.
-        case cloudSignIn(CloudSignInProvider)
+        /// El faro de iCloud-KV dice que este Apple ID YA tiene una cuenta en la nube ⇒ se encamina a entrar
+        /// con ella (§k.4). `accountProvider` es el método con el que se creó SEGÚN EL FARO, sin fallback:
+        /// `nil` = el faro no lo dice o trae un valor que esta versión no conoce, y quien pinta el origen
+        /// necesita distinguir «Apple» de «no lo sé» para no afirmar lo que no sabe. Con qué método se firma
+        /// lo decide `signInProvider(forBeaconAccount:)`.
+        ///
+        /// **Hasta el paso 6 esto era «JAMÁS la elección» (A26, 2026-08-09)**: un nacido en la nube que en su
+        /// 2º móvil eligiera «iCloud privado» arrancaría un dataset que no se junta con nada. El ADR §10 pesa
+        /// más —el faro solo encamina— y Jürgen aceptó esa consecuencia a sabiendas (2026-09-09): la elección
+        /// entera, privado incluido, sin avisos que nadie pidió.
+        case cloudSignIn(accountProvider: CloudSignInProvider?)
         /// Bypass: una sola opción visible ⇒ no se monta pantalla intermedia (el recorrido de hoy).
         case single(NewOption)
         /// Dos o más opciones ⇒ sub-chooser.
@@ -115,9 +122,9 @@ nonisolated enum WelcomeAccountChoiceLogic {
     /// ofrece (residual del owner en `visibleExistingOptions`). El callsite lo DERIVA de
     /// `visibleExistingOptions` en vez de re-escribir los tres términos.
     ///
-    /// **Residual, declarado y no escondido:** bajo el kill remoto un born-cloud en su 2º device
-    /// vuelve a poder divergir — es el mismo residual que ya acepta la card de re-entrada, ampliado
-    /// a este camino. Sin kill (el caso normal) el faro cierra A26.
+    /// Bajo el kill remoto el faro no encamina y la persona ve el chooser de siempre. Antes eso se
+    /// declaraba como residual de A26 («el born-cloud vuelve a poder divergir»); desde el ADR §10 esa
+    /// divergencia es una elección posible también CON el faro, así que ya no es residual de nada.
     static func routeNewBranch(
         beaconLinked: Bool,
         beaconProvider: String?,
@@ -125,12 +132,17 @@ nonisolated enum WelcomeAccountChoiceLogic {
         options: [NewOption]
     ) -> NewBranchRoute {
         if beaconLinked && cloudEntryAvailable {
-            // Provider desconocido/ausente ⇒ `.apple` (el faro solo ENCAMINA; si el método no casa,
-            // `ProviderMismatchLogic` lo dice en la pantalla de destino).
-            return .cloudSignIn(CloudSignInProvider(rawValue: beaconProvider ?? "") ?? .apple)
+            return .cloudSignIn(accountProvider: beaconProvider.flatMap(CloudSignInProvider.init(rawValue:)))
         }
         if let single = bypass(options) { return .single(single) }
         return .chooser
+    }
+
+    /// Con qué método se firma cuando el faro encamina. Sin método conocido ⇒ `.apple`: es el fallback de
+    /// siempre —vivía dentro de `routeNewBranch`— y no una elección silenciosa, porque si no casa, la
+    /// pantalla de destino lo dice (`ProviderMismatchLogic`) y ofrece las dos salidas.
+    static func signInProvider(forBeaconAccount accountProvider: CloudSignInProvider?) -> CloudSignInProvider {
+        accountProvider ?? .apple
     }
 }
 
@@ -183,13 +195,19 @@ nonisolated enum WelcomeRestorePauseLogic {
 /// la decisión sigue siendo pura y vive arriba; esto solo la alimenta.
 @MainActor
 enum WelcomeNewBranchRouter {
+    /// `isSecondarySessionActive`: con una sesión secundaria viva, el faro que hay en el iCloud-KV es el del
+    /// DUEÑO del teléfono, así que no encamina a la visita. Mismo criterio que `WelcomeRestorePauseLogic` («la
+    /// visita NUNCA lee el faro del dueño»), y desde el paso 6 con más motivo: el destino le diría «Este Apple
+    /// ID ya tiene una cuenta de Yala creada con …» sobre la cuenta de otra persona. Sin default a propósito:
+    /// quien llame tiene que decidirlo.
     static func route(
         beacon: CloudBeacon,
+        isSecondarySessionActive: Bool,
         cloudEntryAvailable: Bool,
         options: [WelcomeAccountChoiceLogic.NewOption]
     ) -> WelcomeAccountChoiceLogic.NewBranchRoute {
         WelcomeAccountChoiceLogic.routeNewBranch(
-            beaconLinked: beacon.isCloudAccountLinked,
+            beaconLinked: beacon.isCloudAccountLinked && !isSecondarySessionActive,
             beaconProvider: beacon.linkedProvider,
             cloudEntryAvailable: cloudEntryAvailable,
             options: options)

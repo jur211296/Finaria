@@ -100,9 +100,10 @@ struct WelcomeSignInVerbTests {
 
     /// El conteo es lo que convierte esto en una red: una superficie NUEVA que se cuele sin decidir su
     /// verbo cae aquí, y el compilador no la caza porque `purpose` es obligatorio pero cualquiera de los
-    /// tres valores compila.
-    @Test("las cuatro construcciones de producción declaran su verbo, y son cuatro")
-    func productionCallSites_declareTheirVerb_andAreFour() throws {
+    /// tres valores compila. **Eran cuatro hasta el paso 6**, que añadió las DOS de la pantalla de
+    /// mismatch —una por salida, cada una con su verbo: lo fija el test de abajo—.
+    @Test("las seis construcciones de producción declaran su verbo, y son seis")
+    func productionCallSites_declareTheirVerb_andAreSix() throws {
         var total = 0
         for path in [Self.welcomePath, Self.storagePath, Self.groupsPath] {
             let src = try Self.code(path)
@@ -112,7 +113,58 @@ struct WelcomeSignInVerbTests {
                     "\(path): \(constructions) botones de Google y \(declared) verbos declarados")
             total += constructions
         }
-        #expect(total == 4, "se esperaban 4 construcciones de producción, hay \(total)")
+        #expect(total == 6, "se esperaban 6 construcciones de producción, hay \(total)")
+    }
+
+    /// **Paso 6 · el mismatch dice DOS verbos, uno por salida, y emparejados.** Con un `contains` suelto un
+    /// SWAP pasaría en verde (los cuatro literales seguirían ahí); por eso se corta la pantalla por sus dos
+    /// `switch` y, dentro de cada uno, por sus dos `case`: cada botón tiene que ser el de SU marca y con el verbo
+    /// de SU salida. Que la acción tome el método de `exits` lo fija el test siguiente, aparte para que un
+    /// mutante no tape al otro (lente C de la review).
+    @Test("mismatch: entrar con el método del faro dice INICIAR SESIÓN y crear con el usado dice CREAR")
+    func providerMismatch_pairsEachExitWithItsVerb() throws {
+        let screen = try Self.member(
+            "private func providerMismatchContent(_ exits: ProviderMismatchLogic.Exits) -> some View {",
+            in: try Self.code(Self.welcomePath))
+        let halves = screen.components(separatedBy: "switch exits.createWith {")
+        try #require(halves.count == 2, "la pantalla dejó de tener sus dos `switch` (hay \(halves.count - 1))")
+        let signIn = try #require(halves.first?.components(separatedBy: "switch exits.signInWith {").last)
+        let create = halves[1]
+
+        for (mitad, verbo) in [(signIn, ".signIn"), (create, ".signUp")] {
+            let casos = mitad.components(separatedBy: "case .google:")
+            try #require(casos.count == 2, "cada `switch` tiene un `case .apple:` y un `case .google:`")
+            let apple = casos[0], google = casos[1]
+            #expect(apple.contains("case .apple:"))
+            #expect(apple.contains("AppleSignInButton(type: \(verbo))"), "la marca de Apple con el verbo \(verbo)")
+            #expect(!apple.contains("GoogleSignInButton("))
+            #expect(google.contains("GoogleSignInButton(variant: .light, purpose: \(verbo))"))
+            #expect(!google.contains("AppleSignInButton("))
+        }
+        #expect(!signIn.contains(".signUp"), "la salida de ENTRAR dice crear")
+        #expect(!signIn.contains("switchToSignUp("), "la salida de ENTRAR lleva al alta")
+        #expect(!create.contains(".signIn"), "la salida de CREAR dice iniciar sesión")
+        #expect(!create.contains("signInWithAccountMethod("), "la salida de CREAR entra a una cuenta")
+    }
+
+    /// La otra mitad del emparejamiento, en su propio test para que un mutante no tape al de arriba: la acción de
+    /// CADA botón toma el método de `exits`. Con un literal por `case`, un botón podría pintar Apple y firmar con
+    /// Google, que devuelve al mismo mismatch del que se quería salir.
+    @Test("mismatch: la acción de cada botón toma el método de `exits`, no un literal")
+    func providerMismatch_eachButtonActsWithItsExitMethod() throws {
+        let screen = try Self.member(
+            "private func providerMismatchContent(_ exits: ProviderMismatchLogic.Exits) -> some View {",
+            in: try Self.code(Self.welcomePath))
+        let halves = screen.components(separatedBy: "switch exits.createWith {")
+        try #require(halves.count == 2)
+        let signIn = try #require(halves.first?.components(separatedBy: "switch exits.signInWith {").last)
+        for (mitad, accion) in [(signIn, "signInWithAccountMethod(exits.signInWith, from: exits)"),
+                                (halves[1], "switchToSignUp(with: exits.createWith)")] {
+            let casos = mitad.components(separatedBy: "case .google:")
+            try #require(casos.count == 2)
+            #expect(casos[0].contains(accion), "el botón de Apple no actúa con «\(accion)»")
+            #expect(casos[1].contains(accion), "el botón de Google no actúa con «\(accion)»")
+        }
     }
 
     // MARK: - Punto 16 · la nota por contexto

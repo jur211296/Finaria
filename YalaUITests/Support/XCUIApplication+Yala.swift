@@ -37,6 +37,7 @@ extension XCUIApplication {
         joinPhase: String? = nil,
         joinSoftTimeout: String? = nil,
         foreignAccount: String? = nil,
+        fakeBeacon: String? = nil,
         extraArguments: [String] = []
     ) -> XCUIApplication {
         var args = ["-uitest"]
@@ -102,6 +103,13 @@ extension XCUIApplication {
         if let foreignAccount {
             args.append("-uitest-seed-foreign-account")
             args.append(foreignAccount)
+        }
+        // Paso 6 · el faro de iCloud-KV fingido, SOLO en lectura (`CloudBeacon`). NOMBRADO y no por
+        // `extraArguments:` por la misma razón que sus vecinos: un typo dejaría el faro apagado y el test del
+        // encaminamiento caería con un rojo que culparía a la pantalla en vez de al arg.
+        if let fakeBeacon {
+            args.append("-uitest-fake-beacon")
+            args.append(fakeBeacon)
         }
         // Args crudos adicionales (aditivo — p.ej. "-uitest-cloud-chooser").
         args.append(contentsOf: extraArguments)

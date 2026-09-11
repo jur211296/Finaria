@@ -1746,13 +1746,14 @@ private struct WelcomeFlowModifier: ViewModifier {
                         startGroupsOrganizerBranch()
                     },
                     onBeaconRoutesToCloudSignIn: { provider in
-                        // A26 (§k.2): el faro dice que este Apple ID YA tiene cuenta nube ⇒ este
-                        // device es un 2º device (o un reinstall), no un usuario nuevo. Se reusa el
-                        // MISMO cover de re-entrada que la card "Ya tengo cuenta"; el provider viene
-                        // del faro y se setea EXPLÍCITO (jamás heredar el del intento anterior).
-                        // Aquí NO se limpian prefs residuales: no es un fresh start.
+                        // ADR §10: el faro dice que este Apple ID YA tiene cuenta nube ⇒ lo probable es un
+                        // 2º device o un reinstall, y se ENCAMINA a entrar con ella. Mismo cover que la card
+                        // "Ya tengo cuenta", pero con su propio `Entry`: el intro dice de dónde viene y
+                        // ofrece «Crear otra cuenta» (paso 6). El método viene del faro y se setea EXPLÍCITO
+                        // (jamás heredar el del intento anterior). Aquí NO se limpian prefs residuales: no
+                        // es un fresh start.
                         hasShownWelcomeChooser = true
-                        welcomeCloudEntry = .reentry(provider)
+                        welcomeCloudEntry = .beaconRouted(accountProvider: provider)
                         showWelcomeFlow = false
                         showWelcomeCloudSignIn = true
                     },
@@ -1917,6 +1918,26 @@ private struct WelcomeFlowModifier: ViewModifier {
                         welcomeFlowInitialStep = .groupsGate
                         showWelcomeFlow = true
                         showWelcomeCloudSignIn = false
+                    },
+                    onCreateAnotherAccount: {
+                        // **Paso 6 · el faro solo encamina.** Desde la entrada a la que llevó el faro, la
+                        // persona pide crear otra cuenta: vuelve a «Elige dónde quieres guardar tus datos»
+                        // ENTERO —las cards que diga `visibleNewOptions`, privado incluido— y NO al chooser
+                        // de nivel 1, donde «Soy nuevo» la volvería a encaminar. Decisión de Jürgen del
+                        // 2026-09-09: ni se preselecciona ni se recorta nada.
+                        //
+                        // Mismo trío que `onBack`, en el mismo orden: el `onDismiss` de este cover mira
+                        // `showWelcomeFlow` y, ya encendido, no pisa el step con `.chooser`.
+                        //
+                        // **Y la persona vuelve a estar ELIGIENDO**, así que `hasShownWelcomeChooser` vuelve a
+                        // `false`: es el estado de quien llega a esa pantalla por el recorrido normal. Con el
+                        // `true` que dejó el faro al encaminar, un cierre de la app aquí abriría el onboarding
+                        // privado directo —sin elegir y sin la comprobación de iCloud del paso 4— y el arranque
+                        // siguiente ya no montaría neutro. Mismo gesto que `onCancelFromStep1`.
+                        hasShownWelcomeChooser = false
+                        showWelcomeCloudSignIn = false
+                        welcomeFlowInitialStep = .newChooser
+                        showWelcomeFlow = true
                     },
                     onBack: {
                         showWelcomeCloudSignIn = false

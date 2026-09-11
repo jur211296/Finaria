@@ -54,8 +54,9 @@ enum BornCloudSignUpOutcome: Equatable {
     case waitForLeader
     /// Variante B de §f.1: el faro dice que este Apple ID ya activó la nube con OTRO proveedor. Hoy
     /// INALCANZABLE desde la rama born-cloud (ver `signUp()`); se conserva porque la tabla que decide es
-    /// `AccountClaimDecision` y no este servicio.
-    case providerMismatch(knownProvider: String?)
+    /// `AccountClaimDecision` y no este servicio. Lleva las dos salidas del mismatch (paso 6): las MISMAS
+    /// que calcula `ProviderMismatchLogic` para la re-entrada.
+    case providerMismatch(ProviderMismatchLogic.Exits)
     /// 401 / sin JWT → la sesión no está viva; re-firmar. Nada se creó server-side.
     case sessionExpired(detail: String)
     /// 403 → cuenta no disponible (suspendida). Terminal para este intento.
@@ -220,18 +221,20 @@ final class BornCloudSignUpService {
 
         // 2) Decisión §f.1 con los dos booleanos del faro leídos del faro REAL (nada hardcodeado).
         //    `providerMatchesBeacon` se DERIVA de `ProviderMismatchLogic` —la misma lógica sub-first que
-        //    usa el Welcome (`WelcomeCloudSignInView.swift:404-412`)— en vez de comparar aquí a mano: dos
+        //    usa el Welcome (`WelcomeCloudSignInView.runSignInFlow`)— en vez de comparar aquí a mano: dos
         //    reglas para la misma pregunta es exactamente cómo divergen (H4: GoTrue LINKEA identidades del
         //    mismo email verificado al MISMO `sub`, así que el provider a secas NO es la señal).
         let beaconLinked = beacon.isCloudAccountLinked
-        let beaconProvider = beacon.linkedProvider
-        let providerMatchesBeacon = ProviderMismatchLogic.decide(
+        let mismatchVerdict = ProviderMismatchLogic.decide(
             accountExists: false,
             beaconLinked: beaconLinked,
             beaconAccountHash: beacon.accountHash,
-            beaconProvider: beaconProvider,
+            beaconProvider: beacon.linkedProvider,
             sessionSubHash: userID.map { CloudBeacon.hash($0) } ?? "",
-            sessionProvider: sessionProvider) == .proceed
+            // `provider()` ya cae a `"apple"` sin proveedor guardado; el `?? .apple` repite ESE fallback
+            // para un valor que no fuera ninguno de los dos métodos, y que ningún escritor produce.
+            sessionProvider: CloudSignInProvider(rawValue: sessionProvider) ?? .apple)
+        let providerMatchesBeacon = mismatchVerdict == .proceed
 
         let action = AccountClaimDecision.decide(
             state: claimState,
@@ -292,7 +295,14 @@ final class BornCloudSignUpService {
             // `AccountClaimDecision`, no aquí: el día que alguien la amplíe, este consumidor ya reacciona
             // bien en vez de sembrar en silencio.
             MetricsService.cloudSignInProviderMismatch()
-            return .providerMismatch(knownProvider: beaconProvider)
+            // `.showProviderMismatch` solo sale con `!providerMatchesBeacon`, o sea con el veredicto en
+            // `.mismatch`: sus salidas son las mismas que vería la re-entrada. Si la tabla se desincroniza
+            // algún día, lo seguro es NO sembrar.
+            guard case .mismatch(let exits) = mismatchVerdict else {
+                BornCloudBreadcrumb.unexpectedAction(CloudClaimActionStore.encode(action))
+                return .transient(detail: "provider mismatch without exits")
+            }
+            return .providerMismatch(exits)
         case .proceedMigration:
             // Igual de inalcanzable (la rama born-cloud jamás lidera una migración) y, si apareciera, la
             // respuesta segura es NO seguir: born-cloud no tiene máquina de migración que conducir.

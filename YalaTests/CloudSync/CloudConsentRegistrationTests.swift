@@ -269,6 +269,10 @@ struct CloudConsentRegistrationWiringTests {
         let flag = try Self.body(of: "private var persistsConsentOnAccept: Bool {", in: src)
         #expect(flag.contains("case .bornCloud: true"), "el alta conoce su ruta al aceptar y su claim la verifica")
         #expect(flag.contains("case .reentry:   false"))
+        #expect(flag.contains("case .beaconRouted: false"), """
+            La entrada que encamina el faro (paso 6) ES una re-entrada: su ruta también la decide el guard \
+            DESPUÉS del sign-in, así que tampoco puede escribir el consent al aceptar.
+            """)
     }
 
     /// La pantalla tiene que poder NO escribir. Quitar el guard la devuelve a escribir siempre y el

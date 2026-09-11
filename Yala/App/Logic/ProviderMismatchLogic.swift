@@ -12,10 +12,16 @@
 //  eso la señal PRIMARIA es el SUB (hash del faro vs hash de la sesión), JAMÁS el provider a
 //  secas: el provider actúa solo como señal secundaria cuando ya se sabe que el sub es OTRO.
 //
-//  Consumo: DENTRO de la rama `.accountMissing` de `WelcomeCloudSignInView.runSignInFlow`
-//  (con las reglas sub-first, `.mismatch` solo es alcanzable con exists == false — el flujo
-//  Apple existente queda byte-idéntico). `.mismatch` ⇒ canario `cloudSignInProviderMismatch`
-//  + signOut + NO claim + fase `.providerMismatch`.
+//  **Paso 6 del rediseño de sesiones (ADR 2026-09-09 §10): el veredicto dejó de ser una pared.**
+//  Hasta hoy la pantalla decía «vuelve atrás y entra con ese método» y soltaba la sesión: desde este
+//  móvil no había camino hacia una segunda cuenta. Ahora `.mismatch` lleva las DOS salidas (`Exits`)
+//  —entrar con el método del faro, o crear una cuenta con el que la persona acaba de usar— porque el
+//  faro solo ENCAMINA. Las cinco reglas de la tabla no cambian: cambia lo que lleva su salida.
+//
+//  Consumo: la rama «cuenta nueva» de `WelcomeCloudSignInView.runSignInFlow` (con las reglas sub-first,
+//  `.mismatch` solo es alcanzable con exists == false) ⇒ canario `cloudSignInProviderMismatch` + signOut +
+//  NO claim + fase `.providerMismatch`. Y `BornCloudSignUpService`, que deriva de aquí su
+//  `providerMatchesBeacon` en vez de comparar el provider a mano.
 //
 
 import Foundation
@@ -24,9 +30,25 @@ nonisolated enum ProviderMismatchLogic {
 
     enum Verdict: Equatable {
         case proceed
-        /// Cuenta probable con OTRO método: mostrar la pantalla de mismatch. `knownProvider` es
-        /// el provider del faro ("apple"/"google"); nil/desconocido → copy genérico.
-        case mismatch(knownProvider: String?)
+        /// Cuenta probable con OTRO método: la pantalla de mismatch, con sus DOS salidas.
+        case mismatch(Exits)
+    }
+
+    /// Las dos salidas de la pantalla de «esa cuenta usa otro método». **Ninguna es «volver»**: la flecha
+    /// de atrás sigue ahí, pero ya no es la única forma de avanzar (criterio del ticket
+    /// `beacon-routes-only-never-blocks`).
+    ///
+    /// Por construcción `signInWith != createWith`: si el método del faro fuera el mismo que el usado, la
+    /// regla 4 ya habría devuelto `.proceed`, y si el faro no lo sabe, `signInWith` es el OTRO.
+    nonisolated struct Exits: Equatable, Sendable {
+        /// Con qué método se creó la cuenta que recuerda el faro. `nil` = el faro no lo dice, o trae un valor
+        /// que esta versión no conoce: el copy es entonces el GENÉRICO — jamás se interpola un rawValue del wire.
+        let accountProvider: CloudSignInProvider?
+        /// «Iniciar sesión con …»: el método de la cuenta del faro. Si el faro no lo sabe, el OTRO de los dos
+        /// métodos que existen, que es justo la hipótesis de la regla 5: «usaste el otro».
+        let signInWith: CloudSignInProvider
+        /// «Crear cuenta con …»: el método que la persona acaba de usar, que es el que eligió.
+        let createWith: CloudSignInProvider
     }
 
     /// Reglas EN ORDEN (sub-first, §0 del plan):
@@ -41,20 +63,36 @@ nonisolated enum ProviderMismatchLogic {
     /// 4. `sessionProvider == beaconProvider` → `.proceed` (usó el MISMO método y no hay cuenta:
     ///    la hipótesis "método equivocado" está muerta). El provider jamás dispara por sí solo.
     /// 5. Resto (exists=false + faro presente + provider distinto + hash ausente-o-distinto) →
-    ///    `.mismatch(knownProvider: beaconProvider)`.
+    ///    `.mismatch` con sus dos salidas.
+    ///
+    /// `sessionProvider` es el método TIPADO con el que se firmó: el Welcome lo tiene como
+    /// `CloudSignInProvider`, y un método desconocido no puede estar «equivocado» ni ofrecerse para crear.
     static func decide(
         accountExists: Bool,
         beaconLinked: Bool,
         beaconAccountHash: String?,
         beaconProvider: String?,
         sessionSubHash: String,
-        sessionProvider: String
+        sessionProvider: CloudSignInProvider
     ) -> Verdict {
         if accountExists { return .proceed }
         guard beaconLinked else { return .proceed }
         if let hash = beaconAccountHash, hash == sessionSubHash { return .proceed }
-        if let provider = beaconProvider, provider == sessionProvider { return .proceed }
-        return .mismatch(knownProvider: beaconProvider)
+        if let provider = beaconProvider, provider == sessionProvider.rawValue { return .proceed }
+        let accountProvider = beaconProvider.flatMap(CloudSignInProvider.init(rawValue:))
+        return .mismatch(Exits(
+            accountProvider: accountProvider,
+            signInWith: accountProvider ?? otherMethod(than: sessionProvider),
+            createWith: sessionProvider))
+    }
+
+    /// El OTRO de los dos métodos que existen. `switch` exhaustivo a propósito: el día que haya un tercero,
+    /// el compilador obliga a decidir qué «otro» se ofrece, en vez de ofrecer uno a ciegas.
+    private static func otherMethod(than provider: CloudSignInProvider) -> CloudSignInProvider {
+        switch provider {
+        case .apple:  .google
+        case .google: .apple
+        }
     }
 
     /// Red POST-claim (también sub-first): tras el claim, el sub es EL MISMO por construcción
