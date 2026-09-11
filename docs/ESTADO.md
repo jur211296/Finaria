@@ -5,28 +5,25 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-10 (Lima)
 
-**Rama** `2.1` — Merge #135: **el faro de iCloud ya solo encamina.**
+**Rama** `2.1` — Merge #136: **el onboarding personal ofrece dos propósitos; a solo-grupos se entra por el Welcome.**
 TestFlight build **13** (CPV 13). **Subida Yala (TF/store) = solo Mini.**
 
-## Esta sesión (el paso 6, y la regla obvia que no habría disparado nunca)
+## Esta sesión (el paso 7, y el ticket que no era pequeño)
 
-**«Es mi primera vez» con un Apple ID que ya tiene cuenta en la nube ya no decide por ti.** La app sigue
-proponiendo entrar en esa cuenta, pero dice de dónde viene —«Este Apple ID ya tiene una cuenta de Yala
-creada con Apple»— y ofrece **«Crear otra cuenta»**, que abre el chooser entero, iCloud privado incluido.
-**«Esa cuenta usa otro método» dejó de ser una pared:** da entrar con el método de la cuenta o crear cuenta
-con el que usaste. Y **el faro que dejó el fresh start se apaga solo** en cuanto el sign-in lo demuestra.
+**El paso «¿Qué te gustaría hacer?» del onboarding ya no ofrece «Dividir gastos con amigos».** Quedan
+«Llevar el control de mi dinero» y «Solo anotar gastos». A una sesión solo-grupos se entra por «Vengo por
+un grupo», y solo por ahí: es lo que pide el ADR del rediseño (§7).
 
-**Tu decisión decía «se limpia en cuanto [I] lo descubre», y la regla obvia no habría disparado nunca.** El
-faro guarda el hash del uuid de Supabase, y el fresh start borró `auth.users`: volver a firmar da OTRO
-uuid. Lo que sí lo demuestra es el método: Sign in with Apple solo firma con el Apple ID del teléfono, que
-es el mismo cuyo iCloud guarda el faro. Con Google no hay forma de demostrarlo, así que ahí el faro se
-queda y solo vale «al menos no bloquea». Y `restore-beacon-outlives-account-deletion` **no se cierra**:
-su caso ocurre con el kill-switch puesto, donde [I] no corre.
+**El ticket se decía pequeño, y no lo era.** La card no terminaba en el onboarding: cedía a la misma cadena
+de alta de Grupos que el Welcome. Tu decisión —borrar el caso sin dejar ramas muertas— se llevó esa segunda
+puerta entera. La del Welcome quedó idéntica, y su XCUITest la recorre hasta el formulario de grupo. Una
+red nueva fija que esa cadena tenga **una sola entrada**: si el paso 10 la reutiliza para asociar grupos,
+saltará **a propósito**, y habrá que ampliarla, no «arreglarla».
 
-**La review (4 lentes) no encontró nada grave, y arreglé lo de este cambio** —el más serio: cerrar la app
-en el chooser de «Crear otra cuenta» abría el onboarding privado sin la puerta de iCloud del paso 4—.
-Veinte de veinte mutantes caen, cada uno en su test. **Y el gate tenía un hueco:** no mira los warnings de
-los ficheros de test, y dos míos iban al commit (`gate-never-reads-test-file-warnings`).
+**La review (una lente) no encontró nada roto en «Vengo por un grupo»** y sí siete cosas del cambio, que
+arreglé: dos tests que prometían más de lo que cazaban, un comentario que prometía una red que no existía
+—ahora existe— y docblocks que seguían describiendo la card como viva. Suite unitaria y XCUITest **enteras**
+en verde (6751 y 136). Este paso no deja device-QA: nada depende de CloudKit.
 
 ## Tu cola
 
@@ -63,8 +60,8 @@ los ficheros de test, y dos míos iban al commit (`gate-never-reads-test-file-wa
 
 ## Siguiente
 
-**El paso 7** del rediseño (`onboarding-purpose-drops-groups-card`). Pasos 0-6 cerrados; el 11 sigue
-vacante a propósito. **El board: 170 en backlog, 52 en qa** (280 = 280 contra disco).
+**El paso 8** del rediseño (`full-mode-activation-must-ask-where-personal-data-lives`, [adv]). Pasos 0-7
+cerrados; el 11 sigue vacante a propósito. **El board: 170 en backlog, 52 en qa** (281 = 281 contra disco).
 
 ## Bloqueo
 
@@ -77,10 +74,10 @@ por timeout, con 702 grupos de un usuario de test. **Dato nuevo:** el deploy de 
 —el fix del canon viejo, sin desplegar desde el 8-sep— así que **un rojo anterior a hoy puede no valer**.
 Re-medir antes de perseguirlo.
 
-**Dos que este cambio agranda de un caso raro a toda la población** (los dos **high**, y ninguno lo
-introdujo la sesión de hoy): `reverse-upload-has-no-ceiling-and-no-exit` —la subida a iCloud no tiene tope
-ni salida, y ahí el backend ya está congelado— y `reverse-claim-rejection-has-no-way-out-in-the-client`.
-Los dos son la misma forma: una fase de la reversa sin salida.
+**Dos que el paso 6 agranda de un caso raro a toda la población** (los dos **high**, y ninguno lo
+introdujo esa sesión): `reverse-upload-has-no-ceiling-and-no-exit` —la subida a iCloud no tiene tope ni
+salida, y ahí el backend ya está congelado— y `reverse-claim-rejection-has-no-way-out-in-the-client`. Los
+dos son la misma forma: una fase de la reversa sin salida.
 
 **La mitad 2 del paso 5, y es decisión tuya** (`groups-entry-on-a-mirrored-store-still-blocks-the-owner`,
 **high**): cuando el store YA lleva espejo, la puerta «datos ajenos» te sigue bloqueando. Lo medido: el
@@ -102,13 +99,15 @@ la máquina de `CloudSessionSignOut`.
 **medium**): volver atrás desde el sign-in de nube deja el Welcome «ya elegido», y cerrar la app ahí abre
 el onboarding privado sin la puerta de iCloud.
 
-**Y decisiones tuyas, pequeñas, las tres de copy.** `revert-card-copy-says-datos-regresan-a-quien-nunca-estuvo`:
-el texto dice «tus datos **regresan** a tu iCloud» a quien nunca estuvo ahí. Del paso 6:
+**Y decisiones tuyas, pequeñas.** Tres de copy: `revert-card-copy-says-datos-regresan-a-quien-nunca-estuvo`
+(el texto dice «tus datos **regresan** a tu iCloud» a quien nunca estuvo ahí) y, del paso 6,
 `welcome-beacon-origin-contradicts-not-found-copy` (con un faro de Google sin cuenta salen seguidas «ya
 tiene una cuenta» y «aún no tiene una cuenta») y `born-cloud-signup-lands-on-existing-account-silently`
 («Crear otra cuenta → nube → Apple» entra en la cuenta que ya existe diciendo «Creando tu cuenta…»). Es
 voz de producto en 16 locales, así que no las toqué — `.claude/rules/l10n.md` dice «no reescribas copy que
-ya funciona».
+ya funciona». **Y una del paso 7, sin prisa:** `flows-atlas-predates-session-redesign` — el Atlas de flujos
+de Modo Nube sigue enseñando la card retirada (su validador pasa de 4 a 13 fallos); ¿se re-ancla cuando
+acabe el rediseño o se retira?
 
 **Sigue en pie:** la política de privacidad y los términos **bloquean la publicación** del rediseño. Y las
 decisiones tuyas de antes: el filtro de naturaleza, los worktrees sin candado anti-atribución, ¿se ataca
