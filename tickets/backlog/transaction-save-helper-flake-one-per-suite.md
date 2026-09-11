@@ -4,7 +4,7 @@ status: backlog
 priority: medium
 area: qa
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-11
 ---
 
 # Un rojo por corrida completa en el helper que guarda transacciones, y la víctima cambia
@@ -176,3 +176,29 @@ Lo que este ticket sigue teniendo abierto es intacto: **por qué `transaction_su
 aparece en 10 s** cuando el rojo SÍ trae su línea de fallo. Los candidatos 1 (race del producto) y 2
 (presupuesto de la espera) no se tocan. Corré el reproductor con `bash qa/scripts/sim-libre.sh` en
 verde, o la muestra no vale.
+
+## Muestra 19 (2026-09-11, sesión `session-exits-one-verb-per-session`): DETERMINISTA en una clase, y bisecado
+
+La corrida completa por lotes (62 clases, 11 lotes) dio su rojo de siempre —mismo aserto, mismo
+mensaje— y esta vez la víctima fue **`TransactionsCrudUITests.test_createTransaction`**. Lo nuevo:
+
+| Corrida | Árbol | Resultado |
+|---|---|---|
+| En su lote (6 clases) | paso 9 | **failed** (39,7 s) |
+| La clase SOLA | paso 9 | **failed** (39,6 s) |
+| La clase SOLA | **`ba618216` (base, worktree limpio)** | **failed** (40,1 s) |
+
+**Dos cosas que esta muestra añade:**
+
+1. **Ya no siempre se muda.** Aquí repitió víctima en dos corridas seguidas y a solas: el fallo fue
+   **determinista para esa clase ese día**. La hipótesis «un rojo por corrida, aleatorio entre los
+   cuatro candidatos» no cubre esto; lo que sí sigue en pie es que el reparto es binario y rápido
+   (39-40 s frente a los ~70 s de un paso).
+2. **Bisecado contra el árbol base, y allí falla igual.** Es la prueba que cierra la clasificación
+   sin depender de la estadística: el worktree de `ba618216` no tiene ni una línea del paso 9 y el
+   caso cae con el mismo aserto y una duración indistinguible (±0,5 s). ⇒ el rojo no pertenece a
+   ningún cambio de esa rama.
+
+**Y cómo usarla:** si este rojo aparece en un gate, la comprobación barata ya no es «re-córrelo a
+ver si se muda» —puede no mudarse—. Es **correr esa clase sola en un worktree desde el commit
+base**: dos corridas y 90 s zanjan de quién es.

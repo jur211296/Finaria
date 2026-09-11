@@ -100,3 +100,28 @@ YA importó el corpus (instalaciones anteriores al paso 5, o una invitación ace
 espejo). Ahí, tras «borrar mis datos de iCloud», lo ya importado sigue en local y el espejo lo vuelve a
 subir; y por la rama de nube, la promoción sube lo importado a la cuenta. **La vuelta al neutro de este
 ticket lo cierra de raíz**: con ella, una sesión solo-grupos nunca tiene corpus importado debajo.
+
+## Lo que deja el paso 9 (`session-exits-one-verb-per-session`, 2026-09-11)
+
+**El verbo que esta puerta necesitaba ya existe, y resuelve las dos objeciones medidas de arriba.** El cierre
+de una sesión privada hace exactamente «subir lo pendiente, borrar lo local, dejar iCloud intacto»:
+
+1. **Espera al export** antes de borrar: `PrivateSignOutExportGateLogic` + `PersonalExportPendingCounter`
+   (cambios locales del historial posteriores al inicio del último export con éxito), con salida avisada si
+   se agota la espera. Aquí casi siempre saldrá al instante: lo que hay en el store lo BAJÓ el espejo, y eso
+   no cuenta como pendiente.
+2. **Borra por ARCHIVOS pre-mount** (`armSignOutWipe` → `performSignOutWipeIfArmed`), así que no hay filas
+   borradas que el espejo exporte ni container vivo que soltar. Arma el neutro duradero.
+
+**Lo que falta, y es de Jürgen:** ese camino **relanza** (el swap sin relanzar no admite mounts con espejo,
+y es a propósito). Consumirlo aquí es aceptar una pantalla de «reabre Yala» en el alta de Grupos para quien
+ya tenía espejo — la decisión pendiente de este ticket, sin cambios. Técnicamente, la puerta se cablea con
+un tramo como `CloudSessionSignOut.finalizeSessionExit(kind: .privateOnly, …)` sin tocar la sesión en la
+nube (aquí todavía no existe) y con un destino que retome «Vengo por un grupo» tras el arranque (el
+intent del organizador no es durable: ticket propio). No se consumió en el paso 9: su alcance era Ajustes.
+
+**Y lo que no está en `2.1`:** la segunda pasada de este ticket —diseño, código de la puerta, tres lentes y
+el paso a `blocked/`— vive en la rama `encargo/2026-09-10-groups-entry-on-a-mirrored-store-still-blocks-the-owner`,
+subida y **sin PR**. Sus dos bloqueantes eran exactamente estas dos piezas (un borrado acotado y una espera
+de export demostrable), y su añadido al ticket del paso 9 ya está incorporado allí con una respuesta por
+punto. Al rebasar esa rama, esta sección tiene que viajar a su copia en `tickets/blocked/`.

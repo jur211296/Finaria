@@ -49,3 +49,11 @@ lo sano es hacerlo ahí y no antes.
 - [ ] Matar la app entre las dos mitades del borrado tardío y reabrir → los datos viejos NO vuelven.
 - [ ] El camino tardío no llama a `wipeAllUserData` con el espejo adjunto e importando.
 - [ ] El de la puerta sigue funcionando igual (su ventana ya estaba cubierta).
+
+## Nota del paso 9 (2026-09-11)
+
+El paso 9 no resolvió «cómo se pide el relanzamiento sin entrar en la máquina de `CloudSessionSignOut`»:
+los cierres privados nuevos entran en ella (`finalizeSessionExit` arma el boot-wipe y pone
+`.awaitingRelaunch`, y el cover y la salida al pasar a segundo plano cuelgan de esa fase). Lo que sí deja es
+el precedente de borrar por archivos un store CON espejo tras confirmar el export, y el abort del boot-wipe
+en `.icloud` desarma en vez de reintentar (`SignOutWipeHookTests.baseDeleteFails_inICloudMode_…`).
