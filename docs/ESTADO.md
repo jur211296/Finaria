@@ -5,35 +5,37 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-10 (Lima)
 
-**Rama** `2.1` — Merge #134: **una sesión solo-grupos ya no baja el iCloud del teléfono.**
+**Rama** `2.1` — Merge #135: **el faro de iCloud ya solo encamina.**
 TestFlight build **13** (CPV 13). **Subida Yala (TF/store) = solo Mini.**
 
-## Esta sesión (el paso 5, y la review cazó doce cosas mías)
+## Esta sesión (el paso 6, y la regla obvia que no habría disparado nunca)
 
-**Entras por «Vengo por un grupo», creas tu grupo y reabres la app: hasta hoy Yala se conectaba sola al
-iCloud del teléfono y te bajaba los datos personales que hubiera ahí** — tuyos de otra época, o de otra
-persona. Ahora se queda con lo tuyo en TODOS los arranques, hasta que decidas dónde viven tus datos desde
-«Activar Yala completo». Vale igual entrando por invitación. Y se quita el aviso «monté sin iCloud,
-reinicia» que a esta gente le salía en cada arranque sin arreglar nada.
+**«Es mi primera vez» con un Apple ID que ya tiene cuenta en la nube ya no decide por ti.** La app sigue
+proponiendo entrar en esa cuenta, pero dice de dónde viene —«Este Apple ID ya tiene una cuenta de Yala
+creada con Apple»— y ofrece **«Crear otra cuenta»**, que abre el chooser entero, iCloud privado incluido.
+**«Esa cuenta usa otro método» dejó de ser una pared:** da entrar con el método de la cuenta o crear cuenta
+con el que usaste. Y **el faro que dejó el fresh start se apaga solo** en cuanto el sign-in lo demuestra.
 
-**Lo que costó el diseño fue el camino CONTRARIO.** El modo de onboarding viaja por iKV con
-never-downgrade, así que un device que RESTAURA de iCloud puede heredar `.groupInvite` con el espejo ya
-puesto: derivar el mount de ahí le apagaría el espejo sobre su histórico recién bajado. Por eso la marca
-es un hecho de ESTE device, no de la cuenta, y va confinada a `.icloud` sin armar como sus dos hermanas.
+**Tu decisión decía «se limpia en cuanto [I] lo descubre», y la regla obvia no habría disparado nunca.** El
+faro guarda el hash del uuid de Supabase, y el fresh start borró `auth.users`: volver a firmar da OTRO
+uuid. Lo que sí lo demuestra es el método: Sign in with Apple solo firma con el Apple ID del teléfono, que
+es el mismo cuyo iCloud guarda el faro. Con Google no hay forma de demostrarlo, así que ahí el faro se
+queda y solo vale «al menos no bloquea». Y `restore-beacon-outlives-account-deletion` **no se cierra**:
+su caso ocurre con el kill-switch puesto, donde [I] no corre.
 
-**La review (3 lentes) encontró doce defectos y los doce eran míos**, con 14 tests verdes y tres mutantes
-ya caídos. Dos graves: desarmaba la marca sin el guard de secundaria —le devolvía el espejo al dueño del
-teléfono desde la sesión de otra persona— y la marca sin confinar revivía tras «Volver a iCloud»,
-apagando el espejo para siempre. Más un bloqueante de tests: el único cable que enciende la feature no lo
-miraba nadie, así que se apagaba en una línea con la suite entera en verde.
+**La review (4 lentes) no encontró nada grave, y arreglé lo de este cambio** —el más serio: cerrar la app
+en el chooser de «Crear otra cuenta» abría el onboarding privado sin la puerta de iCloud del paso 4—.
+Veinte de veinte mutantes caen, cada uno en su test. **Y el gate tenía un hueco:** no mira los warnings de
+los ficheros de test, y dos míos iban al commit (`gate-never-reads-test-file-warnings`).
 
 ## Tu cola
 
 1. **Cierra sesión en el iPhone y recrea los grupos de prueba.** Es lo ÚNICO que falta para el device-QA
-   del paso 3: el móvil apunta a la cuenta que borró el fresh start y cada llamada da 409/502.
+   del paso 3: el móvil apunta a la cuenta que borró el fresh start y cada llamada da 409/502. **Mira antes
+   el orden del punto 2-quinquies.**
 2. **Device-QA del paso 3** — los cuatro recorridos del ticket. Sal del bloqueo **por swipe y por
    «Entendido»**, no solo por el botón; y en el recorrido 1 **fuerza el cierre de la app** antes de darlo
-   por bueno. Más los device-QA de los pasos 4, 5, 8, 9 y 10.
+   por bueno. Más los device-QA de los pasos 4, 5 y 6.
 2-bis. **Device-QA del paso 4, y empieza por su punto BLOQUEANTE** (`welcome-private-fresh-start-skips-icloud-check`,
    guion dentro): comprobar que la sonda de CloudKit **no lanza**. Baja una lista de `desiredKeys` única
    sobre una zona multi-tipo, y si el servidor la validara contra el schema de cada tipo, la rama privada
@@ -43,6 +45,12 @@ miraba nadie, así que se apagaba en una línea con la suite entera en verde.
    es simulable**: sin cuenta de iCloud no hay espejo que adjuntar. Cuatro recorridos, y el que más caro
    sale es el **tercero** —la no-regresión—: restaurar de iCloud tiene que seguir trayéndote tu histórico.
    Si en vez de eso te pide reabrir la app una y otra vez, es el fallo grave de este cambio.
+2-quinquies. **Device-QA del paso 6** (`beacon-routes-only-never-blocks`, guion dentro). Necesita un
+   TestFlight con este cambio, y su mitad de sign-in real **NO es simulable**. Su recorrido 1 usa el faro
+   que dejó el fresh start en tu iPhone, y **el orden importa**: si recreas los grupos del punto 1 con el
+   build 13, el faro sigue ahí; con el TestFlight nuevo, entrar con Apple por Grupos ya lo limpia —a
+   propósito: el motor lo hace en toda puerta— y el recorrido 1 se comprueba en Console.app en vez de en
+   pantalla.
 2-ter. **Device-QA de la reversa born-cloud → iCloud** (`reverse-cutover-cerrado-para-cuentas-born-cloud`).
    Dos cosas: el **contador de testigos con `ckRecordName`** del panel DEBUG tiene que pasar de 0 a cubrir
    tus filas vivas —ése es el único testigo real de que la subida ocurrió—, y **borra 2-3 transacciones
@@ -55,8 +63,8 @@ miraba nadie, así que se apagaba en una línea con la suite entera en verde.
 
 ## Siguiente
 
-**El paso 6** del rediseño. Pasos 0-5 cerrados; el 11 sigue vacante a propósito. **El board: 167 en
-backlog, 51 en qa** (276 = 276 contra disco).
+**El paso 7** del rediseño (`onboarding-purpose-drops-groups-card`). Pasos 0-6 cerrados; el 11 sigue
+vacante a propósito. **El board: 170 en backlog, 52 en qa** (280 = 280 contra disco).
 
 ## Bloqueo
 
@@ -90,9 +98,17 @@ para que no persista entre arranques; abierta dentro de la misma sesión.
 reaparición, no pérdida, y su arreglo natural es del paso 9 — necesita pedir relanzamiento sin entrar en
 la máquina de `CloudSessionSignOut`.
 
-**Y una decisión tuya, pequeña** (`revert-card-copy-says-datos-regresan-a-quien-nunca-estuvo`): el texto
-dice «tus datos **regresan** a tu iCloud» a quien nunca estuvo ahí. Son 16 locales y es voz de producto,
-así que no lo toqué — `.claude/rules/l10n.md` dice «no reescribas copy que ya funciona».
+**Un gemelo de lo que arregló el paso 6, anterior a él** (`welcome-cloud-back-leaves-chooser-marked-seen`,
+**medium**): volver atrás desde el sign-in de nube deja el Welcome «ya elegido», y cerrar la app ahí abre
+el onboarding privado sin la puerta de iCloud.
+
+**Y decisiones tuyas, pequeñas, las tres de copy.** `revert-card-copy-says-datos-regresan-a-quien-nunca-estuvo`:
+el texto dice «tus datos **regresan** a tu iCloud» a quien nunca estuvo ahí. Del paso 6:
+`welcome-beacon-origin-contradicts-not-found-copy` (con un faro de Google sin cuenta salen seguidas «ya
+tiene una cuenta» y «aún no tiene una cuenta») y `born-cloud-signup-lands-on-existing-account-silently`
+(«Crear otra cuenta → nube → Apple» entra en la cuenta que ya existe diciendo «Creando tu cuenta…»). Es
+voz de producto en 16 locales, así que no las toqué — `.claude/rules/l10n.md` dice «no reescribas copy que
+ya funciona».
 
 **Sigue en pie:** la política de privacidad y los términos **bloquean la publicación** del rediseño. Y las
 decisiones tuyas de antes: el filtro de naturaleza, los worktrees sin candado anti-atribución, ¿se ataca

@@ -200,6 +200,13 @@ DESPUÉS de firmar. Lo que ocurre antes ya lo cubre el XCUITest.
 3. Ojo: todo esto va contra **producción** y crea cuentas reales. Al terminar, bórralas desde Más → Tu
    cuenta de Yala → Eliminar mi cuenta.
 
+**Ojo con el orden, si vas a recrear los grupos del paso 3.** El recorrido 1 necesita el faro que dejó el
+fresh start. Con el build 13, recrear los grupos no lo toca: una cuenta solo-grupos no escribe el faro y
+cerrar sesión no lo borra. Con el TestFlight de este cambio, entrar con Apple por Grupos ya lo limpia —a
+propósito: el motor lo hace en toda puerta—, y entonces el recorrido 1 se comprueba en Console.app
+(`CloudBeacon orphan CLEARED proof=appleIdentityHasNoAccount`) en vez de en pantalla. Crear una cuenta
+COMPLETA nueva lo reescribe con cualquier build.
+
 **Recorrido 1 — el faro huérfano del fresh start (tu iPhone tal como está):**
 
 4. Borra Yala del teléfono (mantener pulsado → Eliminar app) e instálala otra vez.
