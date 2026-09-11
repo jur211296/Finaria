@@ -2,11 +2,12 @@
 //  GroupsGateLogicTests.swift
 //  YalaTests
 //
-//  C2 · la tabla ÚNICA de las cuatro puertas de Grupos, y el source-scan de lo que la tabla no puede fijar.
+//  C2 · la tabla ÚNICA de las puertas de Grupos (tres desde el 2026-09-10: la card «Solo grupos» del
+//  onboarding se retiró, ADR 2026-09-09 §7), y el source-scan de lo que la tabla no puede fijar.
 //
 //  Dos mitades y ninguna cubre a la otra:
-//    1. La DECISIÓN — el dominio completo (4 entries × 2⁴ estados = 64 celdas), más las tres derivaciones.
-//    2. El CABLEADO — quién llama, con qué señales y en qué orden. La tabla puede estar perfecta y sus 64
+//    1. La DECISIÓN — el dominio completo (3 entries × 2⁴ estados = 48 celdas), más las tres derivaciones.
+//    2. El CABLEADO — quién llama, con qué señales y en qué orden. La tabla puede estar perfecta y sus 48
 //       celdas verdes mientras un call-site le pasa un literal, escribe antes de tiempo o mide un snapshot
 //       de 6 h. Es la lección de `AttestWiringTests` y de `GroupCreateRoutingWiringTests`.
 //
@@ -16,7 +17,7 @@ import Testing
 
 @testable import Yala
 
-@Suite("GroupsGateLogic · la tabla única de las cuatro puertas (C2)")
+@Suite("GroupsGateLogic · la tabla única de las puertas de Grupos (C2)")
 struct GroupsGateLogicTests {
 
     typealias Entry = GroupsGateLogic.Entry
@@ -41,20 +42,18 @@ struct GroupsGateLogicTests {
 
     // MARK: - El educativo: el escalón que C2 añade, y las dos puertas que NO lo anteponen
 
-    @Test("las puertas A y B anteponen el educativo a TODO lo demás")
-    func organizerAndCard_showEducationalFirst() {
-        for entry in [Entry.organizer, .onboardingCard] {
-            #expect(step(entry, educational: false, session: false, consent: false, setup: false)
-                    == .presentEducational)
-            // Y también cuando ya hay sesión y consent: el educativo es el PRIMER término, no un fallback.
-            #expect(step(entry, educational: false) == .presentEducational)
-        }
+    @Test("la puerta del organizador antepone el educativo a TODO lo demás")
+    func organizer_showsEducationalFirst() {
+        #expect(step(.organizer, educational: false, session: false, consent: false, setup: false)
+                == .presentEducational)
+        // Y también cuando ya hay sesión y consent: el educativo es el PRIMER término, no un fallback.
+        #expect(step(.organizer, educational: false) == .presentEducational)
     }
 
     /// La medición que justifica la asimetría, y que el docblock de la tabla explica: el invitado tiene su
     /// propio educativo (`GroupInviteOnboardingView`, contextual al link) y el tab presenta el general al
     /// montarse. Anteponerlo aquí daría dos educativos seguidos, o una segunda presentación compitiendo.
-    @Test("las puertas C y D NO anteponen el educativo general")
+    @Test("las puertas de invitación y del tab NO anteponen el educativo general")
     func inviteAndTab_neverPresentEducational() {
         for entry in [Entry.invite, .tab] {
             for educational in [false, true] {
@@ -72,10 +71,10 @@ struct GroupsGateLogicTests {
         }
     }
 
-    @Test("`showsEducationalFirst` es exactamente {organizer, onboardingCard}")
+    @Test("`showsEducationalFirst` es exactamente {organizer}")
     func educationalFlagIsExhaustive() {
         let conEducativo = Entry.allCases.filter(\.showsEducationalFirst)
-        #expect(Set(conEducativo) == Set([.organizer, .onboardingCard]),
+        #expect(Set(conEducativo) == Set([.organizer]),
                 "cambió qué puertas anteponen el educativo: \(conEducativo)")
     }
 
@@ -90,7 +89,7 @@ struct GroupsGateLogicTests {
         }
     }
 
-    @Test("con sesión y sin consent, consent — en las cuatro puertas")
+    @Test("con sesión y sin consent, consent — en las tres puertas")
     func sessionWithoutConsent_alwaysConsent() {
         for entry in Entry.allCases {
             #expect(step(entry, consent: false, setup: false) == .presentConsent)
@@ -100,12 +99,10 @@ struct GroupsGateLogicTests {
 
     // MARK: - Los terminales, uno por puerta
 
-    @Test("terminal de organizer/onboardingCard: nombre si falta el alta, formulario si ya está")
+    @Test("terminal de organizer: nombre si falta el alta, formulario si ya está")
     func organizerTerminals() {
-        for entry in [Entry.organizer, .onboardingCard] {
-            #expect(step(entry, setup: false) == .presentName)
-            #expect(step(entry, setup: true) == .presentGroupForm)
-        }
+        #expect(step(.organizer, setup: false) == .presentName)
+        #expect(step(.organizer, setup: true) == .presentGroupForm)
     }
 
     /// **Contrato NUEVO desde 2026-09-05, y el terminal que este test fijaba antes era el defecto.**
@@ -143,15 +140,15 @@ struct GroupsGateLogicTests {
 
     // MARK: - Dominio completo
 
-    /// Las 64 celdas decididas, para que añadir un `Entry` o un `Step` sin decidir su celda no pase en
+    /// Las 48 celdas decididas, para que añadir un `Entry` o un `Step` sin decidir su celda no pase en
     /// verde por omisión. Y la aserción que carga el peso: **el nombre solo es alcanzable con identidad y
     /// consent**, que es la invariante del chip expresada sobre la tabla.
     ///
-    /// Barre el dominio con `confirmedInvite: false`, y no las 128 celdas que la tabla tiene desde que ese
+    /// Barre el dominio con `confirmedInvite: false`, y no las 96 celdas que la tabla tiene desde que ese
     /// eje existe (2026-09-05): el eje nuevo solo mueve el terminal de `.invite`, que jamás produce
     /// `.presentName` — o sea que la mitad no barrida no puede cambiar lo que aquí se cuenta. El terminal
     /// que sí mueve tiene su propio barrido en `inviteTerminalIgnoresPriorSetup`.
-    @Test("las 64 celdas están decididas y `presentName` exige sesión Y consent")
+    @Test("las 48 celdas están decididas y `presentName` exige sesión Y consent")
     func fullDomain_isExhaustive_andNameRequiresIdentity() {
         var nombres = 0
         for entry in Entry.allCases {
@@ -175,8 +172,8 @@ struct GroupsGateLogicTests {
                 }
             }
         }
-        // organizer y onboardingCard × (educativo visto) × (setup pendiente) = 2
-        #expect(nombres == 2, "cambió el nº de celdas que llegan al alta: \(nombres)")
+        // solo organizer × (educativo visto, sesión, consent, setup pendiente) = 1
+        #expect(nombres == 1, "cambió el nº de celdas que llegan al alta: \(nombres)")
     }
 }
 
@@ -187,27 +184,25 @@ struct GroupsGateLogicTests {
 @Suite("C2 · las tres tablas derivan de GroupsGateLogic")
 struct GroupsGateDerivationTests {
 
-    @Test("GroupsOrganizerFlowLogic espeja la tabla para `.organizer` y `.onboardingCard`")
+    @Test("GroupsOrganizerFlowLogic espeja la tabla para `.organizer`")
     func organizerFlowMirrorsTheTable() {
-        for entry in [GroupsGateLogic.Entry.organizer, .onboardingCard] {
-            for educational in [false, true] {
-                for session in [false, true] {
-                    for consent in [false, true] {
-                        for setup in [false, true] {
-                            let derivado = GroupsOrganizerFlowLogic.nextStep(
-                                hasSeenEducational: educational, hasSession: session,
-                                isConsented: consent, hasCompletedSetup: setup, entry: entry)
-                            let esperado: GroupsOrganizerFlowLogic.Step = switch GroupsGateLogic.nextStep(
-                                entry: entry, hasSeenEducational: educational, hasSession: session,
-                                isConsented: consent, hasCompletedSetup: setup) {
-                            case .presentEducational: .presentEducational
-                            case .presentSignIn:      .presentSignIn
-                            case .presentConsent:     .presentConsent
-                            case .presentName:        .presentName
-                            default:                  .presentGroupForm
-                            }
-                            #expect(derivado == esperado)
+        for educational in [false, true] {
+            for session in [false, true] {
+                for consent in [false, true] {
+                    for setup in [false, true] {
+                        let derivado = GroupsOrganizerFlowLogic.nextStep(
+                            hasSeenEducational: educational, hasSession: session,
+                            isConsented: consent, hasCompletedSetup: setup)
+                        let esperado: GroupsOrganizerFlowLogic.Step = switch GroupsGateLogic.nextStep(
+                            entry: .organizer, hasSeenEducational: educational, hasSession: session,
+                            isConsented: consent, hasCompletedSetup: setup) {
+                        case .presentEducational: .presentEducational
+                        case .presentSignIn:      .presentSignIn
+                        case .presentConsent:     .presentConsent
+                        case .presentName:        .presentName
+                        default:                  .presentGroupForm
                         }
+                        #expect(derivado == esperado)
                     }
                 }
             }
@@ -323,37 +318,49 @@ struct GroupsGateWiringTests {
             """)
         #expect(!code.contains("AppPreferences.Keys.groupsBetaUnlocked"),
                 "OnboardingView volvió a desbloquear el dominio Grupos sin identidad")
-
-        // Y lo que SÍ tiene que haber: la cesión a la cadena.
-        #expect(Self.count("onGroupsOnlyComplete(GroupsOnlyOnboardingPayload(", in: code) == 1, """
-            la card «Solo grupos» ya no cede a la cadena. Sin este callback la rama o no completa, o \
-            —peor— alguien le devuelve un camino que escribe.
-            """)
     }
 
-    /// El gemelo del anterior en la otra dirección: la card tiene que estar CABLEADA. Sin esto, quitar el
-    /// callback del call-site deja `completeOnboarding` haciendo `return` en silencio y la card muerta,
-    /// con el test de arriba en VERDE.
-    @Test("MUTACIÓN (b): ContentView cablea `onGroupsOnlyComplete` y arranca la cadena sin escribir")
-    func contentViewWiresTheCard() throws {
-        let code = try Self.code(Self.contentView)
-
-        #expect(Self.count("onGroupsOnlyComplete:", in: code) == 1,
-                "ContentView dejó de cablear la card «Solo grupos» a la cadena")
-        #expect(code.contains("func startGroupsOnlyBranch(payload: GroupsOnlyOnboardingPayload)"),
-                "desapareció el arranque de la rama de la card")
-        // El payload viaja en `@State`, no en `UserDefaults`: es lo que hace comprobable el «nada se
-        // persiste hasta saber quién es».
-        #expect(code.contains("@State private var pendingGroupsOnlyPayload: GroupsOnlyOnboardingPayload?"), """
-            el payload de la card dejó de vivir en memoria. Persistirlo es escribir antes de tiempo con \
-            otro nombre.
+    /// **La rama del organizador se enciende en UN solo sitio: la puerta del Welcome.** Hasta el 2026-09-10
+    /// había un segundo —la card «Solo grupos» del onboarding cedía a esta cadena— y se retiró con la card
+    /// (ADR 2026-09-09 §7: solo-grupos es una sesión que se abre desde el Welcome). La (c) fija que el alta
+    /// tiene un solo call-site; ésta fija que la cadena que lleva hasta él tiene una sola ENTRADA. Es la
+    /// mitad que la (c) no ve: una puerta nueva que encendiera la rama y dejara escribir a la pantalla del
+    /// nombre pasaría la (c) en verde.
+    @Test("MUTACIÓN (b): la rama del organizador se enciende en un solo sitio, la puerta del Welcome")
+    func organizerBranchHasOneEntry() throws {
+        let root = Self.repoRoot.appendingPathComponent("Yala")
+        var sitios: [String] = []
+        let enumerator = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)
+        while let url = enumerator?.nextObject() as? URL {
+            guard url.pathExtension == "swift" else { continue }
+            // `try` y no `try?`: un fichero que no se pudiera leer contaría cero y dejaría pasar la entrada
+            // que viviera en él.
+            let stripped = try String(contentsOf: url, encoding: .utf8)
+                .split(separator: "\n", omittingEmptySubsequences: false)
+                .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
+                .joined(separator: "\n")
+            let n = Self.count("groupsOrganizerFlowActive = true", in: stripped)
+            if n > 0 { sitios.append("\(url.lastPathComponent)×\(n)") }
+        }
+        #expect(sitios == ["ContentView.swift×1"], """
+            la rama del organizador se enciende desde más de un sitio (o desde ninguno). Su única entrada es \
+            «Vengo por un grupo» en el Welcome; una segunda es la puerta a solo-grupos que el rediseño de \
+            sesiones retiró. Encontrados: \(sitios.sorted())
             """)
+
+        // Y ese sitio es el arranque del Welcome, no otro que casualmente viva en el mismo fichero.
+        let code = try Self.code(Self.contentView)
+        let inicio = try #require(code.range(of: "private func startGroupsOrganizerBranch() {"),
+                                  "`startGroupsOrganizerBranch` desapareció o cambió de firma")
+        let fin = try #require(code.range(of: "\n    }", range: inicio.upperBound..<code.endIndex))
+        #expect(code[inicio.upperBound..<fin.lowerBound].contains("groupsOrganizerFlowActive = true"),
+                "la rama del organizador ya no se enciende en `startGroupsOrganizerBranch`")
     }
 
     // MARK: - El alta sigue teniendo UN solo sitio donde escribe
 
-    @Test("MUTACIÓN (c): `completeSetup` se llama SOLO desde detrás de la cadena, en 2 sitios")
-    func completeSetupHasExactlyTwoCallSites() throws {
+    @Test("MUTACIÓN (c): `completeSetup` se llama SOLO desde detrás de la cadena, en 1 sitio")
+    func completeSetupHasExactlyOneCallSite() throws {
         let root = Self.repoRoot.appendingPathComponent("Yala")
         var sitios: [String] = []
         let enumerator = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)
@@ -366,11 +373,12 @@ struct GroupsGateWiringTests {
             let n = Self.count("GroupsOrganizerOnboarding.completeSetup(", in: stripped)
             if n > 0 { sitios.append("\(url.lastPathComponent)×\(n)") }
         }
-        #expect(Set(sitios) == Set(["GroupsOrganizerNameView.swift×1", "ContentView.swift×1"]), """
-            cambiaron los call-sites del alta. Los DOS legítimos están detrás de la cadena completa \
-            (educativo → login → consent): la pantalla del nombre (puerta A) y el caso `.presentName` con \
-            payload del router (puerta B). Un tercero es, con casi total seguridad, una escritura del trío \
-            adelantada. Encontrados: \(sitios.sorted())
+        #expect(Set(sitios) == Set(["GroupsOrganizerNameView.swift×1"]), """
+            cambiaron los call-sites del alta. El ÚNICO legítimo está detrás de la cadena completa \
+            (educativo → login → consent): la pantalla del nombre de la puerta del Welcome. Hubo un segundo \
+            —la card «Solo grupos» del onboarding— hasta el 2026-09-10 (ADR 2026-09-09 §7). Otro es, con \
+            casi total seguridad, una escritura del trío adelantada; que la cadena tenga una sola ENTRADA lo \
+            fija la (b). Encontrados: \(sitios.sorted())
             """)
     }
 
@@ -386,10 +394,11 @@ struct GroupsGateWiringTests {
                 "el router dejó de leer el consent vivo")
         #expect(code.contains("GroupsOnboardingLogic.hasSeenAnyGroupsEducational("), """
             el router dejó de computar «ya vio un educativo» con la lógica compartida. Un literal ahí \
-            salta el primer escalón de la cadena con las 64 celdas de la tabla en VERDE.
+            salta el primer escalón de la cadena con las 48 celdas de la tabla en VERDE.
             """)
-        // La lectura que NO puede volver al `@AppStorage`: cuando la card B escribe el trío y re-submitea,
-        // el espejo observable puede no haberse refrescado y la cadena repetiría el alta.
+        // La lectura que NO puede volver al `@AppStorage`: justo después de un alta el espejo observable
+        // puede no haberse refrescado y la cadena repetiría el alta (el caso medido era la card «Solo
+        // grupos», retirada el 2026-09-10; la lectura se queda).
         //
         // Y va contra el CAJÓN de la sesión desde 2026-09-05, no contra `.standard`: quien escribe ese
         // trío es `GroupsOrganizerOnboarding`, que ya iba por la puerta (`writer.setLocal`). Leerlo del
@@ -451,7 +460,7 @@ struct GroupsGateWiringTests {
 
         let hooks = try Self.code("Yala/App/UITestHooks.swift")
         #expect(hooks.contains("-uitest-groups-educativo"), """
-            desapareció el seam del educativo. Sin él, el PRIMER escalón de las cuatro puertas vuelve a ser \
+            desapareció el seam del educativo. Sin él, el PRIMER escalón de las puertas de Grupos vuelve a ser \
             inalcanzable desde XCUITest (`evaluateGroupsOnboarding` hace early-return bajo `-uitest`) y \
             nace sin ninguna red determinista.
             """)

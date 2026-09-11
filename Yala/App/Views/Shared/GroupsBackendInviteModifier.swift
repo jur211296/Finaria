@@ -18,8 +18,8 @@
 //  ## C2 · el EDUCATIVO vive aquí, y no en un modifier propio
 //
 //  El chip lo añade como PRIMER escalón de las puertas A (Welcome → «Crear mi primer grupo») y B (card
-//  «Solo grupos»): antes las dos pedían identidad —o, la card B, escribían el trío entero— sin haberle
-//  contado nunca al usuario qué es un grupo ni dónde viven sus gastos.
+//  «Solo grupos», retirada el 2026-09-10): antes las dos pedían identidad —o, la card B, escribían el trío
+//  entero— sin haberle contado nunca al usuario qué es un grupo ni dónde viven sus gastos.
 //
 //  **Está en este modifier por dos razones, y la primera es medida:** un `.modifier(...)` más en la cadena
 //  del `body` de `ContentView` la tumba con «unable to type-check this expression in reasonable time»
@@ -47,7 +47,7 @@ struct GroupsBackendInviteModifier: ViewModifier {
     /// porque `ContentView` necesita verlo para la matriz de readiness: un sheet de este anchor que no
     /// bloquee deja que el drain monte el siguiente intent encima (regla 3 de Presentaciones).
     @Binding var showGroupsAccountIsCompleteBlock: Bool
-    /// C2 · el educativo, paso 0 de las puertas A y B.
+    /// C2 · el educativo, paso 0 de la rama del organizador (puerta A; la B se retiró el 2026-09-10).
     @Binding var showGroupsEducational: Bool
     @Binding var pendingGroupsJoinZone: String?
     /// G3: la rama ORGANIZADOR del Welcome reusa estos dos sheets —este modifier es el dueño ÚNICO de su
@@ -60,10 +60,6 @@ struct GroupsBackendInviteModifier: ViewModifier {
     /// organizador acaba de SALIR del Welcome y debajo no hay shell que usar: sin esto, cancelar deja una
     /// pantalla muerta, que es lo que la invariante (2) del chip prohíbe. `ContentView` lo devuelve al
     /// step de los dos caminos.
-    /// C2 · lo que la card «Solo grupos» arrastra sin persistir (nombre y divisa). Se descarta al cancelar:
-    /// un payload superviviente haría que el siguiente intento saltara la pantalla del nombre con datos de
-    /// una sesión abandonada.
-    @Binding var pendingGroupsOnlyPayload: GroupsOnlyOnboardingPayload?
     var onGroupsOrganizerCancelled: () -> Void
     /// **Bloque [I]** · el backend dijo que esta cuenta lleva Yala completo y no hay sesión privada que
     /// respetar: se adopta y se aterriza en Grupos. Lo ejecuta `ContentView` reencaminando al cover del
@@ -92,7 +88,6 @@ struct GroupsBackendInviteModifier: ViewModifier {
                 // Cancel: la rama se apaga y el usuario vuelve al Welcome, igual que en `handleCancel()` y
                 // por lo mismo — pero aquí además es lo que rompe el bucle descrito arriba.
                 guard educationalCompleted else {
-                    pendingGroupsOnlyPayload = nil
                     return handleCancel()
                 }
                 educationalCompleted = false
@@ -255,11 +250,6 @@ struct GroupsBackendInviteModifier: ViewModifier {
         groupsOrganizerFlowActive = false
         onGroupsOrganizerCancelled()
     }
-
-    // Nota: el descarte de `pendingGroupsOnlyPayload` NO se centralizó aquí sino en
-    // `ContentView.returnToGroupsChooser`, que es el choke-point de TODAS las cancelaciones de la cadena
-    // (educativo, sign-in, consent y el cover del nombre pasan por él). Ponerlo solo en `handleCancel`
-    // dejaría fuera la del cover del nombre, que no llama a este tipo.
 
     private func continueFlow() {
         // G3 primero: la rama organizador no tiene zona, así que el `guard` de abajo la dejaría muda.

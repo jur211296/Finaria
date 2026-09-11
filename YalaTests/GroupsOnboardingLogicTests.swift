@@ -177,8 +177,7 @@ struct GroupsOnboardingSignInCTATests {
 
 /// El pin del CABLEADO. Los conteos no son decoración: sin ellos, un método renombrado o un
 /// fichero movido dejarían al escáner sin encontrar nada y la suite pasaría en verde sin
-/// comprobar nada — la familia de "Executed 0 tests". Molde:
-/// `OnboardingGroupsPurposeGateLogicTests.onboardingViewLePasaElFlagReal_yNoUnLiteral`.
+/// comprobar nada — la familia de "Executed 0 tests".
 @Suite("A1 · cableado del CTA de sign-in (source-scan)")
 struct GroupsOnboardingSignInCTAWiringTests {
 

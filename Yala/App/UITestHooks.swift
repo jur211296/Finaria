@@ -74,8 +74,8 @@ final class UITestHooks {
 
     /// `-uitest-fake-icloud`: fuerza `iCloudSyncService.isAccountAvailable = true` en el
     /// simulador (que NO tiene cuenta iCloud). Desbloquea los flujos cuyo único obstáculo
-    /// es el guard de disponibilidad de cuenta —onboarding "Solo grupos", prompts de
-    /// restore de iCloud— que de otro modo bloquean ANTES de poder ejercitarlos en sim.
+    /// es el guard de disponibilidad de cuenta —prompts de restore de iCloud, por ejemplo—
+    /// que de otro modo bloquean ANTES de poder ejercitarlos en sim.
     /// NO habilita CloudKit real: crear grupo/CKShare/sync bidireccional siguen sin
     /// funcionar en sim (el store uitest es local, `cloudKitDatabase: .none`). El
     /// AppBootstrapper también marca el primer import como asentado para que los gates
@@ -144,8 +144,7 @@ final class UITestHooks {
     /// **Blast radius querido y medido**, porque es lo que reproduce el estado real: el modo EFECTIVO del
     /// proceso pasa a `.cloud` (`CloudSyncFlags.storageMode`), el seed de categorías se salta
     /// (`CategorySeed`), `OnboardingMode.setCurrent` y `GroupsDomainAdoptionMarker.recordEntry` son no-op
-    /// (los guards del chip M1), la fila iCloud del Perfil desaparece y la card «Solo grupos» del
-    /// onboarding deja de pintarse (`OnboardingGroupsPurposeGateLogic`). Solo DEBUG (inerte en release vía
+    /// (los guards del chip M1) y la fila iCloud del Perfil desaparece. Solo DEBUG (inerte en release vía
     /// `hasArg`).
     nonisolated static var secondarySession: Bool { hasArg("-uitest-secondary-session") }
 
@@ -164,7 +163,7 @@ final class UITestHooks {
     /// permitir que las corridas que ejercitan el educativo lo monten a propósito.
     ///
     /// **Sin él, C2 dejaría su primer escalón sin ninguna red determinista.** El educativo pasa a ser el
-    /// paso 1 de las cuatro puertas y era, medido, inalcanzable desde XCUITest — `qa/coverage-index.json`
+    /// paso 1 de las puertas de Grupos y era, medido, inalcanzable desde XCUITest — `qa/coverage-index.json`
     /// ya anotaba el hueco. La alternativa era cubrirlo solo con unit + device-qa, y el spec lo dice: el
     /// primer escalón de la cadena nacería sin red.
     ///

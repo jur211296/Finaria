@@ -180,55 +180,6 @@ final class SecondarySessionGateUITests: XCTestCase {
         )
     }
 
-    // MARK: - La segunda puerta: la card «Solo grupos» del tutorial
-
-    /// **La otra vía a la misma rama, y se cierra un escalón ANTES de lo que dice el choke-point.**
-    /// `ContentView.advanceGroupsOrganizerFlow` lleva un guard que manda a la puerta cualquier avance con
-    /// descriptor vivo —defensa en profundidad, y así hay que leerla—, pero por la UI no se llega: en
-    /// secundaria el modo EFECTIVO es `.cloud` (`CloudSyncFlags.storageMode`) y
-    /// `OnboardingGroupsPurposeGateLogic.shouldShowGroupsCard` deja de pintar la card. Esto es lo que se
-    /// puede afirmar en sim, y es lo que se afirma.
-    ///
-    /// **La aserción negativa NO se sostiene sola** —una card ausente porque el paso no llegó a montarse
-    /// se leería igual— así que va con dos aserciones POSITIVAS: que estamos de verdad en el paso
-    /// Propósito (las otras dos cards SÍ están) y el control positivo, que es su hermano
-    /// `OnboardingGroupsOnlyGuardUITests.test_purposeStep_offersGroupsOnlyCard`: mismo recorrido sin el
-    /// seam, y ahí la card existe.
-    func test_purposeStep_inSecondarySession_hidesGroupsOnlyCard() {
-        let app = XCUIApplication()
-        app.launchForUITest(
-            skipOnboarding: false,
-            seed: nil,
-            onboarding: true,
-            secondarySession: true
-        )
-
-        let nameField = app.textFields["onboarding_name_field"]
-        XCTAssertTrue(nameField.waitForExistence(timeout: 30), "No apareció onboarding_name_field.")
-        nameField.tap()
-        nameField.typeText("QA")
-
-        let next = app.buttons["onboarding_next_button"]
-        XCTAssertTrue(next.waitForExistence(timeout: 5), "No apareció onboarding_next_button.")
-        next.tap()
-
-        // Positivas primero: sin ellas, la ausencia de la card no significaría nada.
-        XCTAssertTrue(
-            app.buttons["onboarding_purpose_control"].waitForExistence(timeout: 10),
-            "No se llegó al paso Propósito: la aserción negativa de abajo no probaría nada."
-        )
-        XCTAssertTrue(app.buttons["onboarding_purpose_expenses"].exists, "Falta la card 'Solo anotar gastos'.")
-
-        XCTAssertFalse(
-            app.buttons["onboarding_purpose_groups"].exists,
-            """
-            De visita en el móvil de otro, la card «Dividir gastos con amigos» no puede ofrecerse: es la \
-            ÚNICA ruta del onboarding a `.groupsOnly`, y detrás de ella el alta escribiría las seis \
-            preferencias de la invitada en el `UserDefaults` del DUEÑO.
-            """
-        )
-    }
-
     // MARK: - La rama privada: informa y sigue
 
     /// Recorre el Welcome hasta la rama privada: Hero → «Es mi primera vez». **Bajo `-uitest` no hay

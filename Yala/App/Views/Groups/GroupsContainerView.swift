@@ -465,7 +465,7 @@ struct GroupsContainerView: View {
         // F1c: en uitest no montar el onboarding informativo del tab (interceptaría taps).
         //
         // **C2 · el seam que invierte este early-return, y por qué existe.** Sin él, el educativo —que C2
-        // convierte en el PRIMER escalón de las cuatro puertas— nace sin ninguna red determinista: no hay
+        // convierte en el PRIMER escalón de las puertas de Grupos— nace sin ninguna red determinista: no hay
         // XCUITest posible porque esta línea lo desmonta, y `qa/coverage-index.json` ya anotaba el hueco.
         // `-uitest-groups-educativo` lo monta a propósito para las corridas que lo ejercitan; el resto de
         // la suite sigue con el early-return intacto (el arg no está en `launchForUITest` por defecto), así

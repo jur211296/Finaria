@@ -2,7 +2,7 @@
 //  GroupsGateLogic.swift
 //  Yala
 //
-//  C2 de la ola del consent · **la SSOT del orden en que se entra a Grupos, para las CUATRO puertas.**
+//  C2 de la ola del consent · **la SSOT del orden en que se entra a Grupos, para las TRES puertas.**
 //
 //  Antes de C2 había tres tablas que se prometían paridad por docblock —`GroupsOrganizerFlowLogic` declara
 //  espejar a `GroupBackendInviteEntryLogic` «a propósito, y respeta su orden»— y una cuarta puerta, la card
@@ -10,6 +10,10 @@
 //  `onboardingMode = .groupInvite` EMPUJADO AL iKV, `groupsBetaUnlocked`, `hasCompletedOnboarding`) sin
 //  sesión, sin consent y sin canal comprobado. Tres funciones que se prometen paridad pasan a ser UNA con
 //  un parámetro, y la cuarta puerta entra por ella.
+//
+//  **Esa cuarta puerta ya no existe (2026-09-10, ADR 2026-09-09 §7).** La card se retiró del onboarding
+//  porque solo-grupos es una sesión que se abre desde el Welcome («Vengo por un grupo»), no un propósito
+//  de quien ya eligió llevar sus finanzas personales. Quedan tres: organizador, invitación y tab.
 //
 //  ## La invariante que esta tabla existe para sostener
 //
@@ -19,18 +23,18 @@
 //  escrito antes de confirmar la ruta, se propaga a los otros dispositivos de esa cuenta —donde el usuario
 //  ve una app recortada a Grupos y vacía— y **no vuelve**. Su única recuperación es restaurar por iCloud.
 //
-//  ## El educativo NO va en las cuatro, y eso es una MEDICIÓN, no un descuido
+//  ## El educativo NO va en todas, y eso es una MEDICIÓN, no un descuido
 //
 //  | Puerta | Educativo | Dónde se monta |
 //  |---|---|---|
 //  | `.organizer` (Welcome → «Crear mi primer grupo») | **SÍ, primero** | cover de `ContentView`, tras `WelcomeGroupsGateView` |
-//  | `.onboardingCard` («Solo grupos» del onboarding) | **SÍ, primero** | el mismo cover: comparte la cadena entera |
 //  | `.invite` (link backend) | NO el general | el suyo es `GroupInviteOnboardingView`, contextual al link y con metadata del grupo, DESPUÉS del consent |
 //  | `.tab` (crear grupo desde el tab) | NO aquí | `GroupsContainerView.evaluateGroupsOnboarding` lo presenta al MONTAR el tab, antes de que ninguna CTA de creación sea alcanzable |
 //
 //  Anteponer el general al invitado le daría **dos educativos seguidos**; anteponerlo en `.tab` sería una
-//  segunda presentación compitiendo con el sheet que ya lo monta. En las cuatro el usuario ve un educativo
-//  antes de que se le pida identidad — que es el contrato— y en las dos que no lo tenían se añade.
+//  segunda presentación compitiendo con el sheet que ya lo monta. En las tres el usuario ve un educativo
+//  antes de que se le pida identidad —que es el contrato—, y en la que no lo tenía (`.organizer`) C2 lo
+//  añadió.
 //
 //  ## La hoja del invitado se presenta SIEMPRE (2026-09-05) — y por qué esto cambió
 //
@@ -83,10 +87,6 @@ nonisolated enum GroupsGateLogic {
     enum Entry: Equatable, CaseIterable {
         /// Welcome → «Crear mi primer grupo». Su puerta (`GroupsOrganizerGateLogic`) ya corrió.
         case organizer
-        /// Card «Solo grupos» del onboarding de 8 pasos. Comparte cadena y terminal con `.organizer`: la
-        /// diferencia es que llega con el nombre y la divisa YA TECLEADOS, que viajan en memoria hasta
-        /// `completeSetup` (jamás persistidos antes — es la invariante).
-        case onboardingCard
         /// Invitación por link backend.
         case invite
         /// Tab Grupos (empty state, FAB simple, FAB expandible, `pendingNewGroupForm`).
@@ -94,7 +94,7 @@ nonisolated enum GroupsGateLogic {
     }
 
     enum Step: Equatable {
-        /// El educativo de Grupos (3 steps). Primer escalón de `.organizer` y `.onboardingCard`.
+        /// El educativo de Grupos (3 steps). Primer escalón de `.organizer`.
         case presentEducational
         /// Sin sesión de nube → `GroupsSignInView` (el de GRUPOS, jamás una hermana de
         /// `WelcomeCloudSignInView`: su docblock prohíbe instanciarla en paralelo).
@@ -116,7 +116,7 @@ nonisolated enum GroupsGateLogic {
     ///
     /// - Parameters:
     ///   - entry: por dónde entró. Decide el terminal y si el educativo se antepone (ver la tabla del
-    ///     encabezado: solo `.organizer` y `.onboardingCard`).
+    ///     encabezado: solo `.organizer`).
     ///   - hasSeenEducational: `AppPreferences.hasShownGroupsOnboarding`. **Es el hecho REAL que el corte
     ///     por `onboardingMode == .groupInvite` quería expresar y expresaba mal**: aquel suprimía el
     ///     educativo justo para quien entraba por la card «Solo grupos», o sea la gente que menos contexto
@@ -146,7 +146,7 @@ nonisolated enum GroupsGateLogic {
         if !isConsented { return .presentConsent }
 
         switch entry {
-        case .organizer, .onboardingCard:
+        case .organizer:
             return hasCompletedSetup ? .presentGroupForm : .presentName
         case .invite:
             // 2026-09-05 · **el terminal del invitado ya no lo decide `hasCompletedSetup`.** Ver el bloque
@@ -168,7 +168,7 @@ extension GroupsGateLogic.Entry {
     /// nonisolated— no puede leerla.
     nonisolated var showsEducationalFirst: Bool {
         switch self {
-        case .organizer, .onboardingCard: return true
+        case .organizer: return true
         case .invite, .tab: return false
         }
     }

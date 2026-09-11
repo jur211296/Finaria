@@ -34,7 +34,7 @@
 //  ## Los dos armadores, y por qué el segundo no es un cinturón
 //
 //  1. **El sign-in de Grupos** (`GroupsBackendInviteModifier`, closure de éxito de `GroupsSignInView`),
-//     que es donde nace la sesión por las cuatro puertas.
+//     que es donde nace la sesión por las puertas de Grupos.
 //  2. **El `onAppear` del tab con sesión viva** (`GroupsContainerView`). No es redundancia defensiva: es lo
 //     ÚNICO que cubre al parque que YA tenía sesión antes de esta versión —para quien no existe ningún
 //     evento de sign-in futuro— y a quien firmó por el camino de nube completo, que no pasa por (1). Sin

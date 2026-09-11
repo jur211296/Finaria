@@ -6,12 +6,9 @@
 //  (`OnboardingNextEnablement.isNextDisabled`). Pure-logic, sin contexto ni
 //  singletons → no requiere `@Suite(.serialized)`.
 //
-//  Regresión del bug del botón "Continuar" muerto en modo "Solo grupos": el paso
-//  `.currencyName` es combinado (moneda + nombre de cuenta), pero en Solo Grupos
-//  el campo de nombre está oculto y nunca se autosugiere → `accountName` queda ""
-//  por diseño → exigirlo deshabilitaba el botón permanentemente. Solo reproducía
-//  en device con iCloud (en sim el guard de iCloud bloquea antes de llegar al paso
-//  de moneda), por eso no lo cubría ni device-qa ni XCUI.
+//  Nació como regresión del botón "Continuar" muerto en el modo "Solo grupos"
+//  (fix 2.0.5). Ese modo se retiró del onboarding el 2026-09-10 (ADR 2026-09-09 §7)
+//  y sus casos se fueron con él; lo que queda fija qué pasos exigen entrada.
 //
 
 import Foundation
@@ -25,7 +22,6 @@ struct OnboardingNextEnablementTests {
     /// campo bajo prueba en cada caso.
     private func disabled(
         step: OnboardingStep,
-        groupsOnly: Bool = false,
         userName: String = "",
         accountName: String = "",
         isAccountTypeValid: Bool = false,
@@ -33,7 +29,6 @@ struct OnboardingNextEnablementTests {
     ) -> Bool {
         OnboardingNextEnablement.isNextDisabled(
             step: step,
-            groupsOnly: groupsOnly,
             userName: userName,
             accountName: accountName,
             isAccountTypeValid: isAccountTypeValid,
@@ -41,30 +36,20 @@ struct OnboardingNextEnablementTests {
         )
     }
 
-    // MARK: - .currencyName — corazón del fix
+    // MARK: - .currencyName
 
-    @Test func currencyName_groupsOnly_emptyAccountName_isEnabled() {
-        // EL BUG: Solo Grupos → nombre de cuenta oculto (queda "") → debe habilitar.
-        #expect(disabled(step: .currencyName, groupsOnly: true, accountName: "") == false)
+    @Test func currencyName_emptyAccountName_isDisabled() {
+        // Sin nombre de cuenta → botón deshabilitado.
+        #expect(disabled(step: .currencyName, accountName: "") == true)
     }
 
-    @Test func currencyName_normal_emptyAccountName_isDisabled() {
-        // Modo normal: sin nombre de cuenta → botón deshabilitado (comportamiento previo).
-        #expect(disabled(step: .currencyName, groupsOnly: false, accountName: "") == true)
+    @Test func currencyName_withAccountName_isEnabled() {
+        #expect(disabled(step: .currencyName, accountName: "Mi Cuenta") == false)
     }
 
-    @Test func currencyName_normal_withAccountName_isEnabled() {
-        #expect(disabled(step: .currencyName, groupsOnly: false, accountName: "Mi Cuenta") == false)
-    }
-
-    @Test func currencyName_groupsOnly_withAccountName_isEnabled() {
-        // En Solo Grupos el nombre es irrelevante: habilitado tenga o no valor.
-        #expect(disabled(step: .currencyName, groupsOnly: true, accountName: "Ignorado") == false)
-    }
-
-    @Test func currencyName_normal_whitespaceAccountName_isDisabled() {
-        // Solo espacios/newlines → cuenta como vacío en modo normal.
-        #expect(disabled(step: .currencyName, groupsOnly: false, accountName: "   \n\t ") == true)
+    @Test func currencyName_whitespaceAccountName_isDisabled() {
+        // Solo espacios/newlines → cuenta como vacío.
+        #expect(disabled(step: .currencyName, accountName: "   \n\t ") == true)
     }
 
     // MARK: - .name
@@ -79,12 +64,6 @@ struct OnboardingNextEnablementTests {
 
     @Test func name_whitespaceUserName_isDisabled() {
         #expect(disabled(step: .name, userName: "   ") == true)
-    }
-
-    @Test func name_groupsOnly_stillRequiresUserName() {
-        // El nombre SÍ se pide en Solo Grupos (`.name` no se salta): sigue exigido.
-        #expect(disabled(step: .name, groupsOnly: true, userName: "") == true)
-        #expect(disabled(step: .name, groupsOnly: true, userName: "Pia") == false)
     }
 
     // MARK: - .accountType
@@ -116,8 +95,6 @@ struct OnboardingNextEnablementTests {
     @Test func nonInputSteps_alwaysEnabled() {
         for step in [OnboardingStep.purpose, .accounts, .categories, .confirmation] {
             #expect(disabled(step: step) == false, "El paso \(step.trackingName) no debe deshabilitar el botón")
-            // También en Solo Grupos.
-            #expect(disabled(step: step, groupsOnly: true) == false)
         }
     }
 }
