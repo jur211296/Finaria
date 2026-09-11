@@ -1542,11 +1542,20 @@ struct ContentView: View {
                 showWelcomeRestore = true
             case .inviteRecovery:
                 showInviteRecovery = true
-            case .cloudAccount, .cloudSignIn, .groupsOrganizer, .fullActivationPrivate, .fullActivationRestore:
-                // Inalcanzables: `requiresMirror` es `false` para las tres primeras, así que el portal del
+            case .groupsOrganizer:
+                // **Mitad 2 del paso 5.** El portal nunca lo persiste (`requiresMirror(.groupsOrganizer)`
+                // es `false`), pero la vuelta al neutro de la puerta de Grupos SÍ: el relanzamiento no lo
+                // pidió el destino sino el borrado, y este arranque es el que lo ejecutó. Se retoma en LA
+                // PUERTA y no en el alta, que es la cautela que el `default` de abajo pedía —«jamás retomar
+                // una rama organizador a mitad en un proceso que no ha visto su puerta»— y que aquí se
+                // respeta al pie: la puerta vuelve a medir, y en este proceso ya no hay corpus ni espejo,
+                // así que abre y sigue sin que la persona toque nada de más.
+                welcomeFlowInitialStep = .groupsGate
+                showWelcomeFlow = true
+            case .cloudAccount, .cloudSignIn, .fullActivationPrivate, .fullActivationRestore:
+                // Inalcanzables: `requiresMirror` es `false` para las dos primeras, así que el portal del
                 // Welcome nunca las persiste. Si aparecen, la respuesta segura es el recorrido normal — jamás
-                // saltar al cover de nube con una sesión que este proceso no ha visto, ni retomar una rama
-                // organizador a mitad en un proceso que no ha visto su puerta.
+                // saltar al cover de nube con una sesión que este proceso no ha visto.
                 // Las dos de la activación (paso 8) solo las escribe un device que YA completó el onboarding
                 // —solo-grupos— y las consume `resumeFullModeActivationIfPending`. Aquí solo llegarían si el
                 // onboarding se vació entre medias, y entonces tampoco hay activación que retomar.
@@ -1731,6 +1740,27 @@ private struct WelcomeFlowModifier: ViewModifier {
                             OnboardingResetHelper.clearResidualPreferencesForFreshStart()
                         }
                         WelcomePendingDestinationStore.set(destination)
+                    },
+                    onGroupsGateNeutralReturnArmed: {
+                        // **Mitad 2 del paso 5 · el borrado está ARMADO y solo falta reabrir la app.**
+                        //
+                        // El destino se persiste AQUÍ y no antes de empezar, y el orden es lo que evita un
+                        // daño concreto: `RelaunchNetLogic.shouldExitOnBackground` lee «hay destino
+                        // pendiente» como «este proceso tiene que morir al pasar a segundo plano»
+                        // (`YalaApp.swift`, `welcomeMirrorRelaunchArmed`). Escribirlo antes del arm haría
+                        // que la app se cerrara sola aunque la vuelta al neutro se hubiera bloqueado o
+                        // abortado. La ventana que queda —un kill entre el arm y esta línea— cuesta una
+                        // pantalla, no datos: el borrado corre igual y la persona aterriza en el Welcome.
+                        //
+                        // Y se persiste `.groupsOrganizer` porque es a donde iba. Sobrevive al borrado:
+                        // `welcome.pendingMirrorRelaunchDestination` no está en el barrido de
+                        // `DataWipeService.removeUserPreferenceKeys` (medido) y nadie la limpia en
+                        // producción.
+                        WelcomePendingDestinationStore.set(.groupsOrganizer)
+                        // El cover del Welcome y el terminal del cierre de sesión cuelgan del MISMO body,
+                        // así que UIKit presenta uno solo. Cerrar éste es lo que deja presentarse al otro,
+                        // que es el que tiene verify loop, blocker de readiness y salida en background.
+                        showWelcomeFlow = false
                     },
                     hasLocalDataNow: hasLocalDataNow,
                     // Paso 4: el borrado vive aquí porque necesita el `modelContext`. La puerta solo

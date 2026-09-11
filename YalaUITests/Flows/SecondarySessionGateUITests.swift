@@ -111,29 +111,50 @@ final class SecondarySessionGateUITests: XCTestCase {
     }
 
     /// La celda GEMELA, y el control que impide que la anterior pase por casualidad: **el mismo recorrido,
-    /// el mismo build y la misma puerta, con la ÚNICA diferencia del seam**, bloquean por motivos
-    /// distintos y lo dicen con pantallas distintas. Aquí hay corpus de otro humano en el dispositivo
-    /// (`checkHasExistingData` cuenta cuentas y categorías no-system, que el perfil de seed crea) pero
-    /// nadie está de visita ⇒ `.blockedForeignData`.
+    /// el mismo build y la misma puerta, con la ÚNICA diferencia del seam**, acaban en pantallas
+    /// distintas. Aquí hay corpus en el dispositivo (`checkHasExistingData` cuenta cuentas y categorías
+    /// no-system, que el perfil de seed crea) pero nadie está de visita ⇒ **vuelta al neutro**.
     ///
-    /// Es además el único sitio del repo donde se ejercita en sim el copy de `welcome.cloud.blocked*`: su
-    /// otra superficie, la fase `.blockedForeignData` del sign-in de nube, exige un SIWA real.
-    func test_organizerGate_withForeignCorpus_blocksAsForeignData() {
+    /// **Y esto es la regresión que el ticket cierra.** Hasta el 2026-09-11 esta celda pintaba
+    /// `welcome_groups_gate_foreign_data`: «Aquí ya hay datos guardados … si son tuyos, crea el grupo
+    /// desde la app que ya usas», con un único botón «Volver» y siendo «la app que ya usas» ÉSTA. Jürgen
+    /// lo midió en su móvil el 2026-09-09 sobre su propio corpus. Ahora la app no bloquea: informa de que
+    /// lo personal sigue en iCloud y deja el teléfono listo para el grupo.
+    ///
+    /// **Lo que este caso NO puede probar, y por eso no lo afirma:** que iCloud queda intacto. En el
+    /// simulador no hay espejo, así que el borrado y su testigo del export son device-QA. Lo que sí se
+    /// mide aquí es el VEREDICTO —qué pantalla decide la puerta— y la ausencia del bloqueo viejo.
+    func test_organizerGate_withLocalCorpus_returnsToNeutralInsteadOfBlocking() {
         let app = walkToOrganizerGate(seed: "minimal", secondarySession: false)
 
-        let blocked = gateScreen(app, "welcome_groups_gate_foreign_data")
+        let working = gateScreen(app, "welcome_groups_gate_neutral_working")
         XCTAssertTrue(
-            blocked.waitForExistence(timeout: 20),
+            working.waitForExistence(timeout: 20),
             """
-            Con datos de otro humano en el dispositivo la puerta tiene que bloquear como «datos ajenos». \
-            Si en su lugar salió el educativo, `hasExistingData` dejó de contar el corpus (ojo: \
-            `checkHasExistingData` excluye lo `isSystem`).
+            Con corpus en el dispositivo la puerta tiene que VOLVER AL NEUTRO, no bloquear. Si en su lugar \
+            salió el educativo, `hasExistingData` dejó de contar el corpus (ojo: `checkHasExistingData` \
+            excluye lo `isSystem`); si salió una pantalla de bloqueo, alguien repuso el término que este \
+            ticket retiró.
+            """
+        )
+        // **La aserción que carga el peso**: la pantalla que atrapaba al dueño ya no es alcanzable.
+        XCTAssertFalse(
+            app.descendants(matching: .any).matching(identifier: "welcome_groups_gate_foreign_data")
+                .firstMatch.exists,
+            """
+            `welcome_groups_gate_foreign_data` es el bloqueo sin salida que este ticket retiró. Si vuelve \
+            a aparecer, el dueño de los datos vuelve a quedarse atrapado.
             """
         )
         XCTAssertFalse(
             app.descendants(matching: .any).matching(identifier: "welcome_groups_gate_secondary_session")
                 .firstMatch.exists,
             "Sin descriptor secundario, la pantalla de «estás de visita» no puede aparecer: el veredicto es otro."
+        )
+        // Y no se pasa al alta: la vuelta al neutro va DELANTE, o el grupo nacería sobre el corpus.
+        XCTAssertFalse(
+            app.buttons["groups_onboarding_cta"].exists,
+            "La puerta dejó pasar al educativo sin haber devuelto el dispositivo al neutro."
         )
     }
 

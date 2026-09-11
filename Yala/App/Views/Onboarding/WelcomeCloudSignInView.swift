@@ -354,11 +354,13 @@ struct WelcomeCloudSignInView: View {
                     body: L10n.Welcome.Cloud.blockedBody)
                     // M4 · gancho de QA, hoy sin XCUITest y así declarado: llegar a esta fase exige un
                     // sign-in REAL con SIWA/Google sobre un device con corpus ajeno, y el simulador no
-                    // firma. Lo que sí puede afirmarse en sim es su GEMELA de la puerta de Grupos-first
-                    // (`welcome_groups_gate_foreign_data`, mismo hecho y mismo copy), que es lo que
-                    // cubre `SecondarySessionGateUITests`. El identifier va puesto para que el device-QA
-                    // pueda anclarse a él sin recompilar y para que el día que exista un seam de sign-in
-                    // el test no dependa de texto localizado.
+                    // firma. **Y desde el 2026-09-11 tampoco tiene gemela**: la puerta de Grupos-first
+                    // dejó de bloquear por corpus —vuelve al neutro— así que este bloqueo se quedó como
+                    // la única superficie del hecho «este dispositivo tiene datos de otra cuenta», y
+                    // sigue vivo porque aquí sí hay alguien conectando una cuenta distinta. El
+                    // identifier va puesto para que el device-QA pueda anclarse a él sin recompilar y
+                    // para que el día que exista un seam de sign-in el test no dependa de texto
+                    // localizado.
                     .accessibilityIdentifier("welcome_cloud_blocked_foreign_data")
 
                 Text(L10n.Welcome.Cloud.blockedRestoreHint)

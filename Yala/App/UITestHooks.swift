@@ -172,6 +172,28 @@ final class UITestHooks {
     /// ejercitar los intermedios. Solo DEBUG (inerte en release vía `hasArg`).
     nonisolated static var groupsEducativo: Bool { hasArg("-uitest-groups-educativo") }
 
+    /// `-uitest-groups-gate-mirror-live`: le dice a la puerta de «Vengo por un grupo» que el store personal
+    /// de este proceso **espeja a iCloud**, para poder recorrer su vuelta al neutro en simulador.
+    ///
+    /// **Existe porque el testigo del mount MIENTE en los hosts de test, y eso está medido:**
+    /// `SwiftDataConfiguration.personalConfiguration` sale por su rama `YalaModel-UITest` —con
+    /// `cloudKitDatabase: .none`— **antes** de llamar a `capturePersonalStoreMountedDecisionOnce`, así que
+    /// `personalStoreMountedDecision` se queda en el default de su declaración, que es `.iCloudMirror`. La
+    /// consecuencia ya estaba escrita para su hermano (`UITestEphemeralDefaults.applySecondarySession`,
+    /// «`capturePersonalStoreMountedDecisionOnce` tampoco corre»); aquí muerde en el otro sentido.
+    ///
+    /// Por eso el default de este seam es **`false`, que es la VERDAD del host de test** (ese store no
+    /// espeja), y no una inversión: sin él, la puerta leería `true` en toda corrida y ningún XCUITest
+    /// podría volver a ver su rama buena.
+    ///
+    /// **Quien lo encienda tiene que saber lo que compra:** con él la puerta ejecuta el cierre de sesión
+    /// privado de verdad, y ése ARMA el boot-wipe (`StorageModePersistence.armSignOutWipe`) sin guard de
+    /// uitest — el guard está en el EJECUTOR. La key es `cloudSync.*`, que ni `-uitest-reset` limpia ni
+    /// `DataWipeService` toca, así que una corrida que llegue hasta el arm deja el simulador con el borrado
+    /// puesto para el siguiente arranque MANUAL, donde el ejecutor sí corre. Un test que use este seam
+    /// tiene que limpiar el arm al terminar.
+    nonisolated static var groupsGateMirrorLive: Bool { hasArg("-uitest-groups-gate-mirror-live") }
+
     /// `-uitest-groups-batch-demo`: QA/XCUITest del batch "salir de todos mis grupos" (D10) SIN backend ni
     /// iCloud (imposibles en sim — la ejecución real de leave/transfer es device/TestFlight). Fuerza que la
     /// hoja de Vaciar OFREZCA «También salir de mis grupos» (input `canLeaveAllGroups` de `UserDataResetView`)
