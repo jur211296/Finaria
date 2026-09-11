@@ -190,6 +190,24 @@ nonisolated enum WelcomeRestorePauseLogic {
     }
 }
 
+/// El gate de las cards de «Soy nuevo» leído con las flags VIVAS. Existe para que el Welcome y la activación
+/// de Yala completo (paso 8, que reusa el MISMO chooser) lean el MISMO gate: el ticket pide «mismo gate de
+/// visibilidad», y dos copias de estos cinco términos es exactamente como dos pantallas empiezan a divergir.
+///
+/// `-uitest-cloud-chooser` (opt-in EXPLÍCITO) destapa la card nube bajo XCUITest SOLO para los tests del
+/// chooser; el resto de uitest queda byte-idéntico. Los remotos son fail-closed sin snapshot.
+@MainActor
+enum WelcomeNewOptionsGate {
+    static var live: [WelcomeAccountChoiceLogic.NewOption] {
+        WelcomeAccountChoiceLogic.visibleNewOptions(
+            isConfigured: CloudBackendConfig.isConfigured,
+            isUITest: SwiftDataConfiguration.isUITesting && !UITestHooks.forceCloudChooser,
+            bornCloudEnabled: CloudSyncFlags.bornCloudChoiceEnabled,
+            remoteCloudEnabled: CloudRemoteFlags.cloudModeEnabled,
+            remoteOnboardingChoiceEnabled: CloudRemoteFlags.cloudOnboardingChoiceEnabled)
+    }
+}
+
 /// Adaptador de LECTURA del faro para la rama "Soy nuevo" (A4 de D-A7). Existe para que el callsite
 /// no lea `CloudBeacon` a mano y para que el test pueda inyectar el store KV (`BeaconKeyValueStore`):
 /// la decisión sigue siendo pura y vive arriba; esto solo la alimenta.

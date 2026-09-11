@@ -49,6 +49,17 @@ struct WelcomeNewChooserView: View {
     let options: [WelcomeAccountChoiceLogic.NewOption]
     var onSelect: (WelcomeAccountChoiceLogic.NewOption) -> Void
     var onBack: () -> Void
+    /// Paso 8 · desde qué recorrido se monta. El chooser es el MISMO en los dos —mismas cards, mismo gate,
+    /// mismo orden—, y lo único que cambia es el texto: en la activación la persona no es nueva, y la card de
+    /// nube tiene que decir que es LA MISMA cuenta que ya usa para grupos, no una segunda (decisión de Jürgen).
+    var context: Context = .firstTime
+
+    enum Context {
+        /// Welcome → «Es mi primera vez».
+        case firstTime
+        /// «Activar Yala completo» desde una sesión solo-grupos.
+        case fullActivation
+    }
 
     /// Alto NATURAL del contenido de cada card, para igualarlas (punto 11). Se mide el
     /// contenido y NO la card ya enmarcada: el `minHeight` de abajo propone más alto, pero un
@@ -72,12 +83,12 @@ struct WelcomeNewChooserView: View {
                 Spacer(minLength: DS.Spacing.lg)
 
                 VStack(spacing: DS.Spacing.sm) {
-                    Text(L10n.Welcome.Chooser.optionNewTitle)
+                    Text(headerTitle)
                         .font(DS.Typography.title2)
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
 
-                    Text(L10n.Welcome.New.subtitle)
+                    Text(headerSubtitle)
                         .font(DS.Typography.subheadline)
                         .foregroundStyle(.white.opacity(0.7))
                         .multilineTextAlignment(.center)
@@ -129,10 +140,27 @@ struct WelcomeNewChooserView: View {
         }
     }
 
+    private var headerTitle: String {
+        switch context {
+        case .firstTime: L10n.Welcome.Chooser.optionNewTitle
+        case .fullActivation: L10n.Groups.FullActivation.chooserTitle
+        }
+    }
+
+    private var headerSubtitle: String {
+        switch context {
+        case .firstTime: L10n.Welcome.New.subtitle
+        case .fullActivation: L10n.Groups.FullActivation.chooserSubtitle
+        }
+    }
+
+    /// La card privada dice lo mismo en los dos contextos: dónde viven los datos y quién puede leerlos no
+    /// depende de por dónde se llegue. La de nube no: en la activación ya HAY una cuenta en la nube.
     private func body(for option: WelcomeAccountChoiceLogic.NewOption) -> String {
-        switch option {
-        case .privateAccount: L10n.Welcome.New.privateBody
-        case .cloudAccount: L10n.Welcome.New.cloudBody
+        switch (option, context) {
+        case (.privateAccount, _): L10n.Welcome.New.privateBody
+        case (.cloudAccount, .firstTime): L10n.Welcome.New.cloudBody
+        case (.cloudAccount, .fullActivation): L10n.Groups.FullActivation.cloudBody
         }
     }
 

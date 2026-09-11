@@ -118,6 +118,12 @@ struct ContentView: View {
     /// arriba y por la misma regla.
     @State private var showGroupsEducational: Bool = false
     @State private var showFullModeActivation: Bool = false
+    /// Paso 8 · «Primera vez → nube» descubrió una cuenta solo-grupos: cuando su sesión quede montada en este
+    /// dispositivo (`hasCompletedOnboarding` pasa a `true` en modo solo-grupos) se le ofrece «Activar Yala
+    /// completo» (ADR §7). En memoria a propósito: es una OFERTA, no una decisión sobre datos — si la app muere
+    /// antes, la persona la tiene igual en Perfil y en los empujones de Grupos, y un estado durable que
+    /// sobreviviera a su motivo podría ofrecerla en un momento que nadie pidió.
+    @State private var offersFullActivationAfterGroupsEntry = false
     /// D1: acción elegida en la pantalla de retención; se EJECUTA en el `onDismiss` del cover
     /// (con el cover YA fuera — anti-carrera toolbar-muerta). `nil` = ninguna elegida aún.
     @State private var pendingRetentionAction: RetentionAction?
@@ -251,6 +257,16 @@ struct ContentView: View {
             hasPersonalData = checkHasPersonalData()
         }
         .onChange(of: hasCompletedOnboarding) { _, newValue in
+            // Paso 8 · la oferta de «Activar Yala completo» a quien vino a estrenar Yala por la nube y resultó
+            // tener una cuenta de grupos. Se consume en la primera transición, sea cual sea, y solo se ofrece
+            // si lo que quedó montado es de verdad solo-grupos: desde otro modo la activación no tiene chooser.
+            // El modo se lee del almacén y no de `SessionState`: el alta del organizador lo escribe ahí.
+            if newValue, offersFullActivationAfterGroupsEntry {
+                offersFullActivationAfterGroupsEntry = false
+                if OnboardingMode.current() == .groupInvite {
+                    RouterEntryGate.shared.submit(.presentFullModeActivation)
+                }
+            }
             // Data wipe path: invalida summary stale + respeta el flag del chooser.
             // `performLocalWipeForRemoteSync` resetea `hasShownWelcomeChooser=false` cuando
             // el wipe requiere re-onboarding completo, así que el chooser vuelve a presentarse.
@@ -342,6 +358,7 @@ struct ContentView: View {
             hasCompletedOnboarding: $hasCompletedOnboarding,
             showFreshStartWipeAlert: $showFreshStartWipeAlert,
             groupsOrganizerFlowActive: $groupsOrganizerFlowActive,
+            offersFullActivationAfterGroupsEntry: $offersFullActivationAfterGroupsEntry,
             hasExistingData: hasExistingData,
             hasLocalDataNow: { checkHasExistingData() },
             performICloudCorpusWipe: { await performICloudCorpusWipe() },
@@ -438,7 +455,12 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showFullModeActivation) {
-            FullModeActivationView {
+            FullModeActivationView(
+                // Paso 8 · la puerta privada de la activación borra SOLO la zona de iCloud. El store de una
+                // sesión solo-grupos nunca espejó —lo local es suyo—, y el borrado local (`wipeAllUserData`)
+                // además resetea el onboarding, el modo y el nombre: mandaría al Welcome a quien está activando.
+                performICloudZoneWipe: { await performICloudCorpusWipe(includingLocalRows: false) }
+            ) {
                 showFullModeActivation = false
             }
             .environment(SessionState.shared)
@@ -1359,6 +1381,14 @@ struct ContentView: View {
         // aviso con las cifras del dueño y podía borrarle su iCloud. Es el mismo guard que
         // `advanceGroupsOrganizerFlow` tiene, y por la misma frontera.
         guard !SecondarySessionStore.isActive() else { return }
+        // **Paso 8 · una sesión solo-grupos también sale antes que nada.** Este aviso es para quien YA tiene una
+        // vida privada en este dispositivo, y un solo-grupos no la tiene. Lo que lo hace obligatorio es el
+        // borrado de abajo: la puerta privada de «Activar Yala completo» arma el mismo borrado, y reanudarlo aquí
+        // pone `hasCompletedOnboarding = false` —mandaría al Welcome a quien estaba activando—. Mientras siga
+        // en solo-grupos el arm queda quieto; si vuelve a elegir privado, la puerta RE-MIDE. Y no sobrevive a la
+        // activación: `FullModeActivationView.completeFullActivation` lo retira, porque para entonces la persona
+        // ya eligió dónde viven sus datos y reanudarlo aquí, a ciegas, se llevaría el corpus que acaba de crear.
+        guard !SessionState.shared.isGroupInviteMode else { return }
         // **Un borrado que quedó a medias manda sobre todo lo demás: no se pregunta otra vez, se termina.**
         // Aquí sí se reanuda a ciegas —al revés que en la puerta, que vuelve a medir— y la asimetría tiene
         // motivo: para cuando esto corre, el espejo ya mezcló los dos corpus en el store local, así que
@@ -1414,8 +1444,12 @@ struct ContentView: View {
     /// dispositivo sino la misma persona limpiando su propio histórico.
     ///
     /// Devuelve `nil` si fue bien, o el motivo del fallo — que la vista que lo llamó enseña.
+    ///
+    /// `includingLocalRows: false` (paso 8) es la activación de Yala completo desde solo-grupos: allí el store
+    /// nunca espejó, así que lo local no vino de iCloud, y el borrado local resetearía además el onboarding de
+    /// quien está activando (`DataWipeService.removeUserPreferenceKeys`).
     @MainActor
-    private func performICloudCorpusWipe() async -> String? {
+    private func performICloudCorpusWipe(includingLocalRows: Bool = true) async -> String? {
         // **Si el import está en vuelo, NO se borra.** Dos motivos y el segundo es duro: un `save()` de
         // SwiftData durante un import de CloudKit dispara el SIGTRAP que ese gate existe para evitar, y
         // borrar la zona con el import a medias deja al espejo re-creando filas que acabamos de quitar.
@@ -1436,7 +1470,7 @@ struct ContentView: View {
         }
         // Las filas locales solo si las hay. En la puerta con mount neutro no puede haberlas —el predicado
         // de instalación fresca lo garantiza—, así que este paso es el que cubre el otro camino.
-        guard checkHasExistingData() else { return nil }
+        guard includingLocalRows, checkHasExistingData() else { return nil }
         do {
             try DataWipeService.wipeAllUserData(in: modelContext, broadcastSignal: false)
         } catch {
@@ -1449,6 +1483,7 @@ struct ContentView: View {
     /// Post-checks de returning user: trial pendiente, What's New, language, app update.
     /// Extraído para SSOT — antes vivía inline en `checkInitialSyncState`.
     private func runReturningUserPostChecks() {
+        resumeFullModeActivationIfPending()
         // GC-08: Skip trial/What's New for groupInvite users — they have no context yet
         if !SessionState.shared.isGroupInviteMode {
             if SessionState.shared.needsPostOnboardingTrial && !FeatureGateService.shared.isProUser {
@@ -1467,6 +1502,39 @@ struct ContentView: View {
         Task { await runLateICloudMirrorCheck() }
         if needsLanguageSelection {
             showLanguageSelection = true
+        }
+    }
+
+    /// **Paso 8 · la activación de Yala completo que tuvo que reabrir la app para adjuntar el espejo.**
+    ///
+    /// Un device solo-grupos es *returning user* (`hasCompletedOnboarding == true`), así que el destino durable
+    /// del relanzamiento NO lo consume `presentNextOnboardingScreen`, que solo corre con el onboarding
+    /// pendiente. Sin este consumidor el destino se quedaría puesto para siempre, y de él cuelga
+    /// `RelaunchNetLogic.shouldExitOnBackground`: la app haría `exit(0)` cada vez que pasara a segundo plano.
+    ///
+    /// Al consumirlo se escribe la marca de reanudación de la activación, que no mata nada y sobrevive a un kill;
+    /// y es ESA marca la que reabre la sheet en cada arranque hasta que la activación termine o se cancele. El
+    /// orden —marca antes que consumir— es la kill-safety: un kill en medio deja las dos y el arranque siguiente
+    /// repite lo mismo.
+    private func resumeFullModeActivationIfPending() {
+        // La sesión secundaria y el eje de sesión los decide `resolveAtBoot`, con tabla: una activación solo se
+        // retoma si el dispositivo SIGUE en solo-grupos; si no, lo pendiente se retira sin reabrir nada.
+        let resolution = FullModeActivationResumeStore.resolveAtBoot(
+            pending: WelcomePendingDestinationStore.peek(),
+            current: FullModeActivationResumeStore.peek(),
+            isSecondarySession: SecondarySessionStore.isActive(),
+            isGroupsOnlySession: SessionState.shared.isGroupInviteMode)
+        if let step = resolution.writesResume {
+            FullModeActivationResumeStore.set(step)
+        }
+        if resolution.clearsResume {
+            FullModeActivationResumeStore.clear()
+        }
+        if resolution.consumesPendingDestination {
+            _ = WelcomePendingDestinationStore.consume()
+        }
+        if resolution.presentsActivation {
+            RouterEntryGate.shared.submit(.presentFullModeActivation)
         }
     }
 
@@ -1546,11 +1614,14 @@ struct ContentView: View {
                 showWelcomeRestore = true
             case .inviteRecovery:
                 showInviteRecovery = true
-            case .cloudAccount, .cloudSignIn, .groupsOrganizer:
-                // Inalcanzables: `requiresMirror` es `false` para las tres, así que el portal del Welcome
-                // nunca las persiste. Si aparecen, la respuesta segura es el recorrido normal — jamás
+            case .cloudAccount, .cloudSignIn, .groupsOrganizer, .fullActivationPrivate, .fullActivationRestore:
+                // Inalcanzables: `requiresMirror` es `false` para las tres primeras, así que el portal del
+                // Welcome nunca las persiste. Si aparecen, la respuesta segura es el recorrido normal — jamás
                 // saltar al cover de nube con una sesión que este proceso no ha visto, ni retomar una rama
                 // organizador a mitad en un proceso que no ha visto su puerta.
+                // Las dos de la activación (paso 8) solo las escribe un device que YA completó el onboarding
+                // —solo-grupos— y las consume `resumeFullModeActivationIfPending`. Aquí solo llegarían si el
+                // onboarding se vació entre medias, y entonces tampoco hay activación que retomar.
                 welcomeFlowInitialStep = .chooser
                 showWelcomeFlow = true
             }
@@ -1602,6 +1673,9 @@ private struct WelcomeFlowModifier: ViewModifier {
     /// G3: la rama organizador arranca aquí y la conduce `ContentView` desde su drain — este modifier solo
     /// la ENCIENDE, porque es quien tiene el callback del portal.
     @Binding var groupsOrganizerFlowActive: Bool
+    /// Paso 8 · lo enciende `onEnterGroupsOnly` cuando [I] dijo «ofrécele Yala completo»; lo consume
+    /// `ContentView` al quedar montada la sesión solo-grupos.
+    @Binding var offersFullActivationAfterGroupsEntry: Bool
     let hasExistingData: Bool
     /// S5 del review adversarial: el guard cross-cuenta evalúa datos locales EN el
     /// momento de la decisión (fetch vivo), no el snapshot `hasExistingData` — el
@@ -1828,7 +1902,9 @@ private struct WelcomeFlowModifier: ViewModifier {
                         showWelcomeCloudSignIn = false
                         showOnboarding = true
                     },
-                    onEnterGroupsOnly: {
+                    onEnterGroupsOnly: { offersFullActivation in
+                        // Paso 8 · la oferta viaja hasta que la sesión solo-grupos quede montada.
+                        offersFullActivationAfterGroupsEntry = offersFullActivation
                         // **Bloque [I]** · el backend dijo que esta cuenta solo lleva grupos, así que no
                         // se adopta nada: el recorrido pasa a la mini-app de Grupos con la sesión VIVA.
                         //

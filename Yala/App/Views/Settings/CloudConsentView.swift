@@ -45,6 +45,10 @@ struct CloudConsentView: View {
     /// Se invoca al ACEPTAR (tras el registro —cuando toca— y la telemetría). El caller sigue con la
     /// doble confirmación.
     var onAccept: () -> Void
+    /// Paso 8 · qué hace «Cancelar». `nil` —todos los callers anteriores— es `dismiss()`, que cierra la
+    /// presentación que lo contiene. La activación de Yala completo lo monta DENTRO de su sheet, donde cancelar
+    /// el consentimiento es volver a la elección privado / nube y no cerrar la activación entera.
+    var onCancel: (() -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -85,7 +89,9 @@ struct CloudConsentView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button(L10n.Common.cancel) { dismiss() }
+                    Button(L10n.Common.cancel) {
+                        if let onCancel { onCancel() } else { dismiss() }
+                    }
                         .accessibilityIdentifier("storage_consent_cancel")
                 }
             }

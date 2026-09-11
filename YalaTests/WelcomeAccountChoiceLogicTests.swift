@@ -298,9 +298,17 @@ struct WelcomeNewChooserWiringTests {
 
     @Test("`visibleNewOptions` cablea la constante COMPILADA y el sub-flag remoto de la elección")
     func visibleNewOptions_wiresBothGates() throws {
-        let body = try Self.body(
+        // Paso 8 · el gate se lee en UN sitio, `WelcomeNewOptionsGate.live`, que comparten el Welcome y la
+        // activación de Yala completo (mismo chooser, mismo gate). El container tiene que DELEGAR en él —si
+        // volviera a escribir los términos, las dos pantallas podrían divergir— y los términos se miden allí.
+        let container = try Self.body(
             of: "private var visibleNewOptions: [WelcomeAccountChoiceLogic.NewOption] {",
             in: try Self.source(Self.containerPath))
+        #expect(container.contains("WelcomeNewOptionsGate.live"))
+        let body = try Self.body(
+            of: "static var live: [WelcomeAccountChoiceLogic.NewOption] {",
+            in: try Self.source("Yala/App/Logic/WelcomeAccountChoiceLogic.swift"))
+        #expect(body.contains("isUITest: SwiftDataConfiguration.isUITesting && !UITestHooks.forceCloudChooser"))
         #expect(body.contains("bornCloudEnabled: CloudSyncFlags.bornCloudChoiceEnabled"))
         #expect(body.contains("remoteOnboardingChoiceEnabled: CloudRemoteFlags.cloudOnboardingChoiceEnabled"),
                 "sin el sub-flag, la card dejaría de ser DARK en producción")

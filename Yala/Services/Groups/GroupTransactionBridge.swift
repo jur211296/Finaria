@@ -99,6 +99,17 @@ final class GroupTransactionBridge {
     static func isDomainOpenForBridge(defaults: UserDefaults = .standard) -> Bool {
         let sealed = !SwiftDataConfiguration.isRunningTests
             && defaults.bool(forKey: AppPreferences.Keys.groupsDomainSealedForFreshStart)
+        // **Paso 8 · con una activación privada de Yala completo a medias, la puerta está cerrada.** Entre el
+        // relanzamiento que adjunta el espejo y el final de la activación, el modo sigue en `.groupInvite` y el
+        // espejo puede estar bajando un corpus RESTAURADO: re-puentear en ese modo borra la transacción real de
+        // cada gasto y de cada liquidación (`createGroupInviteCaseAVirtualPair`, `bridgeSettlement`), o sea lo
+        // que la persona había clasificado en su vida anterior. Cerrar no pierde nada: lo no atendido queda en
+        // `GroupsPendingBridgeIntent` y la activación converge al terminar. Mismo seam de tests que el sello.
+        let activationInFlight = !SwiftDataConfiguration.isRunningTests
+            && FullModeActivationResumeStore.isPrivateActivationInFlight(
+                pending: WelcomePendingDestinationStore.peek(defaults),
+                current: FullModeActivationResumeStore.peek(defaults))
+        guard !activationInFlight else { return false }
         return GroupsDomainAdoptionLogic.isBridgeAllowed(
             sealedForFreshStart: sealed,
             isUnlocked: defaults.bool(forKey: AppPreferences.Keys.groupsBetaUnlocked),
@@ -172,7 +183,7 @@ final class GroupTransactionBridge {
         // como «no veo mis gastos de grupo», y en release no hay otra forma de distinguirla de un
         // bug del bridge. Mensaje fijo, sin PII.
         guard Self.isDomainOpenForBridge() else {
-            Self.logger.info("bridgeExpense: skip — groups domain sealed for a new user on this device")
+            Self.logger.info("bridgeExpense: skip — groups domain closed (sealed for a new user, or a full activation in flight)")
             return false
         }
 

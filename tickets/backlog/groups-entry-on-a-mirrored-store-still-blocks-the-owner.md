@@ -90,3 +90,13 @@ Los dos tickets convergen en el mismo mecanismo, así que conviene decidirlos ju
 - Device-QA (CloudKit): es el único sitio donde el espejo existe. En simulador se puede verificar la
   DECISIÓN y el borrado local, nunca que iCloud quedó intacto.
 - Unit: la vuelta al neutro debería tener su lógica pura, como la tienen las dos puertas de hoy.
+
+## Lo que hereda la activación de Yala completo (paso 8, 2026-09-11)
+
+La puerta privada de «Activar Yala completo» borra **solo la zona de iCloud**, porque el store de una
+sesión solo-grupos nunca espejó y el borrado local (`wipeAllUserData`) resetearía además su onboarding.
+Esa premisa falla exactamente en el estado de este ticket: una sesión solo-grupos montada sobre un store que
+YA importó el corpus (instalaciones anteriores al paso 5, o una invitación aceptada sobre un store con
+espejo). Ahí, tras «borrar mis datos de iCloud», lo ya importado sigue en local y el espejo lo vuelve a
+subir; y por la rama de nube, la promoción sube lo importado a la cuenta. **La vuelta al neutro de este
+ticket lo cierra de raíz**: con ella, una sesión solo-grupos nunca tiene corpus importado debajo.

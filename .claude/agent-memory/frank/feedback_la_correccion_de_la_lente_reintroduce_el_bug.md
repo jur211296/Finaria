@@ -39,6 +39,14 @@ que van a acabar aquí?» (la puerta: eso solo lo contesta CloudKit).
   dos caminos DESPUÉS de que las lentes leyeran el diff. **Lo que se escribe después de la review no
   está revisado**, aunque lo haya escrito la review.
 
+**Otra vez el 2026-09-11 (paso 8), con otra forma.** Para cerrar el hallazgo «re-puentear liquidaciones
+borra las patas reales» escribí una convergencia nueva… que descartaba el retorno de
+`bridgeRemoteExpenses` (los ids ATENDIDOS) y retiraba su intención con gastos sin atender dentro. El repo
+ya tenía un test que documenta exactamente ese bug-class (`GroupsPendingBridgeDurabilityTests`, «el canal
+backend descartaba el valor de retorno…»). No lo cazó ninguna lente: lo cazó escribir el test de
+comportamiento contra el bridge REAL. ⇒ **al reusar una API desde código escrito tras la review, lee sus
+tests existentes antes que su firma**: cuentan qué se hizo mal con ella la última vez.
+
 Relacionado: [[lentes-adversariales-se-contradicen]], [[mi-fix-hereda-la-forma-del-bug]],
 [[el-prefiltro-tapa-al-criterio]] — este caso es literalmente un pre-filtro tapando al criterio, puesto
 por la corrección de un pre-filtro que tapaba al criterio.

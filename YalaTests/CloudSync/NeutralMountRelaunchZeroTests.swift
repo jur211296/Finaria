@@ -193,6 +193,11 @@ struct WelcomeMirrorRelaunchLogicTests {
             // personales. Ponerlo en `true` le cobra al organizador una pantalla de relanzamiento por un
             // mirror que su camino no usa — es la mutación (c) del chip G3.
             .groupsOrganizer: false,
+            // Paso 8 · «Activar Yala completo» → privado (onboarding o restaurar): lo personal va a vivir en
+            // el iCloud privado, así que caen con sus gemelas del Welcome. En `false`, el onboarding o el
+            // restore correrían sin espejo tras elegir privado — el restore agotaría su espera de 90 s.
+            .fullActivationPrivate: true,
+            .fullActivationRestore: true,
         ]
         #expect(Set(expected.keys) == Set(Destination.allCases),
                 "toda salida del Welcome tiene que declarar si necesita el mirror")

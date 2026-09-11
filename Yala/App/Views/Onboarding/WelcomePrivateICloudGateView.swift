@@ -53,6 +53,11 @@ struct WelcomePrivateICloudGateView: View {
     /// Borrar el corpus del iCloud de este Apple ID **y** lo que el espejo hubiera bajado ya. Devuelve
     /// `nil` si fue bien, o el motivo del fallo. Lo ejecuta `ContentView`.
     var performWipe: @MainActor () async -> String?
+    /// Paso 8 · ¿el borrado limpia también el nombre y la divisa residuales? `true` en el Welcome, donde son
+    /// restos de quien usó el dispositivo antes. **`false` en la activación de Yala completo**: allí son el
+    /// prefill de la persona que está activando —su nombre y la divisa de sus grupos—, y borrarlos le quitaría
+    /// justo lo que el onboarding le iba a ahorrar escribir.
+    var clearsResidualPreferencesOnWipe: Bool = true
 
     @State private var phase: Phase = .checking
 
@@ -443,7 +448,9 @@ struct WelcomePrivateICloudGateView: View {
             phase = .wipeFailed
             return
         }
-        OnboardingResetHelper.clearResidualPreferencesForFreshStart()
+        if clearsResidualPreferencesOnWipe {
+            OnboardingResetHelper.clearResidualPreferencesForFreshStart()
+        }
         StorageModePersistence.clearICloudCorpusWipeArm()
         onProceed()
     }

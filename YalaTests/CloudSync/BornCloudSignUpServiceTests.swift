@@ -547,10 +547,14 @@ struct BornCloudSignUpWiringTests {
 
     /// **A5 INVIERTE ESTE TEST.** En A2 afirmaba lo contrario («sigue SIN call-site: es DARK») y decía por
     /// escrito que al cablearlo había que darle la vuelta en ESE commit. Hecho: ahora exige que el servicio
-    /// tenga EXACTAMENTE un productor de producción y que sea la vista del Welcome. El conteo importa —sin
-    /// él, un segundo constructor (otra pantalla que decidiera dar de alta por su cuenta) pasaría en verde—,
-    /// y es la misma familia que los conteos esperados de `AttestWiringTests`.
-    @Test("tiene UN solo call-site de producción, y es la vista del alta del Welcome (A5)")
+    /// tenga EXACTAMENTE los productores de producción que se decidieron. El conteo importa —sin él, un
+    /// constructor más (otra pantalla que decidiera dar de alta por su cuenta) pasaría en verde—, y es la misma
+    /// familia que los conteos esperados de `AttestWiringTests`.
+    ///
+    /// **Paso 8 añadió el segundo, y conscientemente**: «Activar Yala completo → nube» promociona la cuenta
+    /// solo-grupos con el MISMO alta (el claim sobre la fila ligera contesta `created`). Se compara como
+    /// CONJUNTO porque el orden del `enumerator` es el del sistema de ficheros, no uno garantizado.
+    @Test("tiene exactamente sus call-sites de producción: el alta del Welcome (A5) y la activación (paso 8)")
     func service_hasExactlyOneProductionCallSite() throws {
         var constructions: [String] = []
         for root in ["Yala", "YalaWidgets", "YalaShare"] {
@@ -570,8 +574,11 @@ struct BornCloudSignUpWiringTests {
                 }
             }
         }
-        #expect(constructions == ["Yala/WelcomeCloudSignInView.swift"], """
-            El productor del alta born-cloud debe ser exactamente `WelcomeCloudSignInView` (A5).
+        #expect(constructions.count == 2 && Set(constructions) == [
+            "Yala/WelcomeCloudSignInView.swift", "Yala/FullModeActivationView.swift",
+        ], """
+            Los productores del alta born-cloud deben ser exactamente `WelcomeCloudSignInView` (A5) y
+            `FullModeActivationView` (paso 8).
             Encontrado: \(constructions.isEmpty ? "NINGUNO — el servicio volvió a quedarse sin call-site, o sea código muerto" : constructions.joined(separator: ", ")).
             """)
     }

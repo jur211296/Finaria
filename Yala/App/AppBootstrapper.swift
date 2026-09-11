@@ -1440,6 +1440,11 @@ final class AppBootstrapper {
         // El `onBridged` ponía al día el camino rápido en memoria del transporte CloudKit. La Fase 3 se
         // llevó ese argumento y el retome sigue en pie, que es exactamente lo que su diseño prometía.
         GroupsPendingBridgeResume.resumeIfNeeded(context: context)
+        // Paso 8 · la convergencia de los gastos de grupo tras restaurar dentro de «Activar Yala completo», si
+        // quedó pendiente (el import no se asentó en la sheet, o la app murió). Aquí y no en un Task propio por
+        // lo mismo que el retome de arriba: hereda los dos gates —store listo y dominio abierto—, y el de store
+        // listo tiene la salida del store vacío que la espera de quiescencia de la sheet no tiene.
+        GroupsBridgeRestoreConvergence.convergeIfPending(context: context)
 
         let descriptor = FetchDescriptor<SplitExpense>(
             predicate: #Predicate { $0.bridgePending == true }

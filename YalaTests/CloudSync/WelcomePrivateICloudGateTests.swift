@@ -621,7 +621,12 @@ struct WelcomePrivateICloudGateWiringTests {
     @Test("el borrado unificado toca la zona de iCloud Y el store local, y respeta la quiescencia")
     func wipe_clearsBothSides() throws {
         let src = try Self.source("Yala/App/ContentView.swift")
-        let wipe = try Self.body(of: "private func performICloudCorpusWipe() async -> String? {", in: src)
+        // Paso 8 · la firma ganó `includingLocalRows` (la activación de Yala completo borra solo la zona). Su
+        // DEFAULT es `true`, y es lo que mantiene este test con sentido: la puerta del Welcome y el aviso
+        // tardío la llaman sin argumento y siguen borrando los dos lados.
+        let wipe = try Self.body(
+            of: "private func performICloudCorpusWipe(includingLocalRows: Bool = true) async -> String? {",
+            in: src)
         #expect(wipe.contains("ICloudPersonalCorpusProbe.wipe()"))
         #expect(wipe.contains("DataWipeService." + Self.wipeCall))
         #expect(wipe.contains("waitForImportQuiescence"), """
