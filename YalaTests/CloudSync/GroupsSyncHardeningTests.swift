@@ -308,18 +308,18 @@ struct GroupsSyncHardeningTests {
             .appendingPathComponent("Yala/Services/CloudSync/CloudSessionSignOut.swift"), encoding: .utf8)
         let teardowns = source.components(separatedBy: "CloudSyncRuntime.shared?.teardownGuestSession()").count - 1
         let groupsTeardowns = source.components(separatedBy: "GroupsSyncClient.shared.teardownForSignOut()").count - 1
-        // El runtime PERSONAL se derriba en los 3 paths de sign-out que lo montan (privateReset/cloud/
-        // secondary) + el cierre .cloud de ELIMINAR-CUENTA (G5-D1, belt idempotente — el service ya lo
-        // derribó en su paso 2). El solo-grupos NO conoce el runtime personal.
+        // El runtime PERSONAL se derriba en el tramo común de los cierres por archivos (paso 9), el `.cloud`
+        // y el secundario + el cierre .cloud de ELIMINAR-CUENTA (G5-D1, belt idempotente — el service ya lo
+        // derribó en su paso 2).
         // +1 (2026-09-05): `exitSecondaryDiscardingPending`, la salida «salir igualmente» de la sesión de
         // visita — mismo tail-end que el camino secundario, así que derriba lo mismo. Si algún día ese
         // teardown se le cayera, la invitada se iría dejando el motor del DUEÑO apuntando a su cuenta.
         #expect(teardowns == 5)
-        // El canal de grupos se corta en los 5 paths de sign-out (privateReset/cloud/secondary/groupsOnly
-        // + exitYala del split D2 `573c3b8e`, que corta el canal ANTES de purgar cursor+outbox de grupos)
-        // + los 2 cierres de eliminar-cuenta (closeLocalAfterAccountDeletion Cloud/GroupsOnly — belts)
-        // + la salida forzada de la visita (2026-09-05, misma razón que arriba).
-        #expect(groupsTeardowns == 8)
+        // El canal de grupos se corta en: el tramo común de los cierres por archivos (privada, «equipo» y
+        // solo grupos — paso 9, `finalizeSessionExit`), el `.cloud`, el secundario, la salida forzada de la
+        // visita y los 2 cierres de eliminar-cuenta (closeLocalAfterAccountDeletion Cloud/GroupsOnly — belts).
+        // Con el paso 9 se fueron `performPrivateReset` y «Salir de Yala» (`exitYalaOnThisDevice`).
+        #expect(groupsTeardowns == 6)
     }
 
     /// M1 / D8 (G5-C): la purga de frontera de la sesión secundaria incluye el espejo App Group de GRUPOS

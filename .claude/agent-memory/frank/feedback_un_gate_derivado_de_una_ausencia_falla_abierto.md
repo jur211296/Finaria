@@ -47,3 +47,15 @@ dispositivo.** El estado que parece incoherente en un device suele ser el estado
 
 Relacionado: [[un-gate-falla-abierto-por-su-entrada]] (la misma familia, en la entrada en vez de en la
 señal) · [[review-adversarial-caza-lo-mio]] · [[mi-docblock-tambien-es-una-premisa]]
+
+## Un tercer caso, del 2026-09-11: el filtro de TIPO sobre el error
+
+`iCloudSyncService` recibía `event.error as? CKError`. Un evento del espejo que TERMINABA con un error de
+otro dominio (`NSCocoaErrorDomain` 1344xx) llegaba con `error == nil` y fecha de fin, y caía en la rama de
+éxito: movía el ancla del export, y el cierre privado del paso 9 borraba lo que no estaba en iCloud. Es la
+misma familia vista desde el error: **«no hay error» se leía como «fue bien»**, y un cast que filtra por
+tipo fabrica justo esa ausencia. La marca positiva existía y nadie la leía: `Event.succeeded`.
+
+⇒ Cuando una rama de éxito se decide por `error == nil`, busca una señal POSITIVA en el payload
+(`succeeded`, un status, un 2xx) y úsala. Y desconfía de todo `as? TipoConcreto` sobre un error: lo que no
+sea de ese tipo se vuelve invisible.

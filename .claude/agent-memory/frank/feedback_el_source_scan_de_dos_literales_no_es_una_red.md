@@ -54,3 +54,8 @@ habría encontrado —`WelcomeHeroReentryTests`, `WelcomeSecondaryNoticeTests`,
 `GroupCreateRoutingLogicTests`, `OnboardingGroupsPurposeGateLogicTests`— con 17 suites y 91 tests
 detrás. Salieron verdes, pero el gate no lo sabía: nadie las había corrido.
 
+**Y al revés, medido el 11-sep: tu literal lo lee el escáner de OTRO test.** Un source-scan nuevo buscaba
+el texto `"try DataWipeService.wipeAllUserData("` dentro de `UserDataResetView`, y `SharedStateIsolationTests`
+—que busca `wipeAllUserData(` en el código de los tests para exigir un trait— contó mi STRING como una
+llamada y tumbó la suite. Los escáneres del repo filtran comentarios, no literales. ⇒ al escribir el
+marcador de un scan, quítale lo que otro escáner caza (aquí bastó el paréntesis) y deja escrito por qué.

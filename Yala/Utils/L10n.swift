@@ -2150,11 +2150,6 @@ enum L10n {
             static var bannerTitle: String { ls("groups.migrated.bannerTitle", comment: "") }
             static var bannerBody: String { ls("groups.migrated.bannerBody", comment: "") }
             static var rejoinCTA: String { ls("groups.migrated.rejoinCTA", comment: "") }
-            static var deleteCopyRow: String { ls("groups.migrated.deleteCopyRow", comment: "") }
-            static var deleteCopyHint: String { ls("groups.migrated.deleteCopyHint", comment: "") }
-            static var deleteCopyConfirmTitle: String { ls("groups.migrated.deleteCopyConfirmTitle", comment: "") }
-            static var deleteCopyConfirmBody: String { ls("groups.migrated.deleteCopyConfirmBody", comment: "") }
-            static var deleteCopyConfirmButton: String { ls("groups.migrated.deleteCopyConfirmButton", comment: "") }
             /// C-10: cuerpo del banner cuando ESTE build no puede volver a entrar (hay que actualizar).
             static var updateBody: String { ls("groups.migrated.updateBody", comment: "") }
             /// C-10: cuerpo del banner cuando el canal está en pausa (kill remoto). Sin CTA.
@@ -4347,9 +4342,9 @@ enum L10n {
         }
         // D4: `deleteDataWarningGroupsOnly` RETIRADA — sustituida por las filas de la hoja (5a).
         // Cierre de sesión universal (H4 — privada y nube)
+        /// La fila «Cerrar sesión» no lleva subtítulo desde el paso 9 del rediseño (2026-09-11): es el mismo
+        /// verbo en las cuatro celdas, y el detalle de qué se borra vive en la hoja de alcance.
         static var signOut: String { ls("settings.signOut", comment: "") }
-        /// Fase 1 (§3.2): subtítulo de la fila "Cerrar sesión".
-        static var signOutSubtitle: String { ls("settings.signOutSubtitle", comment: "") }
         static var signOutConfirmTitle: String { ls("settings.signOutConfirmTitle", comment: "") }
         static var signOutConfirmAction: String { ls("settings.signOutConfirmAction", comment: "") }
         // D4: `signOutConfirmMessage{Cloud,ICloud,Secondary,GroupsOnly}` RETIRADAS — el copy por-path
@@ -4365,6 +4360,8 @@ enum L10n {
         static var yalaAccountDataLocationTitle: String { ls("settings.yalaAccountDataLocationTitle", comment: "") }
         static var yalaAccountDataLocationCloud: String { ls("settings.yalaAccountDataLocationCloud", comment: "") }
         static var yalaAccountDataLocationGroupsOnly: String { ls("settings.yalaAccountDataLocationGroupsOnly", comment: "") }
+        /// Paso 9: solo grupos SIN sesión privada — no hay datos personales en ninguna parte.
+        static var yalaAccountDataLocationGroupsOnlyNoPrivate: String { ls("settings.yalaAccountDataLocationGroupsOnlyNoPrivate", comment: "") }
         static var yalaAccountSignOutScope: String { ls("settings.yalaAccountSignOutScope", comment: "") }
         static var yalaAccountReturnICloud: String { ls("settings.yalaAccountReturnICloud", comment: "") }
         static var yalaAccountReturnICloudScope: String { ls("settings.yalaAccountReturnICloudScope", comment: "") }
@@ -4385,25 +4382,25 @@ enum L10n {
         static var signOutSecondaryLossWarning: String { ls("settings.signOutSecondaryLossWarning", comment: "") }
         static var signOutWaitButton: String { ls("settings.signOutWaitButton", comment: "") }
         static var signOutExitAnywayButton: String { ls("settings.signOutExitAnywayButton", comment: "") }
-        // D6 (§3.3.6): "Salir de Yala en este dispositivo" — salida del solo-grupos legado 5a
-        // (group-invite SIN sesión backend). Invoca `.privateReset`: NO toca datos ni grupos.
-        static var exitYala: String { ls("settings.exitYala", comment: "") }
-        static var exitYalaSubtitle: String { ls("settings.exitYalaSubtitle", comment: "") }
-        static var exitYalaConfirmTitle: String { ls("settings.exitYalaConfirmTitle", comment: "") }
-        static var exitYalaConfirmAction: String { ls("settings.exitYalaConfirmAction", comment: "") }
-        // D4: `exitYalaConfirmMessage` RETIRADA — sustituida por las filas de la hoja (`exitYalaLegacy`).
-        // D2 (§3.3.3): división de "Cerrar sesión" en el escenario privado+grupos con sesión backend
-        // ([FLAG]) — fila "Cerrar sesión de grupos" (→ .groupsOnlySignOut) + fila "Salir de Yala en este
-        // dispositivo" (→ .privateReset forzado, con boot-wipe de grupos encadenado). El título/acción del
-        // diálogo de "Salir de Yala" reusan `exitYalaConfirm*`; el subtítulo y mensaje son variantes 5b.
-        static var signOutGroups: String { ls("settings.signOutGroups", comment: "") }
-        static var signOutGroupsSubtitle: String { ls("settings.signOutGroupsSubtitle", comment: "") }
-        static var exitYalaGroupsSubtitle: String { ls("settings.exitYalaGroupsSubtitle", comment: "") }
-        // D4: `exitYalaGroupsConfirmMessage` RETIRADA — sustituida por las filas de la hoja (`exitYalaGroups`).
+        // Paso 9 (2026-09-11): «Salir de Yala en este dispositivo» y «Cerrar sesión de grupos» RETIRADAS —
+        // un solo verbo, «Cerrar sesión», en las cuatro celdas del ADR 2026-09-09.
+        // Cierre PRIVADO: la espera del export de iCloud y su salida de emergencia avisada (decisión de
+        // Jürgen, 2026-09-09) + la confirmación reforzada cuando no hay copia en iCloud.
+        static var signOutExportPendingTitle: String { ls("settings.signOutExportPendingTitle", comment: "") }
+        /// «Cambios de este dispositivo que aún no llegaron a iCloud: N.» El número va tras dos puntos a
+        /// propósito: evita la concordancia de plural en los 16 idiomas.
+        static func signOutExportPendingMessage(_ count: Int) -> String {
+            String(format: ls("settings.signOutExportPendingMessage", comment: "Aviso de cierre de sesión con cambios sin subir a iCloud; %d = cuántos"), count)
+        }
+        /// Variante cuando el historial no se pudo leer: no hay número honesto que dar.
+        static var signOutExportPendingMessageUnknown: String { ls("settings.signOutExportPendingMessageUnknown", comment: "") }
+        static var signOutExportDiscardButton: String { ls("settings.signOutExportDiscardButton", comment: "") }
+        static var signOutNoCopyConfirmTitle: String { ls("settings.signOutNoCopyConfirmTitle", comment: "") }
+        static var signOutNoCopyConfirmMessage: String { ls("settings.signOutNoCopyConfirmMessage", comment: "") }
+        static var signOutNoCopyConfirmAction: String { ls("settings.signOutNoCopyConfirmAction", comment: "") }
         // Eliminar mi cuenta (G5-D1b — borrado GDPR, DARK)
         static var deleteAccount: String { ls("settings.deleteAccount", comment: "") }
         /// Fase 1 (§3.2): subtítulo de la fila "Eliminar mi cuenta".
-        static var deleteAccountSubtitle: String { ls("settings.deleteAccountSubtitle", comment: "") }
         /// Fase 1 (§3.3.4): desvío cruzado del diálogo de eliminar cuenta hacia Vaciar.
         static var deleteAccountCrossReferHint: String {
             ls("settings.deleteAccountCrossReferHint", comment: "")
@@ -4437,7 +4434,8 @@ enum L10n {
         static var scopePersonalInICloud: String { ls("settings.scopePersonalInICloud", comment: "") }
         static var wipeScopeDevice: String { ls("settings.wipeScopeDevice", comment: "") }
         static var wipeScopeDeviceGroupsOnly: String { ls("settings.wipeScopeDeviceGroupsOnly", comment: "") }
-        static var wipeScopeCloudICloud: String { ls("settings.wipeScopeCloudICloud", comment: "") }
+        /// Vaciar en privada: nombra los demás dispositivos del Apple ID (decisión de Jürgen, 2026-09-09).
+        static var wipeScopeCloudICloudAllDevices: String { ls("settings.wipeScopeCloudICloudAllDevices", comment: "") }
         static var wipeScopeCloudAccount: String { ls("settings.wipeScopeCloudAccount", comment: "") }
         static var wipeScopeGroups: String { ls("settings.wipeScopeGroups", comment: "") }
         static var wipeScopeConservation: String { ls("settings.wipeScopeConservation", comment: "") }
@@ -4464,14 +4462,6 @@ enum L10n {
         static var batchLeaveStopped: String { ls("settings.batchLeaveStopped", comment: "") }
         static var batchLeaveStoppedBody: String { ls("settings.batchLeaveStoppedBody", comment: "") }
         static var batchLeaveStatSkipped: String { ls("settings.batchLeaveStatSkipped", comment: "") }
-        // D1 — retención «Seguir con mis grupos» (pantalla de éxito post-vaciar con grupos vivos)
-        static var retentionTitle: String { ls("settings.retentionTitle", comment: "") }
-        static var retentionQuestion: String { ls("settings.retentionQuestion", comment: "") }
-        static var retentionGroupsOnly: String { ls("settings.retentionGroupsOnly", comment: "") }
-        static var retentionGroupsOnlySubtitle: String { ls("settings.retentionGroupsOnlySubtitle", comment: "") }
-        static var retentionStartFresh: String { ls("settings.retentionStartFresh", comment: "") }
-        static var retentionStartFreshSubtitle: String { ls("settings.retentionStartFreshSubtitle", comment: "") }
-        static var retentionDebtNote: String { ls("settings.retentionDebtNote", comment: "") }
         static var deleteAccountScopeDeviceCloud: String { ls("settings.deleteAccountScopeDeviceCloud", comment: "") }
         static var deleteAccountScopeDeviceGroupsOnly: String { ls("settings.deleteAccountScopeDeviceGroupsOnly", comment: "") }
         static var deleteAccountScopeCloudCloud: String { ls("settings.deleteAccountScopeCloudCloud", comment: "") }
@@ -4483,20 +4473,14 @@ enum L10n {
         static var signOutScopeCloudCloud: String { ls("settings.signOutScopeCloudCloud", comment: "") }
         static var signOutScopeDeviceSecondary: String { ls("settings.signOutScopeDeviceSecondary", comment: "") }
         static var signOutScopeCloudSecondary: String { ls("settings.signOutScopeCloudSecondary", comment: "") }
-        static var signOutScopeDeviceGroupsOnly: String { ls("settings.signOutScopeDeviceGroupsOnly", comment: "") }
-        static var exitYalaScopeDeviceLegacy: String { ls("settings.exitYalaScopeDeviceLegacy", comment: "") }
-        static var exitYalaScopeCloudLegacy: String { ls("settings.exitYalaScopeCloudLegacy", comment: "") }
-        static var exitYalaScopeGroupsLegacy: String { ls("settings.exitYalaScopeGroupsLegacy", comment: "") }
-        static var exitYalaScopeDeviceGroups: String { ls("settings.exitYalaScopeDeviceGroups", comment: "") }
+        static var signOutScopeDeviceNoCopy: String { ls("settings.signOutScopeDeviceNoCopy", comment: "") }
+        static var signOutScopeCloudNoCopy: String { ls("settings.signOutScopeCloudNoCopy", comment: "") }
+        static var signOutNoCopyWarning: String { ls("settings.signOutNoCopyWarning", comment: "") }
         static var signOutScopeConservationPrivate: String { ls("settings.signOutScopeConservationPrivate", comment: "") }
         static var signOutScopeConservationCloud: String { ls("settings.signOutScopeConservationCloud", comment: "") }
         static var signOutScopeConservationSecondary: String { ls("settings.signOutScopeConservationSecondary", comment: "") }
         static var signOutScopeConservationGroups: String { ls("settings.signOutScopeConservationGroups", comment: "") }
-        static var exitYalaScopeConservationLegacy: String { ls("settings.exitYalaScopeConservationLegacy", comment: "") }
-        static var deleteFrozenScopeDevice: String { ls("settings.deleteFrozenScopeDevice", comment: "") }
-        static var deleteFrozenScopeCloud: String { ls("settings.deleteFrozenScopeCloud", comment: "") }
-        static var deleteFrozenScopeGroups: String { ls("settings.deleteFrozenScopeGroups", comment: "") }
-        static var deleteFrozenScopeConservation: String { ls("settings.deleteFrozenScopeConservation", comment: "") }
+        static var signOutScopeConservationPrivateWithGroups: String { ls("settings.signOutScopeConservationPrivateWithGroups", comment: "") }
 
         static var deleteAccountConfirmTitle: String { ls("settings.deleteAccountConfirmTitle", comment: "") }
         // D4: `deleteAccountConfirmMessage{Cloud,GroupsOnly}` RETIRADAS — la línea `.base` se reparte en

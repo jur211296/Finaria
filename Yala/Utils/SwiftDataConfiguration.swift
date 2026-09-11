@@ -689,7 +689,19 @@ extension SwiftDataConfiguration {
         // sobrevive, sus recordatorios siguen siendo válidos (y el reconciler los reprogramaría).
         guard deleteFiles(databaseName, personalSchema),
               deleteFiles(syncMetaDatabaseName, syncMetaSchema) else {
-            CloudSyncBreadcrumb.signOutWipeAborted(reason: "store file deletion failed")
+            // **Paso 9 · con el modo `.icloud` el abort DESARMA.** El argumento de arriba («el par sigue
+            // montando mirror-OFF, sin riesgo») es del camino `.cloud`. Desde el paso 9 también arman este wipe
+            // los cierres de sesión PRIVADA y solo-grupos, y ahí el arranque monta el ESPEJO: la app entraría
+            // normal con el arm colgando, la persona seguiría escribiendo, y un reintento que saliera bien
+            // más tarde se llevaría cambios que nadie esperó a exportar. Desarmado, el cierre simplemente no
+            // ocurrió: los datos siguen aquí y en iCloud, y volver a «Cerrar sesión» vuelve a esperar al export.
+            if StorageModePersistence.read(defaults) == .icloud {
+                StorageModePersistence.clearSignOutWipeIncludesGroups(defaults)
+                StorageModePersistence.clearSignOutWipeArm(defaults)
+                CloudSyncBreadcrumb.signOutWipeAborted(reason: "store file deletion failed — icloud, disarmed")
+            } else {
+                CloudSyncBreadcrumb.signOutWipeAborted(reason: "store file deletion failed")
+            }
             return
         }
 
@@ -699,6 +711,11 @@ extension SwiftDataConfiguration {
         // JUNTO al arm (AL FINAL, orden kill-safe existente).
         if StorageModePersistence.signOutWipeIncludesGroups(defaults) {
             _ = deleteFiles(groupsDatabaseName, groupsSchema)
+            // Paso 9 · el latch «este dispositivo tuvo sesión de Grupos» se va con los grupos. Decide si el
+            // empty state dice «vuelve a tu cuenta» o «crea una cuenta», y tras este borrado el dispositivo es
+            // «recién instalado»: la persona siguiente no tiene grupos esperándola en ninguna cuenta.
+            // `removeUserPreferenceKeys` no lo nombra (es del dominio Grupos), así que sin esto sobrevivía.
+            defaults.removeObject(forKey: GroupsSessionHistoryMarker.key)
         }
 
         StorageModePersistence.write(.icloud, defaults: defaults)
@@ -726,6 +743,10 @@ extension SwiftDataConfiguration {
         // un estado que sobrevive a su motivo. `removeUserPreferenceKeys` excluye `cloudSync.*` a
         // propósito, así que este es el único sitio donde puede irse.
         StorageModePersistence.clearGroupsOnlyNeutralMount(defaults)
+        // Paso 9 · el testigo «eligió privado sin iCloud» (la validación aplazada del paso 4) es de la vida
+        // que se cierra. `cloudSync.*` lo excluye el barrido de preferencias, así que sin esto la persona
+        // siguiente heredaría un aviso de espejo tardío sobre un corpus que no es suyo.
+        StorageModePersistence.clearPrivateChoseWithoutICloud(defaults)
 
         // El consent de GRUPOS (§C5) es un registro de la CUENTA y `removeUserPreferenceKeys` no lo
         // nombra (ni en su lista ni en sus exclusiones deliberadas): sin esto sobrevive al wipe y la

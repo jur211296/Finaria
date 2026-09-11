@@ -49,12 +49,17 @@
 import Foundation
 import SwiftData
 
-/// Lógica PURA de visibilidad de la fila destructiva (testeable sin UI).
+/// Lógica PURA de visibilidad de «Eliminar mi cuenta» (testeable sin UI). Vive dentro de «Tu cuenta de
+/// Yala» desde el paso 9 del rediseño (fuera de la lista principal de Ajustes, a dos toques).
 enum AccountDeletionRowLogic {
-    /// La fila "Eliminar mi cuenta" solo se ofrece con una sesión backend VIVA y fuera de la sesión
-    /// secundaria (M1, RESIDUAL v1) y del modo group-invite (onboarding de CKShare, sin sesión backend).
-    static func shouldShow(hasSession: Bool, secondaryActive: Bool, isGroupInviteMode: Bool) -> Bool {
-        hasSession && !secondaryActive && !isGroupInviteMode
+    /// Con una sesión backend VIVA y fuera de la sesión secundaria (M1, RESIDUAL v1).
+    ///
+    /// **Ya no excluye el modo group-invite** (paso 9, 2026-09-11). La exclusión venía de la era CKShare,
+    /// cuando group-invite significaba «sin sesión backend» — premisa que el alta por «Vengo por un grupo»
+    /// dejó falsa: esa sesión en la nube solo-grupos CREA una cuenta, y App Store 5.1.1(v) exige poder
+    /// borrarla. Sin sesión el término `hasSession` ya la esconde.
+    static func shouldShow(hasSession: Bool, secondaryActive: Bool) -> Bool {
+        hasSession && !secondaryActive
     }
 }
 
@@ -88,6 +93,10 @@ final class AccountDeletionService {
         var canDelete: @MainActor () -> Bool
         var groupsBackendEnabled: () -> Bool
         var storageModeIsCloud: () -> Bool
+        /// Paso 9: ¿hay sesión PRIVADA (`!isGroupInviteMode`)? Decide el cierre local de la cuenta de grupos:
+        /// con sesión privada (D) lo personal sobrevive; sin ella (F) no hay nada privado que conservar y el
+        /// dispositivo vuelve a recién instalado, como tras borrar una cuenta de la nube.
+        var hasPrivateSession: @MainActor () -> Bool
         var forgetGroupsUser: @MainActor () async throws -> Void
         var teardown: @MainActor () -> Void
         var deletePersonalAccount: @MainActor () async -> DeleteOutcome
@@ -95,6 +104,10 @@ final class AccountDeletionService {
         var revokeGoogle: @MainActor () async -> Void
         var closeLocalCloud: @MainActor () async -> Void
         var closeLocalGroupsOnly: @MainActor (ModelContext) async -> Bool
+        /// Paso 9: un solo-grupos sin sesión privada (F) deja su `.groupInvite` en el iCloud KV del Apple ID.
+        /// Al borrar su cuenta se suelta, o la vida siguiente de este teléfono nacería solo-grupos
+        /// (`DataWipeService.releaseGroupsOnlyOnboardingModeFromICloudKV`).
+        var releaseGroupsOnlyOnboardingMode: @MainActor () -> Void
 
         /// D7 (§3.3.4.2): higiene post-delete BEST-EFFORT. `clearCloudBeacon` no lanza (KV removeObject);
         /// `deleteCloudKitMarker` sí (fetch/save) y el flujo lo TRAGA — jamás condición del cierre.
@@ -107,6 +120,7 @@ final class AccountDeletionService {
             // lo que el usuario ya subió al backend ni le quita el derecho de supresión.
             groupsBackendEnabled: { CloudSyncFlags.groupsBackendCompiledCapability },
             storageModeIsCloud: { CloudSyncFlags.storageMode == .cloud },
+            hasPrivateSession: { !SessionState.shared.isGroupInviteMode },
             forgetGroupsUser: {
                 let client = GroupsMembershipClient(attestProvider: AttestSessionProvider.live)
                 _ = try await GroupBackendMembershipService(client: client).forgetUser()
@@ -126,6 +140,7 @@ final class AccountDeletionService {
             revokeGoogle: { await GoogleTokenRevocation.revokeIfNeeded() },
             closeLocalCloud: { await CloudSessionSignOut.shared.closeLocalAfterAccountDeletionCloud() },
             closeLocalGroupsOnly: { await CloudSessionSignOut.shared.closeLocalAfterAccountDeletionGroupsOnly(context: $0) },
+            releaseGroupsOnlyOnboardingMode: { DataWipeService.releaseGroupsOnlyOnboardingModeFromICloudKV() },
             clearCloudBeacon: {
                 CloudBeacon().clearCloudAccountLinked()
                 CloudSyncBreadcrumb.accountDeletionBeaconCleared()
@@ -228,10 +243,15 @@ final class AccountDeletionService {
         // revoke tiene skip natural: a lo sumo uno tiene par cuyo sub matchea la sesión que se borra.
         await deps.revokeGoogle()
 
-        // 4c) Cierre LOCAL por modo, reusando la red terminal de CloudSessionSignOut.
-        if deps.storageModeIsCloud() {
+        // 4c) Cierre LOCAL por celda, reusando la red terminal de CloudSessionSignOut. El solo-grupos sin sesión
+        // privada (F) cierra como la nube: su dispositivo no guarda nada privado que conservar, y el cierre de
+        // solo-grupos lo dejaría en una shell de grupos sin sesión ni cuenta (paso 9 del rediseño).
+        if deps.storageModeIsCloud() || !deps.hasPrivateSession() {
+            // F deja su `.groupInvite` en el iCloud KV: se suelta antes de cerrar, o la vida siguiente de este
+            // teléfono nacería solo-grupos (review adversarial del paso 9). La nube no tiene nada que soltar.
+            if !deps.storageModeIsCloud() { deps.releaseGroupsOnlyOnboardingMode() }
             await deps.closeLocalCloud()
-            MetricsService.accountDeletionCompleted(step: "cloud")
+            MetricsService.accountDeletionCompleted(step: deps.storageModeIsCloud() ? "cloud" : "groupsOnlyNoPrivate")
             phase = .awaitingRelaunch
         } else {
             if await deps.closeLocalGroupsOnly(context) {

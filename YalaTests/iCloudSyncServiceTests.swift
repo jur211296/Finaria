@@ -331,4 +331,98 @@ struct iCloudSyncServiceTests {
         let result = await service.forceFetchAndWait(timeout: 0.3)
         #expect(result == false)
     }
+
+    // MARK: - Paso 9 · el ancla del export y la prueba de «no hay cuenta»
+
+    // Las anclas de estos tests van en el PASADO (2023): una del futuro se descarta por diseño
+    // (`PrivateSignOutExportGateLogic.usableAnchor`), y con 2027 los tests medirían el descarte, no el ancla.
+
+    @MainActor @Test func exportSuccess_recordsItsStartAsTheAnchor() {
+        let service = freshService()
+        #expect(service.confirmedExportStart == nil, "el ancla de otro test no puede colarse")
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        service.apply(eventType: .exportEvent, error: nil, endDate: start.addingTimeInterval(5), startDate: start)
+        #expect(service.confirmedExportStart == start, "el ancla es el INICIO, no el fin")
+    }
+
+    /// Un evento fuera de orden no puede ADELANTAR el ancla hacia atrás… ni un inicio más viejo retrasarla:
+    /// el `max` cierra las dos direcciones.
+    @MainActor @Test func anchor_isMonotonic() {
+        let service = freshService()
+        let later = Date(timeIntervalSince1970: 1_700_000_100)
+        let earlier = Date(timeIntervalSince1970: 1_700_000_000)
+        service.apply(eventType: .exportEvent, error: nil, endDate: later.addingTimeInterval(1), startDate: later)
+        service.apply(eventType: .exportEvent, error: nil, endDate: earlier.addingTimeInterval(1), startDate: earlier)
+        #expect(service.confirmedExportStart == later)
+    }
+
+    @MainActor @Test func anchor_ignoresFailures_inFlightEvents_andImports() {
+        let service = freshService()
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        service.apply(eventType: .exportEvent, error: ckError(.networkUnavailable), endDate: nil, startDate: start)
+        service.apply(eventType: .exportEvent, error: nil, endDate: nil, startDate: start)   // en curso
+        service.apply(eventType: .importEvent, error: nil, endDate: start.addingTimeInterval(1), startDate: start)
+        #expect(service.confirmedExportStart == nil, "solo un EXPORT que TERMINÓ bien confirma nada")
+    }
+
+    @MainActor @Test func anchor_isNotMovedWithoutAStartDate() {
+        let service = freshService()
+        service.apply(eventType: .exportEvent, error: nil, endDate: .now)
+        #expect(service.confirmedExportStart == nil, "sin inicio no hay ancla: el fin daría por subido lo que no")
+    }
+
+    /// Un export que TERMINÓ sin éxito con un error que no es de CloudKit llegaba con `error == nil` (el
+    /// filtro `as? CKError`) y caía en la rama de éxito: el ancla avanzaba sobre un export que no subió nada
+    /// y el cierre privado borraba lo que no estaba en iCloud. `succeeded` lo corta (review del paso 9).
+    @MainActor @Test func failedExportWithForeignError_neverConfirms_norClearsNotAuthenticated() {
+        let service = freshService()
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        service.apply(eventType: .exportEvent, error: ckError(.notAuthenticated), endDate: nil)
+        #expect(service.mirrorReportedNotAuthenticated)
+        service.apply(eventType: .exportEvent, error: nil, endDate: start.addingTimeInterval(1),
+                      startDate: start, succeeded: false)
+        #expect(service.confirmedExportStart == nil, "un export fallido no confirma nada")
+        #expect(service.mirrorReportedNotAuthenticated, "ni borra la prueba de que no hay cuenta")
+        // Control: el mismo evento, con éxito, sí confirma y sí la borra.
+        service.apply(eventType: .exportEvent, error: nil, endDate: start.addingTimeInterval(1),
+                      startDate: start, succeeded: true)
+        #expect(service.confirmedExportStart == start)
+        #expect(!service.mirrorReportedNotAuthenticated)
+    }
+
+    /// El reloj retrocedió con la app cerrada: el ancla guardada queda en el futuro. Se lee como ausente, y el
+    /// export siguiente la reemplaza en vez de quedarse detrás de ella para siempre (el `max` la protegía).
+    @MainActor @Test func futureAnchor_readsAsAbsent_andTheNextExportReplacesIt() {
+        let service = freshService()
+        // Segundos enteros: el ancla viaja como `timeIntervalSince1970` en un Double, y una fecha con
+        // fracción no vuelve idéntica del `UserDefaults` (el `==` fallaría por el último bit, no por el ancla).
+        let now = Date(timeIntervalSince1970: Date().timeIntervalSince1970.rounded(.down))
+        service.exportAnchorDefaults.set(now.addingTimeInterval(86_400).timeIntervalSince1970,
+                                         forKey: iCloudSyncService.confirmedExportStartKey)
+        #expect(service.confirmedExportStart == nil)
+        let start = now.addingTimeInterval(-10)
+        service.apply(eventType: .exportEvent, error: nil, endDate: now, startDate: start)
+        #expect(service.confirmedExportStart == start)
+    }
+
+    /// Si CloudKit dice que no hay cuenta, lo confirmado antes no prueba nada de la cuenta que venga.
+    @MainActor @Test func notAuthenticated_invalidatesTheAnchor() {
+        let service = freshService()
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        service.apply(eventType: .exportEvent, error: nil, endDate: start.addingTimeInterval(1), startDate: start)
+        #expect(service.confirmedExportStart == start)
+        service.apply(eventType: .importEvent, error: ckError(.notAuthenticated), endDate: nil)
+        #expect(service.confirmedExportStart == nil)
+    }
+
+    @MainActor @Test func notAuthenticated_isRemembered_untilAnyEventSucceeds() {
+        let service = freshService()
+        #expect(!service.mirrorReportedNotAuthenticated)
+        service.apply(eventType: .exportEvent, error: ckError(.notAuthenticated), endDate: nil)
+        #expect(service.mirrorReportedNotAuthenticated)
+        service.apply(eventType: .setup, error: ckError(.networkUnavailable), endDate: nil)
+        #expect(service.mirrorReportedNotAuthenticated, "un fallo que no es de cuenta no lo apaga")
+        service.apply(eventType: .importEvent, error: nil, endDate: .now)
+        #expect(!service.mirrorReportedNotAuthenticated)
+    }
 }

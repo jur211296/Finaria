@@ -939,11 +939,6 @@ final class AppBootstrapper {
         if UITestHooks.aiConsent {
             appPreferences.aiDataConsentAccepted = true
         }
-        // Pantalla de retención D1 en uitest: arma el cover (con deuda) sin ejecutar el wipe real.
-        if UITestHooks.retentionDemo {
-            SessionState.shared.groupsRetentionHasDebt = true
-            SessionState.shared.groupsRetentionPending = true
-        }
     }
 
     /// Mapea `-uitest-deeplink <target>` a un DeepLinkDestination (solo uitest/DEBUG).

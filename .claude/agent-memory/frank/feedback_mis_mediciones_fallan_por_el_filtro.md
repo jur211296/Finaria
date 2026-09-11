@@ -715,3 +715,9 @@ es exactamente una salvaguarda que no se puede probar desde donde se prueba.
 
 Relacionado: [[la-asercion-que-no-puede-fallar]] · [[el-prefiltro-tapa-al-criterio]] (la misma familia:
 algo aguas arriba deja la comprobación sin nada que comprobar).
+
+**Y el filtro puede ser el NOMBRE, medido el 2026-09-11.** Una tanda de 14 mutantes salió «5 muertos»: la
+buscaba como `✘ Test <función>(` y Swift Testing escribe el **nombre visible** cuando el test lo tiene
+(`@Test("la tabla entera")` sale como `✘ Test "la tabla entera"`). Releída con los dos formatos, 14/14. ⇒ al
+leer el log de un mutante, resuelve el nombre visible desde el fuente, o lee el result bundle; y un
+«sobrevive» en un test con nombre visible es sospechoso hasta mirarlo.

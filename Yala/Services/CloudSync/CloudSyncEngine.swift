@@ -338,7 +338,7 @@ enum CloudSyncBreadcrumb {
 
     // MARK: Cierre de sesión (H4) — sin PII
 
-    /// El usuario inició el cierre de sesión. `path` = "private-reset" | "cloud-secure" |
+    /// El usuario inició el cierre de sesión. `path` = "private" | "private-with-groups" | "cloud-secure" |
     /// "secondary" | "icloud-groups-session" | "account-delete-cloud" |
     /// "account-delete-groups-only" (valores reales de los call-sites en `CloudSessionSignOut`).
     static func signOutStarted(path: String) {
@@ -351,9 +351,28 @@ enum CloudSyncBreadcrumb {
         logger.notice("CloudSignOut push blocked pending=\(pending, privacy: .public)")
     }
 
-    /// Camino privado (`.icloud`): sesión cerrada + reset a Welcome SIN tocar datos.
-    static func signOutPrivateReset() {
-        logger.notice("CloudSignOut private reset completed")
+    /// Paso 9 · cierre PRIVADO: la espera del export de iCloud se agotó con cambios sin confirmar y el
+    /// cierre se bloqueó con la salida avisada. `pending` = objetos locales sin subir; −1 = no se pudo
+    /// contar. Sin PII: solo el número. Sostenido en muchos dispositivos = el testigo del export falla
+    /// (el autor del espejo, el ancla) — mirar antes de culpar a la red.
+    static func signOutExportUnconfirmed(pending: Int?) {
+        logger.notice("CloudSignOut private export unconfirmed pending=\(pending ?? -1, privacy: .public)")
+    }
+
+    /// Paso 9 · la celda cambió entre la hoja y la ejecución (una sesión que caducó con la hoja abierta): no
+    /// se ejecuta un borrado que nadie leyó. La vista lo comprueba antes; esto es el cinturón.
+    static func signOutCellChangedBeforeRunning() {
+        logger.notice("CloudSignOut skipped — the confirmed cell changed before running")
+    }
+
+    /// Paso 9 · la persona eligió «Cerrar sesión igualmente» tras el aviso: se borra sin confirmar el export.
+    static func signOutExportDiscarded() {
+        logger.notice("CloudSignOut private exit discarding unconfirmed changes")
+    }
+
+    /// Paso 9 · cierre privado SIN copia en iCloud, confirmado con el segundo gesto: no hay espera que hacer.
+    static func signOutWithoutICloudCopy() {
+        logger.notice("CloudSignOut private without iCloud copy — confirmed, no export wait")
     }
 
     /// Camino `.cloud`: outbox vacío verificado + sesión cerrada + wipe ARMADO → esperando relaunch.

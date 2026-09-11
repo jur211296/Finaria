@@ -76,11 +76,16 @@ struct ProfileView: View {
     // tumbaba AMBAS cadenas (bug device 2026-07-14). Ante `.awaitingRelaunch` este sheet
     // solo se CIERRA; el root verifica presentación efectiva y reintenta.
     private var signOutCoordinator: CloudSessionSignOut { CloudSessionSignOut.shared }
-    @State private var showCloudSignOutConfirm = false
-    // D2 (§3.3.3): confirm DEDICADO de "Salir de Yala en este dispositivo" en el split solo-grupos
-    // backend — invoca `.privateReset` FORZADO (contenedor distinto del de "Cerrar sesión de grupos"
-    // ⇒ sin carrera same-anchor; molde de la doble confirmación de eliminar-cuenta).
-    @State private var showExitYalaGroupsConfirm = false
+    /// Paso 9 · la hoja de «Cerrar sesión» viaja COMO ITEM, con la operación ya resuelta AL TOCAR: la variante
+    /// sin copia en iCloud se decide ahí y la confirmación la hereda, de modo que la hoja que se leyó y el
+    /// cierre que se ejecuta hablan de lo mismo (molde `DeleteAccountScope`, abajo).
+    private struct SignOutScope: Identifiable {
+        let id = UUID()
+        let path: CloudSignOutFlowLogic.Path
+        let operation: DestructiveScopeLogic.Operation
+        let cloudLabel: DestructiveScopeLogic.CloudLabel
+    }
+    @State private var signOutScope: SignOutScope?
     @State private var showSignOutBlockedAlert = false
     // H-2026-07-18-6: el bloqueo TRANSITORIO del sign-out solo-grupos usa un alert distinto
     // ("un momento más") — el permanente conserva el alert de conexión de siempre.
@@ -91,21 +96,67 @@ struct ProfileView: View {
     @State private var signOutBlockedOffersExit = false
     // D4: flags del patrón anti-carrera de las hojas de alcance — la acción corre en el `onDismiss` del
     // sheet (con la hoja YA fuera), no en el tap del botón (evita el race dismiss-hoja / transición-shell).
-    @State private var pendingSignOut = false
-    @State private var pendingExitYalaGroups = false
+    @State private var pendingSignOutScope: SignOutScope?
+    /// Paso 9 · segundo gesto del cierre privado SIN copia en iCloud (confirmación reforzada). Es un alert
+    /// que encadena el `onDismiss` de la hoja: contenedores distintos, sin carrera en el mismo anchor.
+    @State private var showSignOutNoCopyConfirm = false
+    /// El camino que confirmó la hoja sin copia, para que el segundo gesto ejecute ESE y no otro.
+    @State private var pendingNoCopyPath: CloudSignOutFlowLogic.Path?
+    /// Paso 9 · el aviso de la espera del export agotada, con su salida de emergencia. Alert DEDICADO con
+    /// botones literales: el `actions` de un `.alert` no admite labels que dependan del estado.
+    @State private var showSignOutExportAlert = false
+    /// Cuántos cambios no llegaron a iCloud en el bloqueo que se está mostrando (0 = no se pudo contar).
+    @State private var signOutExportPending = 0
+    /// Paso 9 · el bloqueo es de una sesión CADUCADA con grupos sin subir: el aviso dice que hay que volver a
+    /// entrar, no que se revise la conexión.
+    @State private var signOutBlockedSessionExpired = false
 
     private func syncSignOutUI(from phase: CloudSessionSignOut.Phase) {
         switch phase {
         case .blocked(let pending, let reason):
             signOutBlockedOffersExit = CloudSignOutFlowLogic.offersForcedSecondaryExit(
                 isSecondaryActive: SecondarySessionStore.isActive(), pendingCount: pending)
-            switch reason {
-            case .transient: showSignOutPendingAlert = true
-            case .permanent: showSignOutBlockedAlert = true
-            }
+            signOutBlockedSessionExpired = (reason == .sessionExpired)
+            if reason == .exportUnconfirmed { signOutExportPending = pending }
+            presentSignOutBlock(reason)
         case .awaitingRelaunch: dismiss()
         case .idle, .working: break
         }
+    }
+
+    /// Presenta el aviso del bloqueo UN TURNO DESPUÉS, con los tres flags a cero antes.
+    ///
+    /// Paso 9 (review adversarial): el productor es asíncrono —una espera de hasta 45 s— y el anchor puede
+    /// estar ocupado (otra hoja de Ajustes abierta) o desmontando el aviso anterior (el re-aviso de «Cerrar
+    /// sesión igualmente» cuando entraron más cambios). Encender el flag en ese momento lo deja en `true` sin
+    /// presentación, y volver a encenderlo ya no hace nada (`swiftui-ds.md`, dos avisos en el mismo anchor).
+    /// El reset y el turno de espera son una red; la otra es `requestSignOut`, que con la fase bloqueada lo
+    /// vuelve a pedir.
+    private func presentSignOutBlock(_ reason: CloudSignOutFlowLogic.BlockReason) {
+        showSignOutPendingAlert = false
+        showSignOutBlockedAlert = false
+        showSignOutExportAlert = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            guard case .blocked(_, let live) = signOutCoordinator.phase, live == reason else { return }
+            switch reason {
+            case .transient: showSignOutPendingAlert = true
+            case .permanent, .sessionExpired: showSignOutBlockedAlert = true
+            case .exportUnconfirmed: showSignOutExportAlert = true
+            }
+        }
+    }
+
+    /// El toque de «Cerrar sesión», desde Ajustes o desde «Tu cuenta de Yala». Con un cierre parado en un aviso
+    /// vuelve a enseñar ese aviso —la fila no puede quedarse muda con la fase bloqueada—; si no, abre la hoja de
+    /// la celda, una sola vez aunque el toque se repita (un item nuevo por toque cambiaría la identidad del
+    /// `.sheet(item:)` en plena presentación).
+    private func requestSignOut() {
+        if case .blocked = signOutCoordinator.phase {
+            syncSignOutUI(from: signOutCoordinator.phase)
+            return
+        }
+        guard signOutCoordinator.phase == .idle, signOutScope == nil else { return }
+        signOutScope = makeSignOutScope()
     }
 
     /// Botones de los DOS alerts de cierre bloqueado. Se comparten a propósito: la diferencia entre el
@@ -141,31 +192,33 @@ struct ProfileView: View {
         return base + "\n\n" + L10n.Settings.signOutSecondaryLossWarning
     }
 
-    /// D6 (§3.3.6): la hoja de alcance de sign-out se comparte entre "Cerrar sesión" y "Salir de Yala
-    /// en este dispositivo"; este flag distingue el segundo (solo-grupos legado 5a) → `signOutScopeOperation`
-    /// resuelve `.exitYalaLegacy`. Coincide EXACTAMENTE con `shouldShowExitYalaRow`.
-    private var isExitYalaContext: Bool {
-        CloudSignOutFlowLogic.shouldShowExitYalaRow(
-            isGroupInviteMode: isGroupInviteMode,
-            hasLiveSession: CloudAuthService.shared.hasSession)
-    }
-
-    /// D4: operación de la hoja de alcance de sign-out. `.exitYalaLegacy` para el solo-grupos legado 5a
-    /// (D6, `isExitYalaContext`); si no, mapea el path resuelto por la precedencia CONGELADA. La factory
-    /// (`DestructiveScopeSheet.Config.make`) deriva de aquí el título/botón/filas — reproduce el mapeo D6
-    /// (exitYala → título/acción "Salir de Yala"; resto → "Cerrar sesión").
-    private var signOutScopeOperation: DestructiveScopeLogic.Operation {
-        if isExitYalaContext { return .exitYalaLegacy }
-        switch signOutRowPath {
-        case .privateReset:         return .signOutPrivate
-        case .cloudSecureSignOut:   return .signOutCloud
-        case .secondaryCloudSignOut: return .signOutSecondary
-        case .groupsOnlySignOut:    return .signOutGroupsOnly
+    /// Paso 9 · la hoja de «Cerrar sesión» para el camino que el coordinador va a recorrer. En las dos celdas
+    /// privadas pregunta AHORA si hay copia en iCloud (`CloudSessionSignOut.privateCopyChannel`): sin ella la
+    /// hoja dice que no existe copia en ninguna parte y la confirmación pide un segundo gesto (decisión de
+    /// Jürgen del 2026-09-09). La respuesta viaja en el item y no se recalcula al ejecutar.
+    private func makeSignOutScope() -> SignOutScope {
+        let path = signOutRowPath
+        let hasICloudCopy: Bool
+        switch path {
+        case .privateSignOut, .privateWithGroupsSignOut:
+            hasICloudCopy = CloudSessionSignOut.privateCopyChannel() == .iCloud
+        case .cloudSecureSignOut, .secondaryCloudSignOut, .groupsOnlySignOut:
+            hasICloudCopy = true
         }
+        // La privada sin sesión que guarda grupos del canal backend los olvida al cerrar, y su hoja tiene que
+        // decirlo (misma pregunta que se hace el coordinador justo antes de armar).
+        let forgetsBackendGroups = path == .privateSignOut
+            && CloudSessionSignOut.hasBackendGroupRows(context: modelContext)
+        let operation = DestructiveScopeLogic.signOutOperation(
+            path: path, hasICloudCopy: hasICloudCopy, forgetsBackendGroups: forgetsBackendGroups)
+        return SignOutScope(
+            path: path,
+            operation: operation,
+            cloudLabel: DestructiveScopeLogic.cloudLabel(for: operation, storageMode: CloudSyncFlags.storageMode))
     }
 
-    /// Camino de sign-out resuelto por la precedencia CONGELADA (secundaria → nube → solo-grupos →
-    /// privado). SSOT de `signOutScopeOperation` y `signOutRowLayout`.
+    /// Camino de sign-out resuelto por la precedencia CONGELADA (secundaria → nube → equipo/solo-grupos →
+    /// privado). SSOT de `makeSignOutScope`.
     ///
     /// **Lee la capacidad COMPILADA, igual que `CloudSessionSignOut.signOut` (D-R1 paso 2), y las dos
     /// lecturas tienen que moverse juntas.** Si esta se quedara compuesta y la del coordinador no, bajo
@@ -177,16 +230,8 @@ struct ProfileView: View {
             for: CloudSyncFlags.storageMode,
             secondarySessionActive: SecondarySessionStore.isActive(),
             hasLiveSession: CloudAuthService.shared.hasSession,
-            groupsBackendEnabled: CloudSyncFlags.groupsBackendCompiledCapability)
-    }
-
-    /// D2 (§3.3.3): distribución de las filas de salida. Flag OFF / sin sesión (TODO device prod hoy)
-    /// ⇒ `.plainSignOut`/`.exitYalaOnly`/`.none` byte-idéntico (el path nunca es `.groupsOnlySignOut`).
-    private var signOutRowLayout: CloudSignOutFlowLogic.RowLayout {
-        CloudSignOutFlowLogic.rowLayout(
-            path: signOutRowPath,
-            isGroupInviteMode: isGroupInviteMode,
-            hasLiveSession: CloudAuthService.shared.hasSession)
+            groupsBackendEnabled: CloudSyncFlags.groupsBackendCompiledCapability,
+            hasPrivateSession: !isGroupInviteMode)
     }
 
     /// H-2026-07-18-6: caption honesto mientras el sign-out solo-grupos ESPERA a que se asienten writes
@@ -243,7 +288,7 @@ struct ProfileView: View {
     }
     @State private var deleteAccountScope: DeleteAccountScope?
 
-    /// Input `hasSession` de la visibilidad de la fila «Eliminar mi cuenta». En release es
+    /// Input `hasSession` de «Tu cuenta de Yala», que desde el paso 9 es también la puerta de «Eliminar mi cuenta». En release es
     /// exactamente `CloudAuthService.shared.hasSession` (byte-idéntico); `UITestHooks.fakeBackendSession`
     /// es inerte fuera de DEBUG (`hasArg` → false) y solo lo fuerza a `true` para QA/XCUITest del diálogo
     /// D5 en el simulador, donde no hay sign-in backend real (SIWA/Google no corren). NO crea sesión real.
@@ -272,7 +317,8 @@ struct ProfileView: View {
     /// copia iCloud congelada, huella legacy) la sigue decidiendo `AccountDeletionMessageLogic`, reutilizada
     /// por `DestructiveScopeLogic`; aquí solo se elige la operación (la etiqueta ☁️ es siempre la cuenta de Yala).
     private var deleteAccountScopeOperation: DestructiveScopeLogic.Operation {
-        CloudSyncFlags.storageMode == .cloud ? .deleteAccountCloud : .deleteAccountGroupsOnly
+        DestructiveScopeLogic.deleteAccountOperation(
+            storageMode: CloudSyncFlags.storageMode, hasPrivateSession: !isGroupInviteMode)
     }
 
     private func syncDeletionUI(from phase: AccountDeletionService.Phase) {
@@ -430,40 +476,79 @@ struct ProfileView: View {
             } message: { result in
                 Text(result.message)
             }
-            // H4 + D4: cierre de sesión — hoja de alcance (3 filas 📱/☁️/👥). La operación (privado/nube/
-            // secundaria/solo-grupos/salir-legado) la resuelve `signOutScopeOperation`; la factory deriva
-            // título/botón/filas (reproduce el mapeo D6 "Salir de Yala"). El botón fija `pendingSignOut` y
-            // cierra la hoja; el `onDismiss` ejecuta el sign-out YA con la hoja fuera (anti-carrera, crítico
-            // en `.privateReset` → Welcome in-session). El cover terminal lo dueña el root vía `.phase`.
-            .sheet(isPresented: $showCloudSignOutConfirm, onDismiss: {
-                if pendingSignOut {
-                    pendingSignOut = false
-                    Task { await CloudSessionSignOut.shared.signOut(context: modelContext) }
+            // H4 + D4 + paso 9: «Cerrar sesión» — hoja de alcance (3 filas 📱/☁️/👥) de la celda que toca, con
+            // la operación resuelta al tocar (`makeSignOutScope`). El botón fija `pendingSignOutScope` y cierra la
+            // hoja; el `onDismiss` actúa YA con la hoja fuera (anti-carrera): o el segundo gesto del cierre sin
+            // copia, o el cierre. El cover terminal lo dueña el root vía `.phase`.
+            .sheet(item: $signOutScope, onDismiss: {
+                guard let scope = pendingSignOutScope else { return }
+                pendingSignOutScope = nil
+                // La celda pudo cambiar con la hoja abierta (una sesión que caduca, un evento del espejo): se
+                // enseña la hoja de la celda de AHORA en vez de ejecutar un borrado que nadie leyó.
+                let live = makeSignOutScope()
+                guard live.operation == scope.operation else {
+                    signOutScope = live
+                    return
                 }
-            }) {
+                if DestructiveScopeLogic.requiresNoCopyConfirmation(scope.operation) {
+                    pendingNoCopyPath = scope.path
+                    showSignOutNoCopyConfirm = true
+                } else {
+                    Task { await CloudSessionSignOut.shared.signOut(context: modelContext, confirmedPath: scope.path) }
+                }
+            }) { scope in
                 DestructiveScopeSheet(config: .make(
-                    operation: signOutScopeOperation,
-                    cloudLabel: DestructiveScopeLogic.cloudLabel(storageMode: CloudSyncFlags.storageMode),
-                    onConfirm: { pendingSignOut = true }))
+                    operation: scope.operation,
+                    cloudLabel: scope.cloudLabel,
+                    onConfirm: { pendingSignOutScope = scope }))
             }
-            // D2 (§3.3.3) + D4: hoja DEDICADA de "Salir de Yala en este dispositivo" (2ª fila del split
-            // solo-grupos backend) → `.privateReset` FORZADO con boot-wipe de grupos encadenado. Contenedor
-            // DISTINTO del de "Cerrar sesión de grupos" ⇒ sin carrera same-anchor (taps mutuamente excluyentes).
-            .sheet(isPresented: $showExitYalaGroupsConfirm, onDismiss: {
-                if pendingExitYalaGroups {
-                    pendingExitYalaGroups = false
-                    Task { await CloudSessionSignOut.shared.exitYalaOnThisDevice(context: modelContext) }
+            // Paso 9 · el segundo gesto del cierre privado sin copia en iCloud: no se bloquea, se avisa.
+            .alert(L10n.Settings.signOutNoCopyConfirmTitle, isPresented: $showSignOutNoCopyConfirm) {
+                Button(L10n.Settings.signOutNoCopyConfirmAction, role: .destructive) {
+                    let path = pendingNoCopyPath
+                    pendingNoCopyPath = nil
+                    // La celda pudo cambiar con el aviso abierto (una sesión que caduca): se enseña su hoja —un
+                    // turno después, para no presentar mientras este aviso se desmonta— en vez de no hacer nada.
+                    let live = makeSignOutScope()
+                    guard live.path == path, DestructiveScopeLogic.requiresNoCopyConfirmation(live.operation) else {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { signOutScope = live }
+                        return
+                    }
+                    Task {
+                        await CloudSessionSignOut.shared.signOut(
+                            context: modelContext, confirmedPath: path, confirmedWithoutICloudCopy: true)
+                    }
                 }
-            }) {
-                DestructiveScopeSheet(config: .make(
-                    operation: .exitYalaGroups,
-                    cloudLabel: DestructiveScopeLogic.cloudLabel(storageMode: CloudSyncFlags.storageMode),
-                    onConfirm: { pendingExitYalaGroups = true }))
+                .accessibilityIdentifier("signout_no_copy_confirm")
+                Button(L10n.Common.cancel, role: .cancel) { pendingNoCopyPath = nil }
+                    .accessibilityIdentifier("signout_no_copy_cancel")
+            } message: {
+                Text(L10n.Settings.signOutNoCopyConfirmMessage)
+            }
+            // Paso 9 · la espera del export se agotó: el aviso cuenta lo que no llegó a iCloud y ofrece cerrar
+            // igualmente o seguir esperando (decisión de Jürgen del 2026-09-09). Nunca borra sin este gesto.
+            .alert(L10n.Settings.signOutExportPendingTitle, isPresented: $showSignOutExportAlert) {
+                Button(L10n.Settings.signOutExportDiscardButton, role: .destructive) {
+                    Task { await CloudSessionSignOut.shared.exitDiscardingUnconfirmed(context: modelContext) }
+                }
+                .accessibilityIdentifier("signout_export_discard")
+                // «Esperar» sigue esperando y cierra solo cuando llega lo último: no cancela el cierre.
+                Button(L10n.Settings.signOutWaitButton, role: .cancel) {
+                    Task { await CloudSessionSignOut.shared.resumeWaitingForExport(context: modelContext) }
+                }
+                .accessibilityIdentifier("signout_export_wait")
+            } message: {
+                Text(signOutExportPending > 0
+                     ? L10n.Settings.signOutExportPendingMessage(signOutExportPending)
+                     : L10n.Settings.signOutExportPendingMessageUnknown)
             }
             .alert(L10n.Settings.signOutBlockedTitle, isPresented: $showSignOutBlockedAlert) {
                 signOutBlockedButtons
             } message: {
-                Text(signOutBlockedText(L10n.Settings.signOutBlockedMessage))
+                // Paso 9: una sesión caducada con grupos sin subir se arregla volviendo a entrar, no con la red.
+                Text(signOutBlockedSessionExpired
+                     ? L10n.Groups.Errors.sessionExpired
+                     : signOutBlockedText(L10n.Settings.signOutBlockedMessage))
             }
             // H-2026-07-18-6: bloqueo TRANSITORIO (solo-grupos, tras agotar el retry interno) —
             // copy que invita a esperar, no a revisar la conexión. Solo un bool se pone a la vez
@@ -591,14 +676,18 @@ struct ProfileView: View {
                 case .yalaAccount:
                     // §3.3.5: mapa/explainer del enlace privado ↔ nube. Los desenlaces disparan el @State
                     // de ProfileView vía closures (dueño único de las hojas/observers/cover-root); "Volver a
-                    // iCloud" navega por su cuenta a `.storageMode`. Las closures envuelven EXACTAMENTE las
-                    // acciones de los botones de Seguridad (incluida la recomputación READ-ONLY del summary D5).
+                    // iCloud" navega por su cuenta a `.storageMode`. «Cerrar sesión» es el MISMO toque que la
+                    // fila de Ajustes (`requestSignOut`), y el borrado recomputa el resumen D5 READ-ONLY. Desde
+                    // el paso 9 es la única puerta del borrado, así que hereda el bloqueo cruzado de la fila
+                    // retirada: con un cierre o un borrado en curso, el otro no arranca.
                     YalaAccountView(
-                        onSignOut: { showCloudSignOutConfirm = true },
+                        onSignOut: { requestSignOut() },
                         onDeleteAccount: {
                             deleteAccountScope = DeleteAccountScope(
                                 summary: GroupService.shared.accountDeletionGroupsSummary())
-                        })
+                        },
+                        signOutDisabled: signOutCoordinator.phase == .working || deletionService.phase == .working,
+                        deleteDisabled: signOutCoordinator.phase != .idle || deletionService.phase == .working)
                 }
             }
             .onAppear {
@@ -1065,9 +1154,8 @@ struct ProfileView: View {
                 }
                 .buttonStyle(.plain)
                 // §3.2: subsección "Tu cuenta" — SOLO con sesión backend viva. Para VIVO sin sesión (TODO
-                // device prod) nada se inserta ⇒ las filas de salida de abajo quedan byte-idénticas. Agrupa
-                // "Tu cuenta de Yala →" (mapa/explainer, §3.3.5) + las filas de sign-out/eliminar-cuenta que
-                // siguen (que NO se mueven, preservando sus accessibilityIdentifiers y XCUITests — Q2).
+                // device prod) nada se inserta. Agrupa «Tu cuenta de Yala →» (mapa/explainer, §3.3.5), que
+                // desde el paso 9 es también la puerta de «Eliminar mi cuenta»; «Cerrar sesión» sigue debajo.
                 if showsYalaAccountRow {
                     SubsectionDivider()
                     Text(L10n.Settings.accountSubsectionTitle)
@@ -1088,120 +1176,26 @@ struct ProfileView: View {
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("profile_yala_account")
                 }
-                // H4: cerrar sesión — SIEMPRE al final (privada y nube; oculta solo en group-invite SIN
-                // sesión backend, que ve "Salir de Yala" — D6). D2 (§3.3.3): en el escenario privado+grupos
-                // con sesión backend ([FLAG], path = .groupsOnlySignOut) la fila se DIVIDE en dos ("Cerrar
-                // sesión de grupos" + "Salir de Yala en este dispositivo"). Con flag OFF / sin sesión (TODO
-                // device prod) `signOutRowLayout` cae a .plainSignOut/.exitYalaOnly/.none byte-idéntico.
-                switch signOutRowLayout {
-                case .plainSignOut:
-                    SubsectionDivider()
-                    VStack(alignment: .leading, spacing: 0) {
-                        Button {
-                            showCloudSignOutConfirm = true
-                        } label: {
-                            settingsRowContent(
-                                icon: "rectangle.portrait.and.arrow.right",
-                                title: L10n.Settings.signOut,
-                                subtitle: L10n.Settings.signOutSubtitle,
-                                iconColor: .red,
-                                showSpinner: signOutCoordinator.phase == .working)
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(signOutCoordinator.phase == .working)
-                        // Sufijo por `RowLayout`: esta fila y la primera del split compartían
-                        // `profile_security_signout`, y son de humanos distintos con borrados distintos
-                        // (`.privateReset`/`.cloudSecureSignOut` aquí, `.groupsOnlySignOut` allí). Un test
-                        // que tapeara el id compartido pasaba en verde sin saber cuál estaba ejerciendo.
-                        .accessibilityIdentifier("profile_security_signout_plain")
-
-                        signOutWorkingCaption
-                    }
-
-                case .groupsSignOutPlusExitYala:
-                    // Fila 1: "Cerrar sesión de grupos" → .groupsOnlySignOut (dispatch por precedencia; la
-                    // hoja compartida muestra las filas de .signOutGroupsOnly — isExitYalaContext es false).
-                    SubsectionDivider()
-                    VStack(alignment: .leading, spacing: 0) {
-                        Button {
-                            showCloudSignOutConfirm = true
-                        } label: {
-                            settingsRowContent(
-                                icon: "rectangle.portrait.and.arrow.right",
-                                title: L10n.Settings.signOutGroups,
-                                subtitle: L10n.Settings.signOutGroupsSubtitle,
-                                iconColor: .red,
-                                showSpinner: signOutCoordinator.phase == .working)
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(signOutCoordinator.phase == .working)
-                        .accessibilityIdentifier("profile_security_signout_groups")
-
-                        signOutWorkingCaption
-                    }
-                    // Fila 2: "Salir de Yala en este dispositivo" → .privateReset FORZADO (confirm dedicado,
-                    // con boot-wipe de grupos encadenado). Este es el "volver al Welcome" que el usuario espera.
-                    SubsectionDivider()
+                // H4 + paso 9: «Cerrar sesión» — SIEMPRE al final, UNA fila y el mismo verbo en las cuatro celdas
+                // del ADR 2026-09-09 (§6: «dos botones y nada más»), sin subtítulo: el detalle de qué se borra y
+                // qué queda vive en la hoja de alcance, que nombra su celda. «Eliminar mi cuenta» ya no está
+                // aquí: vive dentro de «Tu cuenta de Yala» (a dos toques), como pide la App Store 5.1.1(v).
+                SubsectionDivider()
+                VStack(alignment: .leading, spacing: 0) {
                     Button {
-                        showExitYalaGroupsConfirm = true
+                        requestSignOut()
                     } label: {
                         settingsRowContent(
                             icon: "rectangle.portrait.and.arrow.right",
-                            title: L10n.Settings.exitYala,
-                            subtitle: L10n.Settings.exitYalaGroupsSubtitle,
+                            title: L10n.Settings.signOut,
                             iconColor: .red,
                             showSpinner: signOutCoordinator.phase == .working)
                     }
                     .buttonStyle(.plain)
-                    .disabled(signOutCoordinator.phase == .working)
-                    .accessibilityIdentifier("profile_security_exit_yala_split")
+                    .disabled(signOutCoordinator.phase == .working || deletionService.phase == .working)
+                    .accessibilityIdentifier("profile_security_signout")
 
-                case .exitYalaOnly:
-                    // D6 (§3.3.6): salida del solo-grupos legado 5a. `.privateReset` vuelve al Welcome sin
-                    // tocar datos ni grupos (que siguen en el iCloud del usuario). Reusa la hoja de alcance
-                    // compartida (operación `.exitYalaLegacy` vía `isExitYalaContext`).
-                    SubsectionDivider()
-                    Button {
-                        showCloudSignOutConfirm = true
-                    } label: {
-                        settingsRowContent(
-                            icon: "rectangle.portrait.and.arrow.right",
-                            title: L10n.Settings.exitYala,
-                            subtitle: L10n.Settings.exitYalaSubtitle,
-                            iconColor: .red,
-                            showSpinner: signOutCoordinator.phase == .working)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(signOutCoordinator.phase == .working)
-                    .accessibilityIdentifier("profile_security_exit_yala_legacy")
-
-                case .none:
-                    EmptyView()
-                }
-                // G5-D1b: eliminar cuenta — tras "Cerrar sesión", solo con sesión backend viva y fuera de
-                // secundaria (RESIDUAL v1) / group-invite. DARK hoy (hasSession imposible en prod).
-                if AccountDeletionRowLogic.shouldShow(
-                    hasSession: deleteAccountRowHasSession,
-                    secondaryActive: SecondarySessionStore.isActive(),
-                    isGroupInviteMode: isGroupInviteMode) {
-                    SubsectionDivider()
-                    Button {
-                        // D5: recomputa READ-ONLY (fetches + cálculo puro, cero saves) el resumen de grupos
-                        // ANTES de mostrar el diálogo — fresco y barato (solo al tap).
-                        deleteAccountScope = DeleteAccountScope(
-                            summary: GroupService.shared.accountDeletionGroupsSummary())
-                    } label: {
-                        settingsRowContent(
-                            icon: "trash",
-                            title: L10n.Settings.deleteAccount,
-                            subtitle: L10n.Settings.deleteAccountSubtitle,
-                            iconColor: .red)
-                    }
-                    .buttonStyle(.plain)
-                    // Deshabilitada si CUALQUIER coordinador trabaja (borrado o cierre de sesión) —
-                    // acciones mutuamente excluyentes que comparten la fase terminal de relaunch.
-                    .disabled(deletionService.phase == .working || signOutCoordinator.phase == .working)
-                    .accessibilityIdentifier("profile_security_delete_account")
+                    signOutWorkingCaption
                 }
             }
         }

@@ -41,9 +41,6 @@ struct UserDataResetView: View {
     @State private var isShowingSecondConfirmationAlert = false
     @State private var isProcessing = false
     @State private var errorMessage: String?
-    /// v2 (§3.3.1): resumen READ-ONLY de grupos (deuda del usuario), recomputado al TAP de "Vaciar datos"
-    /// (molde D5 `ProfileView:1021-1025`: fresco y barato — cero saves, invariante de quiescencia (b) intacto).
-    @State private var groupsSummary: AccountDeletionGroupsSummary = .empty
 
     /// Callback opcional para cerrar la hoja de Ajustes ENTERA desde esta vista PUSHED (su
     /// `@Environment(\.dismiss)` solo haría *pop* a Profile — B1). Lo usa la finalización del wipe y el
@@ -54,12 +51,14 @@ struct UserDataResetView: View {
         self.onRequestCloseSettings = onRequestCloseSettings
     }
 
-    /// D4 (§3.3.1) + C4: operación de la hoja. `wipeDataGroupsOnly` en group-invite legado 5a (sin vida
-    /// personal); `wipeDataFull` en el resto — incl. 5b (onboarding completed + sesión backend solo-grupos),
-    /// que ve el corpus personal completo con la fila 👥 reflejando sus grupos backend. La sesión NO baja el
-    /// scope (ver `wipeOperation`). La etiqueta ☁️ la resuelve `cloudLabel(storageMode)` (mata C2).
+    /// D4 (§3.3.1) + C4: operación de la hoja. `wipeDataGroupsOnly` en solo grupos sin espejo (sin vida
+    /// personal que viaje a ningún sitio); `wipeDataFull` en el resto — incluido el solo-grupos cuyo store
+    /// espeja, porque ahí los borrados salen a iCloud y a todos los dispositivos (ver `wipeOperation`). La
+    /// sesión NO baja el scope. La etiqueta ☁️ la resuelve `cloudLabel(storageMode)` (mata C2).
     private var scopeOperation: DestructiveScopeLogic.Operation {
-        DestructiveScopeLogic.wipeOperation(isGroupInviteMode: sessionState.isGroupInviteMode)
+        DestructiveScopeLogic.wipeOperation(
+            isGroupInviteMode: sessionState.isGroupInviteMode,
+            personalMountAttachesMirror: CloudSessionSignOut.personalMountAttachesMirror)
     }
 
     /// D10: ofrecer el batch "También salir de mis grupos" solo con el canal backend ON (DARK), grupos vivos y
@@ -97,7 +96,6 @@ struct UserDataResetView: View {
                                 // v2: detección READ-ONLY al TAP (molde D5) — alimenta la fila 👥 y el desvío
                                 // "Ver mis grupos". Cero saves (invariante de quiescencia (b) intacto).
                                 let summary = GroupService.shared.accountDeletionGroupsSummary()
-                                groupsSummary = summary   // lo consume `performWipe` (retención de grupos)
                                 wipeScope = WipeScope(summary: summary)
                             } label: {
                                 HStack {
@@ -212,21 +210,45 @@ struct UserDataResetView: View {
 
     // MARK: - Lógica de borrado
 
+    /// Paso 9 del rediseño de sesiones (ticket §7 y fila H de la matriz de escenarios): tras «Vaciar datos»
+    /// la app NO vuelve al Welcome — la sesión en la nube y los grupos, si los hay, siguen puestos, y el
+    /// Welcome le ofrecería «Ya tengo cuenta» a quien sigue dentro. Con esto se retiró la pantalla de
+    /// retención «Seguir con mis grupos»: con «Vaciar datos» sin tocar grupos, no queda nada que retener.
+    ///
+    /// Deroga SOLO para este camino el «tras wipe vuelve a mostrarse el chooser» (A4) de
+    /// `DataWipeService.removeUserPreferenceKeys`; el vaciado remoto (otro dispositivo) no pasa por aquí.
+    private func applyWipeLanding(_ landing: DestructiveScopeLogic.WipeLanding) {
+        // El mismo dominio que acaba de barrer el wipe (el de quien pulsa, M1 incluida).
+        let defaults = SessionDefaults.current
+        switch landing {
+        case .personalOnboarding:
+            // `presentNextOnboardingScreen` salta al onboarding personal cuando el chooser ya se vio.
+            defaults.set(true, forKey: "hasShownWelcomeChooser")
+        case .groupsShell:
+            // Solo grupos: la app sigue enseñando los grupos. Se reponen el modo y el onboarding que el
+            // barrido quitó; el perfil y las preferencias, que es lo que se vaciaba, quedan restablecidos.
+            sessionState.onboardingMode = .groupInvite
+            defaults.set(true, forKey: "hasShownWelcomeChooser")
+            defaults.set(true, forKey: AppPreferences.Keys.hasCompletedOnboarding)
+            sessionState.selectMainTab(.groups)
+        }
+    }
+
     @MainActor
     private func handleWipeAllData() async {
         isProcessing = true
+
+        // Paso 9 · a dónde aterriza la app se decide ANTES del wipe: el barrido de preferencias borra
+        // `onboardingMode`, y después ya no se sabría si esto era un solo-grupos.
+        let landing = DestructiveScopeLogic.wipeLanding(isGroupInviteMode: sessionState.isGroupInviteMode)
+        // Y si avisa a los demás dispositivos del Apple ID: solo una sesión privada (ver la decisión pura).
+        let signalsOtherDevices = DestructiveScopeLogic.wipeSignalsAppleIDDevices(
+            isGroupInviteMode: sessionState.isGroupInviteMode, storageMode: CloudSyncFlags.storageMode)
 
         // 1. Activate wipe overlay BEFORE starting deletion
         //    This prevents @Query observers from crashing by showing a blocking overlay
         sessionState.resetToDefaults()
         sessionState.isWipingData = true
-
-        // D1 (retención): con grupos vivos, arma la pantalla de retención ANTES del wipe (para que
-        // gatee el ruteo automático a Welcome del onChange(hasCompletedOnboarding) que dispara el wipe).
-        // DESPUÉS de `isWipingData = true` → el cover (`pending && !isWipingData`) no se presenta hasta
-        // que el wipe termina. Snapshot `groupsSummary` capturado al TAP; los grupos sobreviven el wipe.
-        sessionState.groupsRetentionPending = groupsSummary.hasGroups
-        sessionState.groupsRetentionHasDebt = groupsSummary.hasOutstandingDebt
 
         // 2. Dismiss all sheets first to reduce active observers
         onRequestCloseSettings?()
@@ -245,8 +267,14 @@ struct UserDataResetView: View {
         do {
             try DataWipeService.wipeAllUserData(
                 in: modelContext,
-                reseedInitialData: false
+                reseedInitialData: false,
+                broadcastSignal: signalsOtherDevices
             )
+
+            // 5b. Paso 9 · el aterrizaje, en la MISMA vuelta del main actor que el wipe y antes de cualquier
+            // `await`: el `onChange(hasCompletedOnboarding)` de ContentView lee estos flags en el render
+            // siguiente, así que ve el estado final y no el intermedio que deja el barrido.
+            applyWipeLanding(landing)
 
             // 6. Ensure @Observable tracks the theme reset
             themeManager.resetToDefaults()

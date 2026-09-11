@@ -6,7 +6,7 @@
 //  el único ALTA que estaba ACTIVO en producción sin depender de ningún flag).
 //
 //  El escenario, reproducido en simulador antes del fix: el usuario A hace «Cerrar sesión»
-//  (`.privateReset`, no borra nada) y B elige «Soy nuevo» en el MISMO dispositivo con el MISMO Apple ID.
+//  (`.privateReset`, el cierre privado anterior al paso 9, que no borraba nada) y B elige «Soy nuevo» en el MISMO dispositivo con el MISMO Apple ID.
 //  `wipeAllUserData` vaciaba el corpus personal (36 TX → 0) pero el dominio Grupos quedaba intacto
 //  (2 grupos, 12 gastos), `groupsBetaUnlocked` sobrevivía —B heredaba la adopción de A, que entonces era
 //  el desbloqueo del código beta— y el bridge,

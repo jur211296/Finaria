@@ -49,10 +49,9 @@ struct DestructiveScopeSheet: View {
         ///
         /// El botón destructivo NO puede llevarlo: `destructive_scope_confirm` lo assertan cinco
         /// aserciones de dos XCUITests, y cambiarlo por operación las rompería a todas. Pero un test que
-        /// tapea ese botón genérico no puede demostrar QUÉ escenario estaba ejerciendo —«Vaciar»,
-        /// «Cerrar sesión privado» y «Salir de Yala» arman borrados distintos y comparten pantalla— así
-        /// que la operación viaja en el contenedor. Misma familia que «Executed 0 tests»: verde que no
-        /// prueba lo que dice.
+        /// tapea ese botón genérico no puede demostrar QUÉ escenario estaba ejerciendo —«Vaciar» y los
+        /// cuatro «Cerrar sesión» arman borrados distintos y comparten pantalla— así que la operación
+        /// viaja en el contenedor. Misma familia que «Executed 0 tests»: verde que no prueba lo que dice.
         let scenarioIdentifier: String
         let cancelLabel: String
         /// Se invoca ANTES del `dismiss()` de la hoja — el callsite fija su `pending` aquí.
@@ -311,7 +310,8 @@ extension DestructiveScopeSheet.Config {
     /// Vaciar usa `wipe_view_groups` (contexto distinto).
     private static func viewGroupsIdentifier(for operation: DestructiveScopeLogic.Operation) -> String {
         switch operation {
-        case .deleteAccountCloud, .deleteAccountGroupsOnly: return "delete_account_view_groups"
+        case .deleteAccountCloud, .deleteAccountGroupsOnly, .deleteAccountGroupsOnlyNoPrivate:
+            return "delete_account_view_groups"
         default: return "wipe_view_groups"
         }
     }
@@ -351,14 +351,16 @@ extension DestructiveScopeSheet.Config {
         case .wipeDataFull:
             switch location {
             case .device: return L10n.Settings.wipeScopeDevice
+            // En privada la fila ☁️ nombra TODOS los dispositivos del Apple ID (decisión de Jürgen): borrar
+            // de iCloud lo borra del iPad y del Mac, y «local e iCloud» no lo decía.
             case .cloud:  return cloudLabel == .cloudAccount
-                ? L10n.Settings.wipeScopeCloudAccount : L10n.Settings.wipeScopeCloudICloud
+                ? L10n.Settings.wipeScopeCloudAccount : L10n.Settings.wipeScopeCloudICloudAllDevices
             case .groups: return wipeGroupsDetail
             }
         case .wipeDataGroupsOnly:
             switch location {
             case .device: return L10n.Settings.wipeScopeDeviceGroupsOnly
-            case .cloud:  return L10n.Settings.wipeScopeCloudICloud
+            case .cloud:  return L10n.Settings.scopeUntouchedShort
             case .groups: return wipeGroupsDetail
             }
         case .deleteAccountCloud:
@@ -373,11 +375,36 @@ extension DestructiveScopeSheet.Config {
             case .cloud:  return L10n.Settings.deleteAccountScopeCloudGroupsOnly
             case .groups: return L10n.Settings.deleteAccountScopeGroups
             }
+        case .deleteAccountGroupsOnlyNoPrivate:
+            // Solo grupos sin sesión privada: lo de este dispositivo se va con la cuenta.
+            switch location {
+            case .device: return L10n.Settings.deleteAccountScopeDeviceCloud
+            case .cloud:  return L10n.Settings.deleteAccountScopeCloudGroupsOnly
+            case .groups: return L10n.Settings.deleteAccountScopeGroups
+            }
         case .signOutPrivate:
             switch location {
             case .device: return L10n.Settings.signOutScopeDevicePrivate
             case .cloud:  return L10n.Settings.signOutScopeCloudPrivate
             case .groups: return L10n.Settings.scopeUntouchedShort
+            }
+        case .signOutPrivateNoCopy:
+            switch location {
+            case .device: return L10n.Settings.signOutScopeDeviceNoCopy
+            case .cloud:  return L10n.Settings.signOutScopeCloudNoCopy
+            case .groups: return L10n.Settings.scopeUntouchedShort
+            }
+        case .signOutPrivateWithGroups:
+            switch location {
+            case .device: return L10n.Settings.signOutScopeDevicePrivate
+            case .cloud:  return L10n.Settings.scopePersonalInICloud
+            case .groups: return L10n.Settings.scopeForgetGroups
+            }
+        case .signOutPrivateWithGroupsNoCopy:
+            switch location {
+            case .device: return L10n.Settings.signOutScopeDeviceNoCopy
+            case .cloud:  return L10n.Settings.signOutScopeCloudNoCopy
+            case .groups: return L10n.Settings.scopeForgetGroups
             }
         case .signOutCloud:
             switch location {
@@ -385,35 +412,19 @@ extension DestructiveScopeSheet.Config {
             case .cloud:  return L10n.Settings.signOutScopeCloudCloud
             case .groups: return L10n.Settings.scopeUntouchedShort
             }
+        case .signOutGroupsOnly:
+            // Solo grupos: el dispositivo vuelve a recién instalado, como en la nube completa; lo que queda a
+            // salvo en la cuenta son los grupos.
+            switch location {
+            case .device: return L10n.Settings.signOutScopeDeviceCloud
+            case .cloud:  return L10n.Settings.signOutScopeCloudCloud
+            case .groups: return L10n.Settings.scopeForgetGroups
+            }
         case .signOutSecondary:
             switch location {
             case .device: return L10n.Settings.signOutScopeDeviceSecondary
             case .cloud:  return L10n.Settings.signOutScopeCloudSecondary
             case .groups: return L10n.Settings.scopeUntouchedShort
-            }
-        case .signOutGroupsOnly:
-            switch location {
-            case .device: return L10n.Settings.signOutScopeDeviceGroupsOnly
-            case .cloud:  return L10n.Settings.scopePersonalInICloud
-            case .groups: return L10n.Settings.scopeForgetGroups
-            }
-        case .exitYalaLegacy:
-            switch location {
-            case .device: return L10n.Settings.exitYalaScopeDeviceLegacy
-            case .cloud:  return L10n.Settings.exitYalaScopeCloudLegacy
-            case .groups: return L10n.Settings.exitYalaScopeGroupsLegacy
-            }
-        case .exitYalaGroups:
-            switch location {
-            case .device: return L10n.Settings.exitYalaScopeDeviceGroups
-            case .cloud:  return L10n.Settings.scopePersonalInICloud
-            case .groups: return L10n.Settings.scopeForgetGroups
-            }
-        case .deleteFrozenCopy:
-            switch location {
-            case .device: return L10n.Settings.deleteFrozenScopeDevice
-            case .cloud:  return L10n.Settings.deleteFrozenScopeCloud
-            case .groups: return L10n.Settings.deleteFrozenScopeGroups
             }
         }
     }
@@ -422,14 +433,11 @@ extension DestructiveScopeSheet.Config {
         switch operation {
         case .wipeDataFull, .wipeDataGroupsOnly:
             return L10n.Settings.deleteDataConfirmation
-        case .deleteAccountCloud, .deleteAccountGroupsOnly:
+        case .deleteAccountCloud, .deleteAccountGroupsOnly, .deleteAccountGroupsOnlyNoPrivate:
             return L10n.Settings.deleteAccountConfirmTitle
-        case .signOutPrivate, .signOutCloud, .signOutSecondary, .signOutGroupsOnly:
+        case .signOutPrivate, .signOutPrivateNoCopy, .signOutPrivateWithGroups, .signOutPrivateWithGroupsNoCopy,
+             .signOutCloud, .signOutGroupsOnly, .signOutSecondary:
             return L10n.Settings.signOutConfirmTitle
-        case .exitYalaLegacy, .exitYalaGroups:
-            return L10n.Settings.exitYalaConfirmTitle
-        case .deleteFrozenCopy:
-            return L10n.Groups.Migrated.deleteCopyConfirmTitle
         }
     }
 
@@ -437,19 +445,16 @@ extension DestructiveScopeSheet.Config {
         switch operation {
         case .wipeDataFull, .wipeDataGroupsOnly:
             return L10n.Settings.deleteAllDataAction
-        case .deleteAccountCloud, .deleteAccountGroupsOnly:
+        case .deleteAccountCloud, .deleteAccountGroupsOnly, .deleteAccountGroupsOnlyNoPrivate:
             return L10n.Settings.deleteAccountContinue
-        case .signOutPrivate, .signOutCloud, .signOutSecondary, .signOutGroupsOnly:
+        case .signOutPrivate, .signOutPrivateNoCopy, .signOutPrivateWithGroups, .signOutPrivateWithGroupsNoCopy,
+             .signOutCloud, .signOutGroupsOnly, .signOutSecondary:
             return L10n.Settings.signOutConfirmAction
-        case .exitYalaLegacy, .exitYalaGroups:
-            return L10n.Settings.exitYalaConfirmAction
-        case .deleteFrozenCopy:
-            return L10n.Groups.Migrated.deleteCopyConfirmButton
         }
     }
 
     /// Nombra el ESCENARIO en el contenedor de la hoja, para que una prueba (o una captura del Atlas)
-    /// pueda demostrar cuál de las once operaciones está retratando. No sustituye al identifier del
+    /// pueda demostrar cuál de las doce operaciones está retratando. No sustituye al identifier del
     /// botón: lo complementa, precisamente porque ese no se puede tocar sin romper cinco aserciones.
     static func scenarioIdentifier(for operation: DestructiveScopeLogic.Operation) -> String {
         let suffix: String
@@ -458,13 +463,14 @@ extension DestructiveScopeSheet.Config {
         case .wipeDataGroupsOnly: suffix = "wipe_groups_only"
         case .deleteAccountCloud: suffix = "delete_account_cloud"
         case .deleteAccountGroupsOnly: suffix = "delete_account_groups_only"
+        case .deleteAccountGroupsOnlyNoPrivate: suffix = "delete_account_groups_only_no_private"
         case .signOutPrivate: suffix = "signout_private"
+        case .signOutPrivateNoCopy: suffix = "signout_private_no_copy"
+        case .signOutPrivateWithGroups: suffix = "signout_private_with_groups"
+        case .signOutPrivateWithGroupsNoCopy: suffix = "signout_private_with_groups_no_copy"
         case .signOutCloud: suffix = "signout_cloud"
-        case .signOutSecondary: suffix = "signout_secondary"
         case .signOutGroupsOnly: suffix = "signout_groups_only"
-        case .exitYalaLegacy: suffix = "exit_yala_legacy"
-        case .exitYalaGroups: suffix = "exit_yala_groups"
-        case .deleteFrozenCopy: suffix = "delete_frozen_copy"
+        case .signOutSecondary: suffix = "signout_secondary"
         }
         return "destructive_scope_sheet_\(suffix)"
     }
@@ -472,23 +478,24 @@ extension DestructiveScopeSheet.Config {
     /// Preserva los identifiers que `DeleteAccountDialogUITests` asserta; el resto usa el genérico.
     private static func confirmIdentifier(for operation: DestructiveScopeLogic.Operation) -> String {
         switch operation {
-        case .deleteAccountCloud, .deleteAccountGroupsOnly: return "delete_account_continue"
+        case .deleteAccountCloud, .deleteAccountGroupsOnly, .deleteAccountGroupsOnlyNoPrivate:
+            return "delete_account_continue"
         default: return "destructive_scope_confirm"
         }
     }
 
     private static func conservation(for operation: DestructiveScopeLogic.Operation) -> String {
         switch operation {
-        case .wipeDataFull:       return L10n.Settings.wipeScopeConservation
-        case .signOutPrivate:     return L10n.Settings.signOutScopeConservationPrivate
-        case .signOutCloud:       return L10n.Settings.signOutScopeConservationCloud
-        case .signOutSecondary:   return L10n.Settings.signOutScopeConservationSecondary
-        case .signOutGroupsOnly, .exitYalaGroups:
-            return L10n.Settings.signOutScopeConservationGroups
-        case .exitYalaLegacy:     return L10n.Settings.exitYalaScopeConservationLegacy
-        case .deleteFrozenCopy:   return L10n.Settings.deleteFrozenScopeConservation
-        // Operaciones sin nota de conservación (`hasConservationNote == false`): nunca se llama.
-        case .wipeDataGroupsOnly, .deleteAccountCloud, .deleteAccountGroupsOnly:
+        case .wipeDataFull:             return L10n.Settings.wipeScopeConservation
+        case .signOutPrivate:           return L10n.Settings.signOutScopeConservationPrivate
+        case .signOutPrivateWithGroups: return L10n.Settings.signOutScopeConservationPrivateWithGroups
+        case .signOutCloud:             return L10n.Settings.signOutScopeConservationCloud
+        case .signOutSecondary:         return L10n.Settings.signOutScopeConservationSecondary
+        case .signOutGroupsOnly:        return L10n.Settings.signOutScopeConservationGroups
+        // Operaciones sin nota de conservación (`hasConservationNote == false`): nunca se llama. Los cierres
+        // sin copia no prometen vuelta atrás porque no la hay.
+        case .wipeDataGroupsOnly, .deleteAccountCloud, .deleteAccountGroupsOnly, .deleteAccountGroupsOnlyNoPrivate,
+             .signOutPrivateNoCopy, .signOutPrivateWithGroupsNoCopy:
             return ""
         }
     }
@@ -505,6 +512,8 @@ extension DestructiveScopeSheet.Config {
             return ExtraLineItem(text: L10n.Settings.deleteAccountLegacyFootprintNote, style: .info)
         case .multiDeviceResidual:
             return ExtraLineItem(text: L10n.Settings.wipeScopeMultiDeviceResidual, style: .info)
+        case .noICloudCopy:
+            return ExtraLineItem(text: L10n.Settings.signOutNoCopyWarning, style: .warning)
         }
     }
 }

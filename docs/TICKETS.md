@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (286)
+## Index (298)
 
 | id | status | path |
 |----|--------|------|
@@ -85,6 +85,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | cloud-sign-in-discovers-account-kind | qa | tickets/qa/cloud-sign-in-discovers-account-kind.md |
 | cloud-tx-epoch-orphan-relations | backlog | tickets/backlog/cloud-tx-epoch-orphan-relations.md |
 | cloudsync-account-currency-orphans-receiver-history | backlog | tickets/backlog/cloudsync-account-currency-orphans-receiver-history.md |
+| cloudsync-witnesses-survive-the-sign-out-wipe | backlog | tickets/backlog/cloudsync-witnesses-survive-the-sign-out-wipe.md |
 | cobertura-ui-diaria-cuelga-del-push | backlog | tickets/backlog/cobertura-ui-diaria-cuelga-del-push.md |
 | completed-mode-escalates-a-second-groups-only-device | backlog | tickets/backlog/completed-mode-escalates-a-second-groups-only-device.md |
 | converted-amount-sweep-blind-to-input-changes | backlog | tickets/backlog/converted-amount-sweep-blind-to-input-changes.md |
@@ -116,6 +117,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | ensure-rates-for-existing-transactions-has-no-callers | backlog | tickets/backlog/ensure-rates-for-existing-transactions-has-no-callers.md |
 | entitlement-sync-forzado-es-noop-si-hay-otro-en-vuelo | backlog | tickets/backlog/entitlement-sync-forzado-es-noop-si-hay-otro-en-vuelo.md |
 | exchange-rate-detail-shows-zero-for-low-denomination-currencies | backlog | tickets/backlog/exchange-rate-detail-shows-zero-for-low-denomination-currencies.md |
+| export-anchor-accepts-events-from-any-container | backlog | tickets/backlog/export-anchor-accepts-events-from-any-container.md |
 | exportable-insights | backlog | tickets/backlog/exportable-insights.md |
 | fab-appears-without-animation | backlog | tickets/backlog/fab-appears-without-animation.md |
 | filtro-de-cuentas-se-colapsa-al-navegar-a-registros | backlog | tickets/backlog/filtro-de-cuentas-se-colapsa-al-navegar-a-registros.md |
@@ -171,9 +173,11 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | groups-join-intent-reconciler | blocked | tickets/blocked/groups-join-intent-reconciler.md |
 | groups-leave-rpc-error-10 | qa | tickets/qa/groups-leave-rpc-error-10.md |
 | groups-log-expense-via-chat-voice | backlog | tickets/backlog/groups-log-expense-via-chat-voice.md |
+| groups-only-account-deletion-skips-export-wait | backlog | tickets/backlog/groups-only-account-deletion-skips-export-wait.md |
 | groups-only-private-restart-skips-the-wipe-alert | backlog | tickets/backlog/groups-only-private-restart-skips-the-wipe-alert.md |
 | groups-only-second-launch-mounts-icloud-mirror | qa | tickets/qa/groups-only-second-launch-mounts-icloud-mirror.md |
 | groups-organizer-intent-is-lost-on-relaunch | backlog | tickets/backlog/groups-organizer-intent-is-lost-on-relaunch.md |
+| groups-outbox-rows-without-a-live-session-have-no-exit | backlog | tickets/backlog/groups-outbox-rows-without-a-live-session-have-no-exit.md |
 | groups-owner-debt-no-heir-dead-end | done | tickets/done/groups-owner-debt-no-heir-dead-end.md |
 | groups-owner-transfer-and-leave | qa | tickets/qa/groups-owner-transfer-and-leave.md |
 | groups-pending-member-can-open-group | done | tickets/done/groups-pending-member-can-open-group.md |
@@ -184,6 +188,8 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | groups-settlement-reminder-discoverability | qa | tickets/qa/groups-settlement-reminder-discoverability.md |
 | groups-settlement-reminder-stale-clock | backlog | tickets/backlog/groups-settlement-reminder-stale-clock.md |
 | groups-shareable-summary | done | tickets/done/groups-shareable-summary.md |
+| groups-sign-out-quiescence-gate-fails-open-with-drive-off | backlog | tickets/backlog/groups-sign-out-quiescence-gate-fails-open-with-drive-off.md |
+| groups-signout-reentry-banner-has-no-producer | backlog | tickets/backlog/groups-signout-reentry-banner-has-no-producer.md |
 | groups-stats-no-deduplica-gastos | backlog | tickets/backlog/groups-stats-no-deduplica-gastos.md |
 | groups-tab-missing-panel-perf | qa | tickets/qa/groups-tab-missing-panel-perf.md |
 | groups-transfer-leave-write-ahead | backlog | tickets/backlog/groups-transfer-leave-write-ahead.md |
@@ -192,6 +198,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | hero-estadisticas-stock-vs-flujo-entre-pestanas | done | tickets/done/hero-estadisticas-stock-vs-flujo-entre-pestanas.md |
 | history-token-guard-echo-blind-spot | backlog | tickets/backlog/history-token-guard-echo-blind-spot.md |
 | hoja-del-saldo-vivo-ignora-los-filtros-de-sesion | backlog | tickets/backlog/hoja-del-saldo-vivo-ignora-los-filtros-de-sesion.md |
+| icloud-sync-status-treats-non-ck-failures-as-success | backlog | tickets/backlog/icloud-sync-status-treats-non-ck-failures-as-success.md |
 | inbox-convert-draft-to-group-expense | done | tickets/done/inbox-convert-draft-to-group-expense.md |
 | inbox-crash-convert-to-group-expense | done | tickets/done/inbox-crash-convert-to-group-expense.md |
 | initial-balance-date-move-leaves-converted-amount-stale | backlog | tickets/backlog/initial-balance-date-move-leaves-converted-amount-stale.md |
@@ -216,6 +223,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | only-testing-filters-may-be-silently-empty | backlog | tickets/backlog/only-testing-filters-may-be-silently-empty.md |
 | open-worktrees-lack-the-attribution-hook | backlog | tickets/backlog/open-worktrees-lack-the-attribution-hook.md |
 | orphan-alerts-behind-fullscreen-covers | backlog | tickets/backlog/orphan-alerts-behind-fullscreen-covers.md |
+| owner-preferences-return-via-ikv-after-private-sign-out | backlog | tickets/backlog/owner-preferences-return-via-ikv-after-private-sign-out.md |
 | panel-accounts-redesign | backlog | tickets/backlog/panel-accounts-redesign.md |
 | panel-colapsa-la-seleccion-de-cuentas-a-la-primera | qa | tickets/qa/panel-colapsa-la-seleccion-de-cuentas-a-la-primera.md |
 | panel-defaults-four-sections-four-widgets | done | tickets/done/panel-defaults-four-sections-four-widgets.md |
@@ -225,6 +233,8 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | preferred-currency-has-three-different-defaults | backlog | tickets/backlog/preferred-currency-has-three-different-defaults.md |
 | prefs-domain-per-secondary-session | discarded | tickets/discarded/prefs-domain-per-secondary-session.md |
 | prefs-synced-keys-upload-not-download | qa | tickets/qa/prefs-synced-keys-upload-not-download.md |
+| private-exit-loses-unmaterialized-inbound-captures | backlog | tickets/backlog/private-exit-loses-unmaterialized-inbound-captures.md |
+| private-sign-out-keeps-legacy-cloudkit-groups | backlog | tickets/backlog/private-sign-out-keeps-legacy-cloudkit-groups.md |
 | push-client-ignores-yala-kind | backlog | tickets/backlog/push-client-ignores-yala-kind.md |
 | qa-cloud-readme-sin-entradas-g13-04-y-g13-05 | backlog | tickets/backlog/qa-cloud-readme-sin-entradas-g13-04-y-g13-05.md |
 | qa-guion-tanda-no-cubre-17-tickets | backlog | tickets/backlog/qa-guion-tanda-no-cubre-17-tickets.md |
@@ -240,6 +250,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | registros-calendario-cuenta-gastos-por-signo | qa | tickets/qa/registros-calendario-cuenta-gastos-por-signo.md |
 | rejected-member-cold-tap-does-nothing | qa | tickets/qa/rejected-member-cold-tap-does-nothing.md |
 | rejoin-tap-renotifies-admins | qa | tickets/qa/rejoin-tap-renotifies-admins.md |
+| remote-wipe-signal-honored-by-any-session | backlog | tickets/backlog/remote-wipe-signal-honored-by-any-session.md |
 | repair-queue-has-no-exit-for-partial-rate-rows | qa | tickets/qa/repair-queue-has-no-exit-for-partial-rate-rows.md |
 | reparacion-de-tasas-no-avisa-al-panel | backlog | tickets/backlog/reparacion-de-tasas-no-avisa-al-panel.md |
 | rescue-discarded-groups-pull | discarded | tickets/discarded/rescue-discarded-groups-pull.md |
@@ -267,11 +278,12 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | secondary-visit-data-lost-on-signout-unannounced | discarded | tickets/discarded/secondary-visit-data-lost-on-signout-unannounced.md |
 | secondary-visitor-writes-owner-domain | discarded | tickets/discarded/secondary-visitor-writes-owner-domain.md |
 | seeds-de-grupos-no-escriben-userid-ni-memberkey | backlog | tickets/backlog/seeds-de-grupos-no-escriben-userid-ni-memberkey.md |
-| session-exits-one-verb-per-session | backlog | tickets/backlog/session-exits-one-verb-per-session.md |
+| session-exits-one-verb-per-session | qa | tickets/qa/session-exits-one-verb-per-session.md |
 | session-redesign-implementation-order | backlog | tickets/backlog/session-redesign-implementation-order.md |
 | session-redesign-web-and-store-copy | backlog | tickets/backlog/session-redesign-web-and-store-copy.md |
 | settings-migrate-to-cloud-adopts-silently-instead-of-migrating | backlog | tickets/backlog/settings-migrate-to-cloud-adopts-silently-instead-of-migrating.md |
 | shell-derives-from-two-session-axes | backlog | tickets/backlog/shell-derives-from-two-session-axes.md |
+| sign-out-wipe-abort-in-icloud-says-nothing | backlog | tickets/backlog/sign-out-wipe-abort-in-icloud-says-nothing.md |
 | siri-ai-integration-ios-27 | backlog | tickets/backlog/siri-ai-integration-ios-27.md |
 | siri-intent-dual-container | qa | tickets/qa/siri-intent-dual-container.md |
 | smart-ai-notifications | backlog | tickets/backlog/smart-ai-notifications.md |

@@ -20,7 +20,7 @@
 //  ## `hadSessionEver` NO es `GroupsSignOutBannerMarker` — se midió antes de usarlo
 //
 //  El §4 del spec proponía reusar ese marcador y pedía medirlo. **No sirve: es one-shot.** Se arma solo en
-//  `CloudSessionSignOut.finalizeGroupsOnlyClose`, se QUEMA en el `onAppear` del banner y se DESARMA al
+//  `CloudSessionSignOut.finalizeGroupsOnlyClose` (retirado en el paso 9), se QUEMA en el `onAppear` del banner y se DESARMA al
 //  re-firmar (`GroupsSignOutBannerMarker.swift:24-37`) ⇒ en cuanto el banner se muestra una vez, quien SÍ
 //  tuvo cuenta volvería a ver «crea una cuenta». Tampoco cubre el cierre de sesión de nube completo, que
 //  no pasa por ahí. La señal correcta es un latch monotónico propio: `GroupsSessionHistoryMarker`.

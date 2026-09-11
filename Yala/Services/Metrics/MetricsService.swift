@@ -30,6 +30,13 @@ enum MetricsCanary: String {
     // CloudKit (store personal espejado + container de grupos)
     case cloudkitExportFailed
     case cloudkitExportSucceeded
+    /// Paso 9 · cierre de sesión PRIVADA: la espera del export de iCloud se agotó con cambios sin confirmar
+    /// y el aviso de la salida de emergencia se enseñó. `detail` = `pending=N` o `pending=unknown` (sin PII).
+    /// Sostenido en muchos dispositivos = el testigo del export no confirma (el autor del espejo o el ancla
+    /// no son lo que el diseño supone) — mirar el device-QA del paso 9 antes de culpar a la red.
+    case privateSignOutExportUnconfirmed
+    /// Paso 9 · la persona eligió «Cerrar sesión igualmente» tras ese aviso: se borró sin confirmar el export.
+    case privateSignOutExportDiscarded
     case cloudkitStalledDetected
     case cloudkitDuplicateDetected
     case cloudkitTransferOrphanRepaired

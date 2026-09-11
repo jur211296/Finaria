@@ -247,7 +247,7 @@ final class DataWipeService {
     /// empieza OTRO usuario: «Soy nuevo» del Welcome y «Empezar de cero» de la oferta de restore.
     ///
     /// **El problema que resuelve** (auditoría Modo Nube §4/1, hallazgos `E2-04`/`NEW-E2-01`/
-    /// `NEW-E2-03`; reproducido en simulador): el usuario A cierra sesión (`.privateReset`, no borra
+    /// `NEW-E2-03`; reproducido en simulador): el usuario A cierra sesión (`.privateReset`, el cierre privado anterior al paso 9, que no borraba
     /// nada) y B elige «Soy nuevo» en el MISMO dispositivo con el MISMO Apple ID. `wipeAllUserData`
     /// vacía el corpus personal, pero los grupos de A siguen ahí, `groupsBetaUnlocked` sobrevive
     /// (B entra a Grupos sin el código) y el bridge, que no comprueba identidad, vuelve a
@@ -473,6 +473,26 @@ final class DataWipeService {
             SessionState.shared.onboardingMode = .full
         }
         defaults.removeObject(forKey: OnboardingMode.userDefaultsKey)
+        iKV.setString("", forKey: OnboardingMode.userDefaultsKey)
+        iKV.synchronize()
+    }
+
+    /// **Paso 9 · el modo solo-grupos se suelta del iCloud KV al cerrar esa sesión.** `onboardingMode` viaja
+    /// por el iCloud KV del Apple ID con merge never-downgrade (`PreferenceMergeLogic`, rank de
+    /// `OnboardingMode`), y el boot-wipe solo borra la copia LOCAL: el arranque siguiente leía `.groupInvite`
+    /// del KV y lo volvía a imponer, así que la vida siguiente de este teléfono —quien restaura su iCloud o
+    /// empieza en privado— nacía dentro de la shell de grupos (review adversarial del paso 9). Se deja el
+    /// valor VACÍO, que el merge ignora en todos los dispositivos, como hace `clearHandoverOnboardingMode`.
+    ///
+    /// A diferencia de aquel, NO toca `SessionState`: corre con el cover terminal en pantalla, y cambiar el
+    /// modo del proceso vivo remontaría la shell debajo. Lo local lo borra el boot-wipe.
+    ///
+    /// Sin parámetro a propósito: un `= OwnerKeyValueStore.shared` por defecto se evalúa en el contexto del
+    /// LLAMADOR, que aquí es nonisolated, y eso deja un warning de aislamiento. Dentro del cuerpo —que sí es
+    /// `@MainActor` por el tipo— la referencia es legal. Nadie lo inyecta hoy; si hiciera falta, el patrón
+    /// del repo es el de `clearHandoverOnboardingMode`: parámetro obligatorio pasado por el llamador.
+    static func releaseGroupsOnlyOnboardingModeFromICloudKV() {
+        let iKV: BeaconKeyValueStore = OwnerKeyValueStore.shared
         iKV.setString("", forKey: OnboardingMode.userDefaultsKey)
         iKV.synchronize()
     }

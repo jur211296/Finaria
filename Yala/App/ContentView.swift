@@ -124,12 +124,6 @@ struct ContentView: View {
     /// antes, la persona la tiene igual en Perfil y en los empujones de Grupos, y un estado durable que
     /// sobreviviera a su motivo podría ofrecerla en un momento que nadie pidió.
     @State private var offersFullActivationAfterGroupsEntry = false
-    /// D1: acción elegida en la pantalla de retención; se EJECUTA en el `onDismiss` del cover
-    /// (con el cover YA fuera — anti-carrera toolbar-muerta). `nil` = ninguna elegida aún.
-    @State private var pendingRetentionAction: RetentionAction?
-    /// D1: red visual del cover de retención. Sincronizada desde la condición viva
-    /// (`groupsRetentionPending && !isWipingData`) por `syncGroupsRetentionCover()`.
-    @State private var showGroupsRetentionCover: Bool = false
     /// Inbox alert payload, driven by .contentView drain of .showInboxAlert.
     @State private var activeInboxNotification: PendingInboxNotification = .init()
     /// Invite error detail, carried by .showInviteError intent.
@@ -271,10 +265,6 @@ struct ContentView: View {
             // `performLocalWipeForRemoteSync` resetea `hasShownWelcomeChooser=false` cuando
             // el wipe requiere re-onboarding completo, así que el chooser vuelve a presentarse.
             if !newValue {
-                // D1: con retención pendiente (vaciado CON grupos vivos), NO rutear a Welcome —
-                // la pantalla de retención decide. Si el usuario elige «Empezar de cero», su
-                // onDismiss llama a `presentNextOnboardingScreen()` (mismo cuerpo).
-                guard !SessionState.shared.groupsRetentionPending else { return }
                 prefilledOnboardingData = nil
                 presentNextOnboardingScreen()
             }
@@ -465,45 +455,6 @@ struct ContentView: View {
             }
             .environment(SessionState.shared)
         }
-        // D1: pantalla de retención tras «Vaciar mis datos» CON grupos vivos. DUEÑO ÚNICO = ContentView.
-        // @State `showGroupsRetentionCover` = red visual (patrón showSignOutRelaunchCover); la CONDICIÓN VIVA
-        // es `groupsRetentionPending && !isWipingData`, sincronizada por `syncGroupsRetentionCover()` desde los
-        // onChange de ambos flags (un Binding(get:) computado sobre el singleton NO re-evalúa la presentación).
-        // La acción de cada botón se difiere al `onDismiss` (cover YA fuera — anti-carrera toolbar-muerta).
-        .fullScreenCover(isPresented: $showGroupsRetentionCover, onDismiss: {
-            // capture-all → reset-all → act (molde UserDataResetView:122-144).
-            let action = pendingRetentionAction
-            pendingRetentionAction = nil
-            switch action {
-            case .groupsOnly:
-                // `usageFocus` ya es `.groupsOnly` (escrito en el botón). Navega a Grupos y monta
-                // MainTabView (reducida). selectMainTab primero (usa effectiveShellMode), luego montar.
-                SessionState.shared.selectMainTab(.groups)
-                hasCompletedOnboarding = true
-            case .startFresh:
-                // `usageFocus` ya es `.full`. Rutea a Welcome/onboarding = comportamiento actual exacto
-                // (mismo cuerpo que el onChange(hasCompletedOnboarding) gateado durante la retención).
-                prefilledOnboardingData = nil
-                presentNextOnboardingScreen()
-            case nil:
-                // Teardown EXTERNO (UIKit tumbó el cover sin elección del usuario). Re-arma desde la
-                // condición viva: si la retención sigue pendiente, re-presenta en el próximo runloop
-                // (molde RelaunchNet) — evita el blocker `groupsRetention` colgado sin cover visible.
-                syncGroupsRetentionCover()
-            }
-        }) {
-            GroupsRetentionView(
-                hasDebt: SessionState.shared.groupsRetentionHasDebt,
-                onGroupsOnly: {
-                    pendingRetentionAction = .groupsOnly
-                    SessionState.shared.groupsRetentionPending = false
-                },
-                onStartFresh: {
-                    pendingRetentionAction = .startFresh
-                    SessionState.shared.groupsRetentionPending = false
-                })
-            .environment(SessionState.shared)
-        }
         // Inbox alert as fullScreenCover (appears over any sheet).
         // Driven by @State set by the .contentView drain handler.
         // Setter real + onDismiss son la red contra teardowns externos (p.ej.
@@ -535,9 +486,6 @@ struct ContentView: View {
         base
         .onAppear {
             themeManager.systemColorScheme = colorScheme
-            // D1: recoge un `groupsRetentionPending` armado ANTES de que ContentView observara
-            // (p.ej. el seam de uitest o un re-arranque); los onChange cubren el cambio in-sesión.
-            syncGroupsRetentionCover()
         }
         .onChange(of: colorScheme) { _, newScheme in
             themeManager.systemColorScheme = newScheme
@@ -558,9 +506,6 @@ struct ContentView: View {
                 Task { @MainActor in
                     await GroupBatchLeaveOrchestrator.resume(trigger: .foreground)
                 }
-                // D1: recuperación warm-foreground del cover de retención (si un teardown externo lo
-                // tumbó con la retención aún pendiente). Idempotente; no-op sin retención pendiente.
-                syncGroupsRetentionCover()
                 // Re-chequeo de actualización al volver a foreground (una app que no se mata en días
                 // no veía el banner). Barato: el cache de 24h de checkForUpdate hace no-op dentro de
                 // la ventana. Solo returning-users (paridad con el boot, runReturningUserPostChecks);
@@ -581,7 +526,6 @@ struct ContentView: View {
         }
         .onChange(of: SessionState.shared.isWipingData) { _, _ in
             updateContentViewReadiness()
-            syncGroupsRetentionCover()  // el cover se presenta cuando el wipe termina (!isWipingData)
         }
         // El arranque asentó → se abre el gate `bootstrapPending` y la cola retenida drena
         // por prioridad (aviso de bandeja antes que paywall). Con el shell libre, `markReady`
@@ -597,11 +541,6 @@ struct ContentView: View {
             if ContentViewReadinessLogic.blocker(state: currentShellReadinessState()) != nil {
                 drainContentViewIntents()
             }
-        }
-        // D1: la retención es blocker de la matriz + condición viva de la red visual del cover.
-        .onChange(of: SessionState.shared.groupsRetentionPending) { _, _ in
-            updateContentViewReadiness()
-            syncGroupsRetentionCover()
         }
         // Fix carrera 2026-07-14: la fase de sign-out alimenta el blocker `signOutRelaunch`
         // como condición viva — cinturón explícito de recompute (leerla en el snapshot ya
@@ -831,7 +770,6 @@ struct ContentView: View {
             isSplashDismissed: SessionState.shared.isSplashDismissed,
             isBootstrapSettled: SessionState.shared.isBootstrapSettled,
             isWipingData: SessionState.shared.isWipingData,
-            groupsRetentionPending: SessionState.shared.groupsRetentionPending,
             showOnboarding: showOnboarding,
             showWelcomeFlow: showWelcomeFlow,
             showLanguageSelection: showLanguageSelection,
@@ -1551,16 +1489,6 @@ struct ContentView: View {
 
     /// Routing único para presentar la siguiente pantalla del flow inicial.
     /// Si Chooser no se ha visto, presenta el flow Welcome (Hero+Chooser unificado).
-    /// D1: sincroniza la red visual del cover de retención con la condición viva. Presenta cuando la
-    /// retención está pendiente Y el wipe terminó (durante el wipe `wipingData` tapa todo). Idempotente.
-    @MainActor
-    private func syncGroupsRetentionCover() {
-        let shouldShow = SessionState.shared.groupsRetentionPending && !SessionState.shared.isWipingData
-        if showGroupsRetentionCover != shouldShow {
-            showGroupsRetentionCover = shouldShow
-        }
-    }
-
     private func presentNextOnboardingScreen() {
         #if DEBUG
         // uitest: ir directo al OnboardingView (salta Welcome Hero/Chooser) para
@@ -2748,15 +2676,6 @@ struct MainTabView: View {
 private struct MilestoneIdentifier: Identifiable {
     let value: Int
     var id: Int { value }
-}
-
-/// D1: elección de la pantalla de retención tras vaciar con grupos vivos. La acción se difiere
-/// al `onDismiss` del cover (con la pantalla YA fuera — anti-carrera toolbar-muerta).
-private enum RetentionAction {
-    /// «Solo mis grupos»: navega al tab Grupos y mantiene la app montada (shell reducida).
-    case groupsOnly
-    /// «Empezar de cero»: ruta a Welcome/onboarding (comportamiento actual exacto).
-    case startFresh
 }
 
 // MARK: - App Tab Enum
