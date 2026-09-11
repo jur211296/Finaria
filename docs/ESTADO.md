@@ -5,22 +5,32 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-11 (Lima)
 
-**Rama** `2.1` — Merge #137: **«Activar Yala completo» pregunta dónde viven tus datos personales.**
+**Rama** `2.1` — Merge #138: **un verbo por sesión — «Cerrar sesión» espera a que iCloud confirme.**
 TestFlight build **13** (CPV 13). **Subida Yala (TF/store) = solo Mini.**
 
-## Esta sesión (el paso 8, y lo que costaba el bridge)
+## Esta sesión (el paso 9: un verbo por sesión)
 
-**Quien usa Yala solo para grupos y toca «Activar Yala completo» ve primero «¿Dónde guardamos tus
-finanzas?»**, con las dos cards del Welcome; la de nube dice que es la misma cuenta que ya usa para sus
-grupos. Privado pasa por la puerta de iCloud del paso 4 y deja restaurar; nube promociona la cuenta al
-final, y si no sale no escribe nada. Al terminar el onboarding se pregunta si los gastos de grupo se ven
-también en lo personal.
+**Ajustes queda con dos botones en las cuatro celdas: «Cerrar sesión» y «Vaciar datos».** «Eliminar mi
+cuenta» vive ahora dentro de «Tu cuenta de Yala», y se fueron «Salir de Yala en este dispositivo»,
+«Cerrar sesión de grupos» y la pantalla «Seguir con mis grupos».
 
-**La review (cuatro lentes) cazó 14 defectos míos, y el más caro era de dinero**: con el modo aún en
-solo-grupos, el bridge borra la transacción real de cada gasto que re-puentea — y tras restaurar, esas son
-las de tu vida anterior. Ahora el bridge queda cerrado mientras la activación está a medias y los gastos
-convergen después del modo completo; medido contra el bridge real, con su control. Suite unitaria (6808) y
-XCUITest **enteras** (62 clases) en verde.
+**Cerrar sesión en una sesión privada ya no deja los datos donde estaban**: Yala espera a que lo último
+que guardaste llegue a iCloud, borra lo de este teléfono y vuelve al Welcome, donde «Restaurar desde
+iCloud» lo trae todo. Si iCloud no confirma en 45 s, un aviso dice **cuántos cambios** no llegaron y
+ofrece «Cerrar sesión igualmente» o «Esperar» —que retoma donde estaba—. Sin iCloud, y solo con prueba
+de que no lo hay, pide un segundo gesto. Una sesión solo-grupos cierra dejando el teléfono como nuevo, y
+ahora **puede borrar su cuenta**, que antes no podía.
+
+**Lo que costó el testigo del export.** Cuenta los cambios locales del historial de SwiftData contra el
+INICIO del último export con éxito; el ancla solo avanza con un evento `succeeded` —un error que no era
+de CloudKit la movía y el cierre borraba lo que no estaba subido— y un ancla en el futuro se descarta.
+
+**Verificado sobre el árbol final**: unit 6848/701 en verde, los dos builds sin warnings nuevos, XCUITest
+**62/62 clases** (139 casos) y 14 de 15 mutantes muertos. El que sobrevive (M15) es un hallazgo, no un
+hueco: el historial de SwiftData **no registra** una reescritura idéntica, así que el filtro que decía
+producir ese cero no es quien lo produce — corregido en la regla y en los dos docblocks. El único rojo
+de XCUITest era el flaky conocido del helper de guardar, **bisecado contra el árbol base**, donde cae
+igual.
 
 ## Tu cola
 
@@ -29,7 +39,7 @@ XCUITest **enteras** (62 clases) en verde.
    el orden del punto 2-quinquies.**
 2. **Device-QA del paso 3** — los cuatro recorridos del ticket. Sal del bloqueo **por swipe y por
    «Entendido»**, no solo por el botón; y en el recorrido 1 **fuerza el cierre de la app** antes de darlo
-   por bueno. Más los device-QA de los pasos 4, 5, 6 y 8.
+   por bueno. Más los device-QA de los pasos 4, 5, 6, 8 y 9.
 2-bis. **Device-QA del paso 4, y empieza por su punto BLOQUEANTE** (`welcome-private-fresh-start-skips-icloud-check`,
    guion dentro): comprobar que la sonda de CloudKit **no lanza**. Baja una lista de `desiredKeys` única
    sobre una zona multi-tipo, y si el servidor la validara contra el schema de cada tipo, la rama privada
@@ -50,6 +60,14 @@ XCUITest **enteras** (62 clases) en verde.
    10-sep: si no, verás el aviso de reinstalar —correcto— y no el chooser. El que más caro sale es
    **restaurar**: los gastos de grupo tienen que salir UNA vez, y los que ya habías clasificado conservan
    su cuenta y su nota.
+2-septies. **Device-QA del paso 9** (`session-exits-one-verb-per-session`, guion dentro). **NO es
+   simulable**: sin cuenta de iCloud no hay espejo, y el testigo del export solo se prueba en device.
+   **Empieza por su spike de tres supuestos**, que ningún test puede medir: que el espejo firme sus
+   importaciones con su autor, que emita un evento de export tras cada save, y que un export con éxito
+   haya subido todo lo anterior a su inicio. **Si falla el primero, todo cierre privado acaba en la
+   salida de emergencia diciendo «1 cambio»** —falla seguro, pero inservible—. Y una decisión tuya
+   dentro: qué hacer con cambios de grupos que ya no tienen a dónde subir
+   (`groups-outbox-rows-without-a-live-session-have-no-exit`).
 2-ter. **Device-QA de la reversa born-cloud → iCloud** (`reverse-cutover-cerrado-para-cuentas-born-cloud`).
    Dos cosas: el **contador de testigos con `ckRecordName`** del panel DEBUG tiene que pasar de 0 a cubrir
    tus filas vivas —ése es el único testigo real de que la subida ocurrió—, y **borra 2-3 transacciones
@@ -62,9 +80,8 @@ XCUITest **enteras** (62 clases) en verde.
 
 ## Siguiente
 
-**El paso 9** del rediseño (`session-exits-one-verb-per-session`): un solo verbo de salida por sesión.
-Pasos 0-8 cerrados; el 11 sigue vacante a propósito. **El board: 174 en backlog, 53 en qa** (286 = 286
-contra disco).
+**El paso 10** del rediseño. Pasos 0-9 cerrados; el 11 sigue vacante a propósito. **El board: 298 en
+disco = 298 en `docs/TICKETS.md`**, cero desajustes de estado.
 
 ## Bloqueo
 
@@ -84,7 +101,9 @@ salida, y ahí el backend ya está congelado— y `reverse-claim-rejection-has-n
 dos son la misma forma: una fase de la reversa sin salida.
 
 **La mitad 2 del paso 5, y es decisión tuya** (`groups-entry-on-a-mirrored-store-still-blocks-the-owner`,
-**high**): cuando el store YA lleva espejo, la puerta «datos ajenos» te sigue bloqueando. Lo medido: el
+**high**): cuando el store YA lleva espejo, la puerta «datos ajenos» te sigue bloqueando. **El paso 9 ya
+le da el verbo que le faltaba**; lo que queda es tu decisión de aceptar el relanzamiento en el alta de
+Grupos, anotada en su ticket. Lo medido: el
 desmontaje en caliente que pediste lo rechaza su propio guard, y borrar lo local con el espejo montado
 **exporta los borrados a iCloud** — destruiría justo lo que el criterio promete conservar. La salida que
 sí existe cuesta un relanzamiento. **Conviene decidirlo junto al residual del paso 4**, que converge en
@@ -96,8 +115,9 @@ para que no persista entre arranques; abierta dentro de la misma sesión.
 
 **Un residual del paso 4, con ticket** (`late-icloud-wipe-can-re-export-between-its-two-halves`,
 **medium**): matar la app entre las dos mitades del borrado tardío puede devolver los datos viejos. Es
-reaparición, no pérdida, y su arreglo natural es del paso 9 — necesita pedir relanzamiento sin entrar en
-la máquina de `CloudSessionSignOut`.
+reaparición, no pérdida. **El paso 9 NO lo cerró** —sus cierres privados sí entran en la máquina de
+`CloudSessionSignOut`, que es justo lo que este caso quería evitar—, pero deja el precedente de borrar
+por archivos un store CON espejo después de confirmar el export. Anotado en su ticket.
 
 **Un gemelo de lo que arregló el paso 6, anterior a él** (`welcome-cloud-back-leaves-chooser-marked-seen`,
 **medium**): volver atrás desde el sign-in de nube deja el Welcome «ya elegido», y cerrar la app ahí abre
