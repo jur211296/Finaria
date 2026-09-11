@@ -26,5 +26,10 @@ leerlo antes de que muerda.
   Yala (ADR-008): ahí entra código ajeno a los mismos ficheros. Ese día el merge de `2.1` subió la
   suite de 6046/609 a 6082/618 — números distintos, gate distinto.
 
+**Y en un worktree recién creado `.claude/sessions/` NO existe** (medido el 2026-09-11): el `>` del
+sellado falla con «no such file or directory», el sello no se escribe, y el hook tumba el commit con
+«no consta que haya pasado el gate» aunque todo estuviera verde. `mkdir -p .claude/sessions` antes del
+primer sellado de la sesión.
+
 Relacionado: [[mis-mediciones-fallan-por-el-filtro]] (el caso 12: el PR nace `DIRTY` y el CI ni
 arranca, que es el otro efecto de que `2.1` avance mientras trabajas).
