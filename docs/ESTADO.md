@@ -5,40 +5,42 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-11 (Lima)
 
-**Rama** `2.1` — Merge #140: **la cuenta de grupos se ve, se suelta y se vuelve a poner.**
+**Rama** `2.1` — Merge #141: **soltar la cuenta de grupos ya no puede borrarle los gastos a los demás.**
 TestFlight build **13** (CPV 13). **Subida Yala (TF/store) = solo Mini.**
 
-## Esta sesión (el paso 10: la cuenta de grupos deja de ser invisible)
+## Esta sesión (el agujero que dejó el paso 10, cerrado)
 
-**Tu cuenta de grupos ya tiene una pantalla.** Hasta hoy, quien usa Grupos con sus finanzas en su iCloud
-privado no tenía forma de saber CON QUÉ cuenta las usa, ni de soltarla sin cerrar la sesión entera. Ahora,
-en Ajustes → «¿Dónde viven tus datos?», una sección **Grupos** dice el correo de esa cuenta, ofrece
-asociar una si no hay, y deja **desasociarla** — preguntando antes qué pasa con los gastos de grupo que ya
-están en el Panel: conservar los que pagaste tú, o quitarlo todo. **Las dos salidas, decisión tuya del
-9-sep, implementadas y probadas.**
+**Nadie va a perder los gastos de su grupo porque otro suelte su cuenta.** Cuando sueltas tu cuenta de
+grupos, Yala borra tus grupos **de este teléfono** — es lo que promete. Podía no quedarse ahí: el historial
+de cambios de SwiftData sobrevive al relanzamiento, así que en un **arranque posterior** el canal leía esos
+borrados locales, los convertía en borrados de servidor y **les quitaba los gastos a todos los miembros**.
+Gente que no tocó nada, viendo desaparecer su dinero de la pantalla.
 
-**Y la asociación viaja contigo**: va al iCloud-KV de tu Apple ID, así que tu segundo móvil —o éste tras
-«Restaurar desde iCloud»— sabe que existe aunque la sesión no viaje, y te ofrece **entrar** con ella en vez
-de proponerte crear la cuenta que ya tienes. Era el hueco de la fila «D · N» de la matriz.
+Lo único que lo impedía era el orden en que corren dos pasos del ciclo de sync, y bastaba con que el
+primero fallara —su `catch` se traga el error— para que el agujero se abriera.
 
-**El «enlace dormido» que pedía el ticket era IMPOSIBLE tal cual, y esa es la decisión que más pesa.**
-`TransactionItem` **no tiene identidad propia serializable** (ni `id`, ni UUID estable: `syncID` es
-opcional y en sesión privada es `nil`), así que «devuélvele el puntero a ESA fila» no se puede escribir sin
-inventar un ancla. Y dejarlo puesto —la lectura literal del ticket— deja el movimiento **ATRAPADO**: ni
-editable ni borrable, sobre un gasto que ya no existe, y ningún barrido lo repara. ⇒ Se entrega la mitad
-que el criterio persigue de verdad (**cero duplicados**, con un libro sellado por el `sub` de la cuenta) y
-el re-ENLACE queda con ticket y con su vía real: campo nuevo **con deploy de schema coordinado**.
+**El arreglo no es ninguna de las dos vías que proponía el ticket, y esa es la decisión que más pesa.** El
+boot-wipe por ARCHIVOS exigiría **relanzar la app**, y desasociar es un gesto in-session de Ajustes:
+convertirlo en «reabre Yala» es un cambio de producto que ni el ADR ni el ticket piden. Y conservar el ancla
+del drain —la alternativa escrita— se implementó, se midió y **se retiró**: el ancla es ANTERIOR a esos
+borrados, así que no los tapaba; encima clavaba uno de los cuatro suelos del corte de purga del historial,
+sin canal que volviera a avanzarlo. ⇒ lo que queda es una tercera vía, más simple y más fuerte: **el borrado
+va FIRMADO con el autor del canal**, y el drain descarta por autor antes de traducir. No depende del cursor,
+ni de las zonas vivas, ni del orden de `syncCycleOnce`, que era el requisito duro.
 
-**Lo que costó la review** (tres lentes, 12 defectos míos): el peor es que **desasociar no era durable** —
-el otro dispositivo del Apple ID, con su sesión viva, reponía la asociación en su siguiente arranque y el
-gesto se deshacía solo; ahora hay tombstone. Los otros tres graves: la asociación se escribía DESPUÉS de
-arrancar el canal, así que un pull rápido duplicaba cada gasto conservado; `.remove` se llevaba por delante
-puentes de grupos de la era CloudKit —dinero real, en un store sin espejo que lo reponga—; y el CTA
-apostaba a un `sleep` de 350 ms sobre un flag que bloquea el router de toda la app.
+**Y arregla de paso un camino que el ticket no nombraba.** La firma vive DENTRO del escritor
+(`DataWipeService.deleteLocalGroupsRows`), no en los llamadores, así que el **«Empiezo de cero»** del
+Welcome queda cubierto por construcción: sus borrados eran igualmente traducibles, a borrados de los grupos
+del humano anterior.
 
-**Verificado sobre el árbol final**: unit **6918/709** en verde, XCUITest **18 casos en 4 suites**, los dos
-builds con `clean` y **cero warnings nuevos** (los 8 mismos ficheros del árbol base), **20 mutantes y 20
-muertos**.
+**Lo que costó la review** (tres lentes + la regla de área leída contra el diff): un `rollback` que no
+cubría los `fetch` —la misma pérdida de datos por la puerta de al lado—, una aserción que **no podía
+fallar** (el campo ya valía `"{}"` por su default de modelo), dos afirmaciones falsas en mis docblocks, y
+que **media solución no servía**.
+
+**Verificado sobre el árbol final**: unit **6923/710** en verde, XCUITest 3/3, los dos builds con `clean` y
+cero warnings nuevos, **tres mutantes y tres muertos**. Con el agujero abierto salen **2 tombstones de
+`SplitExpense`** (medido; el grupo no cuenta, su emisión es `updateOnly`).
 
 ## Tu cola
 
@@ -87,7 +89,10 @@ muertos**.
    **quinto**: desasocia en un teléfono, abre el otro del mismo Apple ID, y comprueba que la asociación
    **sigue soltada**. Si reaparece, el tombstone no está llegando y el gesto se deshace solo. El tercero
    es el que prueba lo demás: re-asocia la misma cuenta y **cuenta los movimientos del Panel** — tres
-   gastos tienen que seguir siendo tres, no seis.
+   gastos tienen que seguir siendo tres, no seis. **Y desde hoy hay un octavo, que es el más caro de todos
+   y necesita DOS personas**: desasocia, **mata la app y vuélvela a abrir** —el daño estaba en el arranque
+   siguiente, no en el gesto—, re-asocia, y comprueba en el teléfono del OTRO miembro que sus gastos siguen
+   ahí. Si desaparecen sin que él toque nada, para el release.
 2-ter. **Device-QA de la reversa born-cloud → iCloud** (`reverse-cutover-cerrado-para-cuentas-born-cloud`).
    Dos cosas: el **contador de testigos con `ckRecordName`** del panel DEBUG tiene que pasar de 0 a cubrir
    tus filas vivas —ése es el único testigo real de que la subida ocurrió—, y **borra 2-3 transacciones
@@ -101,90 +106,18 @@ muertos**.
 ## Siguiente
 
 **El paso 12** del rediseño (`shell-derives-from-two-session-axes`): el barrido de las 19 vistas y la
-retirada de M1. Pasos 0-10 cerrados; el 11 sigue vacante a propósito. **El board: 311 en disco = 311 en
+retirada de M1. Pasos 0-10 cerrados; el 11 sigue vacante a propósito. **El board: 314 en disco = 314 en
 `docs/TICKETS.md`**, cero desajustes de estado.
 
 ## Bloqueo
 
-**Lo que deja el paso 10, y el primero es el que más caro sale**
-(`detach-history-replay-can-tombstone-groups-on-next-launch`, **high**): desasociar borra las filas de los
-grupos por FILAS, y en un arranque posterior el canal puede leer esos borrados del historial y
-**convertirlos en tombstones que borren los gastos para todos los miembros del grupo**. Hoy solo lo frena
-un efecto colateral del orden de `syncCycleOnce`, no una defensa: la forma correcta —borrar ARCHIVOS antes
-del mount, como hacen los tres cierres del paso 9— está escrita en el ticket.
+**Lo que sale de camino, y el primero es el que más caro sale** (`detach-failure-looks-like-success`,
+**high**): si el borrado del desasociar **falla**, la pantalla dice que soltó la cuenta y **no avisa de
+nada** — la sesión queda cerrada, la asociación borrada, y tus grupos siguen enteros en el teléfono. La app
+y el teléfono cuentan cosas distintas y la que se equivoca es la app. Es preexistente del paso 10, y su
+salida está escrita: el hermano «Empiezo de cero» sí tiene alert y canario.
 
-**Y el segundo es de producto** (`cloud-killswitch-hides-the-only-door-to-detach-groups`, **high**): si
-bajas el kill-switch de la nube por un incidente, la fila «¿Dónde viven tus datos?» desaparece — pero
-Grupos sigue encendido, porque tiene su propio interruptor. Quien tenga cuenta asociada se queda sin
-ninguna pantalla desde la que soltarla. Hasta este paso esconder esa fila era inocuo. **Decisión tuya**
-entre las dos salidas del ticket.
-
-**Un bug vivo medido el 10-sep** (`settings-migrate-to-cloud-adopts-silently-instead-of-migrating`,
-**high**): «Ajustes → migrar a la nube» sobre una cuenta que ya tiene datos **no migra: adopta en
-silencio**, y te cobra dos confirmaciones destructivas antes. Tus datos locales se quedan donde están, sin
-aviso. **El paso 10 le entregó la mitad que le faltaba**: ya se sabe cuál es la cuenta de grupos asociada
-(`isAssociatedGroupsAccount`), que es lo que esa puerta necesitaba para promover la correcta.
-
-**Los goldens de grupos** (`corpus-de-test-de-staging-crece-sin-limite`, **high**): seguían sin dar señal
-por timeout, con 702 grupos de un usuario de test. **Dato nuevo:** el deploy de staging subió `f84620b5`
-—el fix del canon viejo, sin desplegar desde el 8-sep— así que **un rojo anterior al 10-sep puede no
-valer**. Re-medir antes de perseguirlo.
-
-**Dos que el paso 6 agranda de un caso raro a toda la población** (los dos **high**, y ninguno lo
-introdujo esa sesión): `reverse-upload-has-no-ceiling-and-no-exit` —la subida a iCloud no tiene tope ni
-salida, y ahí el backend ya está congelado— y `reverse-claim-rejection-has-no-way-out-in-the-client`. Los
-dos son la misma forma: una fase de la reversa sin salida.
-
-**Lo que deja la mitad 2 del paso 5, y hay una decisión tuya dentro**
-(`groups-invite-on-a-mirrored-store-crosses-data`, **high**): la puerta de CREAR ya no bloquea, pero la
-entrada por **invitación** sigue sin puerta — aceptar un enlace en un teléfono que ya espeja manda los
-gastos del invitado al iCloud del dueño. Se midió por qué no se cerró de paso: su embudo lo llama también
-el reconciler **en el arranque, sin pantalla**, y el intent de la invitación muere en el borrado. Hacen
-falta dos piezas nuevas. **Lo que decides tú** es si eso entra antes o después del paso 10.
-
-**Y tres residuales de esa misma sesión**, los tres con ticket y ninguno bloqueante:
-`invite-recovery-relaunches-for-a-mirror-it-never-uses` (**medium** — al invitado se le cobra un
-relanzamiento para encender un espejo que su camino no usa, y encima lo deja entrando con él),
-`sign-out-wipe-abort-loops-the-groups-gate` (**medium**) y
-`superseding-intent-can-strand-the-sign-out-coordinator` (**medium** — un enlace de grupo que llegue a
-mitad del borrado puede dejar mudo el «Cerrar sesión» de Ajustes del resto del proceso).
-
-**Dos tickets rescatados de una rama sin PR** (`encargo/2026-09-10-…`, que queda superada y se puede
-borrar): `forcesync-returns-ok-without-touching-the-network` e `icloud-export-error-latch-never-clears`.
-Se midieron el 10-sep, nunca llegaron a `2.1` y los dos siguen vivos — el segundo lo comprobé hoy:
-`lastExportError` no se limpia en ningún camino de producción.
-
-**Y una regresión que encontró la review del paso 5** (`groups-only-private-restart-skips-the-wipe-alert`,
-**high**): desde solo-grupos, «Primera vez → privado» se salta el aviso de datos existentes. Mitigada
-para que no persista entre arranques; abierta dentro de la misma sesión.
-
-**Un residual del paso 4, con ticket** (`late-icloud-wipe-can-re-export-between-its-two-halves`,
-**medium**): matar la app entre las dos mitades del borrado tardío puede devolver los datos viejos. Es
-reaparición, no pérdida. **El paso 9 NO lo cerró** —sus cierres privados sí entran en la máquina de
-`CloudSessionSignOut`, que es justo lo que este caso quería evitar—, pero deja el precedente de borrar
-por archivos un store CON espejo después de confirmar el export. Anotado en su ticket.
-
-**Un gemelo de lo que arregló el paso 6, anterior a él** (`welcome-cloud-back-leaves-chooser-marked-seen`,
-**medium**): volver atrás desde el sign-in de nube deja el Welcome «ya elegido», y cerrar la app ahí abre
-el onboarding privado sin la puerta de iCloud.
-
-**Dos del paso 8, con ticket** (los dos **medium**): `completed-mode-escalates-a-second-groups-only-device`
-—activar Yala completo en un dispositivo sube de nivel al otro, que sigue en solo-grupos, y lo deja sin
-espejo; no lo introdujo el paso 8 y **la salida es decisión tuya**— y
-`claim-promotion-lost-response-blocks-the-retry` —si se pierde la respuesta de la promoción, «Reintentar»
-bloquea la activación a la nube—.
-
-**Y decisiones tuyas, pequeñas.** Tres de copy: `revert-card-copy-says-datos-regresan-a-quien-nunca-estuvo`
-(el texto dice «tus datos **regresan** a tu iCloud» a quien nunca estuvo ahí) y, del paso 6,
-`welcome-beacon-origin-contradicts-not-found-copy` (con un faro de Google sin cuenta salen seguidas «ya
-tiene una cuenta» y «aún no tiene una cuenta») y `born-cloud-signup-lands-on-existing-account-silently`
-(«Crear otra cuenta → nube → Apple» entra en la cuenta que ya existe diciendo «Creando tu cuenta…»). Es
-voz de producto en 16 locales, así que no las toqué — `.claude/rules/l10n.md` dice «no reescribas copy que
-ya funciona». **Y una del paso 7, sin prisa:** `flows-atlas-predates-session-redesign` — el Atlas de flujos
-de Modo Nube sigue enseñando la card retirada (su validador pasa de 4 a 13 fallos); ¿se re-ancla cuando
-acabe el rediseño o se retira?
-
-**Sigue en pie:** la política de privacidad y los términos **bloquean la publicación** del rediseño. Y las
-decisiones tuyas de antes: el filtro de naturaleza, los worktrees sin candado anti-atribución, ¿se ataca
-ya el chat caído?, y si `fab-appears-without-animation` sube de `low`. **Sin ticket, medido el 9-sep:** un
-CSV exportado antes de convertir una cuenta ya no se importa a ella y aborta el fichero entero.
+Los otros dos son de testing: `shared-state-guard-misses-wipelocalgroupsdomain` (el guard del trait de
+aislamiento busca `wipeAllUserData(` y se le escapa el otro escritor del espejo) y
+`spike-r3-eje-4b-flaky-en-suite-completa` (rojo en la suite completa, verde en solitario; su control
+negativo afirma un modo de fallo que cambia según lo que corriera antes).
