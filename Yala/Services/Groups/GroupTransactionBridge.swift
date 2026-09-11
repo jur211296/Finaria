@@ -187,6 +187,23 @@ final class GroupTransactionBridge {
             return false
         }
 
+        // Paso 10 · **este gasto ya está en el Panel como movimiento personal**, porque el usuario
+        // desasoció esta misma cuenta y eligió conservarlo. Volver a puentearlo lo duplicaría: una vez el
+        // movimiento que conservó y otra la transacción que el puente crearía ahora.
+        //
+        // Va DESPUÉS del gate de dominio y ANTES de todo lo demás por el mismo criterio que aquél: es una
+        // puerta cerrada, no un fallo a reintentar. Y devuelve `true` (atendido) a propósito — `false`
+        // dejaría el gasto en `GroupsPendingBridgeIntent` reintentándose para siempre.
+        //
+        // El libro está SELLADO con el `sub` de la cuenta que se fue: con otra cuenta asociada no frena
+        // nada, que es lo que hace que «asociar otra cuenta» reciba sus gastos limpios.
+        guard !GroupsDetachedBridgeLedger.isConserved(
+            expenseID: expense.id.uuidString,
+            associatedSub: GroupsAccountAssociation.shared.associatedSub) else {
+            Self.logger.info("bridgeExpense: skip — expense kept as a personal movement on a previous detach")
+            return true
+        }
+
         // Defensa-en-profundidad: si el grupo está hidden (soft-deleted), no bridgear
         // expenses — el cleanup observer ya corrió o correrá. Previene bridging en el
         // device del invitado fresh-install que recibe el SplitGroup ya hidden vía sync.
@@ -1052,6 +1069,15 @@ final class GroupTransactionBridge {
         guard Self.isDomainOpenForBridge() else {
             Self.logger.info("bridgeSettlement: skip — groups domain sealed for a new user on this device")
             return false
+        }
+
+        // Paso 10 · gemelo del de `bridgeExpense`: esta liquidación ya está en el Panel como movimiento
+        // personal conservado en una desasociación anterior de ESTA misma cuenta. Ver allí el racional.
+        guard !GroupsDetachedBridgeLedger.isConserved(
+            settlementID: settlement.id.uuidString,
+            associatedSub: GroupsAccountAssociation.shared.associatedSub) else {
+            Self.logger.info("bridgeSettlement: skip — settlement kept as a personal movement on a previous detach")
+            return true
         }
 
         // Solo bridge si confirmed. NO atendida: confirmarla es una edición REMOTA de una fila que este

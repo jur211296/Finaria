@@ -672,7 +672,23 @@ struct ProfileView: View {
                 case .aiPrivacy:
                     AIPrivacySettingsView()
                 case .storageMode:
-                    StorageSettingsView()
+                    // Paso 10 · el CTA de asociar cierra ESTE sheet y emite el intent: el sheet del
+                    // sign-in de Grupos tiene dueño único (`GroupsBackendInviteModifier`, anclado en
+                    // `ContentView`) y dos anchors ante el mismo observable es el bug de sign-out del
+                    // 2026-07-14 — UIKit no presenta dos veces y puede tumbar las dos cadenas. Misma
+                    // forma que los desenlaces de `YalaAccountView`: la vista pide, `ProfileView` cierra.
+                    StorageSettingsView(onAssociateGroupsAccount: {
+                        dismiss()
+                        // **Sin `sleep` de por medio, y es lo que hace seguro el gesto.** El intent va por
+                        // el router porque el router RETIENE la cola mientras un nodo superior tape
+                        // (`RouterConsumerGateLogic`, peek-first): si este sheet todavía no ha terminado
+                        // de irse, el intent espera y se drena cuando el anchor quede libre. Un
+                        // `Task { sleep 350 ms }` apostaba a un reloj —y el flag que enciende es BLOCKER
+                        // de la matriz de readiness, así que una presentación que no monta deja el router
+                        // muerto el resto de la sesión, sin `onDismiss` que rescate porque nunca se
+                        // presentó. Es el modo de fallo de la regla (4) de Presentaciones.
+                        RouterEntryGate.shared.submit(.presentGroupsSignIn(pendingJoin: ""))
+                    })
                 case .yalaAccount:
                     // §3.3.5: mapa/explainer del enlace privado ↔ nube. Los desenlaces disparan el @State
                     // de ProfileView vía closures (dueño único de las hojas/observers/cover-root); "Volver a

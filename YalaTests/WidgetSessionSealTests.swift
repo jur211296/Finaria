@@ -383,6 +383,11 @@ struct WidgetSessionSealWiringTests {
     ///
     /// Si el número cambia por una razón legítima, ajústalo a conciencia.
     ///
+    /// **2026-09-11 (paso 10): de 48 a 50.** Los dos escritores nuevos son las dos mitades del desasociar
+    /// de la cuenta de grupos: `GroupsAssociationDetach.detachBridge` —que suelta el puente y cambia lo
+    /// que el Panel suma— y `CloudSessionSignOut.detachGroupsAccount`, que cierra el gesto. Los dos
+    /// mueven filas que el widget muestra, así que los dos tienen que refrescar el snapshot.
+    ///
     /// **2026-09-08 (tarde): de 49 a 48.** Se BORRÓ `TransactionService.bulkUpdateAccount`
     /// (`bulk-update-account-leaves-converted-amount-stale`), que llamaba a `updateCache` en su última
     /// línea. **El escritor que desaparece no era un escritor**: ese método no tuvo un llamador en toda
@@ -424,7 +429,7 @@ struct WidgetSessionSealWiringTests {
             callSites += src.components(separatedBy: "WidgetDataCache.updateCache(").count - 1
         }
 
-        #expect(callSites == 48, "los escritores del snapshot pasaron de 48 a \(callSites)")
+        #expect(callSites == 50, "los escritores del snapshot pasaron de 50 a \(callSites)")
     }
 
     /// El predicado de la puerta es el MISMO que el del gemelo de notificaciones, literalmente. Si uno de

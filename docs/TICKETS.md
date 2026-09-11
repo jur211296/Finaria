@@ -28,10 +28,10 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (304))
+## Index (311)
 
 | id | status | path |
-|----|--------|------|
+|---|---|---|
 | account-currency-change-leaves-scheduled-and-favorites-stale | backlog | tickets/backlog/account-currency-change-leaves-scheduled-and-favorites-stale.md |
 | account-currency-conversion-overlay-has-no-ceiling | backlog | tickets/backlog/account-currency-conversion-overlay-has-no-ceiling.md |
 | account-form-as-medium-detent-sheet | backlog | tickets/backlog/account-form-as-medium-detent-sheet.md |
@@ -82,6 +82,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | ci-workflow-cites-missing-testing-strategy | backlog | tickets/backlog/ci-workflow-cites-missing-testing-strategy.md |
 | claim-promotion-lost-response-blocks-the-retry | backlog | tickets/backlog/claim-promotion-lost-response-blocks-the-retry.md |
 | cloud-fx-rates-blob-two-faces | qa | tickets/qa/cloud-fx-rates-blob-two-faces.md |
+| cloud-killswitch-hides-the-only-door-to-detach-groups | backlog | tickets/backlog/cloud-killswitch-hides-the-only-door-to-detach-groups.md |
 | cloud-sign-in-discovers-account-kind | qa | tickets/qa/cloud-sign-in-discovers-account-kind.md |
 | cloud-tx-epoch-orphan-relations | backlog | tickets/backlog/cloud-tx-epoch-orphan-relations.md |
 | cloudsync-account-currency-orphans-receiver-history | backlog | tickets/backlog/cloudsync-account-currency-orphans-receiver-history.md |
@@ -98,7 +99,11 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | debounce-sync-imported-transactions | backlog | tickets/backlog/debounce-sync-imported-transactions.md |
 | debt-simplification-nondeterministic-ties | backlog | tickets/backlog/debt-simplification-nondeterministic-ties.md |
 | debt-tracking | backlog | tickets/backlog/debt-tracking.md |
+| detach-does-not-verify-the-cloud-session-actually-closed | backlog | tickets/backlog/detach-does-not-verify-the-cloud-session-actually-closed.md |
+| detach-history-replay-can-tombstone-groups-on-next-launch | backlog | tickets/backlog/detach-history-replay-can-tombstone-groups-on-next-launch.md |
+| detach-saves-the-personal-graph-outside-the-quiescence-window | backlog | tickets/backlog/detach-saves-the-personal-graph-outside-the-quiescence-window.md |
 | device-handover-groups-leak | discarded | tickets/discarded/device-handover-groups-leak.md |
+| device-qa-groups-account-association | qa | tickets/qa/device-qa-groups-account-association.md |
 | diez-worktrees-comparten-un-simulador | backlog | tickets/backlog/diez-worktrees-comparten-un-simulador.md |
 | distribucion-recalcula-dos-veces-por-toque-y-sin-debounce | backlog | tickets/backlog/distribucion-recalcula-dos-veces-por-toque-y-sin-debounce.md |
 | distribution-balance-kpi-skips-fx | done | tickets/done/distribution-balance-kpi-skips-fx.md |
@@ -149,7 +154,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | group-balance-service-shares-not-deduped | backlog | tickets/backlog/group-balance-service-shares-not-deduped.md |
 | group-joiner-flag-consumers-still-narrow | qa | tickets/qa/group-joiner-flag-consumers-still-narrow.md |
 | group-notif-credits-payer-not-editor | done | tickets/done/group-notif-credits-payer-not-editor.md |
-| groups-account-association-in-storage-row | backlog | tickets/backlog/groups-account-association-in-storage-row.md |
+| groups-account-association-in-storage-row | qa | tickets/qa/groups-account-association-in-storage-row.md |
 | groups-approval-banner-stays | done | tickets/done/groups-approval-banner-stays.md |
 | groups-archived-group-rejects-join | qa | tickets/qa/groups-archived-group-rejects-join.md |
 | groups-archived-still-accepts-changes | backlog | tickets/backlog/groups-archived-still-accepts-changes.md |
@@ -162,6 +167,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | groups-cloud-mode-hardening-v1 | discarded | tickets/discarded/groups-cloud-mode-hardening-v1.md |
 | groups-consent-door-spec | qa | tickets/qa/groups-consent-door-spec.md |
 | groups-deleted-group-detail-stays-open | qa | tickets/qa/groups-deleted-group-detail-stays-open.md |
+| groups-detach-ledger-has-no-exit | backlog | tickets/backlog/groups-detach-ledger-has-no-exit.md |
 | groups-entry-on-a-mirrored-store-still-blocks-the-owner | qa | tickets/qa/groups-entry-on-a-mirrored-store-still-blocks-the-owner.md |
 | groups-equal-split-shows-not-participating-on-peer | qa | tickets/qa/groups-equal-split-shows-not-participating-on-peer.md |
 | groups-expense-notif-only-on-foreground | qa | tickets/qa/groups-expense-notif-only-on-foreground.md |
@@ -185,6 +191,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | groups-pending-member-can-open-group | done | tickets/done/groups-pending-member-can-open-group.md |
 | groups-pending-member-sees-detail-chrome | backlog | tickets/backlog/groups-pending-member-sees-detail-chrome.md |
 | groups-pull-cuesta-cinco-viajes-por-grupo | backlog | tickets/backlog/groups-pull-cuesta-cinco-viajes-por-grupo.md |
+| groups-reassociation-does-not-restore-the-bridge-link | backlog | tickets/backlog/groups-reassociation-does-not-restore-the-bridge-link.md |
 | groups-reconnect-prune-or-rewire | done | tickets/done/groups-reconnect-prune-or-rewire.md |
 | groups-settlement-reminder | qa | tickets/qa/groups-settlement-reminder.md |
 | groups-settlement-reminder-discoverability | qa | tickets/qa/groups-settlement-reminder-discoverability.md |
@@ -336,127 +343,3 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | wrangler-prod-onboarding-choice-percent-drift | done | tickets/done/wrangler-prod-onboarding-choice-percent-drift.md |
 | yala-android | backlog | tickets/backlog/yala-android.md |
 | zone-decisions-still-per-row | backlog | tickets/backlog/zone-decisions-still-per-row.md |
-
-
-## Origin map (YalaWiki → tickets/)
-
-| origin | destination |
-|--------|-------------|
-| Bugs/crash-inbox-convertir-a-gasto-grupo-draft-borrado.md | tickets/done/inbox-crash-convert-to-group-expense.md |
-| Bugs/groups-notif-actualizo-atribuye-al-pagador-no-al-autor.md | tickets/done/group-notif-credits-payer-not-editor.md |
-| Bugs/grupos-enlace-de-invitacion-cinco-causas-un-solo-mensaje.md | tickets/qa/invite-link-five-causes-one-message.md |
-| Bugs/grupos-invitado-el-no-no-tiene-pantalla.md | tickets/qa/guest-decline-has-no-screen.md |
-| Bugs/grupos-recorrido-del-invitado-codigo-muerto-y-docblock-caducado.md | tickets/done/guest-journey-dead-screens.md |
-| Bugs/ok_applepay-shortcut-ios27-warm-launch-datos-vacios.md | tickets/qa/applepay-shortcut-warm-launch-empty-data.md |
-| Bugs/ok_siri-intent-dual-container-refactor.md | tickets/qa/siri-intent-dual-container.md |
-| Bugs/prefs-cinco-keys-synced-suben-y-no-vuelven.md | tickets/qa/prefs-synced-keys-upload-not-download.md |
-| Bugs/qa_cloud-fx-rates-blob-dos-caras.md | tickets/qa/cloud-fx-rates-blob-two-faces.md |
-| Bugs/qa_cloud-tx-epoca-relaciones-huerfanas.md | tickets/backlog/cloud-tx-epoch-orphan-relations.md |
-| Bugs/qa_groups-aprobacion-no-retira-banner.md | tickets/done/groups-approval-banner-stays.md |
-| Bugs/qa_groups-join-intent-reconciler.md | tickets/blocked/groups-join-intent-reconciler.md |
-| Bugs/qa_groups-tab-no-perf-patterns.md | tickets/qa/groups-tab-missing-panel-perf.md |
-| Bugs/qa_groups-tx-fantasma-al-borrar-gasto-de-grupo.md | tickets/done/groups-ghost-tx-on-delete.md |
-| Bugs/qa_invite-backend-mudo-config-stale.md | tickets/qa/invite-backend-stale-config.md |
-| Bugs/qa_pagos-planificados-notifs-incoherentes-y-dedup-sin-entrega.md | tickets/qa/scheduled-payments-notif-dedup.md |
-| Bugs/qa_storekit-appgroup-siri-pro-gate.md | tickets/qa/storekit-appgroup-siri-pro-gate.md |
-| Bugs/qa_welcome-copy-acusa-al-dueno-de-traer-datos-ajenos.md | tickets/discarded/welcome-copy-blames-owner.md |
-| Bugs/qa_welcome-empiezo-de-cero-borra-antes-de-preguntar-y-falla-mudo.md | tickets/qa/welcome-start-fresh-wipes-before-ask.md |
-| Bugs/qa_widget-snapshot-sin-sello-la-visita-pisa-los-datos-del-dueno.md | tickets/discarded/widget-snapshot-visitor-overwrites-owner.md |
-| Bugs/reentrada-la-vuelta-cuenta-como-instalacion-nueva.md | tickets/qa/reentry-counts-as-fresh-install.md |
-| Bugs/secundaria-canal-apagado-la-visita-borra-los-grupos-del-dueno.md | tickets/discarded/secondary-groups-off-wipes-owner.md |
-| Bugs/secundaria-la-visita-escribe-en-el-dominio-del-dueno.md | tickets/in-progress/secondary-visitor-writes-owner-domain.md |
-| Bugs/secundaria-salida-de-la-invitada-bloqueo-permanente-y-outbox-de-grupos.md | tickets/in-progress/secondary-guest-exit-lock-and-outbox.md |
-| Bugs/tf-suscripcion-exito-sin-pro.md | tickets/done/subscription-success-without-pro.md |
-| Bugs/ux_update-banner-appstore-criterios-y-forzado.md | tickets/qa/update-banner-appstore-criteria.md |
-| Backlog/alerts-huerfanos-detras-de-fullscreencovers.md | tickets/backlog/orphan-alerts-behind-fullscreen-covers.md |
-| Backlog/debounce-transactions-imported-from-sync-observer.md | tickets/backlog/debounce-sync-imported-transactions.md |
-| Backlog/future_yala-android.md | tickets/backlog/yala-android.md |
-| Backlog/groups-busqueda-interna.md | tickets/backlog/groups-in-group-search.md |
-| Backlog/groups-emisor-segundo-plano-no-sube.md | tickets/done/groups-background-emitter-no-upload.md |
-| Backlog/groups-import-splitwise-tricount.md | tickets/backlog/groups-import-splitwise-tricount.md |
-| Backlog/groups-invitado-moneda-region-red-muerta.md | tickets/discarded/groups-guest-currency-from-region.md |
-| Backlog/groups-presupuesto-de-grupo.md | tickets/backlog/groups-budget.md |
-| Backlog/groups-reconexion-poda-o-recableado.md | tickets/done/groups-reconnect-prune-or-rewire.md |
-| Backlog/groups-recordatorio-liquidacion.md | tickets/qa/groups-settlement-reminder.md |
-| Backlog/groups-registrar-gasto-por-chat-voz.md | tickets/backlog/groups-log-expense-via-chat-voice.md |
-| Backlog/groups-resumen-compartible-exportable.md | tickets/backlog/groups-shareable-summary.md |
-| Backlog/insights-calculator-iconlookup-precomputed.md | tickets/backlog/insights-precomputed-icon-lookup.md |
-| Backlog/p20-13_records-standalone-discrepancy.md | tickets/backlog/records-standalone-amount-discrepancy.md |
-| Backlog/p20-15_comparativa-kpi-vs-curva-descuadre.md | tickets/done/trends-comparison-kpi-vs-curve.md |
-| Backlog/qa_apppreferences-lavado-general.md | tickets/blocked/apppreferences-rewritten-on-launch.md |
-| Backlog/qa_groups-endurecimiento-modo-nube-v1.md | tickets/discarded/groups-cloud-mode-hardening-v1.md |
-| Backlog/qa_grupos-nube-perdida-identidad-y-migracion.md | tickets/discarded/groups-cloud-identity-loss-on-migrate.md |
-| Backlog/qa_handover-dispositivo-grupos-fuga.md | tickets/discarded/device-handover-groups-leak.md |
-| Backlog/qa_inbox-convertir-a-gasto-de-grupo.md | tickets/done/inbox-convert-draft-to-group-expense.md |
-| Backlog/qa_prefs-dominio-por-sesion-secundaria.md | tickets/discarded/prefs-domain-per-secondary-session.md |
-| Backlog/trends-insight-card-v2-bullets.md | tickets/backlog/trends-insight-card-v2-bullets.md |
-| Ideas/idea-fx-pnl-card.md | tickets/backlog/fx-pnl-education-card.md |
-| Ideas/Insights exportable basado en comando insights de Claude con diseño muy basico y amigable.md | tickets/backlog/exportable-insights.md |
-| Ideas/Integración con Apple Watch.md | tickets/backlog/apple-watch.md |
-| Ideas/Notificaciones Smart con IA.md | tickets/backlog/smart-ai-notifications.md |
-| Ideas/Predicción de gasto dentro de línea de gasto en flujo de caja.md | tickets/backlog/cashflow-spend-prediction.md |
-| Ideas/Presupuesto adaptado a ingreso o egreso (?).md | tickets/backlog/budget-tied-to-income-or-expense.md |
-| Ideas/Presupuestos recomendados con IA.md | tickets/backlog/ai-recommended-budgets.md |
-| Ideas/Rediseño cuentas en Panel.md | tickets/backlog/panel-accounts-redesign.md |
-| Ideas/Tracking de ahorros.md | tickets/backlog/savings-tracking.md |
-| Ideas/Tracking de deudas.md | tickets/backlog/debt-tracking.md |
-| Backlog/modo-nube/qa_MODO-NUBE-SPEC-CONSENT-GRUPOS.md | tickets/qa/groups-consent-door-spec.md |
-| Backlog/modo-nube/qa_rescate-pull-grupos-descartados.md | tickets/discarded/rescue-discarded-groups-pull.md |
-
-Frank 2026-09-05 (implementación): `groups-invite-skips-unirme-sheet-if-onboarded` pasa a `qa/`. La hoja
-del invitado se presenta SIEMPRE: el terminal de `.invite` deja de cortar por `hasCompletedOnboarding`
-—un PROXY que solo valía para el fresco, porque la propia hoja marcaba su alta al terminar— y pasa a
-preguntar el hecho real, `PendingJoinEntry.inviteConfirmedAt`. Las DOS puertas cambian juntas (la tabla y
-el drain del router); y lo que la hoja MUESTRA se separa de lo que su CTA ESCRIBE, porque el alta corrida
-sobre una cuenta viva le pisa nombre, moneda y periodo, y esos tres SÍ viajan al iKV.
-
-**Tres correcciones a lo que el ticket daba por medido**, re-medidas en este árbol: (1) su punto 5 está
-caducado — `AppBootstrapper.inviteRouteDecision` y sus tests dan CERO ocurrencias, se retiraron después de
-escribirlo; (2) las coordenadas se desplazaron, como el propio ticket avisaba; (3) su premisa de que
-`onboardingMode = .groupInvite` escala al iKV por este camino es **falsa** — `OnboardingMode.setCurrent`
-escribe `.standard` a secas, y los dos que empujan esa key al canal sincronizado son
-`GroupsOrganizerOnboarding` y `FullModeActivationView`. La conclusión del ticket (no correr el alta) era
-correcta; su titular, no.
-
-La **review adversarial** cazó cuatro defectos que este mismo cambio introducía y que ningún grep ve; el
-peor, que confirmar UNA invitación sellaba TODAS (`reconcile` barre las 8 entries vivas), o sea el defecto
-del ticket colado por la puerta de atrás. Y una decisión de producto nueva y **reversible en un commit**:
-la hoja gana salida («Más tarde», copy ya traducido) para quien tiene app detrás — sin ella, ampliar su
-audiencia convertía su falta de salida en una jaula que el reconciler remonta durante 7 días.
-
-Gate verde entero: build ×2 schemes sin warnings nuevos · 6134 unit / 623 suites · **130 XCUITest, la
-suite completa** · índice de QA validado. Verificado por MUTACIÓN en las dos rondas. **Queda device-QA de
-dos teléfonos**, que es lo que los tests no ven.
-
-
----
-
-Frank 2026-09-07 (welcome-privacy-branch-has-no-secondary-door): **la rama privada del Welcome deja de
-callarse en visita, y el onboarding deja de prometer categorías que no crea.** `backlog → qa` — el código
-está hecho y pinneado; falta el e2e con dos cuentas reales, que el seam de simulador no puede fingir
-(enciende el descriptor pero **no monta** un store secundario). Counts `backlog 65 → 67`, `qa 41 → 42`,
-total `129 → 132`.
-
-**La premisa del ticket se midió otra vez y trajo dos hechos que no estaban escritos.** El primero cambió
-el copy: la card que la visita acaba de tocar promete «se sincronizan por tu iCloud privado» y el store
-secundario es `cloudKitDatabase: .none` (`SwiftDataConfiguration.swift:1188`) — no se espeja a ninguna
-CloudKit, ni a la del dueño ni a la de la visita. El aviso dice por eso «solo para ti y solo en este
-dispositivo», que es el hecho verdadero. El segundo era un defecto vivo del mismo patrón: **en visita, el
-saldo inicial que la persona teclea se descartaba en silencio** — el seed no corría (cinturón M1), nadie
-creaba «Ajuste de saldo» y `createOnboardingAccount` no encontraba dónde colgar el importe. No hizo falta
-arreglo aparte: tratar la visita como «sin seed» —que es lo que la decisión pedía— entra por la rama que
-ya la crea.
-
-**Y la pantalla cazó lo que el fuente escondía.** La primera captura mostraba el copy VIEJO con el fichero
-ya corregido: `es.lproj` y `pt.lproj` son copias regeneradas de `es-419` y `pt-BR`, así que editar los
-`.strings` después de correr `add-l10n-key.sh` los dejó atrás, con un `[NEEDS_TRANSLATION]` vivo en `pt`.
-Se resincronizó y se volvió a mirar.
-
-Tres tickets nuevos, todos salidos de camino y ninguno colado en este PR:
-**`welcome-private-card-promises-icloud-in-visit`** (low — hoy esa card casi no se lee: en producción el
-sub-chooser hace bypass; deja de ser low en cuanto el percent suba de 0),
-**`secondary-visit-data-lost-on-signout-unannounced`** (medium — el wipe de salida es correcto y borra lo
-que la visita apuntó; qué se le cuenta y cuándo es decisión de producto, con cuatro salidas y
-contrapartidas reales) y **`welcome-beacon-reads-owner-icloud-in-secondary`** (medium — el faro lee el
-iCloud del DUEÑO y decide antes que nada en «Soy nuevo»; medido que no mira la sesión secundaria, **no**
-medido dónde aterriza la visita, y el ticket lo dice así).

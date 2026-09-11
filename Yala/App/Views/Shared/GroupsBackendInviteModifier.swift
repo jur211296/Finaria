@@ -143,6 +143,20 @@ struct GroupsBackendInviteModifier: ViewModifier {
                     // cuenta»): sin él, quien cierra sesión lee que le esperan unos grupos que nunca creó,
                     // o al revés. Monotónico y sin `clear()` a propósito — solo lo retira el handover.
                     GroupsSessionHistoryMarker.markSessionSeen()
+                    // Paso 10 · **la asociación se escribe AQUÍ y no en el `onDismiss`, y el orden es lo
+                    // único que la hace útil**: `startIfEligible`, tres líneas más abajo, arranca el canal
+                    // en el acto, y su primer ciclo puede bajar el corpus entero y llamar al puente. El
+                    // guard del libro de conservados pregunta por la cuenta asociada; si todavía no
+                    // estuviera escrita, leería `nil`, no frenaría nada, y cada gasto que el usuario
+                    // decidió conservar aparecería DOS VECES en su Panel. El `onDismiss` corre después de
+                    // la animación de cierre, que es demasiado tarde.
+                    if destino == .associateGroupsAccount {
+                        GroupsAccountAssociation.shared.associate(
+                            sub: CloudAuthService.shared.currentUserID,
+                            provider: CloudAuthService.shared.storedProvider(),
+                            email: CloudAuthService.shared.capturedEmail(),
+                            kind: AccountKindService.shared.current)
+                    }
                     // H-2026-07-18-4: un sign-in solo-grupos IN-SESSION no arrancaba el canal (startIfEligible
                     // solo corría en cold boot) → arrancarlo aquí cubre crear-grupo / invite / futuro CTA del
                     // empty state. D8-safe por el guard de mount-mismatch; no-op temprano con el flag OFF.
@@ -224,9 +238,10 @@ struct GroupsBackendInviteModifier: ViewModifier {
     private func routeIdentityDestination(_ destino: CloudIdentityRoutingLogic.Destination?) {
         switch destino {
         case .continueGroupsSetup, .associateGroupsAccount, .none:
-            // El camino de HOY, byte-idéntico. `associateGroupsAccount` comparte rama porque lo que
-            // significa —esta cuenta queda ligada a mi Yala privado para grupos— es lo que la cadena ya
-            // hace; ponerle escritura propia es `groups-account-association-in-storage-row` (paso 10).
+            // El camino de HOY, byte-idéntico. **La asociación NO se escribe aquí**, aunque
+            // `.associateGroupsAccount` sea su destino: este `onDismiss` corre tras la animación de
+            // cierre y el canal ya lleva un rato arrancado. Se escribe en el callback de éxito del
+            // sign-in, antes de `startIfEligible` — ver allí el porqué completo.
             continueFlow()
         case .adoptAsCompleteAndOpenGroups:
             onAdoptCompleteAccount()

@@ -223,9 +223,11 @@ extension GroupsSignInView {
     @MainActor
     func resolveDestination() async -> CloudIdentityRoutingLogic.Destination {
         let discovery: CloudIdentityRoutingLogic.Discovery
+        var userID: String?
         switch await CloudIdentityDiscovery().discover(gate: .groups) {
-        case .discovered(let resultado, _):
+        case .discovered(let resultado, let discoveredUserID):
             discovery = resultado
+            userID = discoveredUserID
         case .unavailable:
             discovery = .groupsOnly
         }
@@ -240,10 +242,15 @@ extension GroupsSignInView {
                 hasCompletedOnboarding: appPreferences.hasCompletedOnboarding,
                 storageMode: StorageModePersistence.read(),
                 onboardingMode: OnboardingMode.current()),
-            // Esta puerta no puede saber si la cuenta es la que ya estaba asociada: la identidad de la
-            // asociada la persiste `groups-account-association-in-storage-row` (paso 10). La tabla solo
-            // lo mira en la puerta de Ajustes, así que aquí `nil` no cambia ningún destino.
-            isAssociatedGroupsAccount: nil)
+            // Paso 10 · desde aquí SÍ se puede contestar: la asociación es estado propio y persistido.
+            // La tabla solo lo mira en la puerta de Ajustes, así que por ésta no cambia ningún destino —
+            // se pasa igual porque el parámetro no tiene default a propósito y porque el día que la
+            // tabla lo consulte aquí, la respuesta correcta ya estará puesta.
+            //
+            // `nil` cuando el descubrimiento no dejó `userID` (gateway caído): es «no puedo probarlo»,
+            // que es lo que la tabla trata como el lado seguro. Nunca `false` por no haber preguntado.
+            isAssociatedGroupsAccount: GroupsAccountAssociation.shared.isAssociated(
+                sub: userID ?? CloudAuthService.shared.currentUserID))
     }
 }
 

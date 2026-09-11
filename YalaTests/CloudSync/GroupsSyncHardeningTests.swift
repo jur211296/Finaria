@@ -319,7 +319,11 @@ struct GroupsSyncHardeningTests {
         // solo grupos — paso 9, `finalizeSessionExit`), el `.cloud`, el secundario, la salida forzada de la
         // visita y los 2 cierres de eliminar-cuenta (closeLocalAfterAccountDeletion Cloud/GroupsOnly — belts).
         // Con el paso 9 se fueron `performPrivateReset` y «Salir de Yala» (`exitYalaOnThisDevice`).
-        #expect(groupsTeardowns == 6)
+        // **+1 (2026-09-11, paso 10): `detachGroupsAccount`**, el desasociar de la fila de Ajustes. No es
+        // un cierre de sesión —no toca nada personal— pero corta el mismo canal y por la misma razón:
+        // después de él se borran las filas `Split*` localmente, y con el drain vivo esos deletes se
+        // traducirían a tombstones que borrarían los grupos **para todos los miembros**.
+        #expect(groupsTeardowns == 7)
     }
 
     /// M1 / D8 (G5-C): la purga de frontera de la sesión secundaria incluye el espejo App Group de GRUPOS

@@ -399,7 +399,8 @@ struct GroupsContainerView: View {
             hasSeenEducational: hasSeenGroupsEducational,
             hadSessionEver: GroupsSessionHistoryMarker.hadSessionEver(),
             hasSession: CloudAuthService.shared.hasSession,
-            isConsented: GroupsConsentState.isAccepted
+            isConsented: GroupsConsentState.isAccepted,
+            hasAssociatedAccount: GroupsAccountAssociation.shared.hasAssociation
         ) {
         case .standard:
             let base = YalaEmptyState.noGroups { Task { await requestCreateGroup() } }
@@ -739,7 +740,8 @@ struct GroupsContainerView: View {
                 hasSeenEducational: hasSeenGroupsEducational,
                 hadSessionEver: GroupsSessionHistoryMarker.hadSessionEver(),
                 hasSession: CloudAuthService.shared.hasSession,
-                isConsented: GroupsConsentState.isAccepted) == .signInToView
+                isConsented: GroupsConsentState.isAccepted,
+                hasAssociatedAccount: GroupsAccountAssociation.shared.hasAssociation) == .signInToView
     }
 
     // MARK: - Create-group routing (G5-A / C3 · C4)

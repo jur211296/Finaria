@@ -64,16 +64,23 @@ nonisolated enum GroupsEmptyStateLogic {
     ///   - hadSessionEver: `GroupsSessionHistoryMarker.hadSessionEver()`. Latch monotónico per-device.
     ///   - hasSession: `CloudAuthService.shared.hasSession`.
     ///   - isConsented: `GroupsConsentState.isAccepted`.
+    ///   - hasAssociatedAccount: paso 10 · `GroupsAccountAssociation.shared.hasAssociation`. **Es la
+    ///     segunda mitad de «¿hay una cuenta suya esperando?», y cubre justo donde el latch no llega.**
+    ///     `hadSessionEver` es per-DEVICE: en el segundo móvil del mismo Apple ID —o en este mismo tras
+    ///     «Restaurar desde iCloud»— vale `false` aunque la persona tenga sus grupos en una cuenta, así
+    ///     que sin esto leería «crea una cuenta» y se le ofrecería crear la que ya tiene. La asociación
+    ///     sí viaja (iCloud-KV del Apple ID). Es la fila «D · N (segundo móvil)» de la matriz.
     static func decide(
         flagOn: Bool,
         hasSeenEducational: Bool,
         hadSessionEver: Bool,
         hasSession: Bool,
-        isConsented: Bool
+        isConsented: Bool,
+        hasAssociatedAccount: Bool = false
     ) -> Kind {
         guard flagOn else { return .standard }
         if !hasSeenEducational { return .needsEducational }
-        if !hasSession { return hadSessionEver ? .signInToView : .createAccount }
+        if !hasSession { return (hadSessionEver || hasAssociatedAccount) ? .signInToView : .createAccount }
         if !isConsented { return .needsConsent }
         return .standard
     }

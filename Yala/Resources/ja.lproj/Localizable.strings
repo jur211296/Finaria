@@ -5826,3 +5826,63 @@
 
 /* Vuelta al neutro imposible en esta celda: cuerpo */
 "welcome.groups.neutralUnavailableBody" = "この端末には開いたままのセッションがあります。ここでグループを始める前に、設定から閉じてください。戻ってください。何も変更していません。";
+
+/* Título de la sección Grupos dentro de «Dónde viven tus datos» */
+"storage.groups.title" = "グループ";
+
+/* Cuerpo cuando no hay cuenta de grupos asociada */
+"storage.groups.noAccountBody" = "グループは Yala アカウントにあり、この iPhone のデータとは別に保存されます。";
+
+/* Botón para asociar una cuenta de grupos */
+"storage.groups.associateButton" = "グループ用のアカウントをリンク";
+
+/* Cuerpo cuando hay cuenta asociada pero no se sabe su nombre */
+"storage.groups.associatedUnnamedBody" = "グループは Yala アカウントを使っています。";
+
+/* Cuerpo en un segundo dispositivo, sin nombre de cuenta */
+"storage.groups.needsSignInUnnamedBody" = "グループは Yala アカウントにあります。この iPhone で見るにはサインインしてください。";
+
+/* Botón para entrar con la cuenta de grupos ya asociada */
+"storage.groups.signInButton" = "そのアカウントでサインイン";
+
+/* Botón para desasociar la cuenta de grupos */
+"storage.groups.detachButton" = "リンクを解除";
+
+/* Cuerpo cuando los datos personales ya viven en la cuenta de Yala */
+"storage.groups.sameAccountBody" = "グループも同じこのアカウントを使っています。";
+
+/* Título de la confirmación de desasociar */
+"storage.groups.detachTitle" = "グループのアカウントのリンクを解除しますか？";
+
+/* Botón: conservar en el Panel los gastos de grupo */
+"storage.groups.detachKeep" = "自分が払った支出を残す";
+
+/* Botón: quitar del Panel los gastos de grupo */
+"storage.groups.detachRemove" = "「ホーム」からすべて削除";
+
+/* Progreso mientras se desasocia */
+"storage.groups.detachWorking" = "リンクを解除しています…";
+
+/* Progreso mientras se suben los cambios de grupos */
+"storage.groups.detachWaiting" = "保留中の変更を保存しています…";
+
+/* Cuerpo con el nombre de la cuenta de grupos asociada */
+"storage.groups.associatedBody" = "グループは %@ を使っています。";
+
+/* Cuerpo en un segundo dispositivo, con el nombre de la cuenta */
+"storage.groups.needsSignInBody" = "グループは %@ にあります。この iPhone で見るにはサインインしてください。";
+
+/* Mensaje de la confirmación de desasociar */
+"storage.groups.detachBody" = "グループはこの iPhone から消えますが、アカウントには残ります。もう一度リンクすれば、また表示されます。貸し借りの記録はどちらを選んでも消えます。選べるのは、自分が払った支出をどうするかだけです。";
+
+/* Título del aviso cuando el desasociar se bloquea */
+"storage.groups.detachBlockedTitle" = "リンクを解除できませんでした";
+
+/* Aviso: bloqueo temporal al desasociar */
+"storage.groups.detachBlockedTransient" = "グループの変更がまだアップロードされていません。少ししてからもう一度お試しください。";
+
+/* Aviso: bloqueo permanente al desasociar */
+"storage.groups.detachBlockedPermanent" = "グループの変更がまだアップロードされておらず、接続できませんでした。接続を確認してからもう一度お試しください。";
+
+/* Aviso: sesión caducada al desasociar */
+"storage.groups.detachBlockedSession" = "グループのセッションの有効期限が切れました。もう一度サインインしてお試しください。";
