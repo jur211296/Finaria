@@ -61,9 +61,12 @@
 - [Medir la web: axe, Lighthouse, preview](feedback_medir_la_web_a11y_y_preview.md) — axe ciego con opacity 0; transiciones congeladas; preview con SSO se verifica por config.json; heredoc suelto en zsh imprime.
 - [Capturas del simulador para la web](feedback_capturas_simulador_para_la_web.md) — receta y trampas: Secrets.xcconfig, nombre efímero, categorías sembradas, `sips -Z` escala el lado largo.
 - [El fixture hereda la anatomía de producción](feedback_el_fixture_hereda_la_anatomia_de_produccion.md) — no la deduzcas del ticket; el error se ve en el TOTAL, y el fixture tiene que ser DISCRIMINANTE.
+- [El reparador, tan re-ejecutable como el destructor](feedback_el_reparador_tan_reejecutable_como_el_destructor.md) — en un hook kill-safe, `consume()` mata lo que repara en la 2.ª pasada; y el sobre que sobrevive a un borrado necesita TTL y su frontera.
+- [El estado paralelo al lado del step](feedback_el_estado_paralelo_al_lado_del_step.md) — «siempre va con aquello» se hereda en silencio: mételo DENTRO y que lo obligue el compilador. Cuéntalos, no lo afirmes.
 - [«Cero warnings» se mide en TODOS los logs](feedback_cero_warnings_se_mide_en_todos_los_logs.md) — el gate no mira los tests y lee un build incremental; dos míos iban al commit el 10-sep.
 
 ## Estado del trabajo
+- [Aceptar una invitación en un teléfono prestado ya no cruza datos](project_puerta_neutro_del_invitado.md) — PR #143; la puerta del invitado NO es la del organizador y aquí se PREGUNTA; la review cazó 23 defectos MÍOS; device-QA NO simulable.
 - [La cuenta de grupos ya se ve y se suelta en Ajustes](project_asociacion_cuenta_de_grupos.md) — paso 10, PR #140; el «enlace dormido» del ticket era IMPOSIBLE (sin ancla) y se sustituyó; device-QA NO simulable; deja dos tickets `high`.
 - [«Vengo por un grupo» ya no bloquea al dueño](project_puerta_grupos_vuelve_al_neutro.md) — mitad 2, PR #139; el relanzamiento ya estaba decidido en la fila B; la INVITACIÓN queda fuera con ticket `high`; device-QA NO simulable.
 - [Paso 9: un verbo por sesión](project_paso9_un_verbo_por_sesion.md) — PR #138; M15 sobrevive y es hallazgo; el único rojo de XCUITest lo zanjó el árbol base; falta device-QA y NO es simulable.
