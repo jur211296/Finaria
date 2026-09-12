@@ -25,7 +25,7 @@ Si la toma está mal, se vuelve a grabar.
 | `src/brand/tokens.ts` | La marca 2.1. Único sitio donde vive un hex |
 | `src/brand/copy.ts` | El guion: los **beats** de texto y los **planos de cámara**. Ni una palabra de copy en el JSX |
 | `src/compositions/FeatureDemo.tsx` | La plantilla. Una sola, para los dos lienzos |
-| `src/components/` | `DeviceFrame` (footage + cámara), `AppleTitle`, `Callout`, `SafeAreas` |
+| `src/components/` | `DeviceFrame` (el iPhone), `AppleTitle`, `Callout`, `FloatBadge`, `SafeAreas` |
 | `src/lib/layout.ts` | El encuadre y la **cámara**, con los números medidos sobre el footage |
 | `public/footage/` | Las tomas. Curadas, no crudas |
 | `scripts/` | Render de una pieza o del pack, con comprobación del fichero |

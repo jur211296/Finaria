@@ -8,12 +8,22 @@ import {
 import { AppleTitle } from "../components/AppleTitle";
 import { Callout } from "../components/Callout";
 import { DeviceFrame } from "../components/DeviceFrame";
+import { FloatBadge } from "../components/FloatBadge";
 import { SafeAreas } from "../components/SafeAreas";
 import { pieceBySlug, type Beat, type Locale, type Piece } from "../brand/copy";
 import { FONT_STACK } from "../brand/font";
 import { yala } from "../brand/tokens";
 import { cue, sec } from "../lib/timing";
-import { REELS_SAFE, REELS_STAGE, REELS_TEXT, WIDE_COPY, WIDE_DEVICE } from "../lib/layout";
+import {
+  cameraAt,
+  PHONE,
+  phoneHeight,
+  phoneTransform,
+  REELS_CAMERA,
+  REELS_SAFE,
+  REELS_TEXT,
+  WIDE_COPY,
+} from "../lib/layout";
 import { EndCard } from "./EndCard";
 
 export type Aspect = "9x16" | "16x9";
@@ -30,9 +40,10 @@ export type FeatureDemoProps = {
 /**
  * La plantilla. UNA sola para todas las piezas y los dos lienzos.
  *
- * Capa A (verdad del producto) = `DeviceFrame` con el footage real, intacto,
- * a sangre y con cámara: la vista va donde está el gesto.
- * Capa B (motion) = el hilo de beats encima.
+ * Capa A (verdad del producto) = un iPhone con el footage real, intacto, que
+ * la cámara mueve como un objeto.
+ * Capa B (motion) = fondo con profundidad, hilo de beats, la tarjeta que sale
+ * de la pantalla en el golpe, end card.
  *
  * Las dos capas no se mezclan nunca: la app no se redibuja, se filma.
  */
@@ -50,6 +61,8 @@ export const FeatureDemo: React.FC<FeatureDemoProps> = ({
 
   return (
     <AbsoluteFill style={{ background: yala.color.bg, fontFamily: FONT_STACK }}>
+      <Backdrop aspect={aspect} />
+
       <Sequence durationInFrames={bodyFrames} name="Cuerpo">
         {aspect === "9x16" ? (
           <Reels piece={piece} locale={locale} />
@@ -80,118 +93,56 @@ export const FeatureDemo: React.FC<FeatureDemoProps> = ({
 type SideProps = { piece: Piece; locale: Locale };
 
 /**
- * 9:16 — el lienzo de Reels. Footage a sangre, texto dentro de las safe areas.
- *
- * El footage puede pasar por debajo de la UI de Instagram; el TEXTO no, y los
- * gestos clave tampoco — de eso se ocupa la cámara en `copy.ts`.
+ * El teléfono con su cámara. Se dibuja a escala 1 en `phoneTop` y el
+ * transform lo escala y desplaza para llevar `focusY` a `centerY`.
  */
-const Reels: React.FC<SideProps> = ({ piece, locale }) => (
-  <AbsoluteFill>
-    <Backdrop />
-    <DeviceFrame piece={piece} box={REELS_STAGE} />
-
-    {piece.beats.map((beat, i) => (
-      <Sequence
-        key={`${beat.fromSec}-${i}`}
-        {...cue(beat.fromSec, beat.toSec)}
-        name={`${i + 1}· ${beat.text.es}`}
-      >
-        <div
-          style={{
-            position: "absolute",
-            left: REELS_SAFE.side,
-            right: REELS_SAFE.side,
-            ...(beat.place === "top"
-              ? { top: REELS_TEXT.top }
-              : { bottom: REELS_TEXT.bottom }),
-            display: "flex",
-            justifyContent: "center",
-          }}
-        >
-          <BeatText beat={beat} locale={locale} />
-        </div>
-      </Sequence>
-    ))}
-
-    <Progress />
-  </AbsoluteFill>
-);
-
-/**
- * Barra de avance bajo el teléfono.
- *
- * Ocupa la banda que Reels tapa con el caption, así que en Instagram casi no
- * se ve — y ese es el punto: en TikTok y Shorts sí, y ahí retiene, porque
- * enseña cuánto queda. Si desaparece bajo un caption no se pierde nada.
- */
-const Progress: React.FC = () => {
+const PhoneStage: React.FC<{
+  piece: Piece;
+  screenWidth: number;
+  phoneTop: number;
+  centerY: number;
+  canvasW: number;
+}> = ({ piece, screenWidth, phoneTop, centerY, canvasW }) => {
   const frame = useCurrentFrame();
-  const { durationInFrames } = useVideoConfig();
-  const pct = interpolate(frame, [0, durationInFrames], [0, 1], {
-    extrapolateRight: "clamp",
-  });
+  const cam = cameraAt(piece.shots, frame);
+  const phoneH = phoneHeight(screenWidth, piece.source, piece.crop);
+  const outerW = screenWidth + PHONE.bezel * 2;
 
   return (
     <div
       style={{
         position: "absolute",
-        left: REELS_SAFE.side + 40,
-        right: REELS_SAFE.side + 40,
-        top: REELS_STAGE.top + REELS_STAGE.height + 60,
-        height: 8,
-        borderRadius: 999,
-        background: "rgba(255,255,255,0.12)",
-        overflow: "hidden",
+        left: (canvasW - outerW) / 2,
+        top: phoneTop,
+        width: outerW,
+        height: phoneH,
+        transformOrigin: "center center",
+        transform: phoneTransform({
+          focusY: cam.focusY,
+          scale: cam.scale,
+          phoneH,
+          phoneTop,
+          centerY,
+          tiltDeg: cam.tiltDeg,
+        }),
       }}
     >
-      <div
-        style={{
-          width: `${pct * 100}%`,
-          height: "100%",
-          borderRadius: 999,
-          background: `linear-gradient(90deg, ${yala.color.indigo}, ${yala.color.pink})`,
-          boxShadow: `0 0 24px ${yala.color.indigo}`,
-        }}
-      />
+      <DeviceFrame piece={piece} screenWidth={screenWidth} />
     </div>
   );
 };
 
-/**
- * El fondo. Glow índigo arriba —donde se sienta el texto— y teal abajo, para
- * que el negro no sea un negro plano de plantilla vacía.
- */
-const Backdrop: React.FC = () => (
-  <AbsoluteFill
-    style={{
-      background: `radial-gradient(78% 30% at 50% 14%, ${yala.color.indigo}3D, transparent 70%), radial-gradient(70% 26% at 50% 92%, ${yala.color.teal}22, transparent 70%)`,
-    }}
-  />
-);
-
-/** 16:9 — teléfono a la izquierda, columna de texto a la derecha. */
-const Wide: React.FC<SideProps> = ({ piece, locale }) => {
-  const deviceWidth = Math.round(
-    (WIDE_DEVICE.height * piece.source.w) /
-      (piece.source.h * (1 - (piece.crop?.top ?? 0) - (piece.crop?.bottom ?? 0))),
-  );
-
+/** 9:16 — el lienzo de Reels. */
+const Reels: React.FC<SideProps> = ({ piece, locale }) => {
+  const { width } = useVideoConfig();
   return (
     <AbsoluteFill>
-      <AbsoluteFill
-        style={{
-          background: `radial-gradient(46% 70% at 22% 50%, ${yala.color.indigo}33, transparent 72%)`,
-        }}
-      />
-      <DeviceFrame
+      <PhoneStage
         piece={piece}
-        box={{
-          left: WIDE_DEVICE.left,
-          top: WIDE_DEVICE.top,
-          width: deviceWidth,
-          height: WIDE_DEVICE.height,
-          radius: 48,
-        }}
+        screenWidth={PHONE.screenWidth}
+        phoneTop={REELS_CAMERA.phoneTop}
+        centerY={REELS_CAMERA.centerY}
+        canvasW={width}
       />
 
       {piece.beats.map((beat, i) => (
@@ -200,18 +151,78 @@ const Wide: React.FC<SideProps> = ({ piece, locale }) => {
           {...cue(beat.fromSec, beat.toSec)}
           name={`${i + 1}· ${beat.text.es}`}
         >
-          <div
-            style={{
-              position: "absolute",
-              left: WIDE_COPY.left,
-              right: WIDE_COPY.right,
-              ...(beat.place === "top" ? { top: 190 } : { bottom: 190 }),
-              display: "flex",
-              justifyContent: "flex-start",
-            }}
-          >
-            <BeatText beat={beat} locale={locale} typeScale={0.9} align="left" />
-          </div>
+          <BeatSlot beat={beat} locale={locale} />
+        </Sequence>
+      ))}
+    </AbsoluteFill>
+  );
+};
+
+/** Dónde cae cada beat en 9:16 según su `place`. */
+const BeatSlot: React.FC<{ beat: Beat; locale: Locale }> = ({ beat, locale }) => {
+  if (beat.place === "float") {
+    return (
+      <div style={{ position: "absolute", left: 400, top: 1250 }}>
+        <FloatBadge text={beat.text[locale]} sub={beat.sub?.[locale]} tone={beat.tone} />
+      </div>
+    );
+  }
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: REELS_SAFE.side,
+        right: REELS_SAFE.side,
+        ...(beat.place === "top" ? { top: REELS_TEXT.top } : { bottom: REELS_TEXT.bottom }),
+        display: "flex",
+        justifyContent: "center",
+      }}
+    >
+      <BeatText beat={beat} locale={locale} />
+    </div>
+  );
+};
+
+/** 16:9 — teléfono a la izquierda, columna de texto a la derecha. */
+const Wide: React.FC<SideProps> = ({ piece, locale }) => {
+  const { height } = useVideoConfig();
+  const screenWidth = 430;
+  return (
+    <AbsoluteFill>
+      <div style={{ position: "absolute", left: 0, top: 0, width: 760, height }}>
+        <PhoneStage
+          piece={piece}
+          screenWidth={screenWidth}
+          phoneTop={70}
+          centerY={height / 2}
+          canvasW={760}
+        />
+      </div>
+
+      {piece.beats.map((beat, i) => (
+        <Sequence
+          key={`${beat.fromSec}-${i}`}
+          {...cue(beat.fromSec, beat.toSec)}
+          name={`${i + 1}· ${beat.text.es}`}
+        >
+          {beat.place === "float" ? (
+            <div style={{ position: "absolute", left: 540, top: 600 }}>
+              <FloatBadge text={beat.text[locale]} sub={beat.sub?.[locale]} tone={beat.tone} />
+            </div>
+          ) : (
+            <div
+              style={{
+                position: "absolute",
+                left: WIDE_COPY.left,
+                right: WIDE_COPY.right,
+                ...(beat.place === "top" ? { top: 190 } : { bottom: 190 }),
+                display: "flex",
+                justifyContent: "flex-start",
+              }}
+            >
+              <BeatText beat={beat} locale={locale} typeScale={0.9} align="left" />
+            </div>
+          )}
         </Sequence>
       ))}
     </AbsoluteFill>
@@ -229,13 +240,63 @@ const BeatText: React.FC<{
   ) : (
     <AppleTitle
       text={beat.text[locale]}
-      style={beat.style}
-      place={beat.place}
+      style={beat.style === "badge" ? "hero" : beat.style}
+      place={beat.place === "float" ? "top" : beat.place}
       tone={beat.tone}
       typeScale={typeScale}
       align={align}
     />
   );
+
+/**
+ * Fondo con profundidad: tres orbes de luz que derivan despacio, más grano.
+ *
+ * Un negro plano se lee como plantilla vacía. Los orbes dan atmósfera y, al
+ * moverse, hacen que el fondo también esté vivo aunque la cámara pare.
+ */
+const Backdrop: React.FC<{ aspect: Aspect }> = ({ aspect }) => {
+  const frame = useCurrentFrame();
+  const { width, height } = useVideoConfig();
+  const t = frame / 30;
+  const orb = (color: string, x: number, y: number, r: number, phase: number) => (
+    <div
+      style={{
+        position: "absolute",
+        left: x * width + Math.sin(t * 0.35 + phase) * width * 0.06 - r,
+        top: y * height + Math.cos(t * 0.28 + phase) * height * 0.05 - r,
+        width: r * 2,
+        height: r * 2,
+        borderRadius: "50%",
+        background: color,
+        opacity: 0.42,
+        filter: "blur(120px)",
+      }}
+    />
+  );
+  const wide = aspect === "16x9";
+  return (
+    <AbsoluteFill style={{ overflow: "hidden" }}>
+      {orb(yala.color.indigo, wide ? 0.25 : 0.5, wide ? 0.4 : 0.16, wide ? 520 : 560, 0)}
+      {orb(yala.color.pink, wide ? 0.85 : 0.92, wide ? 0.9 : 0.62, wide ? 380 : 420, 2.1)}
+      {orb(yala.color.teal, wide ? 0.6 : 0.06, wide ? 0.1 : 0.92, wide ? 340 : 380, 4.2)}
+      {/* Grano fino: quita el aspecto de render digital limpio. */}
+      <svg style={{ position: "absolute", inset: 0, opacity: 0.07 }} width="100%" height="100%">
+        <filter id="grain">
+          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed={frame % 7} />
+          <feColorMatrix type="saturate" values="0" />
+        </filter>
+        <rect width="100%" height="100%" filter="url(#grain)" />
+      </svg>
+      {/* Viñeta. */}
+      <AbsoluteFill
+        style={{
+          background:
+            "radial-gradient(120% 80% at 50% 45%, transparent 55%, rgba(6,6,18,0.7) 100%)",
+        }}
+      />
+    </AbsoluteFill>
+  );
+};
 
 const FadeIn: React.FC<{ frames: number; children: React.ReactNode }> = ({
   frames,

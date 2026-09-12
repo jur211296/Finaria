@@ -108,18 +108,27 @@ No son gusto. Salen de medir el footage del piloto con `ffmpeg`, frame a frame:
 | Fila «Cuenta» | 40 %–45 % |
 | Fila de éxito «Pizza · PEN 20.00 · Registrado» | 32 %–40 % |
 
-El escenario 9:16 (`REELS_STAGE`) es **940×1000 en x=70, y=530** — el 87 % del ancho del
-lienzo. Es deliberadamente **más cuadrado que un iPhone**: ese recorte es lo que da a la
-cámara sitio a donde moverse.
+En 9:16 el teléfono se dibuja **entero, con marco** (`PHONE`: pantalla de 690 px, bisel de
+16, isla, botones, reflejo del cristal) y la cámara lo mueve **como un objeto**: escala desde
+su centro y lo desplaza para llevar `focusY` al centro de cámara (`REELS_CAMERA.centerY`,
+1210 px — más bajo que el centro del lienzo para que el texto tenga su banda arriba). Cuando
+la cámara se acerca, el iPhone crece y se sale por arriba y por abajo, que es lo que hace
+una cámara de verdad; nunca deja de tener forma de iPhone. Lleva un balanceo de ±3° en
+`rotateY` para que parezca sostenido, no atornillado.
 
-Tres encuadres probados, y por qué se descartaron los dos primeros:
+Cuatro encuadres probados, y por qué se descartaron los tres primeros:
 
 1. **Teléfono pequeño centrado sobre negro** (65 % de ancho): el 36 % del lienzo queda
    vacío y en un feed la pieza es invisible.
 2. **Footage a sangre**: el texto blanco cae sobre las tarjetas blancas de la app y no se
    lee, por mucho scrim que se le ponga.
-3. **Escenario + banda de texto arriba** ← el que está. Teléfono grande, texto sobre fondo
-   oscuro, nada tapado.
+3. **Pantalla recortada en una caja de 940×1000**: legible y grande, pero sin marco un trozo
+   de UI no se lee como «un teléfono», se lee como una captura pegada. Jürgen lo tumbó.
+4. **iPhone entero + cámara de objeto + fondo con orbes** ← el que está.
+
+En el golpe, un `badge` **sale de la pantalla**: repite el dato que la fila de éxito ya
+enseña —monto, concepto, categoría— y lo saca al primer plano con volumen. No inventa nada;
+si no está en el footage, no va ahí. Una vez por pieza: repetirlo lo gasta.
 
 `REELS_SAFE` (top 220, bottom 400, side 64) **no recorta nada**: `SafeAreas` lo dibuja en
 punteado para comprobarlo en Studio, y va apagado en render. Lo que se respeta es que

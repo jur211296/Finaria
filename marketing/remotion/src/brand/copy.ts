@@ -26,9 +26,16 @@ export type Cue = { fromSec: number; toSec: number };
  */
 export type Beat = Cue & {
   text: Localized;
-  /** `hero` grita, `line` cuenta, `pill` etiqueta lo que acaba de pasar. */
-  style: "hero" | "line" | "pill";
-  place: "top" | "bottom";
+  /** Segunda línea, solo para `badge`. */
+  sub?: Localized;
+  /**
+   * `hero` grita, `line` cuenta, `pill` etiqueta lo que acaba de pasar y
+   * `badge` saca un dato de la pantalla al primer plano, con volumen.
+   * `badge` va UNA vez por pieza, en el golpe: repetirlo lo gasta.
+   */
+  style: "hero" | "line" | "pill" | "badge";
+  /** `float` = flotando sobre el borde del teléfono; solo tiene sentido con `badge`. */
+  place: "top" | "bottom" | "float";
   /** `gasto` pinta el acento en rosa #FF0080, como el monto en la app. */
   tone?: "neutral" | "gasto";
 };
@@ -141,11 +148,22 @@ export const PIECES: Piece[] = [
         // aparezca: si entra a la vez, parece que lo anuncia; entrando
         // después, lo confirma.
         fromSec: 11.8,
-        toSec: 13.8,
+        toSec: 13.9,
         style: "hero",
         place: "top",
         tone: "gasto",
         text: { es: "Registrado.", en: "Logged." },
+      },
+      {
+        // El dato sale de la pantalla. Es EXACTAMENTE lo que enseña la fila
+        // de éxito —monto, concepto, categoría—; nada que no esté en la toma.
+        fromSec: 12.1,
+        toSec: 13.9,
+        style: "badge",
+        place: "float",
+        tone: "gasto",
+        text: { es: "PEN 20.00", en: "PEN 20.00" },
+        sub: { es: "Pizza · Restaurantes", en: "Pizza · Restaurants" },
       },
       {
         fromSec: 14.2,
@@ -166,7 +184,7 @@ export const PIECES: Piece[] = [
       // el zoom cierra el plano: por encima de ~1,25 empieza a cortar texto
       // por los lados.
       { atSec: 0.0, focusY: 0.4, scale: 1.02 }, // los tres chips
-      { atSec: 1.7, focusY: 0.72, scale: 1.08 }, // el campo de texto ← el gesto
+      { atSec: 1.7, focusY: 0.7, scale: 1.02 }, // el campo de texto ← el gesto
       { atSec: 3.9, focusY: 0.26, scale: 1.12 }, // la burbuja del usuario
       { atSec: 6.1, focusY: 0.49, scale: 1.0 }, // la card ENTERA: plano estrella
       { atSec: 8.4, focusY: 0.41, scale: 1.22 }, // la fila «Cuenta» cambiando

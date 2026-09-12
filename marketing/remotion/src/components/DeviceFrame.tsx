@@ -1,105 +1,151 @@
-import { OffthreadVideo, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { OffthreadVideo, staticFile } from "remotion";
 import type { Piece } from "../brand/copy";
 import { FONT_STACK } from "../brand/font";
 import { yala } from "../brand/tokens";
-import { cameraAt, cameraRect } from "../lib/layout";
+import { PHONE, phoneHeight } from "../lib/layout";
 
 /**
- * El trozo de VERDAD DEL PRODUCTO: la grabación real del iPhone, con cámara.
+ * Un iPhone. Entero, con marco, isla y botones — no una ventana recortada.
  *
  * Reglas duras:
- *  1. `OffthreadVideo`, no `<Video>`. Muestrea el frame exacto al renderizar,
- *     y aquí el origen va a 60 fps contra una composition de 30.
+ *  1. `OffthreadVideo`, no `<Video>`: muestrea el frame exacto al renderizar,
+ *     y el origen va a 60 fps contra una composition de 30.
  *  2. El footage NO se recolorea, NO se estira y NO se reconstruye. Si la UI
  *     de la toma está mal, se vuelve a grabar; no se retoca aquí.
- *  3. La cámara RECORTA, nunca deforma: el ancho manda y el alto sale de la
- *     proporción del origen. Mover la cámara no cambia lo que la app hizo.
+ *  3. Este componente NO sabe de cámara. Se dibuja a escala 1 y quien lo monta
+ *     lo mueve como un objeto (`phoneTransform`). Así el zoom conserva la
+ *     forma de teléfono en vez de convertirlo en una captura.
  *
- * Va **a sangre**, sin marco de teléfono. Un mockup de iPhone flotando en medio
- * de un fondo negro deja el 40 % del lienzo vacío, y en un feed ese 40 % es
- * espacio que no cuenta nada.
+ * Los píxeles que el `crop` quita del origen (status bar sucia, pie de página)
+ * quedan bajo la isla y bajo el marco inferior: no se echan en falta.
  */
-export const DeviceFrame: React.FC<{
-  piece: Piece;
-  /** Recorta a una caja en vez de ir a sangre (lo usa el lienzo 16:9). */
-  box?: { left: number; top: number; width: number; height: number; radius: number };
-}> = ({ piece, box }) => {
-  const frame = useCurrentFrame();
-  const { width: canvasW, height: canvasH } = useVideoConfig();
+export const DeviceFrame: React.FC<{ piece: Piece; screenWidth?: number }> = ({
+  piece,
+  screenWidth = PHONE.screenWidth,
+}) => {
+  const bezel = PHONE.bezel;
+  const outerW = screenWidth + bezel * 2;
+  const outerH = phoneHeight(screenWidth, piece.source, piece.crop);
+  const screenH = outerH - bezel * 2;
+  const radius = (PHONE.radius * screenWidth) / PHONE.screenWidth;
 
-  const viewW = box?.width ?? canvasW;
-  const viewH = box?.height ?? canvasH;
-
-  const { focusY, scale } = cameraAt(piece.shots, frame);
-  const rect = cameraRect({
-    canvasW: viewW,
-    canvasH: viewH,
-    source: piece.source,
-    crop: piece.crop,
-    focusY,
-    scale,
-  });
+  const fullVideoH = (screenWidth * piece.source.h) / piece.source.w;
+  const cropTopPx = fullVideoH * (piece.crop?.top ?? 0);
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        left: box?.left ?? 0,
-        top: box?.top ?? 0,
-        width: viewW,
-        height: viewH,
-        overflow: "hidden",
-        borderRadius: box?.radius ?? 0,
-        background: yala.color.bg,
-        // El marco solo existe cuando hay caja. A sangre no se dibuja nada.
-        border: box ? `2px solid rgba(255,255,255,0.16)` : undefined,
-        boxShadow: box
-          ? `0 40px 120px rgba(0,0,0,0.7), 0 0 160px ${yala.color.indigo}33`
-          : undefined,
-      }}
-    >
-      {piece.footage ? (
-        <div
-          style={{
-            position: "absolute",
-            left: rect.left,
-            top: rect.top,
-            width: rect.width,
-            height: rect.height,
-            overflow: "hidden",
-          }}
-        >
-          {/* El recorte se hace estirando el vídeo COMPLETO y tapando con
-              overflow; así `crop` quita píxeles sin tocar la proporción. */}
+    <div style={{ position: "relative", width: outerW, height: outerH }}>
+      {/* Sombra en el suelo: separa el teléfono del fondo. */}
+      <div
+        style={{
+          position: "absolute",
+          left: outerW * 0.08,
+          right: outerW * 0.08,
+          bottom: -outerH * 0.04,
+          height: outerH * 0.18,
+          borderRadius: "50%",
+          background: "rgba(0,0,0,0.75)",
+          filter: "blur(70px)",
+        }}
+      />
+
+      {/* Botones laterales. */}
+      <SideButton side="left" top={outerH * 0.16} height={outerH * 0.028} />
+      <SideButton side="left" top={outerH * 0.235} height={outerH * 0.05} />
+      <SideButton side="left" top={outerH * 0.3} height={outerH * 0.05} />
+      <SideButton side="right" top={outerH * 0.25} height={outerH * 0.085} />
+
+      {/* Marco. Titanio: gris muy oscuro con una arista clara arriba-izquierda. */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          borderRadius: radius,
+          background:
+            "linear-gradient(150deg, #3a3a44 0%, #16161c 22%, #0c0c11 55%, #1d1d24 100%)",
+          boxShadow: `0 0 0 1.5px rgba(255,255,255,0.22), 0 60px 140px rgba(0,0,0,0.75), 0 0 180px ${yala.color.indigo}2E`,
+        }}
+      />
+
+      {/* Pantalla. */}
+      <div
+        style={{
+          position: "absolute",
+          left: bezel,
+          top: bezel,
+          width: screenWidth,
+          height: screenH,
+          borderRadius: radius - bezel,
+          overflow: "hidden",
+          background: "#000",
+        }}
+      >
+        {piece.footage ? (
           <OffthreadVideo
             src={staticFile(piece.footage)}
             style={{
               position: "absolute",
               left: 0,
-              top: -cropPx(piece, rect.width),
-              width: rect.width,
-              height: fullHeight(piece, rect.width),
+              top: -cropTopPx,
+              width: screenWidth,
+              height: fullVideoH,
               objectFit: "fill",
             }}
           />
-        </div>
-      ) : (
-        <MissingFootage slug={piece.slug} />
-      )}
+        ) : (
+          <MissingFootage slug={piece.slug} />
+        )}
+
+        {/* Reflejo del cristal: una diagonal muy tenue. Es lo que hace que
+            la pantalla se lea como vidrio y no como un PNG plano. */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(115deg, rgba(255,255,255,0.13) 0%, rgba(255,255,255,0.04) 28%, transparent 46%)",
+            pointerEvents: "none",
+          }}
+        />
+
+        {/* Dynamic Island. */}
+        <div
+          style={{
+            position: "absolute",
+            top: (PHONE.island.top * screenWidth) / PHONE.screenWidth,
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: (PHONE.island.width * screenWidth) / PHONE.screenWidth,
+            height: (PHONE.island.height * screenWidth) / PHONE.screenWidth,
+            borderRadius: 999,
+            background: "#000",
+            boxShadow: "0 0 0 1px rgba(255,255,255,0.05)",
+          }}
+        />
+      </div>
     </div>
   );
 };
 
-const fullHeight = (piece: Piece, width: number) =>
-  (width * piece.source.h) / piece.source.w;
+const SideButton: React.FC<{ side: "left" | "right"; top: number; height: number }> = ({
+  side,
+  top,
+  height,
+}) => (
+  <div
+    style={{
+      position: "absolute",
+      top,
+      height,
+      width: 5,
+      [side]: -4,
+      borderRadius: 3,
+      background: "linear-gradient(90deg, #2a2a33, #111116)",
+      boxShadow: "0 0 0 1px rgba(255,255,255,0.12)",
+    }}
+  />
+);
 
-const cropPx = (piece: Piece, width: number) =>
-  fullHeight(piece, width) * (piece.crop?.top ?? 0);
-
-/**
- * Un slug del pack sin toma todavía. Enseña el hueco en vez de reventar el
- * Studio: la lista de piezas pendientes se ve de un vistazo.
- */
+/** Un slug del pack sin toma todavía: enseña el hueco en vez de reventar. */
 const MissingFootage: React.FC<{ slug: string }> = ({ slug }) => (
   <div
     style={{
@@ -110,19 +156,17 @@ const MissingFootage: React.FC<{ slug: string }> = ({ slug }) => (
       alignItems: "center",
       justifyContent: "center",
       gap: 18,
-      background: `linear-gradient(160deg, ${yala.color.indigo}22, ${yala.color.bg})`,
+      background: `linear-gradient(160deg, ${yala.color.indigo}33, ${yala.color.bg})`,
       fontFamily: FONT_STACK,
       textAlign: "center",
       padding: 48,
     }}
   >
-    <div style={{ fontSize: 46, fontWeight: 800, color: yala.color.white }}>
-      Falta la toma
-    </div>
-    <div style={{ fontSize: 30, color: yala.color.textSecondary }}>{slug}</div>
-    <div style={{ fontSize: 24, color: yala.color.textSecondary, maxWidth: 520 }}>
-      Graba la pantalla del iPhone, copia el mp4 a <code>public/footage/</code> y
-      apúntalo en <code>src/brand/copy.ts</code>.
+    <div style={{ fontSize: 44, fontWeight: 800, color: yala.color.white }}>Falta la toma</div>
+    <div style={{ fontSize: 28, color: yala.color.textSecondary }}>{slug}</div>
+    <div style={{ fontSize: 22, color: yala.color.textSecondary, maxWidth: 480 }}>
+      Graba la pantalla del iPhone, copia el mp4 a <code>public/footage/</code> y apúntalo
+      en <code>src/brand/copy.ts</code>.
     </div>
   </div>
 );
