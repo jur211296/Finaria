@@ -88,3 +88,28 @@ El aviso del 2026-09-09 02:41 (`ENVIADO destino=frank motivo=cierre-resumen HTTP
 lleva el `#109` equivocado. **No se mandó un segundo aviso corregido a propósito**: ADR-021 protege
 ese canal y un duplicado por una línea vale menos que el ruido que mete. Los PR buenos son #111 y
 #112.
+
+## Reincidencia medida el 2026-09-12
+
+Vuelve a pasar, y ahora con el mecanismo entendido del todo. El aviso de las 02:41
+(`ENVIADO destino=frank motivo=cierre-resumen HTTP 200`) salió citando **PR #146** — el de la sesión
+anterior — cuando los de esta eran **#147 y #148**. Se pasó `--rama` y no cambió nada; `--dry-run`
+con el flag da exactamente el mismo texto.
+
+**El dato nuevo es qué hay dentro del puntero.** El fichero de la rama existe y **no contiene ningún
+PR**:
+
+```
+$ cat ~/.claude/cache/avisos-grok/ultimas/Yala__encargo-2026-09-12-diez-worktrees…txt
+89b43ac6-664a-4338-9a8a-c9272875fd7c        ← el session-id, y nada más
+```
+
+O sea que no es que la resolución elija mal el fichero: es que **el hook nunca anotó el PR bajo la
+clave de la rama** en esta sesión. El PR se abrió con `gh pr create` desde el worktree y el hook no
+lo vio, así que la resolución cae al respaldo (`Yala__2.1.txt`) y sirve el del último que cerró. Con
+eso, el criterio de hecho de arriba se puede afinar: antes de arreglar la resolución hay que
+comprobar **quién escribe el PR en ese fichero y cuándo**, porque puede que el agujero esté en la
+anotación y no en la lectura.
+
+Tampoco aquí se mandó un segundo aviso corregido, por lo mismo que la vez anterior.
+
