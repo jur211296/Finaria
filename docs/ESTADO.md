@@ -75,8 +75,23 @@ la segunda —sobre el rediseño que la primera obligó— cazó dos ALTAS mías
 cuerpo del PR #144. **Su device-QA sigue pendiente y NO es simulable** (falta el seam de la asociación
 sembrada).
 
+## Marketing (Lola · #142 · el estudio de vídeo)
+
+**Ya hay sistema para sacar vídeo del producto sin dibujar la app**: `marketing/remotion/`, con dos
+formatos —**una presentación 16:9 por escenas** y **clips 9:16 por función**— sobre grabaciones reales
+del iPhone. Tres versiones en un día: la primera no vendía nada (teléfono pequeño sobre negro), la segunda
+recortaba la pantalla en una caja y parecía una captura pegada, la tercera pone **un iPhone entero como
+objeto 3D** con la gramática de la referencia que trajo Jürgen (Kelo). **Se cerró sin su visto bueno**:
+«lo seguiremos mirando en una siguiente sesión». Detalle y trampas medidas en el PR #142 y en
+`marketing/remotion/docs/`.
+
 ## Tu cola
 
+0-bis. **Marketing · el estudio de vídeo espera tu ojo** (`marketing/remotion/out/` se regenera con
+   `bun run render:presentation` y `bun run render:reels`). Tres decisiones cortas: fondo de la
+   presentación **oscuro o blanco**; el **guion de 8 líneas** en `copy.ts`; y cuándo grabas los **clips por
+   función** desde QuickTime, en Liquid Glass y sin la píldora roja. Sin eso, la presentación sigue
+   repitiendo el mismo mp4 del piloto.
 0. **Nada nuevo te pide esta sesión.** #147 y #148 están mergeados y no tocan ninguna superficie de la
    app, así que **no hay device-QA que hacer**. Lo único que cambia para ti: a partir de ahora, si dos
    sesiones llegan al gate a la vez, la segunda dice `[cola] … ESPERA` en vez de sacar un rojo falso.
