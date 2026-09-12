@@ -47,13 +47,13 @@ y es **preexistente**: el PR de la mitad 2 no lo agrava.
 
 ## Criterios de aceptación
 
-- [ ] Enlace de invitación aceptado sobre un store con espejo → antes de entrar al grupo, el dispositivo
+- [x] Enlace de invitación aceptado sobre un store con espejo → antes de entrar al grupo, el dispositivo
       vuelve al neutro (espera el export, borra lo local, iCloud intacto) y **la invitación sobrevive** al
       relanzamiento: al reabrir, la hoja «unirme» sale sola.
-- [ ] La vuelta al neutro **nunca** se dispara sin pantalla: el trigger `.boot` del reconciler no puede
+- [x] La vuelta al neutro **nunca** se dispara sin pantalla: el trigger `.boot` del reconciler no puede
       borrar nada por su cuenta.
-- [ ] Un invitado en un teléfono neutro (instalación fresca) no paga ninguna pantalla de más.
-- [ ] Lo que el dueño escribió y no llegó a subir no se pierde.
+- [x] Un invitado en un teléfono neutro (instalación fresca) no paga ninguna pantalla de más.
+- [x] Lo que el dueño escribió y no llegó a subir no se pierde.
 
 ## Por dónde va
 
