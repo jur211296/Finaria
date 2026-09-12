@@ -277,7 +277,11 @@ struct SessionPreferenceKeysSpellingTests {
                     // `DeviceSessionState` que decide si hay sesión privada a la que asociar una cuenta
                     // de grupos. Por el CAJÓN (`SessionDefaults.current`), que es lo que pide esta misma
                     // suite para un consumidor in-session.
-                    expectedSites: 27),
+                    // +1 (2026-09-11): `ContentView` CABLEA con ella el término «¿hay sesión privada
+                    // viva?» de la puerta del invitado (`GroupInviteNeutralGateLogic`). El sitio es uno
+                    // solo a propósito: el handler que la consume recibe el closure y no nombra la key,
+                    // que es lo que le impide leer el dominio del dueño.
+                    expectedSites: 28),
     ]
 
     /// Cuenta ocurrencias de una grafía en el CÓDIGO (sin comentarios) de todo `Yala/`, **excluyendo
@@ -371,7 +375,10 @@ struct HasCompletedOnboardingDomainTests {
     private static let cajonEsperado: [String: Int] = [
         // +1 (2026-09-11, paso 10): el `DeviceSessionState` del registrador de la cuenta de grupos.
         "AppBootstrapper.swift": 4,                  // restart-alert · seed de avisos · imagen compartida · asociación de grupos
-        "ContentView.swift": 2,                      // gate del organizador · el skip de restauración
+        // +1 (2026-09-11): el cableado del término «¿hay sesión privada viva?» de la puerta del INVITADO.
+        // Vive aquí y no en `GroupBackendInviteEntryHandler` justo por lo que mide esta tabla — aquel no
+        // tiene cajón que consultar y habría acabado leyendo el dominio del dueño.
+        "ContentView.swift": 3,                      // gate del organizador · skip de restauración · puerta del invitado
         "RouterEntryGate.swift": 1,                  // readiness del router
         // 2026-09-05 · el consumidor SE MOVIÓ, no desapareció: `GroupBackendInviteEntryHandler` decidía
         // con esta key si el invitado veía la hoja y ya no la lee (ese terminal lo decide ahora

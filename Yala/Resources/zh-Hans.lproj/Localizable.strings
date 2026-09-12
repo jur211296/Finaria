@@ -5886,3 +5886,15 @@
 
 /* Aviso: sesión caducada al desasociar */
 "storage.groups.detachBlockedSession" = "你的群组登录已过期。请重新登录后再试。";
+
+/* Puerta del invitado: vuelta al neutro antes de aceptar una invitación de grupo */
+"welcome.groups.inviteNeutralTitle" = "加入之前，这部手机会被清空";
+
+/* Puerta del invitado: cuerpo cuando SÍ hay copia en iCloud */
+"welcome.groups.inviteNeutralBody" = "这里保存着与某个 iCloud 同步的数据。为了让你的群组支出不会进到那里，我们会把它从这部手机上删除：iCloud 中的副本保持不变。Yala 会重新启动，然后你继续完成邀请。";
+
+/* Puerta del invitado: cuerpo cuando NO hay copia en iCloud */
+"welcome.groups.inviteNeutralBodyNoBackup" = "这里保存着数据，而且我们没有在 iCloud 中找到副本。为了让你的群组支出不与它们混在一起，必须把它从这部手机上删除，并且无法恢复。Yala 会重新启动，然后你继续完成邀请。";
+
+/* Puerta del invitado: CTA destructivo que arranca la vuelta al neutro */
+"welcome.groups.inviteNeutralCta" = "继续并删除";

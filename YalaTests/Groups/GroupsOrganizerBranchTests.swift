@@ -596,9 +596,14 @@ struct GroupsOrganizerWiringTests {
     @Test("el container reenvía el aviso de la vuelta al neutro sin decidir nada")
     func containerOnlyForwardsTheNeutralReturn() throws {
         let code = try Self.code(Self.container)
-        #expect(code.contains("onNeutralReturnArmed: onGroupsGateNeutralReturnArmed"), """
-            el step tiene que recibir el callback tal cual. Envolverlo aquí sería un segundo sitio donde
-            decidir qué pasa al armar.
+        // 2026-09-11: el callback pasó a llevar el PROPÓSITO del step, porque desde la puerta del
+        // invitado el mismo aviso significa dos destinos distintos. El envoltorio reenvía un DATO que el
+        // container ya tiene delante —el `let purpose` del propio `case`—, no una decisión: sigue sin
+        // haber aquí ni un `if`, ni una lectura de `UserDefaults`, ni nada que `ContentView` tenga que
+        // volver a comprobar.
+        #expect(code.contains("onNeutralReturnArmed: { onGroupsGateNeutralReturnArmed(purpose) }"), """
+            el step tiene que reenviar el callback con el propósito y nada más. Meter aquí una condición
+            sería un segundo sitio donde decidir qué pasa al armar.
             """)
         #expect(!code.contains("WelcomePendingDestinationStore.set(.groupsOrganizer)"), """
             el container no toca `UserDefaults` — es el contrato que su propio docblock declara para el
@@ -985,7 +990,9 @@ struct GroupsOrganizerWiringTests {
             `WelcomeHeroReentryTests` prohíbe `.alert(` en este fichero por source-scan, y además un alert
             para la puerta cerrada sería un camino muerto en un flujo que el spec exige que no los tenga.
             """)
-        #expect(container.contains("case .groupsGate:"),
+        // El `case` lleva payload desde 2026-09-11: el propósito viaja DENTRO del step para que ningún
+        // productor pueda heredar el del uso anterior.
+        #expect(container.contains("case .groupsGate(let purpose):"),
                 "la puerta es un STEP del container, no una presentación del anchor de ContentView")
     }
 }

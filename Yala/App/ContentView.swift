@@ -916,6 +916,19 @@ struct ContentView: View {
         // vivas en vez de viajar en el payload.
         case .presentGroupsOrganizerStep:
             advanceGroupsOrganizerFlow()
+        case .presentGroupsInviteNeutralGate(let zone):
+            // **La puerta del invitado.** No presenta nada propio: reabre el Welcome en su step
+            // `.groupsGate` con el propósito de la invitación, que es el motor de borrado ya probado.
+            //
+            // **Se re-mide al llegar, y no se confía en el veredicto del productor** (regla del repo): el
+            // intent pudo quedar retenido bajo un cover, y entre el submit y esta línea puede haber
+            // mediado el relanzamiento entero que esta pantalla provoca. Quien llega ya neutro encuentra
+            // `.proceed` y sale sin tocar nada.
+            //
+            // El propósito se escribe EXPLÍCITO junto al step, en la misma vuelta: son un par, y
+            // separarlos es lo que haría que esta invitación entrara por la rama que informa-y-borra.
+            welcomeFlowInitialStep = .groupsGate(purpose: .acceptInvite(groupID: zone))
+            showWelcomeFlow = true
         case .presentGroupBackendInviteOnboarding(let zone):
             // Condición viva al drenar (regla del repo): el intent pudo quedar retenido bajo un cover; si
             // la persona YA confirmó la invitación mientras tanto, no re-presentar — continuar el flujo
@@ -981,7 +994,7 @@ struct ContentView: View {
         if SecondarySessionStore.isActive() {
             groupsOrganizerFlowActive = false
             showOnboarding = false
-            welcomeFlowInitialStep = .groupsGate
+            welcomeFlowInitialStep = .groupsGate(purpose: .createGroup)
             showWelcomeFlow = true
             return
         }
@@ -1279,6 +1292,29 @@ struct ContentView: View {
     /// El fetch de iCloud lo hace `WelcomeHeroView` invisible mientras el user lee
     /// las cards animadas. Decisión consciente del user — no se carga data sin tap explícito.
     private func checkInitialSyncState() async {
+        // **El término del corpus de la puerta del invitado, cableado desde aquí.** Contar filas pide un
+        // `ModelContext` y `GroupBackendInviteEntryHandler` no tiene ninguno, así que se le instala el
+        // MISMO closure que alimenta al guard cross-cuenta y a la puerta del organizador — los tres miden
+        // lo mismo, incluido su fallo CERRADO ante un error de fetch.
+        //
+        // **Lo que este cableado NO cubre, dicho con precisión:** corre en el splash, y el trigger `.boot`
+        // del reconciler corre en paralelo desde `AppBootstrapper`, así que un `drive(.boot)` muy temprano
+        // puede leer todavía el default (`false`). El caso del ticket no se escapa por ahí —un store que
+        // espeja iCloud lo caza el otro término, que no necesita contexto— y las vueltas siguientes
+        // (`.foreground`, `.continuation`, `.userAction`) ya leen el closure real. Lo que quedaría fuera de
+        // esa ventana es «corpus SIN espejo y sin onboarding completado», que en los estados donde esta
+        // puerta actúa no es alcanzable: el neutro durable borra el corpus y una instalación fresca no lo
+        // tiene.
+        GroupBackendInviteEntryHandler.hasLocalDataProvider = { checkHasExistingData() }
+        // **Y el término que distingue «sesión privada viva» de «Welcome visible», por el CAJÓN.** El par
+        // escritor/lector de esta key vive en `SessionDefaults.current` y no en el dominio del dueño: en
+        // una sesión de visita, la pregunta «¿el alta de quién?» la contesta quien está usando la app.
+        // Leerla con `.standard` desde el handler devolvería el defecto de 2026-09-03, y por eso la key no
+        // se nombra allí — `HasCompletedOnboardingDomainTests` enumera quién puede.
+        GroupBackendInviteEntryHandler.hasCompletedPersonalOnboardingProvider = {
+            SessionDefaults.current.bool(forKey: AppPreferences.Keys.hasCompletedOnboarding)
+        }
+
         // GC-08: If group invite onboarding is pending, skip normal flow entirely.
         // The CKShare was already accepted eagerly — just let the invite UI take over.
         if showGroupInviteOnboarding {
@@ -1550,7 +1586,27 @@ struct ContentView: View {
                 // una rama organizador a mitad en un proceso que no ha visto su puerta»— y que aquí se
                 // respeta al pie: la puerta vuelve a medir, y en este proceso ya no hay corpus ni espejo,
                 // así que abre y sigue sin que la persona toque nada de más.
-                welcomeFlowInitialStep = .groupsGate
+                welcomeFlowInitialStep = .groupsGate(purpose: .createGroup)
+                showWelcomeFlow = true
+            case .groupsInvite:
+                // **La invitación que devolvió el teléfono al neutro.** Mismo molde que `.groupsOrganizer`
+                // y por la misma razón: el relanzamiento no lo pidió el destino sino el borrado, y este
+                // arranque es el que lo ejecutó. Se retoma en LA PUERTA, que vuelve a medir — y en este
+                // proceso ya no hay corpus ni espejo, así que abre y el join sigue sin que la persona
+                // toque nada de más.
+                //
+                // El `groupID` sale del intent REPUESTO, no del destino: el destino no lleva payload, y
+                // quien lo repuso es el boot-hook con la key one-shot de `GroupInviteResumeStore`. Si no
+                // hay intent vivo —TTL agotado, o el token nunca llegó a guardarse— no hay puerta que
+                // abrir, y el recorrido normal es la respuesta segura.
+                // La MÁS RECIENTE y no la primera: `all()` ordena por `createdAt` ascendente, y la que
+                // este arranque acaba de reponer es por construcción la última. Con dos invitaciones vivas
+                // —posible si el wipe no llegó a correr— coger la vieja retomaría la que nadie confirmó.
+                if let zone = PendingJoinStore.all().last(where: { $0.isBackendJoin })?.zoneName {
+                    welcomeFlowInitialStep = .groupsGate(purpose: .acceptInvite(groupID: zone))
+                } else {
+                    welcomeFlowInitialStep = .chooser
+                }
                 showWelcomeFlow = true
             case .cloudAccount, .cloudSignIn, .fullActivationPrivate, .fullActivationRestore:
                 // Inalcanzables: `requiresMirror` es `false` para las dos primeras, así que el portal del
@@ -1741,7 +1797,7 @@ private struct WelcomeFlowModifier: ViewModifier {
                         }
                         WelcomePendingDestinationStore.set(destination)
                     },
-                    onGroupsGateNeutralReturnArmed: {
+                    onGroupsGateNeutralReturnArmed: { purpose in
                         // **Mitad 2 del paso 5 · el borrado está ARMADO y solo falta reabrir la app.**
                         //
                         // El destino se persiste AQUÍ y no antes de empezar, y el orden es lo que evita un
@@ -1752,15 +1808,59 @@ private struct WelcomeFlowModifier: ViewModifier {
                         // abortado. La ventana que queda —un kill entre el arm y esta línea— cuesta una
                         // pantalla, no datos: el borrado corre igual y la persona aterriza en el Welcome.
                         //
-                        // Y se persiste `.groupsOrganizer` porque es a donde iba. Sobrevive al borrado:
+                        // Y se persiste a donde iba. Sobrevive al borrado:
                         // `welcome.pendingMirrorRelaunchDestination` no está en el barrido de
                         // `DataWipeService.removeUserPreferenceKeys` (medido) y nadie la limpia en
                         // producción.
-                        WelcomePendingDestinationStore.set(.groupsOrganizer)
+                        //
+                        // **Y qué destino se persiste lo decide el PROPÓSITO que VIENE CON el aviso**, no
+                        // un estado de esta vista: los dos caminos llegan a este mismo callback desde la
+                        // misma pantalla, y escribir siempre `.groupsOrganizer` mandaría al invitado al
+                        // alta de un grupo que no quiso crear.
+                        //
+                        // El sobre `{groupID, token}` ya lo escribió la PANTALLA al recibir el gesto —aquí
+                        // solo se comprueba—: entre el arm del borrado y este callback hay una entrega de
+                        // SwiftUI, y en el camino del swap in-process la jerarquía se desmonta en la misma
+                        // vuelta del arm, así que escribirlo aquí lo dejaba fuera de la ventana.
+                        if let groupID = purpose.invitedGroupID {
+                            // Sin sobre no hay join que retomar, así que tampoco se persiste un destino que
+                            // llevaría a una puerta sin nada detrás: el arranque siguiente cae en el
+                            // recorrido normal, que es lo honesto cuando la invitación ya no está.
+                            if GroupInviteResumeStore.peek()?.groupID == groupID {
+                                WelcomePendingDestinationStore.set(.groupsInvite)
+                            } else {
+                                #if DEBUG
+                                print("ContentView: invite neutral return armed without a live envelope — nothing to resume")
+                                #endif
+                            }
+                        } else {
+                            WelcomePendingDestinationStore.set(.groupsOrganizer)
+                        }
                         // El cover del Welcome y el terminal del cierre de sesión cuelgan del MISMO body,
                         // así que UIKit presenta uno solo. Cerrar éste es lo que deja presentarse al otro,
                         // que es el que tiene verify loop, blocker de readiness y salida en background.
                         showWelcomeFlow = false
+                    },
+                    onGroupsGateInviteProceed: { zone in
+                        // La puerta del invitado abrió: este dispositivo ya no cruza datos de nadie. Se
+                        // cierra el Welcome y se RETOMA el join donde estaba — `continueFlow` re-lee el
+                        // intent persistido y re-evalúa el paso con condiciones vivas, así que no hace
+                        // falta recordar en cuál se quedó.
+                        //
+                        // **El cover NO se cierra si no hay nada que continuar**, y esa comprobación es la
+                        // misma que `continueFlow` hace por dentro antes de volverse sin hacer nada. El
+                        // intent puede haber muerto entre el submit y este tap (el pull baja el member y el
+                        // reconciler lo limpia), y con el onboarding sin completar debajo de este cover no
+                        // hay shell ninguna: cerrarlo dejaba a la persona ante un fondo vacío, sin un solo
+                        // control, hasta matar la app.
+                        guard PendingJoinStore.entry(zoneName: zone) != nil else {
+                            welcomeFlowInitialStep = .groupsChooser
+                            return
+                        }
+                        showWelcomeFlow = false
+                        Task { @MainActor in
+                            await GroupBackendInviteEntryHandler.continueFlow(zoneName: zone)
+                        }
                     },
                     hasLocalDataNow: hasLocalDataNow,
                     // Paso 4: el borrado vive aquí porque necesita el `modelContext`. La puerta solo
@@ -1896,7 +1996,7 @@ private struct WelcomeFlowModifier: ViewModifier {
                         // baja en el boot siguiente.
                         StorageModePersistence.clearGroupsOnlyWipeArm()
                         GroupsSignOutBannerMarker.clear()
-                        welcomeFlowInitialStep = .groupsGate
+                        welcomeFlowInitialStep = .groupsGate(purpose: .createGroup)
                         showWelcomeFlow = true
                         showWelcomeCloudSignIn = false
                     },

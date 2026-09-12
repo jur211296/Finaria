@@ -91,6 +91,17 @@ enum RouterIntent: Identifiable, Equatable {
     /// Los dos primeros pasos reusan los sheets de `GroupsBackendInviteModifier` —el dueño ÚNICO de ese
     /// anchor—, así que la única presentación nueva es la del nombre.
     case presentGroupsOrganizerStep
+    /// **La puerta del neutro del INVITADO** (`GroupInviteNeutralGateLogic`): aceptar esta invitación
+    /// sobre un store que espeja iCloud —o que ya tiene corpus de alguien— mandaría los gastos del
+    /// invitado al iCloud del dueño del teléfono, así que antes hay que devolver el dispositivo al
+    /// neutro. El payload es el `groupID`, que es lo que la pantalla necesita para retomar el join.
+    ///
+    /// **No presenta una vista nueva**: su consumidor abre el Welcome en su step `.groupsGate` con el
+    /// propósito del invitado, que es el motor de borrado ya probado. Y `supersedesWelcomeChain` es
+    /// `true` como en sus tres hermanos de esta cadena, y por lo mismo: llega de FUERA (un link, el
+    /// reconciler en boot) y se encuentra el Welcome montado por delante — sin eso, el cover del Welcome
+    /// bloquearía justo el intent que tiene que reemplazarlo.
+    case presentGroupsInviteNeutralGate(pendingJoin: String)
 
     // D) Tab navigation
     case navigate(DeepLinkDestination)
@@ -121,7 +132,7 @@ extension RouterIntent {
         case .presentLateICloudMirrorNotice: return .contentView
         case .showInboxAlert, .presentTrialOffer, .presentWhatsNew,
              .presentGroupsConsent, .presentGroupsSignIn, .presentGroupBackendInviteOnboarding,
-             .presentGroupsOrganizerStep,
+             .presentGroupsOrganizerStep, .presentGroupsInviteNeutralGate,
              .showInviteError,
              .showGroupSyncError,
              .showGroupArchivedNotice,
@@ -169,7 +180,7 @@ extension RouterIntent {
              .presentMilestoneUpgrade,
              .presentFullModeActivation, .navigate,
              .presentGroupsConsent, .presentGroupsSignIn, .presentGroupBackendInviteOnboarding,
-             .presentGroupsOrganizerStep,
+             .presentGroupsOrganizerStep, .presentGroupsInviteNeutralGate,
              .presentTrialOffer, .autoOpenBudgetEditor, .autoOpenScheduledEditor:
             return .normal
         case .requestAppStoreReview, .presentWhatsNew:
@@ -229,6 +240,8 @@ extension RouterIntent {
             return "groupsSignIn:\(pendingJoin)"
         case .presentGroupBackendInviteOnboarding(let pendingJoin):
             return "groupBackendInviteOnboarding:\(pendingJoin)"
+        case .presentGroupsInviteNeutralGate(let pendingJoin):
+            return "groupsInviteNeutralGate:\(pendingJoin)"
         case .presentGroupsOrganizerStep:
             // Clave FIJA (sin payload): dos avances encolados a la vez son el mismo avance, y colapsarlos
             // es lo correcto — el drain re-decide el paso con condiciones vivas de todos modos.
@@ -274,7 +287,8 @@ extension RouterIntent {
     /// si el usuario relanza a mitad de la rama— en vez de esperar su turno, que es lo correcto.
     var supersedesWelcomeChain: Bool {
         switch self {
-        case .presentGroupsConsent, .presentGroupsSignIn, .presentGroupBackendInviteOnboarding:
+        case .presentGroupsConsent, .presentGroupsSignIn, .presentGroupBackendInviteOnboarding,
+             .presentGroupsInviteNeutralGate:
             return true
         default:
             return false

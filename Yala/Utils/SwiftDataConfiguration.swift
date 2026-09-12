@@ -658,7 +658,9 @@ extension SwiftDataConfiguration {
                 NotificationService.shared.clearDeliveredNotifications()
             },
             purgeInboundSurfaces: { AppGroupInboundPurge.purgeInboundSurfaces() },
-            clearGroupsConsent: { GroupsConsentState.clear() })
+            clearGroupsConsent: { GroupsConsentState.clear() },
+            restoreDeferredInvite: { GroupInviteResumeStore.restoreIntoPendingJoins() },
+            clearDeferredInvite: { GroupInviteResumeStore.clearAfterRestore() })
     }
 
     /// Variante inyectable (tests del ORDEN/idempotencia sin archivos reales, sin `UserDefaults.standard`
@@ -675,7 +677,9 @@ extension SwiftDataConfiguration {
         resetPrefs: () -> Void,
         cancelNotifications: () -> Void,
         purgeInboundSurfaces: () -> Void = {},
-        clearGroupsConsent: () -> Void = {}
+        clearGroupsConsent: () -> Void = {},
+        restoreDeferredInvite: () -> Void = {},
+        clearDeferredInvite: () -> Void = {}
     ) {
         guard StorageModePersistence.isSignOutWipeArmed(defaults) else { return }
 
@@ -698,6 +702,12 @@ extension SwiftDataConfiguration {
             if StorageModePersistence.read(defaults) == .icloud {
                 StorageModePersistence.clearSignOutWipeIncludesGroups(defaults)
                 StorageModePersistence.clearSignOutWipeArm(defaults)
+                // El sobre de la invitación se va con el arm, por lo mismo: el cierre no ocurrió, así que
+                // no hay nada que reponer. Dejarlo lo convertía en un residuo SIN dueño y sin nadie que lo
+                // retirara —su único consumidor es este hook—, y el siguiente cierre de sesión, que puede
+                // ser de otra persona, lo repondría con el tap armado: una solicitud de entrada a un grupo
+                // viejo bajo una cuenta que nunca la pidió. Aquí el arm se retira, luego el par también.
+                clearDeferredInvite()
                 CloudSyncBreadcrumb.signOutWipeAborted(reason: "store file deletion failed — icloud, disarmed")
             } else {
                 CloudSyncBreadcrumb.signOutWipeAborted(reason: "store file deletion failed")
@@ -797,6 +807,21 @@ extension SwiftDataConfiguration {
 
         resetPrefs()
 
+        // **La invitación que este borrado acaba de matar, repuesta.** Va PEGADA a `resetPrefs()` y
+        // DESPUÉS, porque es ése quien la mata: `resetForSignOutWipe` → `resetAllUserPreferences` →
+        // `AppRouter.resetAll()` → `PendingJoinStore.clearAll()`. Delante sería un no-op silencioso.
+        //
+        // **Qué vuelve y qué no.** Solo el par `{groupID, token}` que la puerta del invitado guardó en su
+        // key one-shot antes de armar el cierre — sin PII, sin el nombre tecleado y sin la credencial de
+        // re-bind. Y **solo si esa key existe**, que la escribe una única pantalla: para todos los demás
+        // cierres de sesión esta línea es un no-op, así que el camino de la nube y el de solo-grupos
+        // siguen siendo byte-idénticos.
+        //
+        // Sin esto el invitado reabre la app SIN su invitación: el camino muerto, movido un paso más
+        // adelante — le habríamos pedido que borrara el teléfono para unirse a un grupo al que ya no
+        // puede unirse.
+        restoreDeferredInvite()
+
         // §5.2.1: las notificaciones locales de la cuenta saliente quedan HUÉRFANAS al morir sus filas
         // `NotificationItem` con el archivo del store — y nadie las mata después: el reconciler de boot
         // (`AppBootstrapper.ensureNotificationsScheduled`) solo REPROGRAMA, y su guard exige
@@ -837,6 +862,13 @@ extension SwiftDataConfiguration {
         }
 
         StorageModePersistence.clearSignOutWipeIncludesGroups(defaults)
+        // El sobre ya repuesto se retira AQUÍ, con el resto de lo one-shot, y no en la reposición de
+        // arriba. Consumirlo allí rompía el orden kill-safe que este hook declara: un kill entre la
+        // reposición y esta línea deja el arm puesto, el arranque siguiente re-ejecuta el borrado ENTERO
+        // —`resetPrefs()` incluido, que vuelve a vaciar `PendingJoinStore`— y la reposición ya no tendría
+        // nada que reponer. El destructor se re-ejecuta; el reparador tiene que poder re-ejecutarse
+        // también.
+        clearDeferredInvite()
         StorageModePersistence.clearSignOutWipeArm(defaults)
         CloudSyncBreadcrumb.signOutWipeExecuted()
     }

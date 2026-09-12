@@ -5270,6 +5270,19 @@ enum L10n {
             /// que la única salida honesta es volver a entrar con esa cuenta.
             static var neutralBlockedTitle: String { ls("welcome.groups.neutralBlockedTitle", comment: "") }
             static var neutralBlockedBody: String { ls("welcome.groups.neutralBlockedBody", comment: "") }
+            /// **La puerta del INVITADO** (`GroupInviteNeutralGateLogic`), que a diferencia de la del
+            /// organizador PREGUNTA. Allí la persona acaba de tapear «Crear mi primer grupo» y la pantalla
+            /// es la respuesta a su gesto; aquí el reconciler puede llegar por el trigger `.boot`, sin que
+            /// nadie haya tocado nada, y borrar el corpus de alguien en un arranque sin que mire es lo que
+            /// el ADR 2026-09-09 prohíbe.
+            static var inviteNeutralTitle: String { ls("welcome.groups.inviteNeutralTitle", comment: "") }
+            /// Dos cuerpos para la MISMA pregunta y no dos preguntas encadenadas: el hecho que cambia es si
+            /// hay copia en iCloud, y `neutralNoBackup*` —que sí es una segunda pantalla en la rama del
+            /// organizador— se saltaría aquí, porque este gesto ya cubre los dos.
+            static var inviteNeutralBody: String { ls("welcome.groups.inviteNeutralBody", comment: "") }
+            /// Sin copia en iCloud, **y solo se dice con prueba** (`PrivateSignOutExportGateLogic.CopyChannel.none`).
+            static var inviteNeutralBodyNoBackup: String { ls("welcome.groups.inviteNeutralBodyNoBackup", comment: "") }
+            static var inviteNeutralCta: String { ls("welcome.groups.inviteNeutralCta", comment: "") }
             /// Este arranque no puede volver al neutro por el cierre privado: su celda es la de la nube o la
             /// de una visita, que hacen OTRO borrado. Se dice y se vuelve; cero escrituras.
             static var neutralUnavailableTitle: String { ls("welcome.groups.neutralUnavailableTitle", comment: "") }

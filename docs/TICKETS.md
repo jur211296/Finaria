@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (314)
+## Index (317)
 
 | id | status | path |
 |---|---|---|
@@ -105,6 +105,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | detach-saves-the-personal-graph-outside-the-quiescence-window | backlog | tickets/backlog/detach-saves-the-personal-graph-outside-the-quiescence-window.md |
 | device-handover-groups-leak | discarded | tickets/discarded/device-handover-groups-leak.md |
 | device-qa-groups-account-association | qa | tickets/qa/device-qa-groups-account-association.md |
+| device-qa-groups-invite-neutral-return | qa | tickets/qa/device-qa-groups-invite-neutral-return.md |
 | diez-worktrees-comparten-un-simulador | backlog | tickets/backlog/diez-worktrees-comparten-un-simulador.md |
 | distribucion-recalcula-dos-veces-por-toque-y-sin-debounce | backlog | tickets/backlog/distribucion-recalcula-dos-veces-por-toque-y-sin-debounce.md |
 | distribution-balance-kpi-skips-fx | done | tickets/done/distribution-balance-kpi-skips-fx.md |
@@ -177,7 +178,8 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | groups-history-cutoff-needs-synced-state | backlog | tickets/backlog/groups-history-cutoff-needs-synced-state.md |
 | groups-import-splitwise-tricount | backlog | tickets/backlog/groups-import-splitwise-tricount.md |
 | groups-in-group-search | backlog | tickets/backlog/groups-in-group-search.md |
-| groups-invite-on-a-mirrored-store-crosses-data | backlog | tickets/backlog/groups-invite-on-a-mirrored-store-crosses-data.md |
+| groups-invite-neutral-gate-has-no-way-out-when-the-exit-cell-cannot-wipe | backlog | tickets/backlog/groups-invite-neutral-gate-has-no-way-out-when-the-exit-cell-cannot-wipe.md |
+| groups-invite-on-a-mirrored-store-crosses-data | qa | tickets/qa/groups-invite-on-a-mirrored-store-crosses-data.md |
 | groups-invite-skips-unirme-sheet-if-onboarded | qa | tickets/qa/groups-invite-skips-unirme-sheet-if-onboarded.md |
 | groups-join-intent-reconciler | blocked | tickets/blocked/groups-join-intent-reconciler.md |
 | groups-leave-rpc-error-10 | qa | tickets/qa/groups-leave-rpc-error-10.md |
@@ -330,6 +332,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | weekday-bar-daily-average-unmarked | backlog | tickets/backlog/weekday-bar-daily-average-unmarked.md |
 | welcome-beacon-origin-contradicts-not-found-copy | backlog | tickets/backlog/welcome-beacon-origin-contradicts-not-found-copy.md |
 | welcome-beacon-reads-owner-icloud-in-secondary | discarded | tickets/discarded/welcome-beacon-reads-owner-icloud-in-secondary.md |
+| welcome-chooser-uitests-cannot-reach-the-chooser | backlog | tickets/backlog/welcome-chooser-uitests-cannot-reach-the-chooser.md |
 | welcome-cloud-back-leaves-chooser-marked-seen | backlog | tickets/backlog/welcome-cloud-back-leaves-chooser-marked-seen.md |
 | welcome-copy-blames-owner | discarded | tickets/discarded/welcome-copy-blames-owner.md |
 | welcome-destructive-buttons-are-plain-text-taps | backlog | tickets/backlog/welcome-destructive-buttons-are-plain-text-taps.md |

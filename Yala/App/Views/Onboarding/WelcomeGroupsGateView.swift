@@ -66,11 +66,38 @@ import SwiftUI
 
 struct WelcomeGroupsGateView: View {
 
+    /// **A QUÉ vino quien está delante**, y lo decide TODO lo que esta pantalla hace distinto en cada
+    /// caso: qué puerta se consulta, si se informa o se pregunta, y a dónde se sale al abrir.
+    ///
+    /// Las dos comparten el motor —la celda de cierre, la espera del export, el bloqueo por grupos sin
+    /// subir, el terminal «reabre Yala»— y **ésa es la razón de que sea un propósito y no una vista
+    /// hermana**: son el mismo borrado, y dos implementaciones serían dos verdades sobre él.
+    enum Purpose: Equatable {
+        /// G3 · «Crear mi primer grupo» desde el Welcome. Puerta: `GroupsOrganizerGateLogic`. Se INFORMA y
+        /// se arranca, porque la persona acaba de tapear la card y esta pantalla es la respuesta a su gesto.
+        case createGroup
+        /// La invitación aceptada sobre un teléfono que espeja iCloud. Puerta:
+        /// `GroupInviteNeutralGateLogic`. Se PREGUNTA, porque aquí puede no haber ningún gesto detrás — el
+        /// reconciler llama a `drive` también en el trigger `.boot`, y el ADR 2026-09-09 prohíbe borrar el
+        /// corpus de alguien en un arranque sin que nadie mire.
+        case acceptInvite(groupID: String)
+
+        /// El `groupID` de la invitación, o `nil` en la rama del organizador.
+        var invitedGroupID: String? {
+            if case .acceptInvite(let groupID) = self { return groupID }
+            return nil
+        }
+    }
+
+    /// Ver `Purpose`. Sin valor por defecto a propósito: un default sería `.createGroup` y un call-site
+    /// nuevo del invitado heredaría en silencio el «informa y borra» que esta rama NO puede hacer.
+    let purpose: Purpose
     /// Fetch VIVO del corpus local, no un snapshot: es el mismo argumento (y el mismo closure) que el
     /// guard cross-cuenta del Welcome usa, porque el mirror de iCloud puede estar re-importando mientras
     /// el usuario mira estas pantallas.
     let hasLocalDataNow: @MainActor @Sendable () -> Bool
-    /// La puerta abrió: seguir a `leaveWelcome(to: .groupsOrganizer)`.
+    /// La puerta abrió. En `.createGroup`, seguir a `leaveWelcome(to: .groupsOrganizer)`; en
+    /// `.acceptInvite`, cerrar el Welcome y retomar el join donde estaba.
     var onProceed: () -> Void
     /// Vuelta al step de los dos caminos. También es el CTA de las dos pantallas de bloqueo — «vuelve al
     /// chooser con todas las demás vías intactas», que es la mitad de «ningún camino muerto».
@@ -99,6 +126,11 @@ struct WelcomeGroupsGateView: View {
         case blockedSecondarySession
         /// Sin copia en iCloud **con prueba**: segundo gesto antes de borrar.
         case confirmingNoBackup
+        /// **La pregunta del invitado** (`purpose == .acceptInvite`). Un solo gesto que cubre los dos
+        /// hechos: qué va a pasar con este teléfono y si hay copia en iCloud a la que apuntar. Se decidió
+        /// así —y no encadenando `confirmingNoBackup` detrás— porque dos preguntas seguidas para un solo
+        /// borrado leen como un trámite, y la segunda acabaría contestándose sin leerse.
+        case confirmingInviteNeutral(withoutICloudCopy: Bool)
         /// **Este arranque no puede volver al neutro por el cierre privado**: su celda no es una de las tres
         /// que borran por archivos. Pantalla con salida, y CERO escrituras — lo contrario del `return` mudo
         /// que dejaba un progreso eterno sin botón.
@@ -159,7 +191,8 @@ struct WelcomeGroupsGateView: View {
     /// `body` porque el type-checker no resuelve `cond ? nil : método` sin anotación.
     private var backAction: (() -> Void)? {
         switch phase {
-        case .checking, .blockedChannelOff, .blockedSecondarySession, .confirmingNoBackup, .unavailable:
+        case .checking, .blockedChannelOff, .blockedSecondarySession, .confirmingNoBackup,
+             .confirmingInviteNeutral, .unavailable:
             return onBack
         case .returningToNeutral, .discardingUnconfirmed, .resumingExportWait:
             // Con un aviso en pantalla la salida es su propio botón; mientras trabaja, no hay ninguna.
@@ -213,8 +246,7 @@ struct WelcomeGroupsGateView: View {
                         identifier: "welcome_groups_gate_neutral_no_backup") {
                 VStack(spacing: DS.Spacing.sm) {
                     Button(role: .destructive) {
-                        intento += 1
-                        phase = .returningToNeutral(withoutICloudCopy: true, intento: intento)
+                        beginNeutralReturn(withoutICloudCopy: true)
                     } label: {
                         Text(L10n.Welcome.Groups.neutralNoBackupCta)
                             .font(DS.Typography.label)
@@ -225,6 +257,41 @@ struct WelcomeGroupsGateView: View {
                     .accessibilityIdentifier("welcome_groups_gate_neutral_no_backup_confirm")
                     YalaPrimaryButton(L10n.Welcome.Groups.gateBack) { onBack() }
                         .accessibilityIdentifier("welcome_groups_gate_neutral_no_backup_back")
+                }
+            }
+        case .confirmingInviteNeutral(let withoutICloudCopy):
+            // **La pregunta del invitado.** El cuerpo cambia con la copia porque son dos situaciones
+            // distintas y decir la del otro sería mentir: con copia, lo local se va y iCloud se queda;
+            // sin copia (y solo se afirma CON prueba), lo que se borra no está en ningún otro sitio.
+            noticeShell(icon: withoutICloudCopy ? "icloud.slash" : "iphone.badge.exclamationmark",
+                        title: L10n.Welcome.Groups.inviteNeutralTitle,
+                        body: withoutICloudCopy
+                            ? L10n.Welcome.Groups.inviteNeutralBodyNoBackup
+                            : L10n.Welcome.Groups.inviteNeutralBody,
+                        identifier: "welcome_groups_gate_invite_neutral") {
+                VStack(spacing: DS.Spacing.sm) {
+                    Button(role: .destructive) {
+                        // **Sin copia en iCloud se pide un SEGUNDO gesto, igual que en la rama del
+                        // organizador.** Colapsarlo en uno era ahorrarse justo la pantalla que protege el
+                        // caso irreversible: con copia, lo local se va y iCloud se queda; sin ella, lo que
+                        // se borra no está en ningún otro sitio. El primero explica por qué hay que
+                        // limpiar el teléfono; el segundo confirma que no hay red debajo.
+                        if withoutICloudCopy {
+                            phase = .confirmingNoBackup
+                        } else {
+                            beginNeutralReturn(withoutICloudCopy: false)
+                        }
+                    } label: {
+                        Text(L10n.Welcome.Groups.inviteNeutralCta)
+                            .font(DS.Typography.label)
+                            .foregroundStyle(.white.opacity(0.7))
+                            .frame(maxWidth: .infinity, minHeight: DS.Button.actionSize)
+                            .contentShape(Rectangle())
+                    }
+                    .accessibilityIdentifier("welcome_groups_gate_invite_neutral_confirm")
+                    // Primero visualmente el que NO destruye, igual que en el aviso de la espera agotada.
+                    YalaPrimaryButton(L10n.Welcome.Groups.gateBack) { onBack() }
+                        .accessibilityIdentifier("welcome_groups_gate_invite_neutral_back")
                 }
             }
         case .returningToNeutral, .discardingUnconfirmed, .resumingExportWait:
@@ -257,17 +324,30 @@ struct WelcomeGroupsGateView: View {
                         phase = .resumingExportWait(intento: intento)
                     }
                     .accessibilityIdentifier("welcome_groups_gate_neutral_stalled_wait")
-                    Button(role: .destructive) {
-                        intento += 1
-                        phase = .discardingUnconfirmed(intento: intento)
-                    } label: {
-                        Text(L10n.Welcome.Groups.neutralStalledContinue)
-                            .font(DS.Typography.label)
-                            .foregroundStyle(.white.opacity(0.7))
-                            .frame(maxWidth: .infinity, minHeight: DS.Button.actionSize)
-                            .contentShape(Rectangle())
+                    // **«Continuar igualmente» NO se le ofrece al INVITADO, y es la asimetría que más pesa
+                    // de toda esta pantalla.** Esa salida existe para el dueño de los datos: descarta lo
+                    // que el espejo no llegó a exportar, y se decidió (Jürgen, 2026-09-09) contándole
+                    // cuánto pierde y dejándole elegir. Por la rama de la invitación quien la tocaría es
+                    // otra persona —la del teléfono prestado o comprado de segunda mano—, así que lo que
+                    // estaría descartando no es suyo. Sin el botón, la única salida es esperar o volver, y
+                    // el criterio del ticket —«lo que el dueño escribió y no llegó a subir no se pierde»—
+                    // deja de depender de a quién le den el móvil.
+                    if purpose.invitedGroupID == nil {
+                        Button(role: .destructive) {
+                            intento += 1
+                            phase = .discardingUnconfirmed(intento: intento)
+                        } label: {
+                            Text(L10n.Welcome.Groups.neutralStalledContinue)
+                                .font(DS.Typography.label)
+                                .foregroundStyle(.white.opacity(0.7))
+                                .frame(maxWidth: .infinity, minHeight: DS.Button.actionSize)
+                                .contentShape(Rectangle())
+                        }
+                        .accessibilityIdentifier("welcome_groups_gate_neutral_stalled_continue")
+                    } else {
+                        YalaSecondaryButton(L10n.Welcome.Groups.gateBack) { leaveAfterBlock() }
+                            .accessibilityIdentifier("welcome_groups_gate_neutral_stalled_back")
                     }
-                    .accessibilityIdentifier("welcome_groups_gate_neutral_stalled_continue")
                 }
             }
         case .blocked:
@@ -346,7 +426,8 @@ struct WelcomeGroupsGateView: View {
             await CloudSessionSignOut.shared.exitDiscardingUnconfirmed(context: modelContext)
         case .resumingExportWait:
             await CloudSessionSignOut.shared.resumeWaitingForExport(context: modelContext)
-        case .blockedChannelOff, .blockedSecondarySession, .confirmingNoBackup, .unavailable:
+        case .blockedChannelOff, .blockedSecondarySession, .confirmingNoBackup,
+             .confirmingInviteNeutral, .unavailable:
             return
         }
     }
@@ -356,6 +437,16 @@ struct WelcomeGroupsGateView: View {
     /// llame — y eso es la mitad del chip: `onboardingMode` es never-downgrade cross-device, así que una
     /// escritura prematura viaja al iKV y no vuelve.
     private func evaluate() async {
+        // **La rama del invitado no re-mide el canal, y no es un olvido.** El `force` existe porque la
+        // card «Crear mi primer grupo» es la PRIMERA evidencia de que el canal debería estar encendido;
+        // una invitación ya pasó por `GroupInviteChannelRoutingLogic`, que hace ese mismo refresh forzado
+        // al recibir el link y decide con él. Repetirlo aquí sería una llamada de red que no cambia nada,
+        // y el veredicto del invitado no tiene término de canal.
+        if case .acceptInvite = purpose {
+            evaluateInvite()
+            return
+        }
+
         // Hermeticidad: bajo `-uitest` no se toca red, igual que el `.task` del container. Los getters ya
         // devuelven su default (ON bajo `Yala Dev`), así que el XCUITest recorre la rama buena.
         if !SwiftDataConfiguration.isUITesting {
@@ -389,6 +480,66 @@ struct WelcomeGroupsGateView: View {
         case .returnsToNeutral:
             phase = neutralReturnEntryPhase()
         }
+    }
+
+    /// **La puerta del INVITADO, re-medida aquí.** No es una repetición del veredicto de `drive`: entre
+    /// aquel submit y este render puede haber mediado un relanzamiento entero —que es justamente lo que
+    /// esta pantalla provoca—, así que quien llega tras la vuelta al neutro encuentra `.proceed` y sigue
+    /// sin tocar nada. Es el mismo «la puerta vuelve a medir» con el que el paso 5 retoma la rama
+    /// organizador después de reabrir la app.
+    ///
+    /// Síncrona y sin suspensiones: los cuatro términos son lecturas locales.
+    private func evaluateInvite() {
+        // **Se llama al veredicto del handler y no se recomponen los cuatro términos aquí**, aunque los
+        // dos primeros se lean igual de fácil. Dos composiciones de la misma decisión divergen: bastaría
+        // con que una añadiera un término para que esta pantalla dejara pasar lo que `drive` frenó, o al
+        // revés. Los providers ya los cablea `ContentView` con los MISMOS closures que alimentan al guard
+        // cross-cuenta, así que lo que se mide aquí es literalmente lo que se midió allí — solo que ahora,
+        // que es lo único que esta segunda lectura añade.
+        switch GroupBackendInviteEntryHandler.neutralGateDecision() {
+        case .proceed:
+            onProceed()
+        case .returnsToNeutral:
+            phase = inviteNeutralEntryPhase()
+        }
+    }
+
+    /// A qué pantalla entra la vuelta al neutro del invitado. Comparte con la del organizador las dos
+    /// comprobaciones que impiden un progreso eterno —la fase del coordinador y la celda de cierre— y se
+    /// separa en el último paso: aquí **siempre** se pregunta, con o sin copia en iCloud, y el canal de
+    /// copia solo elige qué dice el cuerpo.
+    private func inviteNeutralEntryPhase() -> Phase {
+        guard CloudSessionSignOut.shared.phase == .idle else { return .unavailable }
+        switch Self.exitCell() {
+        case .privateSignOut, .privateWithGroupsSignOut, .groupsOnlySignOut:
+            return .confirmingInviteNeutral(
+                withoutICloudCopy: CloudSessionSignOut.privateCopyChannel() == .none)
+        case .cloudSecureSignOut, .secondaryCloudSignOut:
+            // Los dos cierres que NO borran por archivos, igual que en la rama del organizador: uno haría
+            // un borrado distinto del que esta pantalla promete y el otro ni siquiera toca el store del
+            // dueño. La secundaria además ya la deja fuera la puerta, así que esto es el cinturón.
+            return .unavailable
+        }
+    }
+
+    /// **El único sitio que arranca la vuelta al neutro desde un gesto, y el que escribe el sobre.**
+    ///
+    /// El sobre `{groupID, token}` va AQUÍ y no en el callback del arm, y la diferencia se mide en
+    /// segundos de proceso: entre `armSignOutWipe()` y la entrega del `onChange` que avisa a `ContentView`
+    /// hay una vuelta de SwiftUI, y en el camino del swap in-process `attemptSignOutSwap()` corre en la
+    /// MISMA vuelta del arm y desmonta esta jerarquía —esta vista incluida—. Escribirlo allí dejaba una
+    /// ventana en la que el teléfono se borraba y la invitación no cruzaba: el camino muerto que toda esta
+    /// pantalla existe para cerrar, y con el corpus ya borrado.
+    ///
+    /// Escribirlo aquí no cuesta nada si el borrado no llega a ocurrir: el sobre es INERTE hasta que un
+    /// boot-wipe lo consume, y caduca solo.
+    private func beginNeutralReturn(withoutICloudCopy: Bool) {
+        if let groupID = purpose.invitedGroupID,
+           let token = PendingJoinStore.entry(zoneName: groupID)?.inviteToken {
+            GroupInviteResumeStore.set(groupID: groupID, token: token)
+        }
+        intento += 1
+        phase = .returningToNeutral(withoutICloudCopy: withoutICloudCopy, intento: intento)
     }
 
     /// **El eje ancho del mount, con el seam que el host de test necesita.**
@@ -428,6 +579,7 @@ struct WelcomeGroupsGateView: View {
             case .iCloud:
                 intento += 1
                 return .returningToNeutral(withoutICloudCopy: false, intento: intento)
+
             case .none:
                 return .confirmingNoBackup
             }

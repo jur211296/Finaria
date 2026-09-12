@@ -209,5 +209,17 @@ enum UITestEphemeralDefaults {
     static func purgeCategorySeedSentinel(from defaults: UserDefaults = .standard) {
         defaults.removeObject(forKey: CategorySeedSentinel.productionKey)
     }
+
+    /// Purga el sobre de la puerta del invitado (`GroupInviteResumeStore`), que bajo `-uitest` **se puede
+    /// escribir y no lo consume nadie**: su único consumidor es el boot-wipe, y ése sale por su
+    /// `guard !isRunningTests, !isUITesting` antes de tocar nada. Sin esta purga, una corrida que llegue al
+    /// gesto de la puerta deja la key puesta en el simulador para todas las suites siguientes y para
+    /// cualquier arranque manual — que es la clase de residuo del QA manual que este fichero existe para
+    /// cerrar (el molde es el de `groupsBetaUnlocked` de aquí arriba).
+    ///
+    /// Purga y no seam: ninguna corrida quiere el sobre PUESTO, así que no hay nada que registrar.
+    static func purgeGroupInviteResumeEnvelope(from defaults: UserDefaults = .standard) {
+        defaults.removeObject(forKey: GroupInviteResumeStore.key)
+    }
 }
 #endif

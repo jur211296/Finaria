@@ -5874,3 +5874,15 @@
 
 /* Aviso: sesión caducada al desasociar */
 "storage.groups.detachBlockedSession" = "Sua sessão de grupos expirou. Entre de novo e tente outra vez.";
+
+/* Puerta del invitado: vuelta al neutro antes de aceptar una invitación de grupo */
+"welcome.groups.inviteNeutralTitle" = "Antes de entrar, este celular fica zerado";
+
+/* Puerta del invitado: cuerpo cuando SÍ hay copia en iCloud */
+"welcome.groups.inviteNeutralBody" = "Aqui há dados salvos que sincronizam com um iCloud. Para que suas despesas do grupo não parem lá, vamos apagá-los deste celular: a cópia no iCloud fica intacta. O Yala vai reiniciar e você segue com o seu convite.";
+
+/* Puerta del invitado: cuerpo cuando NO hay copia en iCloud */
+"welcome.groups.inviteNeutralBodyNoBackup" = "Aqui há dados salvos e não encontramos uma cópia no iCloud. Para que suas despesas do grupo não se misturem com eles, é preciso apagá-los deste celular, e não será possível recuperá-los. O Yala vai reiniciar e você segue com o seu convite.";
+
+/* Puerta del invitado: CTA destructivo que arranca la vuelta al neutro */
+"welcome.groups.inviteNeutralCta" = "Continuar e apagar";

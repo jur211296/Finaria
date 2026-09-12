@@ -5886,3 +5886,15 @@
 
 /* Aviso: sesión caducada al desasociar */
 "storage.groups.detachBlockedSession" = "グループのセッションの有効期限が切れました。もう一度サインインしてお試しください。";
+
+/* Puerta del invitado: vuelta al neutro antes de aceptar una invitación de grupo */
+"welcome.groups.inviteNeutralTitle" = "参加する前に、この端末を空にします";
+
+/* Puerta del invitado: cuerpo cuando SÍ hay copia en iCloud */
+"welcome.groups.inviteNeutralBody" = "この端末には、あるiCloudと同期しているデータが保存されています。あなたのグループの支出がそこに届かないよう、この端末からは削除します。iCloud上のコピーはそのまま残ります。Yalaを再起動したあと、招待の続きに進みます。";
+
+/* Puerta del invitado: cuerpo cuando NO hay copia en iCloud */
+"welcome.groups.inviteNeutralBodyNoBackup" = "この端末にはデータが保存されていますが、iCloudにコピーは見つかりませんでした。あなたのグループの支出が混ざらないよう、この端末から削除する必要があり、元に戻すことはできません。Yalaを再起動したあと、招待の続きに進みます。";
+
+/* Puerta del invitado: CTA destructivo que arranca la vuelta al neutro */
+"welcome.groups.inviteNeutralCta" = "続けて削除";

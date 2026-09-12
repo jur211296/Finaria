@@ -835,6 +835,13 @@ final class AppBootstrapper {
         // es otro (`YalaModel-UITest`) y `UserDefaults.standard` no. Sin esto, un arranque manual
         // con el store personal VACÍO hacía early-return y se quedaba sin categorías.
         UITestEphemeralDefaults.purgeCategorySeedSentinel()
+        // El sobre de la puerta del invitado, por lo mismo que las tres purgas de arriba: bajo `-uitest`
+        // la puerta SÍ es alcanzable (el seam del mount lo permite), pero el boot-hook que consume el
+        // sobre sale antes de tocar nada (`guard !isRunningTests, !isUITesting`) ⇒ una corrida que llegue
+        // al gesto escribe la key en el `UserDefaults.standard` real del simulador y **no la limpia
+        // nadie**: `-uitest-reset` no la nombra y `removeUserPreferenceKeys` tampoco. Es la misma clase de
+        // key filtrada que este bloque existe para cerrar.
+        UITestEphemeralDefaults.purgeGroupInviteResumeEnvelope()
 
         // `-uitest-fake-icloud`: simula cuenta iCloud disponible (+ import asentado) para
         // ejercitar en sim los flujos gated por `isAccountAvailable` (onboarding "Solo
