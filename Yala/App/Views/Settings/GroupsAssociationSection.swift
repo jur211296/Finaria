@@ -66,15 +66,15 @@ struct GroupsAssociationSection: View {
 
     private var signOutCoordinator: CloudSessionSignOut { CloudSessionSignOut.shared }
 
+    /// **La lectura vive en `GroupsAssociationPresence` y no aquí, desde el 2026-09-11.** La fila de
+    /// Ajustes que lleva a esta sección se abre bajo el kill-switch de la nube justo cuando esta sección
+    /// tiene algo que soltar, así que las dos preguntas tienen que salir de la MISMA lectura: cuando cada
+    /// una leía lo suyo, divergían en dos celdas y en las dos el usuario se quedaba sin puerta o con una
+    /// puerta a nada. El porqué entero, en la cabecera de ese fichero.
     private var state: GroupsAssociationLogic.SectionState {
         _ = refreshTick
-        return GroupsAssociationLogic.sectionState(
-            deviceState: CloudIdentityRoutingLogic.deviceState(
-                hasCompletedOnboarding: appPreferences.hasCompletedOnboarding,
-                storageMode: StorageModePersistence.read(),
-                onboardingMode: OnboardingMode.current()),
-            hasPersistedAssociation: GroupsAccountAssociation.shared.hasAssociation,
-            hasLiveGroupsSession: CloudAuthService.shared.hasSession)
+        return GroupsAssociationPresence.sectionState(
+            hasCompletedOnboarding: appPreferences.hasCompletedOnboarding)
     }
 
     var body: some View {

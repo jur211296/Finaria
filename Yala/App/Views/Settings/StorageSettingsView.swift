@@ -144,7 +144,16 @@ struct StorageSettingsView: View {
             // «dónde viven tus datos», pero lo que la persona viene a hacer aquí casi siempre es lo
             // personal. La propia sección se oculta cuando no aplica (`notApplicable`).
             GroupsAssociationSection(onAssociate: onAssociateGroupsAccount)
-            migrateCard(controller)
+            // **El kill-switch de la nube cierra la ENTRADA, y desde 2026-09-11 tiene que decirlo aquí.**
+            // Hasta hoy la card no necesitaba candado propio: la fila de Ajustes estaba oculta bajo el
+            // kill y con ella toda la pantalla. Ahora la fila la abre también una cuenta de grupos que
+            // soltar (`StorageRowGateLogic.isVisible`), así que quien entra a soltar esa cuenta durante
+            // un incidente llegaría hasta aquí — y sin este `if` se encontraría «Migrar a la nube»
+            // abierto, que es justo lo que el incidente cerró. La reversa no pasa por aquí: vive en
+            // `.cloudActive` y es el escape.
+            if offersCloudMigrationEntry {
+                migrateCard(controller)
+            }
         case .cloudActive:
             statusCard(controller)
             // En la nube completa la sección solo informa («tus grupos usan esta misma cuenta») y no
@@ -516,7 +525,39 @@ struct StorageSettingsView: View {
     /// Paso de auth (C-7): con sesión de nube viva NO se pregunta el método — se reusa la cuenta
     /// que ya está dentro (la de Grupos, típicamente), que es justo lo que promete
     /// `groups.signin.accountNote`. Sin sesión, el chooser se comporta como siempre.
+    /// **El término del kill-switch, en UN solo sitio y leído en vivo.** Lo consultan tres: el render de
+    /// `migrateCard` y los dos puntos desde los que se arranca la migración.
+    ///
+    /// `isEngaged` es la misma expresión que pasa `ProfileView` al gate de la fila. Dentro de `case .idle`
+    /// su segundo término es falso por construcción; se escribe entero igual, porque los dos guards de
+    /// abajo corren FUERA de ese `case` —desde callbacks de sheets, con el estado ya movido— y allí sí
+    /// puede ser cierto.
+    private var offersCloudMigrationEntry: Bool {
+        StorageRowGateLogic.offersCloudMigrationEntry(
+            remoteEnabled: CloudRemoteFlags.cloudModeEnabled,
+            isEngaged: StorageModePersistence.read() == .cloud
+                || (controller?.uiState ?? .idle) != .idle)
+    }
+
+    /// **Gatear el render no es gatear la migración, y entre los dos hay una ventana real.** El flujo de
+    /// esta card —consent → doble confirmación → chooser → `startMigration`— no vuelve a preguntar por el
+    /// flag en ningún punto (`CloudMigrationController` no consulta `CloudRemoteFlags`: cero ocurrencias,
+    /// medido el 2026-09-11). Así que quien tapeó «Migrar a la nube» un segundo antes de que aterrizara el
+    /// snapshot nuevo —lo baja el `.task` de esta misma pantalla— migraba con el kill YA puesto, mientras
+    /// la card desaparecía a su espalda. Re-medir aquí cierra esa ventana en el último punto antes del
+    /// consent, y en el del chooser, que es el otro sitio desde el que se arranca.
+    ///
+    /// Sale con el error genérico y no en silencio: la persona acaba de confirmar dos veces, y un botón
+    /// que no hace nada es peor que un aviso. No estrena copy — es el mismo texto que ya usa la pantalla
+    /// cuando no puede operar.
+    private func abortIfCloudEntryClosed() -> Bool {
+        guard !offersCloudMigrationEntry else { return false }
+        controller?.lastError = L10n.Storage.Errors.generic
+        return true
+    }
+
     private func proceedToSignInStep() {
+        guard !abortIfCloudEntryClosed() else { return }
         let path = consentPath
         switch signInDecision(isAdopt: path == .adopt) {
         case .reuseLiveSession:
@@ -577,6 +618,7 @@ struct StorageSettingsView: View {
     /// abajo (Google resuelve su presenter vía topmost VC — sobre un VC a medio dismissal el sheet
     /// se perdería). Cancel del chooser = `chosenProvider` nil → no-op limpio.
     private func onChooserDismissed() {
+        guard !abortIfCloudEntryClosed() else { return }
         let path = consentPath
         if reuseLiveSession {
             reuseLiveSession = false
