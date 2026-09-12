@@ -5898,3 +5898,21 @@
 
 /* Puerta del invitado: CTA destructivo que arranca la vuelta al neutro */
 "welcome.groups.inviteNeutralCta" = "继续并删除";
+
+/* Aviso: el borrado local de los grupos falló al desasociar */
+"storage.groups.detachPurgeFailedTitle" = "无法取消关联";
+
+/* Aviso: cuerpo del fallo del borrado al desasociar */
+"storage.groups.detachPurgeFailedBody" = "你的群组还在这台 iPhone 上，账号也没有取消关联。你为面板记录所做的选择已经生效，并且我们已退出该账号。请再试一次以完成。";
+
+/* Aviso: el desasociar abortó porque no se pudo leer el puente */
+"storage.groups.detachBlockedBridge" = "我们无法检查这台 iPhone 上群组的记录。没有取消任何关联。请再试一次。";
+
+/* Botón cuando quedó un desasociar a medias */
+"storage.groups.detachFinishButton" = "完成取消账号关联";
+
+/* Cuerpo de la sección cuando quedó un desasociar a medias */
+"storage.groups.detachPendingBody" = "中途停下了：你的群组还在这台 iPhone 上，而那个账号的登录已经退出。";
+
+/* Aviso: el desasociar no puede correr con otro cierre de sesión en curso */
+"storage.groups.detachBusy" = "你正在退出登录。请先完成，然后再试一次。";

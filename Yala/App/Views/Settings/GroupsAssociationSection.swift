@@ -35,6 +35,30 @@ struct GroupsAssociationSection: View {
     /// siguiente cae en el `guard phase == .idle` de `detachGroupsAccount`: **no pasa nada, sin un solo
     /// mensaje**. Cerrarlo llama a `acknowledgeBlocked()`, que es lo que devuelve la fase a `.idle`.
     @State private var blockedReason: CloudSignOutFlowLogic.BlockReason?
+    /// **El borrado local falló y la cuenta ya se cerró en la nube.** Aviso propio, separado del de
+    /// bloqueo: aquél dice «no se soltó nada» y éste dice «se soltó todo menos lo que importa» —los
+    /// grupos siguen aquí—. Y lo que ofrecen es distinto: aquél que lo intente en un momento, éste un
+    /// reintento del borrado, que es lo único que queda por hacer. Ver `CloudSessionSignOut.DetachOutcome`.
+    @State private var purgeFailed = false
+    /// ¿Quedó un desasociar a medias **de la cuenta que sigue asociada aquí**? Estado DURABLE
+    /// (`GroupsDetachPendingPurge`), no `@State`: la fase del coordinador muere con el proceso y esto no.
+    /// Se re-lee con cada `refreshTick`, igual que el resto de la sección — y al montar, porque un
+    /// computed se evalúa en cada evaluación del `body`.
+    ///
+    /// **Las dos condiciones de más son las que impiden terminar lo que no toca**: el sello por `sub`
+    /// descarta una marca de otra cuenta o una asociación que ya no está, y la sesión viva **de esa misma
+    /// cuenta** cancela el ofrecimiento —quien vuelve a entrar usa el gesto entero, que sí hace teardown
+    /// y cierra la sesión; terminar a secas la dejaría dentro de una cuenta cuyos datos acaba de borrar—.
+    /// Sin ellas, este botón salía también en `.sameAccountAsPersonal` y en `.noAccount` —dos celdas que
+    /// por contrato no ofrecen soltar nada— y llegaba a purgar la cuenta en la que la persona acababa de
+    /// entrar. Lo cazó la lente del 2026-09-11 sobre este mismo arreglo.
+    private var hasPendingPurge: Bool {
+        _ = refreshTick
+        guard GroupsDetachPendingPurge.isArmed(for: GroupsAccountAssociation.shared.associatedSub) else {
+            return false
+        }
+        return CloudAuthService.shared.currentUserID != GroupsDetachPendingPurge.armedSub()
+    }
     /// Re-lee el estado tras cada gesto. La sesión en la nube NO es observable
     /// (`CloudAuthService` no publica nada), así que la pantalla se refresca por toques, igual que el
     /// resto de esta fila, que vive de un poll de 1 s.
@@ -102,20 +126,45 @@ struct GroupsAssociationSection: View {
             } message: {
                 Text(blockedMessage)
             }
+            // **Segundo alert de la misma cadena, y los dos no pueden encenderse a la vez**: el de arriba
+            // sale de `.blocked`, que es un abort ANTES del punto de no retorno, y éste de `.purgeFailed`,
+            // que solo existe después. El molde de encadenar alerts en un mismo anchor es el de
+            // `ShellDataAlertsModifier`, que lleva cuatro.
+            .alert(L10n.Storage.Groups.detachPurgeFailedTitle, isPresented: $purgeFailed) {
+                // Labels LITERALES, igual que en el alert de arriba y por lo mismo: un label que dependa
+                // del `@State` rompe flujos que no tienen nada que ver con esta pantalla (2026-09-06).
+                //
+                // **Y sin `accessibilityIdentifier`, a propósito**: SwiftUI NO lo propaga a los botones
+                // del closure de un `.alert` — llegan al árbol con el id VACÍO (medido el 2026-09-04,
+                // `docs/aprendizajes-tecnicos.md`). Dejarlo puesto es peor que no ponerlo: el siguiente
+                // lo lee, da por hecho que la pantalla es targeteable por ahí, y escribe un
+                // `XCTAssertFalse(…exists)` que pasa SIEMPRE. El XCUITest llega por posición
+                // (`app.alerts.buttons.element(boundBy:)`), molde de `WelcomeFreshStartAlertUITests`.
+                Button(L10n.Action.retry) { retryPurge() }
+                Button(L10n.Action.later, role: .cancel) { purgeFailed = false }
+            } message: {
+                Text(L10n.Storage.Groups.detachPurgeFailedBody)
+            }
         }
     }
 
     /// El aviso se cierra soltando TAMBIÉN la fase del coordinador. Si solo se bajara el `@State`, el
     /// `guard phase == .idle` dejaría inertes el desasociar Y el cierre de sesión de Ajustes.
     private func dismissBlocked() {
+        // `.detachBusy` es el ÚNICO motivo que NO puso este gesto: la fase es de un cierre de sesión
+        // ajeno, y soltarla aquí lo dejaría a medias —sin fase y sin `blockedExit`— con sus dos botones
+        // de «Esperar» / «Cerrar igualmente» saliendo por su `guard let` sin hacer nada.
+        let ajeno = blockedReason == .detachBusy
         blockedReason = nil
-        signOutCoordinator.acknowledgeBlocked()
+        if !ajeno { signOutCoordinator.acknowledgeBlocked() }
     }
 
     private var blockedMessage: String {
         switch blockedReason {
         case .sessionExpired: return L10n.Storage.Groups.detachBlockedSession
         case .permanent: return L10n.Storage.Groups.detachBlockedPermanent
+        case .bridgeUnreadable: return L10n.Storage.Groups.detachBlockedBridge
+        case .detachBusy: return L10n.Storage.Groups.detachBusy
         default: return L10n.Storage.Groups.detachBlockedTransient
         }
     }
@@ -123,6 +172,10 @@ struct GroupsAssociationSection: View {
     // MARK: - Cuerpo
 
     private var bodyText: String {
+        // El estado a medias gana al de la celda: la persona ya no está eligiendo cuenta, está esperando
+        // a que termine un gesto suyo. Y decirlo es la única forma de que se entere quien pulsó «Más
+        // tarde» y volvió otro día: el aviso no sobrevive a salir de la pantalla.
+        if hasPendingPurge { return L10n.Storage.Groups.detachPendingBody }
         switch state {
         case .noAccount:
             return L10n.Storage.Groups.noAccountBody
@@ -202,7 +255,25 @@ struct GroupsAssociationSection: View {
                 .buttonStyle(.bordered)
                 .accessibilityIdentifier("storage_groups_signin_button")
             }
-            if GroupsAssociationLogic.offersDetach(state) {
+            if hasPendingPurge {
+                // **Sin hoja de confirmación, y es lo que distingue TERMINAR de repetir.** El puente ya
+                // se soltó con la salida que la persona eligió; volver a preguntárselo ofrecería una
+                // elección que ya no puede aplicarse —un `.remove` no encontraría nada que quitar y el
+                // gesto diría que sí—. Lo cazaron las tres lentes del 2026-09-11.
+                Button {
+                    retryPurge()
+                } label: {
+                    Text(L10n.Storage.Groups.detachFinishButton)
+                        .font(DS.Typography.body.weight(.medium))
+                        .foregroundStyle(DS.Semantic.warningForeground)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, DS.Spacing.sm)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.bordered)
+                .tint(DS.Semantic.warningForeground)
+                .accessibilityIdentifier("storage_groups_detach_finish_button")
+            } else if GroupsAssociationLogic.offersDetach(state) {
                 Button {
                     confirmDetach = true
                 } label: {
@@ -226,15 +297,50 @@ struct GroupsAssociationSection: View {
 
     private var isWorking: Bool { detachInFlight && signOutCoordinator.phase == .working }
 
+    /// **El veredicto viene por el RETORNO, no de leer la fase.** Un `.purgeFailed` deja el coordinador
+    /// en `.idle` —es verdad: no está haciendo nada— así que mirar `phase` no lo distinguiría del éxito.
+    /// Es exactamente la confusión que este ticket arregla, y leerla aquí la reintroduciría en la única
+    /// pantalla que la sufre.
     private func detach(_ choice: GroupsAssociationDetach.BridgedRowsChoice) {
         detachInFlight = true
         Task { @MainActor in
             defer { detachInFlight = false }
-            await signOutCoordinator.detachGroupsAccount(context: modelContext, choice: choice)
+            apply(await signOutCoordinator.detachGroupsAccount(context: modelContext, choice: choice))
+        }
+    }
+
+    /// Terminar el borrado que quedó pendiente. **No repite el gesto**: ver
+    /// `CloudSessionSignOut.retryDetachPurge`.
+    private func retryPurge() {
+        detachInFlight = true
+        Task { @MainActor in
+            defer { detachInFlight = false }
+            apply(await signOutCoordinator.retryDetachPurge(context: modelContext))
+        }
+    }
+
+    private func apply(_ outcome: CloudSessionSignOut.DetachOutcome) {
+        switch outcome {
+        case .blockedBeforeWriting:
             // La fase se lee DESPUÉS del `await`, que es cuando el coordinador ya la dejó puesta.
             if case .blocked(_, let reason) = signOutCoordinator.phase { blockedReason = reason }
-            refreshTick.toggle()
+        case .purgeFailed:
+            purgeFailed = true
+        case .busy:
+            // **No se traga, y ése es exactamente el defecto que el alert de bloqueo existe para
+            // cerrar.** El coordinador estaba ocupado con el cierre de sesión del Perfil: la persona
+            // confirmaba y no pasaba absolutamente nada.
+            //
+            // Motivo PROPIO y no `.transient`, por lo mismo que `.bridgeUnreadable`: aquí no queda nada
+            // sin subir —el gesto ni siquiera arrancó— así que «inténtalo en un momento» describe otro
+            // problema. Y su cierre **no toca la fase del coordinador**: la puso un gesto ajeno, y
+            // `acknowledgeBlocked()` le borraría además el `blockedExit`, que es lo que recuerda dónde
+            // retomar un cierre parado en la espera del export.
+            blockedReason = .detachBusy
+        case .detached:
+            break
         }
+        refreshTick.toggle()
     }
 }
 

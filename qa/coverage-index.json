@@ -459,7 +459,7 @@
       ],
       "scenarioIDs": [],
       "classification": "deterministic",
-      "coverage": "xcuitest:YalaUITests/GroupsAssociationRowUITests (la sección dentro de la fila de almacenamiento, en tres celdas: sin cuenta, asociada y solo-grupos) + unit:YalaTests/GroupsAccountAssociationTests (tabla de la sección, los dos almacenes, el registrador y sus tres guards, el cableado) + unit:YalaTests/GroupsAssociationDetachTests (las dos polaridades, el barrido sobre los tres stores, el filtro por canal y el libro sellado por cuenta). El recorrido con cuenta real y el segundo dispositivo: device-qa (tickets/qa/device-qa-groups-account-association.md)",
+      "coverage": "xcuitest:YalaUITests/GroupsAssociationRowUITests (la sección dentro de la fila de almacenamiento, en tres celdas: sin cuenta, asociada y solo-grupos) + unit:YalaTests/GroupsAccountAssociationTests (tabla de la sección, los dos almacenes, el registrador y sus tres guards, el cableado) + unit:YalaTests/GroupsAssociationDetachTests (las dos polaridades, el barrido sobre los tres stores, el filtro por canal y el libro sellado por cuenta). El recorrido con cuenta real y el segundo dispositivo: device-qa (tickets/qa/device-qa-groups-account-association.md) + unit:YalaTests/CloudSync/GroupsDetachPurgeFailureTests (el borrado local que FALLA: el escritor propaga y hace rollback, el desasociar no limpia la asociación ni arma su remate, el canario, el abort cuando el puente no se pudo tocar, y el libro de conservados que sobrevive al reintento por su sello) + xcuitest:YalaUITests/GroupsAssociationRowUITests (dos celdas más: con `-uitest-fail-wipe` sale el aviso y la sección ofrece TERMINAR; sin el seam no sale ninguno de los dos)",
       "owner": "",
       "lastVerified": "2026-09-11"
     },

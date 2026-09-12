@@ -127,6 +127,68 @@ nonisolated enum GroupsDetachedBridgeLedger {
     }
 }
 
+// MARK: - El desasociar que se quedó a medias
+
+/// **Hay un desasociar cuyo borrado local no entró.** La sesión en la nube ya está cerrada y el puente
+/// personal ya se soltó con la salida que la persona eligió; lo único que falta es vaciar el dominio
+/// Grupos de este teléfono y soltar la asociación.
+///
+/// Existe porque la fase del coordinador **muere con el proceso** y este estado no. Sin la marca, al
+/// reabrir la app la sección vuelve a ofrecer el gesto entero con sus dos salidas —conservar o quitar—
+/// y **la segunda elección ya no puede aplicarse**: el puente está soltado, así que un `.remove` no
+/// encuentra nada que quitar, no quita nada, y el gesto termina diciendo que sí. La persona pediría
+/// quitar sus movimientos del Panel y se quedarían ahí, sin un aviso. Lo cazaron las tres lentes de la
+/// review del 2026-09-11.
+///
+/// Con la marca puesta, la sección ofrece **terminar**, no volver a elegir: el reintento entra por
+/// `CloudSessionSignOut.retryDetachPurge`, que hace el borrado y su remate y **nada más**.
+///
+/// Molde `GroupsDetachedBridgeLedger`, su vecino, y con su misma obligación: **hay que NOMBRARLA en
+/// `DataWipeService.removeGroupsDomainPreferenceKeys`**, que es una LISTA de keys y no un barrido por
+/// prefijo — el `groups.*` del nombre es convención, no mecanismo. Sin eso sobrevive al «Empiezo de
+/// cero» y quien recibe el teléfono ve un botón para terminar de soltar una cuenta que nunca asoció.
+/// Y en el reset de `-uitest-reset`, o contamina la corrida siguiente.
+///
+/// Sin TTL: lo que afirma —«este teléfono tiene grupos de una cuenta que ya se cerró»— no deja de ser
+/// cierto con el tiempo, y quien la retira es el borrado que entra.
+nonisolated enum GroupsDetachPendingPurge {
+
+    static let userDefaultsKey = "groups.detachPendingPurge"
+
+    /// Arma la marca **sellada con el `sub` de la cuenta que se estaba soltando**. El sello no es
+    /// decoración: sin él la marca solo dice «hay algo pendiente» y no contra QUÉ, y con eso «Terminar
+    /// de soltar la cuenta» acabaría borrando el dominio Grupos de una cuenta distinta —incluida una
+    /// **viva**, si la persona vuelve a entrar entre el fallo y el reintento—. Lo cazó la lente sobre
+    /// este mismo arreglo el 2026-09-11: con la sesión repuesta, ese botón hacía el borrado sin teardown
+    /// ni `signOut()` y limpiaba la asociación de la cuenta en la que acababa de entrar.
+    ///
+    /// Un `sub` nulo o vacío **no arma nada**: sin sello no hay forma de saber a quién pertenece lo
+    /// pendiente, y la respuesta segura es no ofrecer terminar. Con la asociación en pie siempre hay
+    /// `sub` (`GroupsAccountAssociation` lo declara no opcional), así que este caso es el de una
+    /// asociación que ya no está — y ahí no queda nada que soltar.
+    static func arm(sub: String?, defaults: UserDefaults = .standard) {
+        guard let sub, !sub.isEmpty else { return }
+        defaults.set(sub, forKey: userDefaultsKey)
+    }
+
+    /// El `sub` con el que se armó, o `nil` si no hay marca.
+    static func armedSub(defaults: UserDefaults = .standard) -> String? {
+        guard let sub = defaults.string(forKey: userDefaultsKey), !sub.isEmpty else { return nil }
+        return sub
+    }
+
+    /// ¿Hay un borrado pendiente **de esta cuenta**? Marca POSITIVA: exige los dos `sub` presentes e
+    /// iguales, así que una asociación ausente o distinta responde `false`.
+    static func isArmed(for sub: String?, defaults: UserDefaults = .standard) -> Bool {
+        guard let sub, !sub.isEmpty, let armed = armedSub(defaults: defaults) else { return false }
+        return armed == sub
+    }
+
+    static func clear(defaults: UserDefaults = .standard) {
+        defaults.removeObject(forKey: userDefaultsKey)
+    }
+}
+
 // MARK: - El barrido del puente al desasociar
 
 @MainActor
@@ -213,8 +275,38 @@ enum GroupsAssociationDetach {
         }
 
         guard !txs.isEmpty || !drafts.isEmpty else {
-            // Sin puente que soltar, el libro de una desasociación anterior deja de significar nada.
-            GroupsDetachedBridgeLedger.clear(defaults: defaults)
+            // Sin puente que soltar, el libro de una desasociación anterior deja de significar nada
+            // —**salvo que sea el de ESTA cuenta**, y esa excepción es el arreglo de un camino que este
+            // método abre a partir del 2026-09-11 (ticket `detach-failure-looks-like-success`).
+            //
+            // El desasociar es re-entrante desde que el fallo del borrado local ya no limpia la
+            // asociación: la persona reintenta y `detachBridge` corre por SEGUNDA vez. En esa pasada ya
+            // no hay puente —la primera lo soltó— así que cae aquí, y con un `clear()` incondicional
+            // borraba el libro que la primera acababa de escribir. Consecuencia: al re-asociar la misma
+            // cuenta, el bridge no sabría que esos gastos ya están en el Panel y **los duplicaría todos**.
+            //
+            // La condición es la que el libro ya sabe contestar: el sello. Si su `sub` es el de la cuenta
+            // que se está soltando, lo que afirma —«estos gastos ya están en el Panel»— sigue siendo
+            // cierto y no depende de que quede puente. Si es otro `sub`, es de una cuenta anterior y se
+            // va, que es lo que esta línea hacía bien.
+            //
+            // La marca va POSITIVA —«el libro es de esta cuenta»— y no derivada de una ausencia: con un
+            // `sub` nulo o vacío no hay sello que comparar, y ahí la respuesta correcta es que NO es
+            // suyo. Es el mismo `!isEmpty` con el que se escribe, al final de este método.
+            //
+            // **No consulta `choice`, y es deliberado.** Con puente vivo, `.remove` sí borra el libro
+            // (abajo): se lleva las transacciones, así que lo que el libro afirmaba deja de ser cierto.
+            // Aquí no hay puente que llevarse — los gastos que el libro nombra ya son movimientos
+            // personales normales y `.remove` no puede quitarlos, porque dejaron de ser de grupo. Borrar
+            // el libro solo conseguiría que re-asociar la misma cuenta los duplicara en el Panel.
+            let ledgerBelongsToThisAccount: Bool = {
+                guard let associatedSub, !associatedSub.isEmpty,
+                      let stored = GroupsDetachedBridgeLedger.read(defaults: defaults) else { return false }
+                return stored.sub == associatedSub
+            }()
+            if !ledgerBelongsToThisAccount {
+                GroupsDetachedBridgeLedger.clear(defaults: defaults)
+            }
             return outcome
         }
 
@@ -286,10 +378,18 @@ enum GroupsAssociationDetach {
             SaveBreadcrumb.didSave("GroupsAssociationDetach.detachBridge")
         } catch {
             #if DEBUG
-            print("GroupsAssociationDetach: save falló: \(error)")
+            print("GroupsAssociationDetach: save falló — el desasociar debe abortar: \(error)")
             #endif
             context.rollback()
-            return Outcome()
+            // **`nil`, no un `Outcome()` vacío**, y es el mismo motivo que el `catch` del fetch de arriba
+            // (review adversarial del 2026-09-11, dos lentes independientes). Devolver un `Outcome` hacía
+            // que el `guard … != nil` del llamador lo leyera como éxito: el desasociar seguía a la purga,
+            // borraba las cinco `Split*`, y las transacciones cuyos punteros el `rollback()` acababa de
+            // reponer quedaban apuntando a una zona sin filas vivas. A ésas no las recoge NADIE —
+            // `OrphanedBridgedTxSweeper` exige un veredicto de zona que se construye de filas vivas—, así
+            // que era dinero atrapado para siempre. Y el veredicto que salía era `.detached`: el mismo
+            // «el fallo parece un éxito» del ticket, una rama más arriba.
+            return nil
         }
 
         // El libro se escribe DESPUÉS del save y solo si el save entró: un libro que afirme «esto ya

@@ -5163,3 +5163,21 @@
 
 /* Puerta del invitado: CTA destructivo que arranca la vuelta al neutro */
 "welcome.groups.inviteNeutralCta" = "Continuar y borrar";
+
+/* Aviso: el borrado local de los grupos falló al desasociar */
+"storage.groups.detachPurgeFailedTitle" = "No pudimos soltar la cuenta";
+
+/* Aviso: cuerpo del fallo del borrado al desasociar */
+"storage.groups.detachPurgeFailedBody" = "Tus grupos siguen en este iPhone y la cuenta no se soltó. Lo que elegiste para los movimientos del Panel ya se aplicó, y cerramos la sesión de esa cuenta. Vuelve a intentarlo para terminar.";
+
+/* Aviso: el desasociar abortó porque no se pudo leer el puente */
+"storage.groups.detachBlockedBridge" = "No pudimos revisar los movimientos de tus grupos en este iPhone. No se soltó nada. Vuelve a intentarlo.";
+
+/* Botón cuando quedó un desasociar a medias */
+"storage.groups.detachFinishButton" = "Terminar de soltar la cuenta";
+
+/* Cuerpo de la sección cuando quedó un desasociar a medias */
+"storage.groups.detachPendingBody" = "Quedó a medias: tus grupos siguen en este iPhone y la sesión de esa cuenta ya está cerrada.";
+
+/* Aviso: el desasociar no puede correr con otro cierre de sesión en curso */
+"storage.groups.detachBusy" = "Estás cerrando sesión en este momento. Termina eso primero y vuelve a intentarlo.";

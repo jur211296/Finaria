@@ -733,6 +733,10 @@ extension SwiftDataConfiguration {
             // borrado no es un desasociar: es olvidar lo que este teléfono sabía.
             defaults.removeObject(forKey: GroupsAccountAssociation.localKey)
             defaults.removeObject(forKey: GroupsDetachedBridgeLedger.userDefaultsKey)
+            // Y la marca de un desasociar a medias, por lo mismo que su vecina: el teléfono se va con
+            // otra persona y lo que quedó pendiente era de la anterior. Esta lista es de keys NOMBRADAS
+            // —no hay barrido por prefijo— así que el `groups.*` del nombre no la borra solo.
+            defaults.removeObject(forKey: GroupsDetachPendingPurge.userDefaultsKey)
         }
 
         StorageModePersistence.write(.icloud, defaults: defaults)

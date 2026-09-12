@@ -5887,3 +5887,21 @@
 
 /* Puerta del invitado: CTA destructivo que arranca la vuelta al neutro */
 "welcome.groups.inviteNeutralCta" = "Continuer et supprimer";
+
+/* Aviso: el borrado local de los grupos falló al desasociar */
+"storage.groups.detachPurgeFailedTitle" = "Impossible de dissocier le compte";
+
+/* Aviso: cuerpo del fallo del borrado al desasociar */
+"storage.groups.detachPurgeFailedBody" = "Tes groupes sont toujours sur cet iPhone et le compte n'a pas été dissocié. Ton choix pour les mouvements du Panel a déjà été appliqué, et nous t'avons déconnecté de ce compte. Réessaie pour terminer.";
+
+/* Aviso: el desasociar abortó porque no se pudo leer el puente */
+"storage.groups.detachBlockedBridge" = "Nous n'avons pas pu vérifier les mouvements de tes groupes sur cet iPhone. Rien n'a été dissocié. Réessaie.";
+
+/* Botón cuando quedó un desasociar a medias */
+"storage.groups.detachFinishButton" = "Terminer la dissociation";
+
+/* Cuerpo de la sección cuando quedó un desasociar a medias */
+"storage.groups.detachPendingBody" = "C'est resté à mi-chemin : tes groupes sont toujours sur cet iPhone et la session de ce compte est déjà fermée.";
+
+/* Aviso: el desasociar no puede correr con otro cierre de sesión en curso */
+"storage.groups.detachBusy" = "Tu es en train de te déconnecter. Termine d'abord et réessaie.";

@@ -42,6 +42,24 @@ final class CloudSessionSignOut {
         case awaitingRelaunch
     }
 
+    /// Cómo terminó un `detachGroupsAccount`. **Un valor de retorno y no un case de `Phase`**: ver el
+    /// docblock de ese método.
+    enum DetachOutcome: Equatable {
+        /// La cuenta se soltó y el dominio Grupos ya no está en este teléfono.
+        case detached
+        /// No se soltó nada, y no se escribió nada irreversible. La fase queda en `.blocked` con su
+        /// motivo y la pantalla lo lee de ahí, como antes. **No se llama `blockedByPush` a propósito**:
+        /// cubre también el abort por un puente que no se pudo ni mirar, que no tiene nada que ver con
+        /// subir cambios — y con ese nombre el mensaje que salía («quedan cambios sin subir, inténtalo en
+        /// un momento») describía un problema que no era y daba un consejo que no arreglaba nada.
+        case blockedBeforeWriting
+        /// **La cuenta se cerró en la nube pero el borrado local NO entró.** Los grupos siguen en el
+        /// teléfono y la asociación sigue en pie a propósito. Se le ofrece reintentar el borrado.
+        case purgeFailed
+        /// El coordinador estaba ocupado (un cierre de sesión en curso). No se tocó nada.
+        case busy
+    }
+
     private(set) var phase: Phase = .idle
 
     /// `true` mientras el sign-out solo-grupos ESPERA a que se asienten writes pendientes
@@ -150,10 +168,45 @@ final class CloudSessionSignOut {
     /// no vacía, la fase queda en `.blocked` y **no se suelta nada**. Reintentar es seguro porque hasta el
     /// paso 2 no se ha escrito nada.
     ///
+    /// **Qué pasa si el borrado local falla, y qué se le ofrece entonces** (ticket
+    /// `detach-failure-looks-like-success`). Hasta el 2026-09-11 el fallo se tragaba y el gesto seguía
+    /// a `clear()`: asociación borrada + grupos enteros en el teléfono, sin un solo mensaje. Ahora el
+    /// borrado es la ÚLTIMA condición del gesto, y si no entra **no se limpia nada**: la asociación sigue
+    /// en pie porque los datos siguen en pie, y las dos cuentan la misma historia.
+    ///
+    /// Lo que se le ofrece es **reintentar el borrado**, no rehacer la asociación, y las dos mitades están
+    /// medidas:
+    ///
+    ///  · **Rehacer la asociación no se puede** sin un sign-in nuevo: para cuando el borrado corre, el
+    ///    `signOut()` de arriba ya soltó las credenciales. Ofrecerlo sería pedirle a la persona que
+    ///    vuelva a entrar en la cuenta para poder salir de ella.
+    ///  · **Reintentar no necesita sesión.** El reintento vuelve a entrar por aquí, y su push-all sale
+    ///    `.drained` **sin una sola petición**: `pushAllPendingGroupsForSignOut` corta en seco con el
+    ///    outbox vacío, y en el reintento lo está porque el primer intento ya lo drenó antes de llegar al
+    ///    borrado. El resto del camino es idempotente —el teardown lo es por contrato, `signOut()` sale
+    ///    por su primer `guard` sin cliente, y `detachBridge` no reencuentra puente que soltar—. Lo único
+    ///    que NO lo era es el libro de conservados, que la segunda pasada borraba: se cerró en
+    ///    `GroupsAssociationDetach.detachBridge`, y sin eso reintentar le duplicaría en el Panel cada
+    ///    gasto que eligió conservar.
+    ///
+    /// El estado intermedio, si decide no reintentar ahora, **no vuelve a ofrecer el gesto entero**: la
+    /// marca durable hace que la sección ofrezca TERMINAR, sin volver a preguntar por el puente. Volver a
+    /// preguntarlo sería ofrecer una elección que ya no puede aplicarse — el puente está soltado, así que
+    /// un `.remove` no encontraría nada que quitar y el gesto acabaría diciendo que sí.
+    ///
     /// - Parameter choice: qué pasa con los movimientos que el puente metió en el Panel. Lo elige el
     ///   usuario en la confirmación (decisión de Jürgen, 2026-09-09).
-    func detachGroupsAccount(context: ModelContext, choice: GroupsAssociationDetach.BridgedRowsChoice) async {
-        guard phase == .idle else { return }
+    /// - Returns: el veredicto. **Viaja por el retorno y no por una fase nueva**: `Phase` la leen seis
+    ///   sitios que no tienen nada que ver con este gesto —el gate del relanzamiento, la fila de cierre
+    ///   de sesión del perfil, la puerta de grupos del Welcome— y un case más les cambiaría el
+    ///   comportamiento por defecto a cambio de nada. `.idle` sigue siendo verdad aquí: el coordinador no
+    ///   está haciendo nada. La que mentía era la PANTALLA, y es la pantalla la que ahora recibe el
+    ///   veredicto.
+    @discardableResult
+    func detachGroupsAccount(
+        context: ModelContext, choice: GroupsAssociationDetach.BridgedRowsChoice
+    ) async -> DetachOutcome {
+        guard phase == .idle else { return .busy }
         phase = .working
         defer { waitingForPending = false }
 
@@ -162,7 +215,7 @@ final class CloudSessionSignOut {
 
         // Lo pendiente sube ANTES de cortar nada, con la generación intacta. Mismo presupuesto de
         // reintentos que el cierre: el bloqueo típico es transitorio.
-        guard await pushGroupsForSignOut(context: context) else { return }
+        guard await pushGroupsForSignOut(context: context) else { return .blockedBeforeWriting }
 
         // Canal fuera + espejo del outbox del App Group purgado. Idempotente.
         GroupsSyncClient.shared.teardownForSignOut()
@@ -173,7 +226,7 @@ final class CloudSessionSignOut {
         guard residual == 0 else {
             phase = .blocked(pendingCount: residual, reason: .permanent)
             CloudSyncBreadcrumb.signOutPushBlocked(pending: residual)
-            return
+            return .blockedBeforeWriting
         }
 
         // ── Punto de no retorno ──
@@ -183,10 +236,14 @@ final class CloudSessionSignOut {
         // apuntando a una zona que ya no existe, y a ésas no las recoge ningún barrido — el veredicto de
         // zona que `OrphanedBridgedTxSweeper` exige se construye de filas vivas. Sería dinero atrapado
         // para siempre, y hasta aquí no se ha escrito nada irreversible.
+        //
+        // **Y «no se pudo mirar» incluye que su propio `save()` fallara**: `detachBridge` devuelve `nil`
+        // en los dos casos desde el 2026-09-11. Antes, un save fallido devolvía un `Outcome` vacío que
+        // este `guard` leía como éxito.
         guard GroupsAssociationDetach.detachBridge(
             context: context, choice: choice, associatedSub: associatedSub) != nil else {
-            phase = .blocked(pendingCount: 0, reason: .transient)
-            return
+            phase = .blocked(pendingCount: 0, reason: .bridgeUnreadable)
+            return .blockedBeforeWriting
         }
 
         // El consent de Grupos NO se limpia aquí, a diferencia del cierre de sesión. Es un snapshot
@@ -197,10 +254,95 @@ final class CloudSessionSignOut {
         await CloudAuthService.shared.signOut()
 
         // (3) Con el canal cortado y sin credenciales: las filas, el outbox y el cursor, de una vez.
-        Self.purgeGroupsDomainForDetach(context: context)
+        //
+        // **Es la última CONDICIÓN del gesto, no su último paso.** Todo lo de abajo afirma que la cuenta
+        // ya no está aquí, y eso solo es cierto si esto entró. Un `catch` que siguiera adelante —lo que
+        // había hasta el 2026-09-11— dejaba la asociación borrada sobre unos grupos enteros: la pantalla
+        // decía una cosa y el teléfono otra, y la que se equivocaba era la pantalla.
+        do {
+            try Self.purgeGroupsDomainForDetach(context: context)
+        } catch {
+            #if DEBUG
+            print("CloudSessionSignOut: borrado local del dominio de grupos falló: \(error)")
+            #endif
+            // **La marca es DURABLE porque la fase no lo es.** Sin ella, al reabrir la app la sección
+            // volvería a ofrecer el gesto entero con sus dos salidas, y la segunda ya no puede aplicarse:
+            // el puente está soltado. Ver `GroupsDetachPendingPurge`.
+            GroupsDetachPendingPurge.arm(sub: associatedSub)
+            // Canario FUERA de `#if DEBUG`, molde `freshStartWipeFailed`: este fallo era invisible en
+            // producción y es su hermano exacto —un borrado que no ocurrió y una UI que decía que sí—.
+            // Sin PII: solo qué eligió la persona para el puente, que es lo que cambia el volumen de
+            // filas que la transacción tocaba.
+            MetricsService.canary(
+                .groupsDetachPurgeFailed,
+                detail: "choice=\(choice == .keep ? "keep" : "remove")")
+            // NADA de lo de abajo corre. La asociación se queda, y con la sesión ya cerrada la sección
+            // pasa a `.associatedNeedsSignIn` —la celda del segundo móvil—, que vuelve a ofrecer el gesto.
+            phase = .idle
+            return .purgeFailed
+        }
 
+        finishDetach(context: context)
+        return .detached
+    }
+
+    /// **Terminar un desasociar cuyo borrado local no entró.** Es lo que ofrece el aviso «No pudimos
+    /// soltar la cuenta», y lo que la sección ofrece mientras `GroupsDetachPendingPurge` esté armada.
+    ///
+    /// **Hace el borrado y su remate, y NADA más — no re-ejecuta el gesto.** Repetir `detachGroupsAccount`
+    /// entero parecía lo barato y lo midió la review del 2026-09-11: volvería a entrar por
+    /// `pushGroupsForSignOut` **después** del teardown, que es exactamente lo que prohíben los docblocks
+    /// de `pushAllPendingGroupsForSignOut` («DEBE correr ANTES») y de `attemptGroupsOnlyClose`
+    /// («reintentar tras el teardown repoblaría el outbox/cursor»). Y no es teórico: las filas `Split*`
+    /// siguen vivas y la pestaña Grupos sigue funcionando sin sesión, así que un gasto añadido entre el
+    /// fallo y el reintento deja History que el `drainOnce` de ese push traduce a outbox → el pre-check
+    /// deja de cortar → 20 ciclos contra un backend sin credenciales → `.blocked`, y el desasociar se
+    /// vuelve imposible de terminar. De paso, `writeMirror` repondría en el espejo del App Group los
+    /// montos que el teardown acababa de purgar.
+    ///
+    /// Lo que queda pendiente en ese estado es **solo** el borrado: el push ya drenó, el canal ya está
+    /// cortado, el puente ya se soltó con la salida elegida y la sesión ya está cerrada.
+    func retryDetachPurge(context: ModelContext) async -> DetachOutcome {
+        guard phase == .idle else { return .busy }
+        // **El sello se comprueba AQUÍ, no solo en la vista.** Es el guard dentro del escritor: si la
+        // pantalla se equivocara —o si alguien añade un segundo call-site— esto no puede borrarle el
+        // dominio Grupos a una cuenta que no es la que quedó a medias.
+        //
+        // La segunda condición es «la sesión viva NO es la de la cuenta pendiente», y es más fina que
+        // «no hay sesión»: este método no hace teardown ni suelta credenciales, así que con la sesión de
+        // ESA cuenta repuesta dejaría a la persona dentro de una cuenta cuyos datos locales acaba de
+        // borrar y cuya asociación acaba de limpiar. Quien vuelve a entrar usa el gesto entero, que sí
+        // cierra la sesión. Una sesión de OTRA cuenta no estorba: lo pendiente sigue siendo local.
+        guard GroupsDetachPendingPurge.isArmed(for: GroupsAccountAssociation.shared.associatedSub),
+              CloudAuthService.shared.currentUserID != GroupsDetachPendingPurge.armedSub()
+        else { return .busy }
+        phase = .working
+        // Un turno del main actor antes de trabajar. Sin él este método no suspende NUNCA —no tiene un
+        // solo `await`— así que SwiftUI no re-renderiza entre `.working` y `.idle`: el spinner no llega a
+        // salir, y un segundo fallo encendería el aviso en el MISMO turno en que el anterior se está
+        // desmontando, que es la carrera de dos presentaciones en un anchor que este repo ya pagó.
+        await Task.yield()
+        do {
+            try Self.purgeGroupsDomainForDetach(context: context)
+        } catch {
+            #if DEBUG
+            print("CloudSessionSignOut: reintento del borrado del dominio de grupos falló: \(error)")
+            #endif
+            MetricsService.canary(.groupsDetachPurgeFailed, detail: "retry")
+            phase = .idle
+            return .purgeFailed
+        }
+        finishDetach(context: context)
+        return .detached
+    }
+
+    /// El tramo que afirma que la cuenta ya no está aquí. **Solo se llama con el borrado hecho**, y por
+    /// eso vive en un método propio: sus dos call-sites —el gesto y su reintento— tienen que decir lo
+    /// mismo, y duplicarlo es como dejarían de decirlo.
+    private func finishDetach(context: ModelContext) {
         GroupsAccountAssociation.shared.clear()
         GroupsSessionHistoryMarker.markSessionSeen()  // siguió siendo cierto: este device tuvo sesión.
+        GroupsDetachPendingPurge.clear()
         SessionState.shared.incrementDataVersion()
         WidgetDataCache.updateCache(context: context)
         phase = .idle
@@ -252,21 +394,21 @@ final class CloudSessionSignOut {
     /// que borrarla exportaría el delete al Apple ID y se la quitaría también al iPad del mismo dueño,
     /// donde puede haber una sesión de grupos viva. Y además es suya: cómo quiere que se puenteen sus
     /// gastos no deja de ser cierto porque suelte esta cuenta.
-    static func purgeGroupsDomainForDetach(context: ModelContext) {
-        do {
-            SaveBreadcrumb.willSave("CloudSessionSignOut.detachGroupsAccount")
-            try DataWipeService.deleteLocalGroupsRows(in: context, includingBridgePreferences: false) {
-                for row in try context.fetch(FetchDescriptor<GroupSyncOutbox>()) { context.delete(row) }
-                for cursor in try context.fetch(FetchDescriptor<GroupSyncCursor>()) { context.delete(cursor) }
-            }
-            SaveBreadcrumb.didSave("CloudSessionSignOut.detachGroupsAccount")
-        } catch {
-            #if DEBUG
-            print("CloudSessionSignOut: borrado local del dominio de grupos falló: \(error)")
-            #endif
-            // `deleteLocalGroupsRows` ya hizo rollback antes de propagar: sin él los deletes quedarían
-            // sucios y el siguiente `save()` de cualquier camino los comitearía bajo el autor por defecto.
+    ///
+    /// **PROPAGA, y hasta el 2026-09-11 no lo hacía** (ticket `detach-failure-looks-like-success`). El
+    /// `catch` de aquí imprimía bajo `#if DEBUG` y devolvía como si nada, así que `detachGroupsAccount`
+    /// seguía a `clear()` y la pantalla decía que la cuenta estaba suelta **con los grupos enteros en el
+    /// teléfono**. `deleteLocalGroupsRows` hace `rollback()` antes de propagar —sin él los deletes
+    /// quedarían sucios y el siguiente `save()` de cualquier camino los comitearía bajo el autor por
+    /// defecto, traducibles a tombstones—, así que quien reciba este `throw` recibe además un contexto
+    /// limpio: el reintento parte del mismo sitio que el primer intento.
+    static func purgeGroupsDomainForDetach(context: ModelContext) throws {
+        SaveBreadcrumb.willSave("CloudSessionSignOut.detachGroupsAccount")
+        try DataWipeService.deleteLocalGroupsRows(in: context, includingBridgePreferences: false) {
+            for row in try context.fetch(FetchDescriptor<GroupSyncOutbox>()) { context.delete(row) }
+            for cursor in try context.fetch(FetchDescriptor<GroupSyncCursor>()) { context.delete(cursor) }
         }
+        SaveBreadcrumb.didSave("CloudSessionSignOut.detachGroupsAccount")
     }
 
     // MARK: - Los tres cierres que borran por ARCHIVOS: privada (C), «equipo» (D) y solo grupos (F)

@@ -141,6 +141,15 @@ struct ProfileView: View {
             switch reason {
             case .transient: showSignOutPendingAlert = true
             case .permanent, .sessionExpired: showSignOutBlockedAlert = true
+            // **Los dos motivos del DESASOCIAR no encienden nada aquí, y no es teoría: llegaban.**
+            // `phase` es un singleton observable y esta pantalla escucha sus cambios; la de
+            // almacenamiento se abre DESDE aquí, así que sigue montada. Sin este corte, cada bloqueo del
+            // desasociar apilaba «No pudimos cerrar tu sesión» encima del aviso propio de la sección
+            // —dos presentaciones del mismo anchor, con su carrera— y le hablaba a la persona de cerrar
+            // la sesión entera cuando solo pidió soltar una cuenta de grupos. Es justo lo que el aviso
+            // propio de `GroupsAssociationSection` existe para evitar. Quien los enseña es esa sección,
+            // por el veredicto de retorno, no por la fase.
+            case .bridgeUnreadable, .detachBusy: break
             case .exportUnconfirmed: showSignOutExportAlert = true
             }
         }

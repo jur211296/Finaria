@@ -151,6 +151,19 @@ nonisolated enum CloudSignOutFlowLogic {
         /// porque el aviso de siempre («revisa tu conexión») mandaba a buscar un fallo que no existe (review
         /// adversarial del paso 9).
         case sessionExpired
+        /// **No se pudo mirar el puente personal al desasociar** (`GroupsAssociationDetach.detachBridge`
+        /// devolvió `nil`): su fetch lanzó, o su `save()` no entró. Va aparte porque el aviso de siempre
+        /// —«quedan cambios de tus grupos sin subir, inténtalo en un momento»— describe un problema que
+        /// no es y da un consejo que no arregla nada: no hay nada sin subir (se llega aquí con el
+        /// push-all ya drenado y `pendingCount == 0`) y esperar no cambia que el store no responda.
+        /// Review adversarial del 2026-09-11.
+        case bridgeUnreadable
+        /// **El coordinador estaba ocupado con OTRO gesto** cuando se pidió desasociar —un cierre de
+        /// sesión del Perfil en curso o parado en su propio aviso—. No hay nada sin subir: el desasociar
+        /// ni siquiera arrancó (`guard phase == .idle`). Va aparte porque es el único motivo cuya fase NO
+        /// la puso el gesto que lo enseña, así que su aviso **no puede llamar a `acknowledgeBlocked()`**:
+        /// le borraría al cierre ajeno su fase y su `blockedExit`. Review adversarial del 2026-09-11.
+        case detachBusy
     }
 
     /// ¿El aviso de cierre bloqueado debe ofrecer «salir igualmente»? (decisión del owner 2026-09-03).

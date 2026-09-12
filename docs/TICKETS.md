@@ -28,7 +28,7 @@ Rules:
 
 Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment could not read that repo (GitHub App sees only `jur211296/Yala`). Bodies are **not** invented. Paths below are the owner map.
 
-## Index (317)
+## Index (321)
 
 | id | status | path |
 |---|---|---|
@@ -100,7 +100,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | debt-simplification-nondeterministic-ties | backlog | tickets/backlog/debt-simplification-nondeterministic-ties.md |
 | debt-tracking | backlog | tickets/backlog/debt-tracking.md |
 | detach-does-not-verify-the-cloud-session-actually-closed | backlog | tickets/backlog/detach-does-not-verify-the-cloud-session-actually-closed.md |
-| detach-failure-looks-like-success | backlog | tickets/backlog/detach-failure-looks-like-success.md |
+| detach-failure-looks-like-success | qa | tickets/qa/detach-failure-looks-like-success.md |
 | detach-history-replay-can-tombstone-groups-on-next-launch | qa | tickets/qa/detach-history-replay-can-tombstone-groups-on-next-launch.md |
 | detach-saves-the-personal-graph-outside-the-quiescence-window | backlog | tickets/backlog/detach-saves-the-personal-graph-outside-the-quiescence-window.md |
 | device-handover-groups-leak | discarded | tickets/discarded/device-handover-groups-leak.md |
@@ -123,6 +123,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | encargos-markdown-triggers-the-whole-ios-suite | backlog | tickets/backlog/encargos-markdown-triggers-the-whole-ios-suite.md |
 | ensure-rates-for-existing-transactions-has-no-callers | backlog | tickets/backlog/ensure-rates-for-existing-transactions-has-no-callers.md |
 | entitlement-sync-forzado-es-noop-si-hay-otro-en-vuelo | backlog | tickets/backlog/entitlement-sync-forzado-es-noop-si-hay-otro-en-vuelo.md |
+| es-ar-storage-groups-block-is-in-tuteo-not-voseo | backlog | tickets/backlog/es-ar-storage-groups-block-is-in-tuteo-not-voseo.md |
 | exchange-rate-detail-shows-zero-for-low-denomination-currencies | backlog | tickets/backlog/exchange-rate-detail-shows-zero-for-low-denomination-currencies.md |
 | export-anchor-accepts-events-from-any-container | backlog | tickets/backlog/export-anchor-accepts-events-from-any-container.md |
 | exportable-insights | backlog | tickets/backlog/exportable-insights.md |
@@ -170,6 +171,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | groups-consent-door-spec | qa | tickets/qa/groups-consent-door-spec.md |
 | groups-deleted-group-detail-stays-open | qa | tickets/qa/groups-deleted-group-detail-stays-open.md |
 | groups-detach-ledger-has-no-exit | backlog | tickets/backlog/groups-detach-ledger-has-no-exit.md |
+| groups-detach-save-breadcrumb-never-closes-on-throw | backlog | tickets/backlog/groups-detach-save-breadcrumb-never-closes-on-throw.md |
 | groups-entry-on-a-mirrored-store-still-blocks-the-owner | qa | tickets/qa/groups-entry-on-a-mirrored-store-still-blocks-the-owner.md |
 | groups-equal-split-shows-not-participating-on-peer | qa | tickets/qa/groups-equal-split-shows-not-participating-on-peer.md |
 | groups-expense-notif-only-on-foreground | qa | tickets/qa/groups-expense-notif-only-on-foreground.md |
@@ -194,6 +196,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | groups-pending-member-can-open-group | done | tickets/done/groups-pending-member-can-open-group.md |
 | groups-pending-member-sees-detail-chrome | backlog | tickets/backlog/groups-pending-member-sees-detail-chrome.md |
 | groups-pull-cuesta-cinco-viajes-por-grupo | backlog | tickets/backlog/groups-pull-cuesta-cinco-viajes-por-grupo.md |
+| groups-purge-save-crosses-two-stores-without-atomicity | backlog | tickets/backlog/groups-purge-save-crosses-two-stores-without-atomicity.md |
 | groups-reassociation-does-not-restore-the-bridge-link | backlog | tickets/backlog/groups-reassociation-does-not-restore-the-bridge-link.md |
 | groups-reconnect-prune-or-rewire | done | tickets/done/groups-reconnect-prune-or-rewire.md |
 | groups-settlement-reminder | qa | tickets/qa/groups-settlement-reminder.md |
@@ -320,6 +323,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | trends-insight-card-v2-bullets | backlog | tickets/backlog/trends-insight-card-v2-bullets.md |
 | two-qa-benches-nobody-runs | backlog | tickets/backlog/two-qa-benches-nobody-runs.md |
 | uitest-compara-fechas-sin-fijar-locale | backlog | tickets/backlog/uitest-compara-fechas-sin-fijar-locale.md |
+| uitest-seam-for-a-seeded-groups-association | backlog | tickets/backlog/uitest-seam-for-a-seeded-groups-association.md |
 | uitest-seed-reseeds-the-corpus-without-reset | backlog | tickets/backlog/uitest-seed-reseeds-the-corpus-without-reset.md |
 | undercount-dias-intervalos-cerrados | done | tickets/done/undercount-dias-intervalos-cerrados.md |
 | unit-suite-nondeterministic-reds | done | tickets/done/unit-suite-nondeterministic-reds.md |

@@ -5898,3 +5898,21 @@
 
 /* Puerta del invitado: CTA destructivo que arranca la vuelta al neutro */
 "welcome.groups.inviteNeutralCta" = "Kontynuuj i usuń";
+
+/* Aviso: el borrado local de los grupos falló al desasociar */
+"storage.groups.detachPurgeFailedTitle" = "Nie udało się odłączyć konta";
+
+/* Aviso: cuerpo del fallo del borrado al desasociar */
+"storage.groups.detachPurgeFailedBody" = "Twoje grupy nadal są na tym iPhonie, a konto nie zostało odłączone. To, co wybrałeś dla wpisów w Panelu, zostało już zastosowane, i wylogowaliśmy Cię z tego konta. Spróbuj ponownie, aby dokończyć.";
+
+/* Aviso: el desasociar abortó porque no se pudo leer el puente */
+"storage.groups.detachBlockedBridge" = "Nie udało się sprawdzić wpisów z Twoich grup na tym iPhonie. Nic nie zostało odłączone. Spróbuj ponownie.";
+
+/* Botón cuando quedó un desasociar a medias */
+"storage.groups.detachFinishButton" = "Dokończ odłączanie konta";
+
+/* Cuerpo de la sección cuando quedó un desasociar a medias */
+"storage.groups.detachPendingBody" = "Zatrzymało się w połowie: Twoje grupy nadal są na tym iPhonie, a sesja tego konta jest już zamknięta.";
+
+/* Aviso: el desasociar no puede correr con otro cierre de sesión en curso */
+"storage.groups.detachBusy" = "Właśnie się wylogowujesz. Najpierw dokończ to i spróbuj ponownie.";

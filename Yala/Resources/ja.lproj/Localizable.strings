@@ -5898,3 +5898,21 @@
 
 /* Puerta del invitado: CTA destructivo que arranca la vuelta al neutro */
 "welcome.groups.inviteNeutralCta" = "続けて削除";
+
+/* Aviso: el borrado local de los grupos falló al desasociar */
+"storage.groups.detachPurgeFailedTitle" = "リンクを解除できませんでした";
+
+/* Aviso: cuerpo del fallo del borrado al desasociar */
+"storage.groups.detachPurgeFailedBody" = "グループはこの iPhone に残っていて、アカウントのリンクも解除されていません。パネルの記録について選んだ内容はすでに反映され、そのアカウントからはサインアウトしました。もう一度試して完了してください。";
+
+/* Aviso: el desasociar abortó porque no se pudo leer el puente */
+"storage.groups.detachBlockedBridge" = "この iPhone でグループの記録を確認できませんでした。何も解除されていません。もう一度お試しください。";
+
+/* Botón cuando quedó un desasociar a medias */
+"storage.groups.detachFinishButton" = "アカウントのリンク解除を完了";
+
+/* Cuerpo de la sección cuando quedó un desasociar a medias */
+"storage.groups.detachPendingBody" = "途中で止まりました。グループはこの iPhone に残っていて、そのアカウントのセッションはすでに終了しています。";
+
+/* Aviso: el desasociar no puede correr con otro cierre de sesión en curso */
+"storage.groups.detachBusy" = "いまサインアウトの途中です。先にそれを終えてから、もう一度お試しください。";

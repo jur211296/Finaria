@@ -5898,3 +5898,21 @@
 
 /* Puerta del invitado: CTA destructivo que arranca la vuelta al neutro */
 "welcome.groups.inviteNeutralCta" = "Doorgaan en verwijderen";
+
+/* Aviso: el borrado local de los grupos falló al desasociar */
+"storage.groups.detachPurgeFailedTitle" = "Ontkoppelen is niet gelukt";
+
+/* Aviso: cuerpo del fallo del borrado al desasociar */
+"storage.groups.detachPurgeFailedBody" = "Je groepen staan nog op deze iPhone en het account is niet ontkoppeld. Je keuze voor de posten in het Paneel is al doorgevoerd en we hebben je bij dat account afgemeld. Probeer het opnieuw om het af te ronden.";
+
+/* Aviso: el desasociar abortó porque no se pudo leer el puente */
+"storage.groups.detachBlockedBridge" = "We konden de posten van je groepen op deze iPhone niet controleren. Er is niets ontkoppeld. Probeer het opnieuw.";
+
+/* Botón cuando quedó un desasociar a medias */
+"storage.groups.detachFinishButton" = "Ontkoppelen afronden";
+
+/* Cuerpo de la sección cuando quedó un desasociar a medias */
+"storage.groups.detachPendingBody" = "Het bleef halverwege steken: je groepen staan nog op deze iPhone en je bent al afgemeld bij dat account.";
+
+/* Aviso: el desasociar no puede correr con otro cierre de sesión en curso */
+"storage.groups.detachBusy" = "Je bent je nu aan het afmelden. Rond dat eerst af en probeer het opnieuw.";
