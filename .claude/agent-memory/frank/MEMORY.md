@@ -14,6 +14,7 @@
 - [Cuándo la app pregunta al usuario](feedback_cuando_la_app_pregunta_al_usuario.md) — pregunta si la decisión mueve DATOS suyos; si solo cambia el recorrido, informa o calla.
 
 ## Cómo mido y cómo entrego
+- [El predicado del ticket no es el criterio](feedback_el_predicado_del_ticket_no_es_el_criterio.md) — mide con qué predicado decide la superficie que desbloqueas: el literal del ticket dejaba el bug vivo.
 - [La premisa del ENCARGO también se mide](feedback_la_premisa_del_encargo_tambien_se_mide.md) — hereda los errores del ticket; «no es simulable» infla la cola de Jürgen, y una BISECCIÓN sobre un sujeto que no cambió no bisecó nada.
 - [El barrido de QA rinde por lotes](feedback_el_barrido_qa_rinde_por_lotes.md) — agrupa por estado de simulador; dos números que comparas, mismo lanzamiento; el testigo aritmético gana a la captura.
 - [Instrumentar gana a razonar](feedback_instrumentar_gana_a_razonar.md) — a la tercera hipótesis caída, cuenta en vez de deducir; y lo que no se reproduce no se explica: se acota.
@@ -67,6 +68,7 @@
 - [«Cero warnings» se mide en TODOS los logs](feedback_cero_warnings_se_mide_en_todos_los_logs.md) — el gate no mira los tests y lee un build incremental; dos míos iban al commit el 10-sep.
 
 ## Estado del trabajo
+- [La cuenta de grupos ya se suelta con la nube en pausa](project_killswitch_puerta_grupos.md) — PR #146; el predicado del ticket era el equivocado; device-QA SÍ simulable; deja un `high`.
 - [Los 7 XCUITest del Welcome estaban SANOS](project_siete_xcuitest_welcome_falso_positivo.md) — `discarded` con 3 mediciones (PR #145); queda el centinela del simulador y un `high` esperando decisión de Jürgen.
 - [«Desasociar» ya no finge que soltó la cuenta](project_desasociar_no_finge_exito.md) — PR #144; la review fue en DOS vueltas y la 2.ª cazó 2 ALTAS de mi rediseño; el botón «Terminar» NO es simulable (falta seam).
 - [Aceptar una invitación en un teléfono prestado ya no cruza datos](project_puerta_neutro_del_invitado.md) — PR #143; la puerta del invitado NO es la del organizador y aquí se PREGUNTA; la review cazó 23 defectos MÍOS; device-QA NO simulable.

@@ -1085,12 +1085,21 @@ struct ProfileView: View {
                 // M3: en builds DEV la celda de secundaria se abre (`devPanelOverrideAvailable`, `false`
                 // literal en producción) porque detrás de esta fila vive el panel DEBUG, que es la única
                 // salida por producto de una sesión FAKE.
+                // Paso 10 (2026-09-11): y una cuenta de grupos que soltar la conserva también. Detrás de
+                // esta fila vive la ÚNICA superficie desde la que se suelta esa cuenta, y Grupos va por su
+                // propio flag: sin este término, bajar el kill de la nube dejaba la cuenta puesta y sin
+                // puerta. El criterio es el MISMO que dibuja el botón «Desasociar» y sale de la misma
+                // lectura (`GroupsAssociationPresence`) — leerlo dos veces es cómo divergen, y divergían.
+                // Quien decide qué se ofrece DENTRO bajo el kill es `offersCloudMigrationEntry`, en
+                // `StorageSettingsView` — abrir la fila no abre la migración.
                 if StorageRowGateLogic.isVisible(
                     isConfigured: CloudBackendConfig.isConfigured,
                     isSecondaryActive: SecondarySessionStore.isActive(),
                     remoteEnabled: CloudRemoteFlags.cloudModeEnabled,
                     isEngaged: StorageModePersistence.read() == .cloud
                         || (CloudMigrationController.shared?.uiState ?? .idle) != .idle,
+                    hasGroupsAccountToDetach: GroupsAssociationPresence.offersDetach(
+                        hasCompletedOnboarding: appPreferences.hasCompletedOnboarding),
                     devPanelOverride: StorageRowGateLogic.devPanelOverrideAvailable
                 ) {
                     SubsectionDivider()

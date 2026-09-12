@@ -36,3 +36,22 @@ Ninguno era un bug «mío». Los tres eran mi problema, porque mi cambio los hiz
 **Hermano de [[mi-arreglo-rompe-la-premisa-de-otro-guard]]**: allí ensanchar un predicado dejaba
 mentirosos a guards lejanos; aquí quitar un efecto vuelve alcanzable código que nunca corrió. La pregunta
 es la misma —«¿de qué era premisa lo que estoy tocando?»— y la respuesta no está en el fichero que editas.
+
+
+## La forma gemela: el guard que cerraba DE REBOTE (2026-09-12)
+
+No siempre quitas un efecto: a veces **abres una puerta cuyo cierre estaba protegiendo otra cosa**, sin
+que nadie lo escribiera. En `cloud-killswitch-hides-the-only-door-to-detach-groups`, la fila de Ajustes
+estaba oculta bajo el kill-switch, y esa ocultación era **el único candado** de «Migrar a la nube»:
+`CloudRemoteFlags` no se consulta ni en esa vista ni en el controller — cero ocurrencias, medido. Abrir
+la fila por el eje de Grupos habría reabierto la migración en pleno incidente.
+
+⇒ al abrir una puerta, **inventaría todo lo que hay detrás y pregunta por cada cosa «¿esto se cerraba
+porque alguien lo decidió, o porque la puerta estaba cerrada?»**. Lo segundo no aparece en ningún grep de
+gates: aparece leyendo la pantalla entera. Y cuando lo encuentres, el término se escribe explícito — si
+no, tu arreglo convierte una política («el kill corta la entrada») en una excepción silenciosa.
+
+**Y gatear el RENDER no es gatear la ACCIÓN.** El `if` que deja de dibujar la card no para el flujo ya
+empezado: consent → confirmación → chooser → `startMigration` no volvía a preguntar por el flag, así que
+quien tapeaba justo antes de que aterrizara el snapshot nuevo migraba con el kill puesto. El mismo
+término va también en el último punto antes del efecto.
