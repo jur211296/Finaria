@@ -1,6 +1,6 @@
 ---
 name: la-correccion-de-la-lente-reintroduce-el-bug
-description: Aplicar el arreglo que una lente propone sin volver a recorrer la población entera puede devolver el bug original — me pasó el 10-sep con el predicado de iCloud, dos veces seguidas en el mismo sitio
+description: Aplicar el arreglo que una lente propone sin recorrer la población entera puede devolver el bug — y el rediseño que nace de una review necesita SU PROPIA review: la del 11-sep cazó dos ALTAS en mi corrección
 metadata:
   type: feedback
 ---
@@ -50,3 +50,28 @@ tests existentes antes que su firma**: cuentan qué se hizo mal con ella la últ
 Relacionado: [[lentes-adversariales-se-contradicen]], [[mi-fix-hereda-la-forma-del-bug]],
 [[el-prefiltro-tapa-al-criterio]] — este caso es literalmente un pre-filtro tapando al criterio, puesto
 por la corrección de un pre-filtro que tapaba al criterio.
+
+
+---
+
+## Y si la corrección es un REDISEÑO, pásale una lente propia: la del 2026-09-11 cazó dos ALTAS
+
+En `detach-failure-looks-like-success`, tres lentes me obligaron a cambiar el diseño —el reintento pasó
+de «repetir el gesto» a un método acotado, con una marca durable nueva—. Eso no es aplicar una
+corrección: es escribir código nuevo, y **ese código no lo había revisado nadie**. Le pasé una cuarta
+lente acotada al delta y salieron dos hallazgos ALTOS, los dos de la misma familia que el ticket:
+
+- **La marca durable no iba sellada**, así que el botón «Terminar de soltar la cuenta» borraba el dominio
+  de la cuenta asociada EN ESE MOMENTO — incluida una viva, si la persona volvía a entrar entre medias.
+- **El boot-wipe del cierre de sesión no se la llevaba**: nombra a sus tres hermanas y se olvidaba de
+  ella, así que el siguiente humano veía un botón para terminar algo que nunca empezó.
+
+Y un tercero de método que vale por sí solo: **mi propio docblock afirmaba que la función del wipe
+«barre ese prefijo», y es una LISTA de keys**. El namespace `groups.*` era convención, no mecanismo.
+
+**How to apply:** cuando una review te obligue a rediseñar y no solo a parchear, vuelca el diff y lánzale
+una lente acotada AL DELTA, con las preguntas concretas del rediseño («¿este estado durable lo limpia
+alguien?», «¿este guard nuevo puede quedar inalcanzable?»). Cuesta una corrida y es exactamente donde el
+resto de lentes ya no está mirando. Y dile que compare contra `git show HEAD:<fichero>`: el refactor que
+saca código a un método nuevo **se lleva las líneas fuera del alcance de los escáneres que las vigilaban**
+—aquí, las cuatro afirmaciones del remate—, y eso deja tests verdes sobre un método que nadie mira.
