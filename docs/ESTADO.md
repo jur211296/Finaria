@@ -1,52 +1,46 @@
 ---
-updated: 2026-09-11
+updated: 2026-09-12
 tags: [now, punto-de-retomada]
 ---
 
-# NOW — 2026-09-11 (Lima)
+# NOW — 2026-09-12 (Lima)
 
-**Rama** `2.1` — Merge #143: **aceptar una invitación en un teléfono prestado ya no manda tus gastos al
-iCloud del dueño.**
+**Rama** `2.1` — Merge #144: **si no se pueden soltar los grupos, la app lo dice en vez de fingir que
+soltó la cuenta.**
 TestFlight build **13** (CPV 13). **Subida Yala (TF/store) = solo Mini.**
 
-## Esta sesión (la mitad que la del paso 5 dejó abierta, cerrada)
+## Esta sesión (el `high` que el paso 10 dejó abierto)
 
-**Nadie va a meterle sus gastos de grupo en el iCloud de otra persona.** Presto el móvil, lo compro de
-segunda mano, o entro por «privado» y no termino: el teléfono ya bajó datos de iCloud. Alguien me pasa un
-enlace de invitación, lo acepto y empiezo a anotar gastos compartidos — y **esos gastos acababan en el
-iCloud del dueño del teléfono**, porque el espejo del store personal sigue adjunto y el bridge de Grupos
-escribe en él. Sin error, sin aviso y sin bloqueo: se ve en el otro dispositivo del dueño, días después.
+**Desasociar la cuenta de grupos ya no puede mentir.** Toco «Desasociar» en Ajustes → «¿Dónde viven tus
+datos?» → Grupos; si el borrado local falla, la pantalla me decía igual que ya no había cuenta asociada —
+y **mis grupos seguían enteros en el teléfono**. Ahora el borrado es la **última condición del gesto, no
+su último paso**: si no entra, no se limpia nada, sale un aviso propio, y la sección recuerda que quedó a
+medias hasta que se termine, aunque cierre la app y vuelva otro día.
 
-Ahora, **antes** de dejar entrar al grupo, Yala lo cuenta y ofrece dejar el teléfono en blanco: espera a
-que lo último suba a iCloud, borra lo de aquí, deja iCloud intacto y se reinicia. **Al reabrir, la hoja
-«Unirme al grupo» sale sola** — la invitación cruza el borrado. Quien llega con el teléfono limpio no ve
-nada de esto: ni una pantalla de más.
+**Se ofrece TERMINAR el borrado, no repetir el gesto, y el porqué está medido.** Rehacer la asociación no
+se puede: cuando el borrado corre, las credenciales ya se soltaron. Y repetir el gesto entero vuelve a
+entrar por el push-all **después** del teardown —lo que prohíben dos docblocks del propio coordinador— y
+un gasto añadido entre medias deja History que ese drain traduce a outbox, quemando 20 ciclos sin
+credenciales hasta bloquearse: el desasociar dejaría de poder terminarse **nunca**.
 
-**Las dos decisiones que más pesan, y las dos son propias.** (1) **La puerta del invitado NO es la del
-organizador**: aquella vive DENTRO del Welcome y el sitio le garantiza que no hay sesión privada viva;
-ésta corre desde `drive`, al que llama el reconciler en el arranque, o sea en cualquier estado. Reusarla
-tal cual **le vaciaría el teléfono al dueño**, contra la fila `C · llega una invitación` de la matriz.
-(2) **Aquí se PREGUNTA**, al revés que en la rama de crear: allí la persona acaba de tapear una card y la
-pantalla es la respuesta a su gesto; aquí puede no haber ningún gesto detrás, y borrar en un arranque sin
-que nadie mire es lo que el ADR prohíbe. Con eso, el criterio «nunca sin pantalla» se cumple por
-construcción.
+**La review fue en DOS vueltas, y la segunda es la que enseña.** Tres lentes sobre el arreglo, y una
+cuarta sobre el rediseño que esas tres me obligaron a hacer — lo que se escribe DESPUÉS de una review no
+lo ha revisado nadie. Esa cuarta cazó dos ALTAS mías: **la marca de «a medias» no iba sellada**, así que
+«Terminar» podía borrarle los grupos a una cuenta **viva** (quien pulsara «Entrar» y luego «Terminar» se
+quedaba dentro de una cuenta cuyos datos acababa de borrar), y **el borrado del cierre de sesión no se la
+llevaba** — nombra a sus tres hermanas y se olvidaba de ella. De propina, mi propio docblock afirmaba que
+esa función «barre el prefijo `groups.*`» y es una **lista de keys**: el namespace era convención, no
+mecanismo.
 
-**Lo que costó la review** (tres lentes + la regla de área leída contra el diff): **23 hallazgos, todos
-MÍOS**, y cuatro dejaban el arreglo sin funcionar o peor que antes. **La pantalla no se renderizaba en su
-propio estado objetivo** —el drain baja el cover del Welcome y el consumidor lo sube en la misma vuelta
-síncrona, así que el step pedido se ignoraba en silencio; era un agujero GENERAL del container, no mío—;
-el propósito era un estado paralelo que **tres de los cinco productores no escribían**, y quien volvía
-atrás en una invitación y tapeaba «Crear mi primer grupo» acababa **uniéndose al grupo de otro**; la
-reposición del sobre **destruía la invitación en la segunda pasada** del boot-hook; y un borrado abortado
-lo dejaba huérfano para siempre, listo para revivir **con el tap armado** en el cierre de sesión de OTRA
-persona. Y tres decisiones de producto que la review obligó a tomar, la más cara: **el invitado no puede
-descartar lo que el dueño no llegó a subir**.
+Y tres defectos preexistentes del mismo gesto, arreglados porque son el mismo objeto: `detachBridge`
+devolvía un `Outcome` vacío cuando su `save()` fallaba —el llamador lo leía como éxito y dejaba
+transacciones apuntando a una zona sin filas vivas, dinero atrapado que no recoge ningún barrido—, el
+aviso de bloqueo describía otro problema, y el «estoy ocupado» era mudo.
 
-**Verificado sobre el árbol final**: unit **6954/714** en verde (baseline 6923/710), los dos builds con
-`clean` y cero warnings nuevos, y los XCUITest de las áreas tocadas. **Siete rojos son PREEXISTENTES** y
-están bisecados contra un worktree limpio de `2.1` — cinco de `WelcomeChooserUITests` y dos de
-`SecondarySessionGateUITests`: el Hero sale y se tapea, el chooser de nivel 1 no llega nunca. Ticket
-`high` con lo medido.
+**Verificado**: build ×2 sin warnings nuevos, unit **380 en 45 suites**, XCUITest **10** en tres suites y
+**catorce mutantes**. Y una trampa nueva en las reglas, que costó tres corridas: **los XCUITest de esta
+pantalla van con `Yala Dev`** — con `Yala` la fila de Ajustes no existe (el gate de rollout es fail-closed
+sin `DEV_BUILD`), y el rojo se parece mucho al del disco lleno.
 
 ## Tu cola
 
@@ -99,6 +93,10 @@ están bisecados contra un worktree limpio de `2.1` — cinco de `WelcomeChooser
    y necesita DOS personas**: desasocia, **mata la app y vuélvela a abrir** —el daño estaba en el arranque
    siguiente, no en el gesto—, re-asocia, y comprueba en el teléfono del OTRO miembro que sus gastos siguen
    ahí. Si desaparecen sin que él toque nada, para el release.
+2-decies. **Device-QA del #144** (`detach-failure-looks-like-success`, dentro de su ticket). **NO es
+   simulable**, y necesita provocar el fallo: desasocia con el borrado roto y comprueba que la app lo DICE
+   y que la pestaña Grupos sigue entera; que «Terminar de soltar la cuenta» funciona **sin sesión viva**;
+   y que re-asociar después **no duplica** los gastos que elegiste conservar — tres siguen siendo tres.
 2-ter. **Device-QA de la reversa born-cloud → iCloud** (`reverse-cutover-cerrado-para-cuentas-born-cloud`).
    Dos cosas: el **contador de testigos con `ckRecordName`** del panel DEBUG tiene que pasar de 0 a cubrir
    tus filas vivas —ése es el único testigo real de que la subida ocurrió—, y **borra 2-3 transacciones
@@ -112,25 +110,26 @@ están bisecados contra un worktree limpio de `2.1` — cinco de `WelcomeChooser
 ## Siguiente
 
 **El paso 12** del rediseño (`shell-derives-from-two-session-axes`): el barrido de las 19 vistas y la
-retirada de M1. Pasos 0-10 cerrados; el 11 sigue vacante a propósito. **El board: 317 en disco = 317 en
+retirada de M1. Pasos 0-10 cerrados; el 11 sigue vacante a propósito. **El board: 321 en disco = 321 en
 `docs/TICKETS.md`**, cero desajustes de estado.
 
 ## Bloqueo
 
-**Lo que sale de camino, y el primero es el que más caro sale** (`detach-failure-looks-like-success`,
-**high**): si el borrado del desasociar **falla**, la pantalla dice que soltó la cuenta y **no avisa de
-nada** — la sesión queda cerrada, la asociación borrada, y tus grupos siguen enteros en el teléfono. La app
-y el teléfono cuentan cosas distintas y la que se equivoca es la app. Es preexistente del paso 10, y su
-salida está escrita: el hermano «Empiezo de cero» sí tiene alert y canario.
+**El `high` de testing sigue siendo el primero** (`welcome-chooser-uitests-cannot-reach-the-chooser`):
+**siete XCUITest** de `WelcomeChooserUITests` y `SecondarySessionGateUITests` fallan en un worktree limpio
+de `2.1` (bisecado, no supuesto). El Hero sale y se tapea; el chooser de nivel 1 no llega nunca. Ciegan el
+primer minuto de la app y las dos celdas que el paso 5 escribió para que la puerta de Grupos no volviera a
+bloquear al dueño — y la suite de UI ya no corre en los PR, solo en la nocturna.
 
-Y desde hoy hay otro **high** de testing, medido al correr el gate:
-`welcome-chooser-uitests-cannot-reach-the-chooser` — **siete XCUITest** de `WelcomeChooserUITests` y
-`SecondarySessionGateUITests` fallan en un worktree limpio de `2.1` (bisecado, no supuesto). El Hero sale
-y se tapea; el chooser de nivel 1 no llega nunca. Ciegan el primer minuto de la app y las dos celdas que
-el paso 5 escribió para que la puerta de Grupos no volviera a bloquear al dueño — y la suite de UI ya no
-corre en los PR, solo en la nocturna.
-
-Los otros dos son de testing: `shared-state-guard-misses-wipelocalgroupsdomain` (el guard del trait de
+Los otros dos de testing: `shared-state-guard-misses-wipelocalgroupsdomain` (el guard del trait de
 aislamiento busca `wipeAllUserData(` y se le escapa el otro escritor del espejo) y
 `spike-r3-eje-4b-flaky-en-suite-completa` (rojo en la suite completa, verde en solitario; su control
 negativo afirma un modo de fallo que cambia según lo que corriera antes).
+
+**Y lo que deja el #144, por orden de lo que más cuesta si falla:**
+`groups-purge-save-crosses-two-stores-without-atomicity` — el borrado del dominio Grupos promete «todo o
+nada» y su `save()` cruza **dos archivos**; si el segundo falla después del primero queda el par que la
+regla de área marca como peligroso, «cursor borrado + filas vivas». Y
+`uitest-seam-for-a-seeded-groups-association` (**medium**): sin un seam que siembre la asociación hay dos
+estados de la pantalla que **nadie puede probar en simulador** — la celda del segundo móvil, sin cobertura
+desde el paso 10, y el botón «Terminar de soltar la cuenta» de hoy.
