@@ -23,10 +23,10 @@ Si la toma está mal, se vuelve a grabar.
 | | |
 |---|---|
 | `src/brand/tokens.ts` | La marca 2.1. Único sitio donde vive un hex |
-| `src/brand/copy.ts` | El guion de cada pieza. Ni una palabra de copy en el JSX |
+| `src/brand/copy.ts` | El guion: los **beats** de texto y los **planos de cámara**. Ni una palabra de copy en el JSX |
 | `src/compositions/FeatureDemo.tsx` | La plantilla. Una sola, para los dos lienzos |
-| `src/components/` | `DeviceFrame`, `AppleTitle`, `Callout`, `SafeAreas` |
-| `src/lib/layout.ts` | El encuadre, con los números medidos sobre el footage |
+| `src/components/` | `DeviceFrame` (footage + cámara), `AppleTitle`, `Callout`, `SafeAreas` |
+| `src/lib/layout.ts` | El encuadre y la **cámara**, con los números medidos sobre el footage |
 | `public/footage/` | Las tomas. Curadas, no crudas |
 | `scripts/` | Render de una pieza o del pack, con comprobación del fichero |
 | `out/` | Los mp4. **No se commitea** |
@@ -55,5 +55,6 @@ La pieza se elige por `slug` en los props, no creando una composition nueva.
 están reservados en `copy.ts` sin toma: el Studio los enseña con su cartel de «falta la
 toma» en lugar de reventar.
 
-⚠️ **El piloto no está listo para publicar.** Tema Light, píldora de grabación y datos que
-parecen reales. Ver `docs/OPERACION.md § Deuda de la toma piloto`.
+⚠️ **Al piloto le falta una toma limpia** antes de publicar: la actual va en tema Light y
+lleva la píldora roja de grabación (tapada con un recorte). Los datos son seed de demo.
+Ver `docs/OPERACION.md § Deuda de la toma piloto`.

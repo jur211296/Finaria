@@ -11,8 +11,7 @@ El contrato entre el guion (`src/brand/copy.ts`) y el motor
 estirar y sin reconstruir. Vive en `DeviceFrame` y llega por `OffthreadVideo`.
 La UI de Yala **jamás** se genera con IA ni se redibuja en React.
 
-**Capa B · motion estilo Apple.** Rótulos, callouts, end card, springs, fades.
-Vive encima, nunca dentro.
+**Capa B · motion.** Beats de texto, cámara, barra de avance, end card. Vive encima.
 
 Si la Capa A está mal, se vuelve a grabar. La Capa B no arregla una toma mala: la disfraza.
 
@@ -40,13 +39,59 @@ Y la pieza que el `slug` resuelve:
 | `source` | `{ w, h }` del origen | Encaja sin deformar. Si mientes aquí, el vídeo se estira |
 | `crop` | Fracción que se recorta arriba/abajo | Recorta, no escala. Para tapar una status bar sucia |
 | `theme` | `dark` \| `light` | Es el **marco**. El footage no se recolorea nunca |
-| `hook` | Máx. 6 palabras, ES + EN | Si no cabe en un respiro, no es un hook |
-| `callouts[]` | Píldora con `fromSec`/`toSec` | **Entra cuando el producto YA enseñó el resultado.** Si se adelanta, la pieza promete en vez de demostrar |
+| `beats[]` | El hilo de texto | Ver abajo. **6–8 por pieza**, no uno |
+| `shots[]` | Los planos de cámara | Ver abajo |
 | `endCard` | Wordmark + una línea | Una línea. No dos |
 
 `durationInFrames` **no se escribe**: lo calcula `calculateMetadata` como
-`footageSec + endCard.durationSec`. Cambiar el mp4 por uno más largo actualiza la línea de
-tiempo sola.
+`footageSec + endCard.durationSec`.
+
+---
+
+## `beats` — el hilo de texto
+
+El texto no es decoración: **es lo que se lee cuando el vídeo va sin sonido**, que es como
+se ve la mayoría de las veces. Una pieza de 16 s lleva **6–8 beats**. Si hay dos segundos
+sin texto, el pulgar sigue bajando.
+
+| `style` | Tamaño | Para |
+|---|---|---|
+| `hero` | 104 px, peso 800 | Abrir y rematar. Dos o tres palabras |
+| `line` | 62 px, peso 700 | Contar el paso que está pasando |
+| `pill` | 40 px en píldora de cristal | Etiquetar lo que la pantalla acaba de enseñar |
+
+Cada beat **entra por palabras**, con la siguiente medio paso por detrás, y lleva una barra
+de acento que crece debajo. Un bloque que aparece entero se lee como una diapositiva.
+
+**Todo el texto va ARRIBA** (`REELS_TEXT.top`), y eso es una decisión, no un descuido de
+maquetación: entre las dos safe areas de Reels quedan 1300 px, y ahí no caben texto grande
+arriba + teléfono grande + texto grande abajo. Intentarlo hizo que los rótulos de abajo
+taparan el botón Guardar, la lista de cuentas y la fila de éxito — o sea, taparan justo lo
+que la pieza viene a demostrar. **El texto titula; el teléfono demuestra.**
+
+---
+
+## `shots` — la cámara
+
+Enseñar la pantalla entera, quieta, durante dieciséis segundos es la forma más rápida de
+que nadie mire. Cada plano lleva a la vista donde está pasando algo.
+
+```ts
+{ atSec: 8.4, focusY: 0.41, scale: 1.22 }
+```
+
+- **`focusY`** = fracción del alto **visible** (el origen menos el crop) que queda centrada.
+  Se calcula midiendo el elemento en el footage:
+  `focusY = (fracciónEnElOriginal − cropTop) / (1 − cropTop − cropBottom)`
+- **`scale`** = 1 llena el ancho del escenario. La ventana que se ve es
+  **`0,505 / scale`** del alto visible. Por encima de **~1,25 empieza a cortar texto por los
+  lados**.
+
+**La cámara se SOSTIENE y luego viaja.** Interpolar de un `atSec` al siguiente sin parar
+suena razonable y es lo que rompió una versión entera: la cámara está siempre en tránsito,
+así que ningún encuadre llega a leerse. Medido — a 0,9 s la vista ya iba por la mitad del
+camino al plano de 1,7 s, y de los tres chips solo se veía uno. El viaje ocupa los últimos
+`CAMERA_MOVE_SEC` (0,65 s) de cada tramo; el resto, el plano está quieto.
 
 ---
 
@@ -54,24 +99,31 @@ tiempo sola.
 
 No son gusto. Salen de medir el footage del piloto con `ffmpeg`, frame a frame:
 
-| Momento del piloto | Dónde cae en la pantalla del iPhone |
+| Elemento del piloto | Dónde cae en la pantalla del iPhone |
 |---|---|
-| Chips de sugerencia (0–1,4 s) | 30 %–53 % del alto |
-| Card de confirmación (5,8–8,0 s) | 27 %–73 % ← **el plano estrella, no se tapa** |
-| Fila de éxito «Pizza · PEN 20.00 · Registrado» (11,3–13,9 s) | 32 %–40 % |
-| Banda vacía en el momento de éxito | 52 %–80 % ← ahí va el callout |
-| Barra de escritura (1,4–3,7 s) | 82 %–89 % |
+| Chips de sugerencia | 30 %–53 % del alto |
+| Campo de escritura | 82 %–89 % |
+| Burbuja del usuario | 18 %–26 % |
+| Card de confirmación | 27 %–73 % ← **el plano estrella** |
+| Fila «Cuenta» | 40 %–45 % |
+| Fila de éxito «Pizza · PEN 20.00 · Registrado» | 32 %–40 % |
 
-De ahí sale el encuadre 9:16 de `src/lib/layout.ts`: **device de 700 px de ancho, arriba a
-170 px**. Con eso la barra de escritura cae en y≈1337–1442 del lienzo, o sea **por encima de
-los 1520 px donde Reels tapa con el caption**. A sangre completa el tipeo —que es medio
-relato— quedaría debajo de la UI de Instagram.
+El escenario 9:16 (`REELS_STAGE`) es **940×1000 en x=70, y=530** — el 87 % del ancho del
+lienzo. Es deliberadamente **más cuadrado que un iPhone**: ese recorte es lo que da a la
+cámara sitio a donde moverse.
+
+Tres encuadres probados, y por qué se descartaron los dos primeros:
+
+1. **Teléfono pequeño centrado sobre negro** (65 % de ancho): el 36 % del lienzo queda
+   vacío y en un feed la pieza es invisible.
+2. **Footage a sangre**: el texto blanco cae sobre las tarjetas blancas de la app y no se
+   lee, por mucho scrim que se le ponga.
+3. **Escenario + banda de texto arriba** ← el que está. Teléfono grande, texto sobre fondo
+   oscuro, nada tapado.
 
 `REELS_SAFE` (top 220, bottom 400, side 64) **no recorta nada**: `SafeAreas` lo dibuja en
-punteado para comprobarlo en Studio, y va apagado en render.
-
-El encuadre 9:16 admite que el **bisel** del device entre en la banda superior. Lo que no
-admite es que entre un gesto, un monto o un rótulo.
+punteado para comprobarlo en Studio, y va apagado en render. Lo que se respeta es que
+ningún **texto** y ningún **gesto clave** caigan dentro.
 
 `src/lib/layout.ts` va aparte de `tokens.ts` a propósito: **tokens es la marca** (lo que no
 cambia entre piezas) y **layout es el encuadre** (lo que se recalcula si cambia el lienzo).
@@ -83,6 +135,10 @@ cambia entre piezas) y **layout es el encuadre** (lo que se recalcula si cambia 
 La referencia real de Yala es **SF Pro Rounded**, y no se puede empaquetar en un render web.
 Se usa **Inter** (`@remotion/google-fonts/Inter`, cargada una sola vez en `src/brand/font.ts`).
 No leas las piezas como «así se ve la tipografía de Yala»: se parece, no es.
+
+**Las escalas están subidas respecto al brief del encargo** (hero 64 → 104, callout 28 → 40,
+`linePx` es nuevo). A 64 px sobre 1080 el texto ocupa un 6 % del alto: se ve, pero no se
+lee en un feed. **Los hex no se tocaron**: esto es escala tipográfica, no marca.
 
 ---
 

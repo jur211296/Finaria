@@ -24,7 +24,7 @@ export const EndCard: React.FC<{ line: string; wide?: boolean }> = ({
     travelPx: 22,
   });
 
-  const markSize = wide ? 132 : 116;
+  const markSize = wide ? 190 : 210;
 
   return (
     <AbsoluteFill
@@ -44,7 +44,7 @@ export const EndCard: React.FC<{ line: string; wide?: boolean }> = ({
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: 34,
+          gap: 60,
           opacity,
           transform: `translateY(${translateY}px) scale(${scale})`,
         }}
@@ -53,12 +53,12 @@ export const EndCard: React.FC<{ line: string; wide?: boolean }> = ({
         <div
           style={{
             fontFamily: FONT_STACK,
-            fontWeight: 400,
-            fontSize: wide ? 40 : 36,
+            fontWeight: 600,
+            fontSize: wide ? 52 : 58,
             letterSpacing: "-0.01em",
             color: yala.color.textSecondary,
             textAlign: "center",
-            maxWidth: wide ? 1100 : 820,
+            maxWidth: wide ? 1200 : 900,
           }}
         >
           {line}

@@ -44,12 +44,37 @@ Ni una palabra de copy vive en el JSX. Una entrada nueva en `PIECES`:
   footage: "footage/voz-gasto-hablado.mp4",
   footageSec: 12.4,                    // lo que dijo ffprobe
   source: { w: 1170, h: 2532 },        // lo que dijo ffprobe
-  crop: { top: 0.05 },                 // solo si hay que tapar la status bar
+  crop: { top: 0.05, bottom: 0.035 },  // status bar y pie de página fuera
   theme: "dark",
-  hook: { fromSec: 0.2, toSec: 1.4, text: { es: "…", en: "…" } },
-  callouts: [{ fromSec: 8.2, toSec: 10.4, tone: "gasto", text: { es: "…", en: "…" } }],
+
+  // 6–8 beats. Si hay dos segundos sin texto, el pulgar sigue bajando.
+  beats: [
+    { fromSec: 0, toSec: 2.1, style: "hero", place: "top",
+      text: { es: "Sin teclear.", en: "No typing." } },
+    { fromSec: 2.2, toSec: 4.0, style: "line", place: "top",
+      text: { es: "Se lo dices y ya", en: "Just say it" } },
+    // …
+  ],
+
+  // La cámara va donde está el gesto. `focusY` se MIDE, no se estima:
+  //   focusY = (fracciónEnElOriginal − cropTop) / (1 − cropTop − cropBottom)
+  // La ventana visible es 0,505 / scale; por encima de ~1,25 corta por los lados.
+  shots: [
+    { atSec: 0, focusY: 0.40, scale: 1.02 },
+    { atSec: 2.4, focusY: 0.72, scale: 1.18 },
+    // …
+  ],
+
   endCard: END_CARD,
 }
+```
+
+**Cómo se mide un `focusY`** — es un comando, no un ojímetro:
+
+```bash
+ffmpeg -ss 8.4 -i public/footage/<slug>.mp4 -frames:v 1 /tmp/f.png
+# abre /tmp/f.png, mide a qué altura está el elemento (px / alto total)
+# y aplica la fórmula de arriba
 ```
 
 El copy sigue la voz de `marketing/screenshots-appstore/captions.md`: **cercana, sin
@@ -168,12 +193,14 @@ sin expandir arrays vacíos bajo `set -u`: las dos cosas revientan ahí.
 ## Deuda de la toma piloto
 
 `ia-gasto-pizza-16s.mp4` entra al repo porque el sistema tenía que probarse con footage de
-verdad, pero **tiene tres cosas que hay que arreglar antes de publicarla**:
+verdad. Le quedan **dos** cosas por arreglar en la siguiente toma:
 
 1. **Tema Light.** El pack 2.1 es Liquid Glass oscuro. El marco de la pieza sí va oscuro,
    pero la pantalla no.
-2. **Píldora roja de grabación** los 16 s. Parcheada con `crop: { top: 0.05 }`, que se lleva
-   la status bar entera. Es un parche.
-3. **Datos que parecen reales** — los chips citan «el presupuesto de Maia 🐕», y la lista
-   final trae saldo PEN 8175.00, Uber, Supermercado y una fila «Compartido».
-   **Esto no sale a ningún sitio sin un sí explícito de Jürgen, o con seed de demo.**
+2. **Píldora roja de grabación** los 16 s. Tapada con `crop: { top: 0.05 }`, que se lleva
+   la status bar entera. Es un parche: una toma sin píldora deja recuperar esos 5 %.
+
+**Los datos de la pantalla son seed de demo**, confirmado por Jürgen el 2026-09-11. Aun así
+el reflejo se queda: los chips de sugerencia de Yala IA se generan con las **categorías
+reales de quien graba**, así que en cualquier toma futura hay que leerlos antes de dar la
+grabación por buena.

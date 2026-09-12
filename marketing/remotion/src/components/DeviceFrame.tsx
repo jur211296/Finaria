@@ -1,68 +1,100 @@
-import { OffthreadVideo, staticFile } from "remotion";
+import { OffthreadVideo, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import type { Piece } from "../brand/copy";
 import { FONT_STACK } from "../brand/font";
-import { frameTheme, glass, yala } from "../brand/tokens";
-import { visibleFraction } from "../lib/layout";
+import { yala } from "../brand/tokens";
+import { cameraAt, cameraRect } from "../lib/layout";
 
 /**
- * El trozo de VERDAD DEL PRODUCTO: la grabación real del iPhone, encajada.
+ * El trozo de VERDAD DEL PRODUCTO: la grabación real del iPhone, con cámara.
  *
- * Reglas duras, las tres:
- *  1. `OffthreadVideo`, no `<Video>`. Es lo que muestrea el frame exacto al
- *     renderizar, y aquí el origen va a 60 fps contra una composition de 30.
+ * Reglas duras:
+ *  1. `OffthreadVideo`, no `<Video>`. Muestrea el frame exacto al renderizar,
+ *     y aquí el origen va a 60 fps contra una composition de 30.
  *  2. El footage NO se recolorea, NO se estira y NO se reconstruye. Si la UI
  *     de la toma está mal, se vuelve a grabar; no se retoca aquí.
- *  3. `crop` recorta, nunca escala de más: el ancho manda y el alto sale de la
- *     proporción del origen por la fracción visible.
+ *  3. La cámara RECORTA, nunca deforma: el ancho manda y el alto sale de la
+ *     proporción del origen. Mover la cámara no cambia lo que la app hizo.
+ *
+ * Va **a sangre**, sin marco de teléfono. Un mockup de iPhone flotando en medio
+ * de un fondo negro deja el 40 % del lienzo vacío, y en un feed ese 40 % es
+ * espacio que no cuenta nada.
  */
 export const DeviceFrame: React.FC<{
   piece: Piece;
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-  radius?: number;
-}> = ({ piece, left, top, width, height, radius = 44 }) => {
-  const theme = frameTheme(piece.theme);
+  /** Recorta a una caja en vez de ir a sangre (lo usa el lienzo 16:9). */
+  box?: { left: number; top: number; width: number; height: number; radius: number };
+}> = ({ piece, box }) => {
+  const frame = useCurrentFrame();
+  const { width: canvasW, height: canvasH } = useVideoConfig();
 
-  // Alto que tendría el origen COMPLETO a este ancho; el recorte se aplica
-  // desplazando el vídeo hacia arriba dentro de un contenedor con overflow.
-  const fullHeight = (width * piece.source.h) / piece.source.w;
-  const offsetTop = -fullHeight * (piece.crop?.top ?? 0);
+  const viewW = box?.width ?? canvasW;
+  const viewH = box?.height ?? canvasH;
+
+  const { focusY, scale } = cameraAt(piece.shots, frame);
+  const rect = cameraRect({
+    canvasW: viewW,
+    canvasH: viewH,
+    source: piece.source,
+    crop: piece.crop,
+    focusY,
+    scale,
+  });
 
   return (
     <div
       style={{
         position: "absolute",
-        left,
-        top,
-        width,
-        height,
-        borderRadius: radius,
+        left: box?.left ?? 0,
+        top: box?.top ?? 0,
+        width: viewW,
+        height: viewH,
         overflow: "hidden",
-        border: `1px solid ${glass.strokeStrong}`,
-        boxShadow: `${glass.shadow}, 0 0 120px ${yala.color.indigo}22`,
-        background: theme.bg,
+        borderRadius: box?.radius ?? 0,
+        background: yala.color.bg,
+        // El marco solo existe cuando hay caja. A sangre no se dibuja nada.
+        border: box ? `2px solid rgba(255,255,255,0.16)` : undefined,
+        boxShadow: box
+          ? `0 40px 120px rgba(0,0,0,0.7), 0 0 160px ${yala.color.indigo}33`
+          : undefined,
       }}
     >
       {piece.footage ? (
-        <OffthreadVideo
-          src={staticFile(piece.footage)}
+        <div
           style={{
             position: "absolute",
-            left: 0,
-            top: offsetTop,
-            width,
-            height: fullHeight,
-            objectFit: "fill",
+            left: rect.left,
+            top: rect.top,
+            width: rect.width,
+            height: rect.height,
+            overflow: "hidden",
           }}
-        />
+        >
+          {/* El recorte se hace estirando el vídeo COMPLETO y tapando con
+              overflow; así `crop` quita píxeles sin tocar la proporción. */}
+          <OffthreadVideo
+            src={staticFile(piece.footage)}
+            style={{
+              position: "absolute",
+              left: 0,
+              top: -cropPx(piece, rect.width),
+              width: rect.width,
+              height: fullHeight(piece, rect.width),
+              objectFit: "fill",
+            }}
+          />
+        </div>
       ) : (
         <MissingFootage slug={piece.slug} />
       )}
     </div>
   );
 };
+
+const fullHeight = (piece: Piece, width: number) =>
+  (width * piece.source.h) / piece.source.w;
+
+const cropPx = (piece: Piece, width: number) =>
+  fullHeight(piece, width) * (piece.crop?.top ?? 0);
 
 /**
  * Un slug del pack sin toma todavía. Enseña el hueco en vez de reventar el
@@ -84,19 +116,13 @@ const MissingFootage: React.FC<{ slug: string }> = ({ slug }) => (
       padding: 48,
     }}
   >
-    <div style={{ fontSize: 34, fontWeight: 700, color: yala.color.white }}>
+    <div style={{ fontSize: 46, fontWeight: 800, color: yala.color.white }}>
       Falta la toma
     </div>
-    <div style={{ fontSize: 24, color: yala.color.textSecondary }}>{slug}</div>
-    <div style={{ fontSize: 20, color: yala.color.textSecondary, maxWidth: 420 }}>
+    <div style={{ fontSize: 30, color: yala.color.textSecondary }}>{slug}</div>
+    <div style={{ fontSize: 24, color: yala.color.textSecondary, maxWidth: 520 }}>
       Graba la pantalla del iPhone, copia el mp4 a <code>public/footage/</code> y
       apúntalo en <code>src/brand/copy.ts</code>.
     </div>
   </div>
 );
-
-/** Comprobación barata: que la caja pedida case con la proporción del origen. */
-export const assertAspect = (piece: Piece, width: number, height: number) => {
-  const expected = (width * piece.source.h * visibleFraction(piece.crop)) / piece.source.w;
-  return Math.abs(expected - height) < 2;
-};

@@ -9,18 +9,11 @@ import { AppleTitle } from "../components/AppleTitle";
 import { Callout } from "../components/Callout";
 import { DeviceFrame } from "../components/DeviceFrame";
 import { SafeAreas } from "../components/SafeAreas";
-import { pieceBySlug, type Locale } from "../brand/copy";
+import { pieceBySlug, type Beat, type Locale, type Piece } from "../brand/copy";
 import { FONT_STACK } from "../brand/font";
-import { glass, yala } from "../brand/tokens";
-import {
-  CAPTION_BAND,
-  deviceBox,
-  REELS_DEVICE,
-  REELS_SAFE,
-  WIDE_COPY,
-  WIDE_DEVICE,
-} from "../lib/layout";
+import { yala } from "../brand/tokens";
 import { cue, sec } from "../lib/timing";
+import { REELS_SAFE, REELS_STAGE, REELS_TEXT, WIDE_COPY, WIDE_DEVICE } from "../lib/layout";
 import { EndCard } from "./EndCard";
 
 export type Aspect = "9x16" | "16x9";
@@ -37,8 +30,10 @@ export type FeatureDemoProps = {
 /**
  * La plantilla. UNA sola para todas las piezas y los dos lienzos.
  *
- * Capa A (verdad del producto) = `DeviceFrame` con el footage real, intacto.
- * Capa B (motion estilo Apple) = título, callouts y end card, encima.
+ * Capa A (verdad del producto) = `DeviceFrame` con el footage real, intacto,
+ * a sangre y con cámara: la vista va donde está el gesto.
+ * Capa B (motion) = el hilo de beats encima.
+ *
  * Las dos capas no se mezclan nunca: la app no se redibuja, se filma.
  */
 export const FeatureDemo: React.FC<FeatureDemoProps> = ({
@@ -48,7 +43,6 @@ export const FeatureDemo: React.FC<FeatureDemoProps> = ({
   showSafeAreas,
 }) => {
   const piece = pieceBySlug(slug);
-  const { width, height } = useVideoConfig();
 
   const bodyFrames = sec(piece.footageSec);
   const endFrames = sec(piece.endCard?.durationSec ?? 0);
@@ -56,13 +50,11 @@ export const FeatureDemo: React.FC<FeatureDemoProps> = ({
 
   return (
     <AbsoluteFill style={{ background: yala.color.bg, fontFamily: FONT_STACK }}>
-      <Backdrop aspect={aspect} />
-
       <Sequence durationInFrames={bodyFrames} name="Cuerpo">
         {aspect === "9x16" ? (
           <Reels piece={piece} locale={locale} />
         ) : (
-          <Wide piece={piece} locale={locale} width={width} height={height} />
+          <Wide piece={piece} locale={locale} />
         )}
       </Sequence>
 
@@ -85,114 +77,140 @@ export const FeatureDemo: React.FC<FeatureDemoProps> = ({
 
 // --------------------------------------------------------------------------
 
-type SideProps = {
-  piece: ReturnType<typeof pieceBySlug>;
-  locale: Locale;
-};
+type SideProps = { piece: Piece; locale: Locale };
 
-/** 9:16 — el lienzo de Reels. Geometría medida, ver docs/SHOT-CONTRACT.md. */
-const Reels: React.FC<SideProps> = ({ piece, locale }) => {
-  const { width } = useVideoConfig();
-  const box = deviceBox({ width: REELS_DEVICE.width, source: piece.source, crop: piece.crop });
-  const left = Math.round((width - box.width) / 2);
-  const top = REELS_DEVICE.top;
+/**
+ * 9:16 — el lienzo de Reels. Footage a sangre, texto dentro de las safe areas.
+ *
+ * El footage puede pasar por debajo de la UI de Instagram; el TEXTO no, y los
+ * gestos clave tampoco — de eso se ocupa la cámara en `copy.ts`.
+ */
+const Reels: React.FC<SideProps> = ({ piece, locale }) => (
+  <AbsoluteFill>
+    <Backdrop />
+    <DeviceFrame piece={piece} box={REELS_STAGE} />
 
-  // Banda libre del footage: debajo de los chips y encima de la barra de
-  // escritura. Es donde caben hook y callout sin tapar lo que importa.
-  const bandTop = Math.round(top + box.height * CAPTION_BAND.topFraction);
-  const bandBottom = Math.round(top + box.height * CAPTION_BAND.bottomFraction);
+    {piece.beats.map((beat, i) => (
+      <Sequence
+        key={`${beat.fromSec}-${i}`}
+        {...cue(beat.fromSec, beat.toSec)}
+        name={`${i + 1}· ${beat.text.es}`}
+      >
+        <div
+          style={{
+            position: "absolute",
+            left: REELS_SAFE.side,
+            right: REELS_SAFE.side,
+            ...(beat.place === "top"
+              ? { top: REELS_TEXT.top }
+              : { bottom: REELS_TEXT.bottom }),
+            display: "flex",
+            justifyContent: "center",
+          }}
+        >
+          <BeatText beat={beat} locale={locale} />
+        </div>
+      </Sequence>
+    ))}
 
-  // El callout va 140 px por debajo del hook —los dos nunca coinciden en el
-  // tiempo— y con tope duro: medido sobre el render, sin el clamp la píldora
-  // acababa encima de la barra de escritura de la app.
-  const calloutTop = Math.min(bandTop + 140, bandBottom - 80);
+    <Progress />
+  </AbsoluteFill>
+);
 
-  // La columna de texto sigue al teléfono en vez de irse a las safe areas.
-  // Un panel más ancho que el device se lee como pegatina, no como rótulo.
-  const columnLeft = Math.max(REELS_SAFE.side, left - 40);
-  const columnWidth = width - columnLeft * 2;
+/**
+ * Barra de avance bajo el teléfono.
+ *
+ * Ocupa la banda que Reels tapa con el caption, así que en Instagram casi no
+ * se ve — y ese es el punto: en TikTok y Shorts sí, y ahí retiene, porque
+ * enseña cuánto queda. Si desaparece bajo un caption no se pierde nada.
+ */
+const Progress: React.FC = () => {
+  const frame = useCurrentFrame();
+  const { durationInFrames } = useVideoConfig();
+  const pct = interpolate(frame, [0, durationInFrames], [0, 1], {
+    extrapolateRight: "clamp",
+  });
 
   return (
-    <AbsoluteFill>
-      <DeviceFrame piece={piece} left={left} top={top} {...box} />
-
-      {piece.hook ? (
-        <Sequence {...cue(piece.hook.fromSec, piece.hook.toSec)} name="Hook">
-          <div style={{ position: "absolute", left: columnLeft, width: columnWidth, top: bandTop }}>
-            <AppleTitle text={piece.hook.text[locale]} maxWidth={columnWidth} />
-          </div>
-        </Sequence>
-      ) : null}
-
-      {piece.callouts.map((c, i) => (
-        <Sequence key={c.fromSec} {...cue(c.fromSec, c.toSec)} name={`Callout ${i + 1}`}>
-          <div style={{ position: "absolute", left: 0, right: 0, top: calloutTop }}>
-            <Callout text={c.text[locale]} tone={c.tone} />
-          </div>
-        </Sequence>
-      ))}
-    </AbsoluteFill>
+    <div
+      style={{
+        position: "absolute",
+        left: REELS_SAFE.side + 40,
+        right: REELS_SAFE.side + 40,
+        top: REELS_STAGE.top + REELS_STAGE.height + 60,
+        height: 8,
+        borderRadius: 999,
+        background: "rgba(255,255,255,0.12)",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          width: `${pct * 100}%`,
+          height: "100%",
+          borderRadius: 999,
+          background: `linear-gradient(90deg, ${yala.color.indigo}, ${yala.color.pink})`,
+          boxShadow: `0 0 24px ${yala.color.indigo}`,
+        }}
+      />
+    </div>
   );
 };
 
-/** 16:9 — teléfono a la izquierda sobre placa de cristal, texto a la derecha. */
-const Wide: React.FC<SideProps & { width: number; height: number }> = ({
-  piece,
-  locale,
-  width,
-}) => {
+/**
+ * El fondo. Glow índigo arriba —donde se sienta el texto— y teal abajo, para
+ * que el negro no sea un negro plano de plantilla vacía.
+ */
+const Backdrop: React.FC = () => (
+  <AbsoluteFill
+    style={{
+      background: `radial-gradient(78% 30% at 50% 14%, ${yala.color.indigo}3D, transparent 70%), radial-gradient(70% 26% at 50% 92%, ${yala.color.teal}22, transparent 70%)`,
+    }}
+  />
+);
+
+/** 16:9 — teléfono a la izquierda, columna de texto a la derecha. */
+const Wide: React.FC<SideProps> = ({ piece, locale }) => {
   const deviceWidth = Math.round(
     (WIDE_DEVICE.height * piece.source.w) /
       (piece.source.h * (1 - (piece.crop?.top ?? 0) - (piece.crop?.bottom ?? 0))),
   );
-  const box = deviceBox({ width: deviceWidth, source: piece.source, crop: piece.crop });
-  const copyWidth = width - WIDE_COPY.left - WIDE_COPY.right;
 
   return (
     <AbsoluteFill>
-      {/* Margen glass: la placa que sostiene el teléfono y separa del fondo. */}
-      <div
+      <AbsoluteFill
         style={{
-          position: "absolute",
-          left: WIDE_DEVICE.left - 56,
-          top: WIDE_DEVICE.top - 36,
-          width: box.width + 112,
-          height: box.height + 72,
-          borderRadius: 72,
-          background: glass.panel,
-          border: `1px solid ${glass.stroke}`,
-          backdropFilter: "blur(30px)",
-          WebkitBackdropFilter: "blur(30px)",
+          background: `radial-gradient(46% 70% at 22% 50%, ${yala.color.indigo}33, transparent 72%)`,
         }}
       />
-      <DeviceFrame piece={piece} left={WIDE_DEVICE.left} top={WIDE_DEVICE.top} {...box} />
+      <DeviceFrame
+        piece={piece}
+        box={{
+          left: WIDE_DEVICE.left,
+          top: WIDE_DEVICE.top,
+          width: deviceWidth,
+          height: WIDE_DEVICE.height,
+          radius: 48,
+        }}
+      />
 
-      {piece.hook ? (
-        <Sequence {...cue(piece.hook.fromSec, piece.hook.toSec)} name="Hook">
-          <div style={{ position: "absolute", left: WIDE_COPY.left, top: 340, width: copyWidth }}>
-            <AppleTitle
-              text={piece.hook.text[locale]}
-              sizePx={yala.type.heroPx169}
-              align="left"
-              maxWidth={copyWidth}
-            />
-          </div>
-        </Sequence>
-      ) : null}
-
-      {piece.callouts.map((c, i) => (
-        <Sequence key={c.fromSec} {...cue(c.fromSec, c.toSec)} name={`Callout ${i + 1}`}>
+      {piece.beats.map((beat, i) => (
+        <Sequence
+          key={`${beat.fromSec}-${i}`}
+          {...cue(beat.fromSec, beat.toSec)}
+          name={`${i + 1}· ${beat.text.es}`}
+        >
           <div
             style={{
               position: "absolute",
               left: WIDE_COPY.left,
-              top: 470,
-              width: copyWidth,
+              right: WIDE_COPY.right,
+              ...(beat.place === "top" ? { top: 190 } : { bottom: 190 }),
               display: "flex",
               justifyContent: "flex-start",
             }}
           >
-            <Callout text={c.text[locale]} tone={c.tone} />
+            <BeatText beat={beat} locale={locale} typeScale={0.9} align="left" />
           </div>
         </Sequence>
       ))}
@@ -200,17 +218,24 @@ const Wide: React.FC<SideProps & { width: number; height: number }> = ({
   );
 };
 
-/** Glow de fondo. Es lo único del marco que no es negro plano. */
-const Backdrop: React.FC<{ aspect: Aspect }> = ({ aspect }) => (
-  <AbsoluteFill
-    style={{
-      background:
-        aspect === "9x16"
-          ? `radial-gradient(70% 34% at 50% 12%, ${yala.color.indigo}2E, transparent 72%), radial-gradient(60% 30% at 50% 96%, ${yala.color.teal}18, transparent 70%)`
-          : `radial-gradient(46% 70% at 22% 50%, ${yala.color.indigo}2E, transparent 72%)`,
-    }}
-  />
-);
+const BeatText: React.FC<{
+  beat: Beat;
+  locale: Locale;
+  typeScale?: number;
+  align?: "center" | "left";
+}> = ({ beat, locale, typeScale = 1, align = "center" }) =>
+  beat.style === "pill" ? (
+    <Callout text={beat.text[locale]} tone={beat.tone} typeScale={typeScale} />
+  ) : (
+    <AppleTitle
+      text={beat.text[locale]}
+      style={beat.style}
+      place={beat.place}
+      tone={beat.tone}
+      typeScale={typeScale}
+      align={align}
+    />
+  );
 
 const FadeIn: React.FC<{ frames: number; children: React.ReactNode }> = ({
   frames,

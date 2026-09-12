@@ -1,52 +1,45 @@
 # Shot cards — `ia-gasto-pizza`
 
-Los planos de la pieza piloto, decididos antes de tocar la composition. Es lo que aporta el
-catálogo de planos (`video-shotcraft` / `ai-product-video`): **decidir cuántos planos hay y
-qué hace cada uno**, no renderizar su template.
+Los planos de la pieza piloto. Nueve movimientos de cámara y siete beats de texto sobre
+una toma continua de 16,18 s.
 
-Cuatro planos, 17,2 s. El footage no se corta —es una toma continua de 16,18 s— así que los
-«planos» aquí son **tramos de intención**, no cortes de montaje. Eso es deliberado: cortar
-una demo de producto rompe la prueba de que la app hace eso de verdad, seguido.
+El footage **no se corta**: cortar una demo de producto rompe la prueba de que la app hace
+eso de verdad, seguido. Lo que se mueve es la cámara.
 
 ---
 
-## Plano 1 · Enganche — 0,0 a 1,4 s
+## Los siete beats
 
-| | |
-|---|---|
-| **Qué se ve** | La pantalla de Yala IA en reposo, con los chips de sugerencia |
-| **Qué hace la Capa B** | `AppleTitle`: «Un gasto, en una frase» / «One expense, one sentence» |
-| **Energía** | Quieta. Entra con spring y se va antes de que empiece el tipeo |
-| **Por qué ahí** | El rótulo se sienta en la banda libre bajo los chips (y≈1005). No los tapa: los chips terminan en y≈897 |
-| **Regla** | Máximo 6 palabras. El hook dice la promesa, no la explica |
+| # | Seg. | Estilo | Texto | Por qué ahí |
+|---|---|---|---|---|
+| 1 | 0,0–2,1 | hero | **Sin formularios.** | El hook ataca la **fricción**, que es el posicionamiento entero. No dice lo que la app tiene; dice lo que te ahorra |
+| 2 | 2,2–3,7 | line | Lo escribes como lo dirías | Titula el gesto que se está viendo |
+| 3 | 3,9–5,7 | line | Y la IA hace el resto | El relevo: tú paras, la app sigue |
+| 4 | 6,0–7,9 | pill | Monto · categoría · fecha | Etiqueta lo que la card **ya está enseñando**. No lo anuncia |
+| 5 | 8,3–11,1 | line | Tú eliges la cuenta | Lo único que la IA no decide sola. Decirlo es honestidad, y evita prometer de más |
+| 6 | 11,8–13,8 | hero, rosa | **Registrado.** | El golpe. Entra **medio segundo después** de que aparezca la fila de éxito: a la vez parecería que lo anuncia; después, lo confirma |
+| 7 | 14,2–16,2 | line | Tus cuentas, al día | Cierra el arco: el gasto ya está donde tiene que estar |
 
-## Plano 2 · La frase — 1,4 a 5,8 s
+Ni un beat dura más de 2,9 s y no hay más de 0,4 s sin texto en pantalla.
 
-| | |
-|---|---|
-| **Qué se ve** | El tipeo y la burbuja: «Registra un gasto de 20 soles en restaurantes con concepto Pizza» |
-| **Qué hace la Capa B** | **Nada.** Silencio de rótulos |
-| **Energía** | Sube sola: el texto apareciendo ya es el movimiento |
-| **Por qué ahí** | Es el momento en que se entiende el producto. Un rótulo encima compite con lo único que importa leer |
+---
 
-## Plano 3 · El resultado — 5,8 a 11,3 s
+## Los nueve planos
 
-| | |
-|---|---|
-| **Qué se ve** | Card de confirmación → selector de cuenta → «Gastos Soles · PEN» → Guardar |
-| **Qué hace la Capa B** | Nada. La card ocupa el 27 %–73 % de la pantalla y **no se tapa** |
-| **Energía** | La del producto. Los sheets de iOS ya traen su propio movimiento |
-| **Nota** | Aquí se ve que la subcategoría «Alimentación · Restaurantes» **la puso la IA sola**. Es la prueba de la afirmación del plano 4 |
+| Seg. | `focusY` | `scale` | Qué se ve |
+|---|---|---|---|
+| 0,0 | 0,40 | 1,02 | Los tres chips de sugerencia. Plano abierto |
+| 1,7 | 0,72 | 1,08 | El campo de texto ← **el gesto**. Se ve lo que se escribe, con el teclado asomando |
+| 3,9 | 0,26 | 1,12 | La burbuja del usuario, ya enviada |
+| 6,1 | 0,49 | 1,00 | **La card entera**, de «Gasto 20 PEN» a «Guardar». El plano estrella: no se recorta |
+| 8,4 | 0,41 | 1,22 | Primer plano de la fila «Cuenta» cambiando de valor |
+| 10,1 | 0,42 | 1,14 | La misma fila, ya en «Gastos Soles · PEN» |
+| 11,6 | 0,34 | 1,18 | La fila de éxito: Pizza · PEN 20.00 · Registrado |
+| 14,1 | 0,34 | 1,00 | Se abre a la lista de Registros |
+| 16,2 | 0,38 | 1,10 | Push lento de salida hacia la end card |
 
-## Plano 4 · El remate — 11,3 a 17,2 s
-
-| | |
-|---|---|
-| **Qué se ve** | «Pizza · PEN 20.00 · ✅ Registrado», luego la lista de Registros |
-| **Qué hace la Capa B** | `Callout` rosa: «La categoría, puesta sola» (11,9–13,9 s) → `EndCard` con el wordmark |
-| **Energía** | Baja y cierra |
-| **Por qué en 11,9 y no en 11,3** | El callout entra **medio segundo después** de que la fila de éxito aparezca. Si entra a la vez, parece que lo anuncia; entrando después, lo confirma |
-| **Por qué ahí** | Cae en y≈1145 del lienzo: por debajo del contenido del chat (acaba en y≈825) y por encima de la barra de escritura (y≈1337). Medido sobre el render, no supuesto — la primera versión pisaba la barra |
+Cada `focusY` sale de localizar el elemento con `ffmpeg` y pasarlo a fracción del trozo
+visible. **No hay ni un número estimado en esta tabla.**
 
 ---
 
@@ -55,8 +48,6 @@ una demo de producto rompe la prueba de que la app hace eso de verdad, seguido.
 - **No demuestra el look 2.1.** La toma es tema Light; el pack es Liquid Glass oscuro.
 - **No demuestra una toma limpia.** Lleva la píldora roja de grabación, tapada con
   `crop: { top: 0.05 }`.
-- **No está lista para publicar.** Los datos de la pantalla parecen reales. Ver
-  `OPERACION.md § Deuda de la toma piloto`.
 
-Lo que sí demuestra es que **el sistema funciona de punta a punta**: footage real → props →
-dos lienzos → dos mp4 verificados.
+Lo que sí demuestra es que **el sistema funciona de punta a punta**: footage real → beats y
+cámara en `copy.ts` → dos lienzos → dos mp4 verificados.

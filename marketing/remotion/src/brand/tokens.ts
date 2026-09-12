@@ -19,17 +19,23 @@ export const yala = {
   },
   type: {
     family: "Inter",
-    heroPx: 64,
-    heroPx169: 72,
-    calloutPx: 28,
+    // ⚠️ Subidos respecto al brief del encargo (hero 64 → 104, callout 28 → 40)
+    // y `linePx` es nuevo. El motivo: a 64 px sobre un lienzo de 1080 el texto
+    // ocupa un 6 % del alto y en un feed no se lee — se ve, que no es lo mismo.
+    // Los hex NO se tocaron; esto es escala tipográfica, no marca.
+    heroPx: 104,
+    linePx: 62,
+    heroPx169: 92,
+    calloutPx: 40,
   },
   motion: {
     fps: 30,
-    springTitle: { damping: 14, mass: 0.4, stiffness: 120 },
+    springTitle: { damping: 13, mass: 0.4, stiffness: 150 },
     fadeFrames: 10,
     titleIn: 8,
     titleHold: 50,
-    titleOut: 12,
+    // Salida corta: el beat tiene que irse antes de que entre el siguiente.
+    titleOut: 7,
   },
   canvas: {
     reels: { w: 1080, h: 1920, id: "FeatureDemo-9x16" },
