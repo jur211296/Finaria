@@ -1,46 +1,40 @@
 ---
-updated: 2026-09-12
+updated: 2026-09-11
 tags: [now, punto-de-retomada]
 ---
 
-# NOW — 2026-09-12 (Lima)
+# NOW — 2026-09-11 (Lima)
 
-**Rama** `2.1` — Merge #144: **si no se pueden soltar los grupos, la app lo dice en vez de fingir que
-soltó la cuenta.**
+**Rama** `2.1` — Merge #145: **los siete XCUITest del Welcome no estaban rotos; lo estaba la medición.**
 TestFlight build **13** (CPV 13). **Subida Yala (TF/store) = solo Mini.**
 
-## Esta sesión (el `high` que el paso 10 dejó abierto)
+## Esta sesión (el `high` de testing que bloqueaba la cola)
 
-**Desasociar la cuenta de grupos ya no puede mentir.** Toco «Desasociar» en Ajustes → «¿Dónde viven tus
-datos?» → Grupos; si el borrado local falla, la pantalla me decía igual que ya no había cuenta asociada —
-y **mis grupos seguían enteros en el teléfono**. Ahora el borrado es la **última condición del gesto, no
-su último paso**: si no entra, no se limpia nada, sale un aviso propio, y la sección recuerda que quedó a
-medias hasta que se termine, aunque cierre la app y vuelva otro día.
+**Los siete XCUITest del Welcome están sanos: el rojo era de la máquina, no del código.** El ticket
+`welcome-chooser-uitests-cannot-reach-the-chooser` nació `high` con su log y su bisección. Medido tres
+veces: **11/11 verde** en `2.1` de hoy (dos corridas), **11/11** en `1a9cbb83` —la revisión exacta que se
+bisecó— y los once verdes en la **nocturna de CI del 11-sep** dentro de los 149 casos. Las dos suites eran
+**byte-idénticas** entre esas revisiones, así que no había eje que bisecar. Y la hipótesis se caía con un
+grep: acusaba a `WelcomeHeroView.handleEmpezar()` de encaminar, y son cuatro líneas que llaman
+`onContinue()`.
 
-**Se ofrece TERMINAR el borrado, no repetir el gesto, y el porqué está medido.** Rehacer la asociación no
-se puede: cuando el borrado corre, las credenciales ya se soltaron. Y repetir el gesto entero vuelve a
-entrar por el push-all **después** del teardown —lo que prohíben dos docblocks del propio coordinador— y
-un gasto añadido entre medias deja History que ese drain traduce a outbox, quemando 20 ciclos sin
-credenciales hasta bloquearse: el desasociar dejaría de poder terminarse **nunca**.
+**Lo que sí era real:** la corrida que lo midió compartía el único simulador con la sesión de #143. La
+segunda corrida **instala su `.app` sobre el mismo bundle id**, así que la primera sigue viva tapeando un
+binario ajeno y falla **con línea de aserto** — con la pinta exacta de una regresión, no con el
+«Restarting after unexpected exit» que las reglas daban por única firma. Ahora
+`qa/scripts/sim-libre.sh --vigilar <pid>` vigila la corrida entera y el paso 3 del `/gate` lo lanza en
+paralelo; si canta, la corrida no da veredicto. Verificado con sus cuatro controles, incluido el positivo
+con otra corrida real encima.
 
-**La review fue en DOS vueltas, y la segunda es la que enseña.** Tres lentes sobre el arreglo, y una
-cuarta sobre el rediseño que esas tres me obligaron a hacer — lo que se escribe DESPUÉS de una review no
-lo ha revisado nadie. Esa cuarta cazó dos ALTAS mías: **la marca de «a medias» no iba sellada**, así que
-«Terminar» podía borrarle los grupos a una cuenta **viva** (quien pulsara «Entrar» y luego «Terminar» se
-quedaba dentro de una cuenta cuyos datos acababa de borrar), y **el borrado del cierre de sesión no se la
-llevaba** — nombra a sus tres hermanas y se olvidaba de ella. De propina, mi propio docblock afirmaba que
-esa función «barre el prefijo `groups.*`» y es una **lista de keys**: el namespace era convención, no
-mecanismo.
+## La sesión anterior (#144)
 
-Y tres defectos preexistentes del mismo gesto, arreglados porque son el mismo objeto: `detachBridge`
-devolvía un `Outcome` vacío cuando su `save()` fallaba —el llamador lo leía como éxito y dejaba
-transacciones apuntando a una zona sin filas vivas, dinero atrapado que no recoge ningún barrido—, el
-aviso de bloqueo describía otro problema, y el «estoy ocupado» era mudo.
-
-**Verificado**: build ×2 sin warnings nuevos, unit **380 en 45 suites**, XCUITest **10** en tres suites y
-**catorce mutantes**. Y una trampa nueva en las reglas, que costó tres corridas: **los XCUITest de esta
-pantalla van con `Yala Dev`** — con `Yala` la fila de Ajustes no existe (el gate de rollout es fail-closed
-sin `DEV_BUILD`), y el rojo se parece mucho al del disco lleno.
+**Desasociar la cuenta de grupos ya no puede mentir.** El borrado local pasó a ser la **última condición
+del gesto, no su último paso**: si no entra, no se limpia nada, sale un aviso propio y la sección recuerda
+que quedó a medias. Se ofrece **Terminar** el borrado, no repetir el gesto (repetirlo vuelve a entrar por
+el push-all tras el teardown y puede dejarlo sin poder terminarse nunca). La review fue en dos vueltas y
+la segunda —sobre el rediseño que la primera obligó— cazó dos ALTAS mías. Detalle en su ticket y en el
+cuerpo del PR #144. **Su device-QA sigue pendiente y NO es simulable** (falta el seam de la asociación
+sembrada).
 
 ## Tu cola
 
@@ -115,11 +109,15 @@ retirada de M1. Pasos 0-10 cerrados; el 11 sigue vacante a propósito. **El boar
 
 ## Bloqueo
 
-**El `high` de testing sigue siendo el primero** (`welcome-chooser-uitests-cannot-reach-the-chooser`):
-**siete XCUITest** de `WelcomeChooserUITests` y `SecondarySessionGateUITests` fallan en un worktree limpio
-de `2.1` (bisecado, no supuesto). El Hero sale y se tapea; el chooser de nivel 1 no llega nunca. Ciegan el
-primer minuto de la app y las dos celdas que el paso 5 escribió para que la puerta de Grupos no volviera a
-bloquear al dueño — y la suite de UI ya no corre en los PR, solo en la nocturna.
+**El `high` de testing que iba primero ya no existe: era un falso positivo** y queda `discarded` con la
+medición dentro. Lo que sí sube a `high` es su causa, `diez-worktrees-comparten-un-simulador`, y **espera
+decisión tuya** entre tres opciones que el ticket ya tiene escritas: un simulador por worktree (cuesta
+disco), un lock de fichero (serializa el gate de las 14 sesiones) o seguir a mano. Lo de este PR es
+**detección**, no prevención.
+
+Y un dato de paso: la nocturna del 11-sep confirma que los cuatro de
+`nocturna-del-9-sep-dejo-cuatro-xcuitest-en-rojo` **siguen rojos**, tres de ellos 3/3 reintentos en dos
+noches distintas. Eso ya no se sostiene como «flaky de runner frío».
 
 Los otros dos de testing: `shared-state-guard-misses-wipelocalgroupsdomain` (el guard del trait de
 aislamiento busca `wipeAllUserData(` y se le escapa el otro escritor del espejo) y
