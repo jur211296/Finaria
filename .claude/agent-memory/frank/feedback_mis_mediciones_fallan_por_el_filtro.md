@@ -721,3 +721,14 @@ buscaba como `✘ Test <función>(` y Swift Testing escribe el **nombre visible*
 (`@Test("la tabla entera")` sale como `✘ Test "la tabla entera"`). Releída con los dos formatos, 14/14. ⇒ al
 leer el log de un mutante, resuelve el nombre visible desde el fuente, o lee el result bundle; y un
 «sobrevive» en un test con nombre visible es sospechoso hasta mirarlo.
+
+## 2026-09-12 · el exit que no informa
+
+`bash qa/scripts/disk-report.sh --guard` **SIEMPRE sale 0**, también por debajo del umbral: es un
+hook de aviso, no un bloqueo. Leí ese 0 como «hay disco de sobra» y seguí con 21 GB (umbral 25). El
+dato está en el texto, no en el código de salida. **Antes de derivar una decisión del exit de un
+script, mira si ese exit tiene más de un valor posible** — un `grep -n "exit" <script>` lo dice.
+
+Y el hermano del mismo día: un `ok`/`mal` de banco cuyo comparador devuelve TRES códigos (0 / 1 / «no
+pude medir») y solo se comprueban dos: el tercero cae en la rama del ✓.
+

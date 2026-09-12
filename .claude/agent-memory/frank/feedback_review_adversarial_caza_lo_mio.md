@@ -298,3 +298,23 @@ Y un aviso de método: **la lente de tests dijo que dos de mis aserciones nuevas
 razón** (sobrevivían a reordenar los guards, y el cableado no tenía NINGÚN test). La forma de zanjarlo no
 fue discutirlo: fue escribir el mutante y verlo caer. Tres mutantes, uno por aserción, cada uno cayendo
 solo en su test.
+
+## 2026-09-12 · diez míos en un candado, y dos eran llaves maestras
+
+Tres lentes sobre `sim-lock.sh` (la cola del simulador). **Diez defectos eran de mi código de esa
+misma sesión**, y los dos peores hacían correr **sin lock y sin un solo mensaje** — el modo de fallo
+exacto que el candado venía a impedir, entrando por la puerta de atrás:
+
+- **`YALA_SIM_LOCK_HELD=0` era un pase libre universal**: la marca de reentrada se fiaba de un PID y
+  `os.kill(0, 0)` señala al propio grupo de procesos, así que nunca falla. Con el PID de un proceso
+  de otro usuario, el `PermissionError` se leía como «vivo, es mi ancestro»: lo mismo.
+- **`--quiet --vigilar PID` apagaba el centinela**: el parseo miraba solo `$1`, caía a la foto
+  instantánea y salía **0 sin vigilar nada**. La única forma de pedir un centinela silencioso era la
+  que lo desactivaba.
+- Y **el caso estrella de mi propio banco daba verde sin datos**: el comparador devolvía «no pude
+  medir» y el `if` lo metía en la rama del ✓.
+
+**La lección que vale para la próxima:** cuando lo que escribo es un CANDADO, la lente que más rinde
+es «¿por dónde se ejecuta esto sin el candado puesto?», y hay que recorrer **todas** las ramas que
+conceden permiso — las de error incluidas. Un `except PermissionError: pass` es una concesión.
+
