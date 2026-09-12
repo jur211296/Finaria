@@ -2,6 +2,7 @@
 # Renderiza UNA pieza en UN lienzo.
 #
 #   scripts/render-reels.sh [slug] [locale] [--aspect 9x16|16x9]
+#   scripts/render-reels.sh <slug-de-presentación> [locale] --presentation
 #
 # Sin argumentos saca el piloto en español y 9:16.
 # Comprueba el fichero DESPUÉS de renderizar: «renderizado» no es «hay vídeo».
@@ -15,12 +16,14 @@ cd "$(dirname "$0")/.."
 SLUG="ia-gasto-pizza"
 LOCALE="es"
 ASPECT="9x16"
+PRESENTATION=0
 POS_COUNT=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --aspect) ASPECT="$2"; shift 2 ;;
     --locale) LOCALE="$2"; shift 2 ;;
+    --presentation) PRESENTATION=1; ASPECT="16x9"; shift ;;
     -h|--help) sed -n '2,9p' "$0"; exit 0 ;;
     *)
       POS_COUNT=$((POS_COUNT + 1))
@@ -36,6 +39,7 @@ case "$ASPECT" in
   16x9) COMP="FeatureDemo-16x9" ;;
   *) echo "✗ aspect desconocido: $ASPECT (usa 9x16 o 16x9)" >&2; exit 2 ;;
 esac
+if [ "$PRESENTATION" -eq 1 ]; then COMP="Presentation-16x9"; fi
 
 # bun si está, npx si no: la Mini puede no tener bun.
 if command -v bunx >/dev/null 2>&1; then
@@ -45,7 +49,11 @@ else
 fi
 
 OUT="out/${SLUG}-${LOCALE}-${ASPECT}.mp4"
-PROPS=$(printf '{"slug":"%s","locale":"%s","aspect":"%s","showSafeAreas":false}' "$SLUG" "$LOCALE" "$ASPECT")
+if [ "$PRESENTATION" -eq 1 ]; then
+  PROPS=$(printf '{"slug":"%s","locale":"%s"}' "$SLUG" "$LOCALE")
+else
+  PROPS=$(printf '{"slug":"%s","locale":"%s","aspect":"%s","showSafeAreas":false}' "$SLUG" "$LOCALE" "$ASPECT")
+fi
 
 mkdir -p out
 echo "→ ${COMP}  ·  ${SLUG}  ·  ${LOCALE}  →  ${OUT}"

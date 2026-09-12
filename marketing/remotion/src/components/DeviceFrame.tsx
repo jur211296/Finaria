@@ -22,15 +22,67 @@ import { PHONE, phoneHeight } from "../lib/layout";
 export const DeviceFrame: React.FC<{ piece: Piece; screenWidth?: number }> = ({
   piece,
   screenWidth = PHONE.screenWidth,
-}) => {
+}) => (
+  <PhoneShell screenWidth={screenWidth} source={piece.source} crop={piece.crop}>
+    {piece.footage ? (
+      <ScreenVideo
+        src={piece.footage}
+        screenWidth={screenWidth}
+        source={piece.source}
+        crop={piece.crop}
+      />
+    ) : (
+      <MissingFootage slug={piece.slug} />
+    )}
+  </PhoneShell>
+);
+
+/**
+ * El footage dentro de la pantalla. El recorte se hace estirando el vídeo
+ * COMPLETO y desplazándolo hacia arriba bajo un contenedor con overflow: así
+ * `crop` quita píxeles sin tocar la proporción.
+ */
+export const ScreenVideo: React.FC<{
+  src: string;
+  screenWidth: number;
+  source: { w: number; h: number };
+  crop?: { top?: number; bottom?: number };
+  startFromSec?: number;
+}> = ({ src, screenWidth, source, crop, startFromSec = 0 }) => {
+  const fullVideoH = (screenWidth * source.h) / source.w;
+  const cropTopPx = fullVideoH * (crop?.top ?? 0);
+  return (
+    <OffthreadVideo
+      src={staticFile(src)}
+      startFrom={Math.round(startFromSec * yala.motion.fps)}
+      style={{
+        position: "absolute",
+        left: 0,
+        top: -cropTopPx,
+        width: screenWidth,
+        height: fullVideoH,
+        objectFit: "fill",
+      }}
+    />
+  );
+};
+
+/**
+ * La carcasa: marco, isla, botones, reflejo y sombra. La pantalla es lo que le
+ * pases como hijo; así la presentación mete una escena distinta en cada tramo
+ * sin que el teléfono deje de ser el mismo objeto.
+ */
+export const PhoneShell: React.FC<{
+  screenWidth: number;
+  source: { w: number; h: number };
+  crop?: { top?: number; bottom?: number };
+  children: React.ReactNode;
+}> = ({ screenWidth, source, crop, children }) => {
   const bezel = PHONE.bezel;
   const outerW = screenWidth + bezel * 2;
-  const outerH = phoneHeight(screenWidth, piece.source, piece.crop);
+  const outerH = phoneHeight(screenWidth, source, crop);
   const screenH = outerH - bezel * 2;
   const radius = (PHONE.radius * screenWidth) / PHONE.screenWidth;
-
-  const fullVideoH = (screenWidth * piece.source.h) / piece.source.w;
-  const cropTopPx = fullVideoH * (piece.crop?.top ?? 0);
 
   return (
     <div style={{ position: "relative", width: outerW, height: outerH }}>
@@ -48,7 +100,6 @@ export const DeviceFrame: React.FC<{ piece: Piece; screenWidth?: number }> = ({
         }}
       />
 
-      {/* Botones laterales. */}
       <SideButton side="left" top={outerH * 0.16} height={outerH * 0.028} />
       <SideButton side="left" top={outerH * 0.235} height={outerH * 0.05} />
       <SideButton side="left" top={outerH * 0.3} height={outerH * 0.05} />
@@ -79,21 +130,7 @@ export const DeviceFrame: React.FC<{ piece: Piece; screenWidth?: number }> = ({
           background: "#000",
         }}
       >
-        {piece.footage ? (
-          <OffthreadVideo
-            src={staticFile(piece.footage)}
-            style={{
-              position: "absolute",
-              left: 0,
-              top: -cropTopPx,
-              width: screenWidth,
-              height: fullVideoH,
-              objectFit: "fill",
-            }}
-          />
-        ) : (
-          <MissingFootage slug={piece.slug} />
-        )}
+        {children}
 
         {/* Reflejo del cristal: una diagonal muy tenue. Es lo que hace que
             la pantalla se lea como vidrio y no como un PNG plano. */}

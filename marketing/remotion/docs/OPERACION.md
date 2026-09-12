@@ -6,6 +6,22 @@ footage no se retoca aquí.**
 
 ---
 
+## Dos formatos, un solo footage por función
+
+| | `Presentation-16x9` | `FeatureDemo-9x16` |
+|---|---|---|
+| Qué es | **La pieza de presentación**, horizontal, por escenas | **Un clip por función**, vertical, con zoom |
+| Dónde | YouTube, web, App Store preview, keynote | Reels, TikTok, Shorts |
+| Cuántas | Una (o una por release) | Una por función del pack |
+| El teléfono | Objeto 3D: se inclina, gira de canto, se acerca | Grande, con la cámara siguiendo el gesto |
+| El texto | **Una línea por escena**, acompaña | 6–8 beats grandes, es el guion sin sonido |
+| Referencia | Kelo (2026-09-11): fondo limpio, ritmo 2–3 s | Feed: lo que para el pulgar |
+
+**El flujo, por función:** grabas UN clip de esa función (8–15 s) → ese clip es una **escena**
+de la presentación y, a la vez, **su propio clip vertical**. Un footage, dos salidas. Hoy la
+presentación demo trocea el mismo mp4 del piloto por escenas; cuando haya un clip por
+función, cada escena apunta al suyo en `PRESENTATIONS[…].scenes[…].footage.src`.
+
 ## El bucle
 
 ### 1 · Graba la pantalla del iPhone
@@ -94,10 +110,12 @@ encuadre, no se publica y ya.**
 ### 5 · Renderiza
 
 ```bash
-bun run render:reels                    # piloto, es, 9:16
-bash scripts/render-reels.sh <slug> es  # una pieza, 9:16
+bun run render:reels                    # clip piloto, es, 9:16
+bash scripts/render-reels.sh <slug> es  # un clip, 9:16
 bash scripts/render-reels.sh <slug> en --aspect 16x9
-bun run render:pack                     # todas las piezas CON toma, los dos lienzos
+bun run render:presentation             # la presentación horizontal
+bash scripts/render-reels.sh <slug-presentación> en --presentation
+bun run render:pack                     # todos los clips CON toma, los dos lienzos
 ```
 
 Sale a `out/<slug>-<locale>-<aspect>.mp4`, que **no se commitea**.

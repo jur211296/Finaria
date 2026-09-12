@@ -78,6 +78,55 @@ export type Piece = {
   notes?: string;
 };
 
+// ---------------------------------------------------------------------------
+// PRESENTACIÓN — la pieza horizontal por escenas
+//
+// Referencia (Kelo, 2026-09-11): fondo limpio, el teléfono como objeto 3D que
+// se inclina, gira de canto y se acerca entre escenas, UNA línea por escena,
+// ritmo de 2–3 s. Es otro registro que el clip vertical: aquí el texto
+// acompaña; el que actúa es el teléfono.
+// ---------------------------------------------------------------------------
+
+/** Postura del teléfono en el lienzo. x/y en fracción del lienzo (centro). */
+export type Pose = {
+  x: number;
+  y: number;
+  scale: number;
+  rotateX: number;
+  rotateY: number;
+  rotateZ: number;
+};
+
+export type SceneFootage = {
+  src: string;
+  /** Segundo del mp4 desde el que arranca esta escena. */
+  fromSec: number;
+  source: { w: number; h: number };
+  crop?: { top?: number; bottom?: number };
+};
+
+export type Scene = {
+  durationSec: number;
+  /** `null` = escena solo de texto; el teléfono se retira. */
+  footage: SceneFootage | null;
+  pose: Pose | null;
+  text: Localized | null;
+  /** Dónde va el texto respecto al teléfono. */
+  textSide: "left" | "right" | "center";
+  /** `hero` para el arranque y el cierre; `line` para todo lo demás. */
+  textStyle?: "hero" | "line";
+  /** Cómo entra esta escena. `flip` gira el teléfono de canto y cambia la pantalla a 90°. */
+  enter?: "flip" | "move" | "cut";
+};
+
+export type Presentation = {
+  slug: string;
+  title: string;
+  theme: Theme;
+  scenes: Scene[];
+  endCard: EndCardSpec | null;
+};
+
 const END_CARD: EndCardSpec = {
   durationSec: 1.6,
   line: {
@@ -247,4 +296,107 @@ export const pieceBySlug = (slug: string): Piece => {
 export const pieceDurationInFrames = (piece: Piece) =>
   sec(piece.footageSec) + sec(piece.endCard?.durationSec ?? 0);
 
-export const PILOT = pieceBySlug("ia-gasto-pizza");
+
+// El footage del piloto, troceado por escenas. Cuando haya un clip por función,
+// cada escena apunta al suyo y esto deja de repetir el mismo mp4.
+const PIZZA: Omit<SceneFootage, "fromSec"> = {
+  src: "footage/ia-gasto-pizza-16s.mp4",
+  source: { w: 1170, h: 2532 },
+  crop: { top: 0.05, bottom: 0.035 },
+};
+
+export const PRESENTATIONS: Presentation[] = [
+  {
+    slug: "presentacion-yala-ia",
+    title: "Presentación · Yala IA (horizontal)",
+    theme: "dark",
+    scenes: [
+      {
+        // Arranque: el teléfono entra inclinado, flotando, sin texto.
+        durationSec: 2.6,
+        footage: { ...PIZZA, fromSec: 0 },
+        pose: { x: 0.5, y: 0.55, scale: 1.05, rotateX: 14, rotateY: -26, rotateZ: -10 },
+        text: null,
+        textSide: "center",
+        enter: "move",
+      },
+      {
+        // Solo texto. El teléfono se retira.
+        durationSec: 2.0,
+        footage: null,
+        pose: null,
+        text: { es: "Esto es Yala.", en: "This is Yala." },
+        textSide: "center",
+        textStyle: "hero",
+        enter: "move",
+      },
+      {
+        durationSec: 3.4,
+        footage: { ...PIZZA, fromSec: 1.2 },
+        pose: { x: 0.3, y: 0.52, scale: 1, rotateX: 0, rotateY: 0, rotateZ: 0 },
+        text: { es: "Anota un gasto como lo dirías.", en: "Log an expense the way you'd say it." },
+        textSide: "right",
+        enter: "move",
+      },
+      {
+        durationSec: 3.2,
+        footage: { ...PIZZA, fromSec: 5.6 },
+        pose: { x: 0.3, y: 0.52, scale: 1.18, rotateX: 0, rotateY: 0, rotateZ: 0 },
+        text: { es: "Monto, categoría y fecha, puestos por la IA.", en: "Amount, category and date, filled by the AI." },
+        textSide: "right",
+        enter: "move",
+      },
+      {
+        durationSec: 3.2,
+        footage: { ...PIZZA, fromSec: 8.2 },
+        pose: { x: 0.68, y: 0.5, scale: 1.05, rotateX: 6, rotateY: 18, rotateZ: 4 },
+        text: { es: "Tú solo eliges la cuenta.", en: "You just pick the account." },
+        textSide: "left",
+        enter: "flip",
+      },
+      {
+        // Termina en 13,9 s del footage: en 14,0 la hoja del chat se cierra y
+        // el Panel asoma un instante antes de Registros. Medido frame a frame.
+        durationSec: 2.5,
+        footage: { ...PIZZA, fromSec: 11.4 },
+        pose: { x: 0.68, y: 0.5, scale: 1.3, rotateX: 0, rotateY: 0, rotateZ: 0 },
+        text: { es: "Y listo. Registrado.", en: "And done. Logged." },
+        textSide: "left",
+        textStyle: "hero",
+        enter: "move",
+      },
+      {
+        durationSec: 1.9,
+        footage: { ...PIZZA, fromSec: 14.25 },
+        pose: { x: 0.36, y: 0.5, scale: 1.02, rotateX: 8, rotateY: -20, rotateZ: -6 },
+        text: { es: "Tus cuentas, siempre al día.", en: "Your books, always up to date." },
+        textSide: "right",
+        enter: "flip",
+      },
+      {
+        durationSec: 2.4,
+        footage: null,
+        pose: null,
+        text: { es: "Yala. Tu dinero, claro.", en: "Yala. Your money, clear." },
+        textSide: "center",
+        textStyle: "hero",
+        enter: "move",
+      },
+    ],
+    endCard: END_CARD,
+  },
+];
+
+export const presentationBySlug = (slug: string): Presentation => {
+  const found = PRESENTATIONS.find((p) => p.slug === slug);
+  if (!found) {
+    throw new Error(
+      `No hay presentación con slug "${slug}". Las que hay: ${PRESENTATIONS.map((p) => p.slug).join(", ")}`,
+    );
+  }
+  return found;
+};
+
+export const presentationDurationInFrames = (p: Presentation) =>
+  p.scenes.reduce((acc, sc) => acc + sec(sc.durationSec), 0) +
+  sec(p.endCard?.durationSec ?? 0);

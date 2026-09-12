@@ -44,8 +44,9 @@ Si la toma está mal, se vuelve a grabar.
 
 | id | Lienzo | Para |
 |---|---|---|
-| `FeatureDemo-9x16` | 1080×1920 | Reels, TikTok, Shorts |
-| `FeatureDemo-16x9` | 1920×1080 | YouTube, web, keynote |
+| `Presentation-16x9` | 1920×1080 | **La presentación** por escenas: YouTube, web, App Store preview |
+| `FeatureDemo-9x16` | 1080×1920 | **Clip por función**: Reels, TikTok, Shorts |
+| `FeatureDemo-16x9` | 1920×1080 | El mismo clip, en horizontal |
 
 La pieza se elige por `slug` en los props, no creando una composition nueva.
 

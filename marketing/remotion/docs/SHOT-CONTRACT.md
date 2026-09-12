@@ -95,6 +95,29 @@ camino al plano de 1,7 s, y de los tres chips solo se veía uno. El viaje ocupa 
 
 ---
 
+## `Presentation-16x9` — escenas, no beats
+
+La pieza horizontal tiene otro contrato: **`scenes[]`**, y cada escena trae
+
+| Campo | Qué es |
+|---|---|
+| `durationSec` | Cuánto dura la escena |
+| `footage` | `{ src, fromSec, source, crop }` — desde qué segundo de qué mp4. `null` = escena solo de texto |
+| `pose` | Dónde y cómo está el teléfono: `x`, `y` (fracción del lienzo), `scale`, `rotateX/Y/Z`. `null` = el teléfono se retira |
+| `text` / `textSide` / `textStyle` | Una línea. A la izquierda, a la derecha o centrada |
+| `enter` | `move` viaja con spring a la postura nueva; `flip` gira de canto y **cambia la pantalla a 90°**, cuando nadie la ve |
+
+El teléfono es **un solo objeto** que persiste toda la pieza —`PhoneShell` con una
+`ScreenVideo` por escena dentro—, así que las posturas se encadenan con spring y el giro de
+canto ocurre de verdad, no como un corte disimulado.
+
+**Las escenas terminan donde termina lo que enseñan.** La escena «Registrado.» dura 2,5 s
+y no 3 porque en 14,0 s del footage la hoja del chat se cierra y el Panel asoma un instante
+antes de Registros — medido frame a frame. Si una escena se alarga un segundo de más, enseña
+algo que no estaba en el guion.
+
+---
+
 ## La geometría, y de dónde salen los números
 
 No son gusto. Salen de medir el footage del piloto con `ffmpeg`, frame a frame:
