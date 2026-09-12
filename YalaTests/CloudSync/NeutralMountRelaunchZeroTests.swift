@@ -198,6 +198,12 @@ struct WelcomeMirrorRelaunchLogicTests {
             // restore correrían sin espejo tras elegir privado — el restore agotaría su espera de 90 s.
             .fullActivationPrivate: true,
             .fullActivationRestore: true,
+            // La invitación que devolvió el teléfono al NEUTRO (`GroupInviteNeutralGateLogic`). Cae con
+            // `groupsOrganizer` y **no con `inviteRecovery`**, aunque las dos hablen de invitaciones:
+            // aquella recupera un CKShare y desemboca en usar la app con datos personales; ésta llega por
+            // el backend y su dispositivo acaba de quedar en blanco A PROPÓSITO. En `true` le pediríamos
+            // reabrir para adjuntar el espejo que la puerta acaba de quitar — deshaciendo el arreglo.
+            .groupsInvite: false,
         ]
         #expect(Set(expected.keys) == Set(Destination.allCases),
                 "toda salida del Welcome tiene que declarar si necesita el mirror")

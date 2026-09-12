@@ -40,6 +40,7 @@ struct GroupInviteSheetAlwaysShownTests {
         let savedConsent = GroupBackendInviteEntryHandler.isConsentedProvider
         let savedProfile = GroupBackendInviteEntryHandler.profileNameProvider
         let savedReadiness = RouterEntryGate.shared.readinessProvider
+        let savedMirror = GroupBackendInviteEntryHandler.mountAttachesMirrorProvider
 
         // Sesión y consent RESUELTOS: los dos escalones anteriores del flujo encadenado ya pasaron, que es
         // el estado en el que el terminal del invitado decide algo.
@@ -51,6 +52,13 @@ struct GroupInviteSheetAlwaysShownTests {
             spy.displayName = name
             return JoinGroupResult(groupID: "G1", memberKey: "sub", status: "pendingApproval", rebound: false)
         }
+        // **El mount, APAGADO explícitamente, y no es ceremonia: en el host de test el testigo MIENTE.**
+        // `SwiftDataConfiguration.personalStoreMountedDecision` se queda en el default de su declaración
+        // (`.iCloudMirror`) porque aquí nadie monta el store de producción, así que sin esta línea la
+        // puerta del invitado (`GroupInviteNeutralGateLogic`) dispararía en TODAS las celdas y `drive`
+        // saldría por el desvío al neutro antes de decidir el terminal — verde o rojo, no estaría midiendo
+        // la hoja. `false` es la verdad de un dispositivo sin espejo, que es donde vive este flujo.
+        GroupBackendInviteEntryHandler.mountAttachesMirrorProvider = { false }
         // App lista: sin esto el gate DIFIERE el intent al buffer y la cola queda vacía por una razón que
         // no tiene nada que ver con lo que se mide.
         RouterEntryGate.shared.readinessProvider = { (hasCompletedOnboarding: true, isBootstrapInitialized: true) }
@@ -67,6 +75,7 @@ struct GroupInviteSheetAlwaysShownTests {
             GroupBackendInviteEntryHandler.hasSessionProvider = savedSession
             GroupBackendInviteEntryHandler.isConsentedProvider = savedConsent
             GroupBackendInviteEntryHandler.profileNameProvider = savedProfile
+            GroupBackendInviteEntryHandler.mountAttachesMirrorProvider = savedMirror
             RouterEntryGate.shared.readinessProvider = savedReadiness
             CloudSyncFlags._testResetGroupsBackendEnabledOverride()
             AppRouter.shared._testReset()

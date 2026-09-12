@@ -30,11 +30,19 @@ struct GroupJoinReconcilerTests {
         PendingJoinStore.defaults = d
         GroupUserIdentityService.shared._testSetCachedRecordName(recordName)
         GroupJoinIntentTracker.shared.clear()
+        // **El mount, APAGADO explícitamente, porque en el host de test el testigo MIENTE.**
+        // `SwiftDataConfiguration.personalStoreMountedDecision` se queda en el default de su declaración
+        // (`.iCloudMirror`) — aquí nadie monta el store de producción—, así que sin esta línea la puerta
+        // del invitado (`GroupInviteNeutralGateLogic`) haría que `drive` saliera por el desvío al neutro
+        // antes de llegar al join, y lo que estas celdas midieran no sería el reconciler.
+        let savedMirror = GroupBackendInviteEntryHandler.mountAttachesMirrorProvider
+        GroupBackendInviteEntryHandler.mountAttachesMirrorProvider = { false }
         return {
             PendingJoinStore.defaults = .standard
             d.removePersistentDomain(forName: suiteName)
             GroupUserIdentityService.shared._testSetCachedRecordName(nil)
             GroupJoinIntentTracker.shared.clear()
+            GroupBackendInviteEntryHandler.mountAttachesMirrorProvider = savedMirror
         }
     }
 

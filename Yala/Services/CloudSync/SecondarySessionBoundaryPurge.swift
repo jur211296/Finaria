@@ -51,5 +51,11 @@ enum SecondarySessionBoundaryPurge {
         // puesto por la persona A y consumido con la sesión de la persona B mandaría la solicitud de
         // entrada al grupo de A con la cuenta de B.
         GroupBackendInviteEntryHandler.clearInviteTapArms()
+        // **La CUARTA superficie de join, desde 2026-09-11.** El sobre de la puerta del invitado
+        // (`{groupID, token}`) existe precisamente para sobrevivir a un borrado, así que es la única de
+        // esta lista que no muere sola — y por eso hay que nombrarla aquí. Sin esto, un sobre escrito
+        // antes de la frontera se repondría en el siguiente boot-wipe **con el tap armado**, que es
+        // exactamente lo que las cuatro líneas de arriba existen para impedir.
+        GroupInviteResumeStore.clear()
     }
 }

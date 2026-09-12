@@ -74,6 +74,53 @@ enum GroupBackendInviteEntryHandler {
 
     static var hasSessionProvider: @MainActor () -> Bool = { CloudAuthService.shared.hasSession }
     static var isConsentedProvider: @MainActor () -> Bool = { GroupsConsentState.isAccepted }
+
+    // MARK: - Los cuatro términos de la puerta del neutro (`GroupInviteNeutralGateLogic`)
+
+    /// El término que separa esta puerta de la del organizador: ¿hay una sesión privada viva debajo? Lo
+    /// **CABLEA `ContentView`** y este tipo no nombra la key, y no es ceremonia: el par escritor/lector de
+    /// `hasCompletedOnboarding` vive en el CAJÓN de la sesión (`SessionDefaults.current`), no en el
+    /// dominio del dueño, y nombrarla aquí a pelo devolvería el defecto de 2026-09-03 —la visita termina
+    /// su onboarding y el lector del dueño sigue viendo `false`—. Lo fija
+    /// `HasCompletedOnboardingDomainTests`, que enumera fichero por fichero quién puede nombrarla.
+    ///
+    /// El default sin cablear es `false`, y es el lado PROTECTOR: «no hay sesión privada viva» deja que
+    /// los otros dos términos decidan, mientras que un `true` apagaría la puerta entera.
+    static var hasCompletedPersonalOnboardingProvider: @MainActor () -> Bool = { false }
+    static var isSecondarySessionProvider: @MainActor () -> Bool = { SecondarySessionStore.isActive() }
+    /// **El único término que no puede medirse desde aquí, y por eso lo CABLEA `ContentView`.** Contar
+    /// filas pide un `ModelContext` y este tipo no tiene ninguno; el closure que se instala es el MISMO
+    /// que alimenta al guard cross-cuenta y a la puerta del organizador (`hasLocalDataNow`), así que los
+    /// tres miden lo mismo — incluido su fallo CERRADO ante un error de fetch.
+    ///
+    /// El default sin cablear es `false` y **no es una ausencia que falle abierto**: el caso del ticket
+    /// —un store que espeja iCloud— lo cubre entero el término de al lado, que sí se mide sin contexto. Lo
+    /// que este provider añade es el corpus SIN espejo, y que el cableado exista lo fija un test de scan
+    /// (`GroupInviteNeutralGateWiringTests`).
+    static var hasLocalDataProvider: @MainActor () -> Bool = { false }
+    /// El eje ANCHO del mount de este proceso, **con el mismo seam que la puerta del organizador**.
+    ///
+    /// Bajo `-uitest` el testigo MIENTE, y está medido: `SwiftDataConfiguration.personalConfiguration` sale
+    /// por su rama `YalaModel-UITest` —que NO espeja— antes de llamar a
+    /// `capturePersonalStoreMountedDecisionOnce`, así que `personalStoreMountedDecision` se queda en el
+    /// default de su declaración, `.iCloudMirror`. Sin este seam la puerta leería `true` en toda corrida y
+    /// ninguna invitación llegaría a su hoja bajo XCUITest.
+    static var mountAttachesMirrorProvider: @MainActor () -> Bool = {
+        #if DEBUG
+        if SwiftDataConfiguration.isUITesting { return UITestHooks.groupsGateMirrorLive }
+        #endif
+        return CloudSessionSignOut.personalMountAttachesMirror
+    }
+
+    /// El veredicto de la puerta con los cuatro términos VIVOS. Internal para que el test pueda
+    /// llamarla con los providers fingidos sin tocar `drive`.
+    static func neutralGateDecision() -> GroupInviteNeutralGateLogic.Decision {
+        GroupInviteNeutralGateLogic.decide(
+            hasCompletedPersonalOnboarding: hasCompletedPersonalOnboardingProvider(),
+            isSecondarySession: isSecondarySessionProvider(),
+            hasExistingData: hasLocalDataProvider(),
+            mountAttachesMirror: mountAttachesMirrorProvider())
+    }
     // `hasCompletedOnboardingProvider` se RETIRÓ el 2026-09-05 y aquí queda su lápida, porque su ausencia
     // es el arreglo. Alimentaba el único término que decidía si el invitado veía la hoja, y respondía a la
     // pregunta equivocada («¿tiene cuenta?» en vez de «¿confirmó esta invitación?»): a quien ya tenía
@@ -287,6 +334,21 @@ enum GroupBackendInviteEntryHandler {
         // a la hoja en el próximo arranque, a repetir un «sí» que ya había dado.
         if source == .userAction {
             PendingJoinStore.markInviteConfirmed(zoneName: groupID)
+        }
+        // **La puerta del neutro, y va ANTES del switch por lo que NO se escribe aquí.** Medido en
+        // `GroupsGateLogic.nextStep`: el orden del flujo es sign-in → consent → hoja, así que interponerla
+        // después del «sí» de la hoja dejaría una sesión de Grupos recién creada que el propio cierre
+        // privado deshace (su celda pasa a `.groupsOnlySignOut`/`.privateWithGroupsSignOut` en cuanto hay
+        // sesión viva) — y el invitado repetiría las dos pantallas tras el relanzamiento. Aquí todavía no
+        // se ha firmado nada.
+        //
+        // No borra ni escribe: SUBMITEA la pantalla, que es la que informa y pide el gesto. Por eso el
+        // trigger `.boot` del reconciler puede llamar a este método sin que nada se pierda, que es el
+        // criterio nº 2 del ticket.
+        if neutralGateDecision() == .returnsToNeutral {
+            RouterEntryGate.shared.submit(.presentGroupsInviteNeutralGate(pendingJoin: groupID))
+            logger.notice("BackendInvite[\(source.rawValue, privacy: .public)]: mirrored/occupied store → neutral return gate for \(groupID, privacy: .public)")
+            return
         }
         switch GroupBackendInviteEntryLogic.nextStep(
             hasSession: hasSessionProvider(),

@@ -365,7 +365,10 @@ nonisolated enum FullModeActivationResumeStore {
         switch destination {
         case .fullActivationPrivate: return .privateOnboarding
         case .fullActivationRestore: return .restore
-        case .privateOnboarding, .restoreICloud, .inviteRecovery, .cloudAccount, .cloudSignIn, .groupsOrganizer:
+        // `groupsInvite` cae con `groupsOrganizer`: los dos los escribe la puerta de Grupos del Welcome
+        // para retomarse A SÍ MISMA tras la vuelta al neutro, y ninguno es un paso de la activación.
+        case .privateOnboarding, .restoreICloud, .inviteRecovery, .cloudAccount, .cloudSignIn,
+             .groupsOrganizer, .groupsInvite:
             return nil
         }
     }

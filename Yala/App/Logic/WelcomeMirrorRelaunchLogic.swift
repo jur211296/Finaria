@@ -59,6 +59,14 @@ nonisolated enum WelcomeMirrorRelaunchLogic {
         case fullActivationPrivate
         /// Paso 8 · lo mismo, por la tercera salida de la puerta privada: «Restaurar mis datos».
         case fullActivationRestore
+        /// **La invitación que tuvo que devolver el teléfono al neutro** (`GroupInviteNeutralGateLogic`).
+        /// Como `groupsOrganizer`, **no es una salida del Welcome**: el portal nunca la produce. La
+        /// escribe la puerta del invitado al quedar ARMADO el borrado, y la consume el arranque siguiente
+        /// para volver a esa misma puerta — que re-mide y, ya sin corpus ni espejo, deja pasar.
+        ///
+        /// Va la ÚLTIMA del enum a propósito: el orden de estos casos se ve fuera (`allCases` gobierna las
+        /// tablas de los tests del testigo de mount) y meter uno en medio cambia lo que esas tablas dicen.
+        case groupsInvite
     }
 
     /// ¿Este destino necesita que el mirror de CloudKit esté ADJUNTO al store personal?
@@ -90,7 +98,11 @@ nonisolated enum WelcomeMirrorRelaunchLogic {
         case .privateOnboarding, .restoreICloud, .inviteRecovery,
              .fullActivationPrivate, .fullActivationRestore:
             return true
-        case .cloudAccount, .cloudSignIn, .groupsOrganizer:
+        // `groupsInvite` cae con `groupsOrganizer` y NO con `inviteRecovery`, aunque las dos hablen de
+        // invitaciones: aquella recupera un CKShare y desemboca en usar la app con datos personales; ésta
+        // llega por el BACKEND y su dispositivo acaba de quedar en NEUTRO a propósito. Pedirle que reabra
+        // para adjuntar un espejo sería deshacer justo lo que la puerta acaba de hacer.
+        case .cloudAccount, .cloudSignIn, .groupsOrganizer, .groupsInvite:
             return false
         }
     }

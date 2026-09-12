@@ -16,7 +16,7 @@
 
 import SwiftUI
 
-enum WelcomeFlowStep {
+enum WelcomeFlowStep: Equatable {
     case hero
     case chooser
     /// 2º nivel de "Ya tengo una cuenta" (H4): Restaurar iCloud | Sign in with Apple.
@@ -34,7 +34,13 @@ enum WelcomeFlowStep {
     /// W1 prohíbe `.alert(` en este fichero, y porque una pantalla con salida no es un camino muerto.
     /// **Nada se escribe hasta que esta puerta dice que sí** — salvo la vuelta al neutro, que sí escribe
     /// porque su trabajo ES borrar, y solo después de haberlo dicho.
-    case groupsGate
+    ///
+    /// **El propósito va DENTRO del case, y eso es lo que hace imposible el defecto que la review cazó.**
+    /// Mientras vivió al lado —un `@State` de `ContentView` que acompañaba al step— tres de los cinco
+    /// productores no lo escribían y heredaban el del uso anterior: quien tapeaba «Crear mi primer grupo»
+    /// después de haber vuelto atrás en una invitación acababa uniéndose al grupo de otro. Aquí el
+    /// compilador obliga a cada productor a decir a qué viene.
+    case groupsGate(purpose: WelcomeGroupsGateView.Purpose)
     /// La rama privada, en sesión secundaria: **informa y sigue**. No es una puerta como `.groupsGate` —no
     /// hay nada que impedir desde que el dominio de preferencias por sesión cerró las escrituras al dueño—
     /// sino el paso que faltaba para que la app no se contradijera según por dónde entres.
@@ -81,7 +87,18 @@ struct WelcomeFlowContainer: View {
     /// destino elegido sino el borrado que acaba de armarse, y el terminal que lo cuenta es el del cierre
     /// de sesión, que vive fuera de este cover. El container solo reenvía: persistir el destino y cerrar
     /// el Welcome es de `ContentView`, por la misma razón que el callback de arriba.
-    var onGroupsGateNeutralReturnArmed: () -> Void
+    /// Recibe el propósito del step que armó el borrado: es lo que decide qué destino se persiste para el
+    /// arranque siguiente —el alta del organizador o la invitación— y, en el segundo caso, que el par
+    /// `{groupID, token}` cruce el wipe.
+    var onGroupsGateNeutralReturnArmed: (WelcomeGroupsGateView.Purpose) -> Void
+    /// La puerta del INVITADO abrió: cerrar el Welcome y retomar el join del grupo que se nombra. Separado
+    /// de `onSelectGroupsOrganizer` porque son dos destinos distintos del mismo step, y **no pasa por
+    /// `leaveWelcome`**: no hay `Destination` que elegir ni mirror que evaluar — el dispositivo acaba de
+    /// quedar neutro a propósito, o nunca dejó de estarlo.
+    ///
+    /// El `groupID` VIAJA en el callback y no lo lee `ContentView` de un estado suyo: así no hay un segundo
+    /// sitio donde el propósito pueda quedarse desfasado respecto al step que se está pintando.
+    var onGroupsGateInviteProceed: (String) -> Void
     /// G3: fetch VIVO del corpus local para la puerta (mismo closure que alimenta el guard cross-cuenta
     /// del sign-in de nube — un snapshot no vale, el mirror puede estar re-importando).
     var hasLocalDataNow: @MainActor @Sendable () -> Bool
@@ -103,7 +120,8 @@ struct WelcomeFlowContainer: View {
         onSelectGroupsOrganizer: @escaping () -> Void,
         onBeaconRoutesToCloudSignIn: @escaping (CloudSignInProvider?) -> Void,
         onNeedsMirrorRelaunch: @escaping (WelcomeMirrorRelaunchLogic.Destination) -> Void,
-        onGroupsGateNeutralReturnArmed: @escaping () -> Void,
+        onGroupsGateNeutralReturnArmed: @escaping (WelcomeGroupsGateView.Purpose) -> Void,
+        onGroupsGateInviteProceed: @escaping (String) -> Void,
         hasLocalDataNow: @escaping @MainActor @Sendable () -> Bool,
         performICloudCorpusWipe: @escaping @MainActor () async -> String?
     ) {
@@ -116,6 +134,7 @@ struct WelcomeFlowContainer: View {
         self.onSelectGroupsOrganizer = onSelectGroupsOrganizer
         self.onNeedsMirrorRelaunch = onNeedsMirrorRelaunch
         self.onGroupsGateNeutralReturnArmed = onGroupsGateNeutralReturnArmed
+        self.onGroupsGateInviteProceed = onGroupsGateInviteProceed
         self.hasLocalDataNow = hasLocalDataNow
         self.performICloudCorpusWipe = performICloudCorpusWipe
         self._step = State(initialValue: initialStep)
@@ -178,24 +197,33 @@ struct WelcomeFlowContainer: View {
                     // G3: la card de crear ya está cableada y por tanto se pinta. Su handler NO sale del
                     // cover: abre la puerta, que es el step siguiente. El portal se cruza más tarde, y
                     // solo si la puerta abre.
-                    onCreate: { goTo(.groupsGate) },
+                    onCreate: { goTo(.groupsGate(purpose: .createGroup)) },
                     onJoin: {
                         leaveWelcome(to: .inviteRecovery) { onSelectBranch(.invite) }
                     },
                     onBack: { goTo(.chooser) }
                 )
                 .transition(.opacity)
-            case .groupsGate:
+            case .groupsGate(let purpose):
                 WelcomeGroupsGateView(
+                    purpose: purpose,
                     // Re-envuelto en vez de reenviado: pasar la property directa convierte un valor de
                     // función no-Sendable y avisa (`may introduce data races`). El closure nuevo nace ya en
                     // este contexto y no cruza ninguna frontera.
                     hasLocalDataNow: { hasLocalDataNow() },
                     onProceed: {
-                        leaveWelcome(to: .groupsOrganizer) { onSelectGroupsOrganizer() }
+                        // El destino del `.proceed` lo decide el propósito, y por eso la rama del invitado
+                        // NO pasa por `leaveWelcome`: aquel evalúa si el destino elegido necesita el mirror
+                        // y aquí no hay destino que elegir — quien viene por una invitación va a su join,
+                        // sobre un dispositivo que acaba de quedar neutro o que nunca dejó de estarlo.
+                        if let groupID = purpose.invitedGroupID {
+                            onGroupsGateInviteProceed(groupID)
+                        } else {
+                            leaveWelcome(to: .groupsOrganizer) { onSelectGroupsOrganizer() }
+                        }
                     },
                     onBack: { goTo(.groupsChooser) },
-                    onNeutralReturnArmed: onGroupsGateNeutralReturnArmed
+                    onNeutralReturnArmed: { onGroupsGateNeutralReturnArmed(purpose) }
                 )
                 .transition(.opacity)
             case .existingChooser:
@@ -246,6 +274,24 @@ struct WelcomeFlowContainer: View {
                 WelcomeMirrorRelaunchView()
                     .transition(.opacity)
             }
+        }
+        // **El step inicial manda AUNQUE el cover ya esté montado, y sin esto se ignoraba en silencio.**
+        //
+        // `@State` se inicializa una sola vez por identidad de la vista, así que un productor que escriba
+        // `welcomeFlowInitialStep` mientras este cover está en pantalla no movía nada. Hasta hoy no se
+        // notaba porque los cinco productores venían de sitios donde el cover estaba BAJADO. El sexto
+        // —el drain del intent de la puerta del invitado— no: `dismissWelcomeChainForSupersedingIntent`
+        // baja `showWelcomeFlow` y el `case` lo vuelve a subir en la MISMA vuelta síncrona, así que
+        // SwiftUI no renderiza entre las dos escrituras, el cover nunca se desmonta y el step pedido se
+        // perdía. El invitado se quedaba mirando el Hero con su invitación viva y sin pantalla que la
+        // retomara.
+        //
+        // Es seguro para todos los demás porque **este valor solo se escribe para navegar**: los catorce
+        // escritores de `welcomeFlowInitialStep` van seguidos de `showWelcomeFlow = true` (medido). No es
+        // un dato que se actualice por su cuenta.
+        .onChange(of: initialStep) { _, new in
+            guard step != new else { return }
+            step = new
         }
         .task {
             // DIFERIDOS #34: refresh del remote-config en la ENTRADA (fresh install pre-onboarding
