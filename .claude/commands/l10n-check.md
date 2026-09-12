@@ -1,6 +1,6 @@
 ---
 description: Auditoría de localización — corre la batería de paridad y busca strings sin localizar en el código
-allowed-tools: Bash(xcodebuild:*), Bash(bash qa/scripts/add-l10n-key.sh:*), Grep, Glob, Read
+allowed-tools: Bash(xcodebuild:*), Bash(bash qa/scripts/sim-lock.sh:*), Bash(bash qa/scripts/add-l10n-key.sh:*), Grep, Glob, Read
 argument-hint: "[locale concreto, o vacío para todo]"
 ---
 
@@ -9,11 +9,16 @@ La verdad sobre la localización de Yala es **ejecutable**: vive en `YalaTests/L
 ## 1 · Batería de paridad
 
 ```bash
-xcodebuild -scheme "Yala Dev" -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+bash qa/scripts/sim-lock.sh -- \
+  xcodebuild -scheme "Yala Dev" -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
   -quiet test -only-testing:YalaTests/LocalizationParityTests \
   -only-testing:YalaTests/WidgetLocalizationParityTests 2>&1 \
   | grep -E "(Test Case|Executed|passed|failed|error:)"
 ```
+
+`sim-lock.sh` es la cola del simulador: esta batería corre *dentro* de él, así que compite con el
+gate de las otras sesiones igual que cualquier otra corrida. Si está tomado, **espera** y lo dice;
+no falla. Por qué existe: `.claude/rules/testing.md`, la regla del simulador compartido.
 
 Qué cubre cada fallo, para que sepas leerlo:
 

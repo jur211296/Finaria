@@ -1,6 +1,6 @@
 ---
 description: Gate único antes de commitear — build, unit, XCUITest de las áreas tocadas, audit de calidad y validación del índice de QA
-allowed-tools: Bash(git:*), Bash(xcodebuild:*), Bash(bash qa/scripts/sim-libre.sh:*), Bash(bash qa/validate-coverage.sh:*), Bash(bash qa/scripts/worktree-stamp.sh:*), Bash(python3 qa/qa-sync.py:*), Bash(grep:*), Bash(jq:*), Read, Glob, Grep
+allowed-tools: Bash(git:*), Bash(xcodebuild:*), Bash(bash qa/scripts/sim-lock.sh:*), Bash(bash qa/scripts/sim-libre.sh:*), Bash(bash qa/validate-coverage.sh:*), Bash(bash qa/scripts/worktree-stamp.sh:*), Bash(python3 qa/qa-sync.py:*), Bash(grep:*), Bash(jq:*), Read, Glob, Grep
 ---
 
 Verificación completa de los cambios actuales. Sustituye a `/verify-ios` + `/test-smart` + `/swift-audit` corridos por separado. Un solo informe; el commit se apoya en él.
@@ -35,10 +35,16 @@ Build en rojo → para aquí. Lo demás no informa de nada.
 Mapea cada `.swift` modificado (excluyendo `Views/` y `Tests/`) a sus suites: por convención `<Clase>Tests.swift` y por `grep -rl "<Clase>" YalaTests/`. Un nivel de transitividad, no más.
 
 ```bash
-xcodebuild -scheme Yala -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+bash qa/scripts/sim-lock.sh -- \
+  xcodebuild -scheme Yala -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
   test -only-testing:YalaTests/<Suite> [-only-testing:...] 2>&1 \
   | grep -E "(Test run with|Test Suite|Test Case|Executed|passed|failed|error:)"
 ```
+
+**El `sim-lock.sh` de delante no es decorado: es la cola del simulador** (ver paso 3). Los unit
+tests también se instalan y corren *dentro* del simulador, así que dos sesiones aquí compiten por
+la misma máquina — y si una hace cola y la otra no, el centinela del paso 3 canta contra la que se
+portó bien. Si otra sesión lo tiene tomado, esto **espera** y lo dice; no falla.
 
 **Sin `-quiet`, y no es cosmético: `-quiet` SUPRIME la línea `Test run with N tests in M suites`** (medido el 2026-08-02: aparece 1 vez sin el flag, 0 con él). Esa línea es justo la que `.claude/rules/testing.md` obliga a verificar contra el número de suites pedidas, porque el modo de fallo «cero casos» de Swift Testing sale con **exit 0 y `TEST SUCCEEDED`** — un array de filtros mal expandido, o un nombre de suite inexistente, dan una corrida verde que no ejecutó nada. Con `-quiet` esa comprobación es imposible y el gate se convierte en un sello de goma. Los marcadores `Test Suite`/`Test Case` del grep son de XCTest y este repo es Swift Testing entero: sin `Test run with` no queda nada que contar.
 
@@ -48,40 +54,45 @@ Si un archivo no tiene ninguna suite, **regístralo como gap** en el informe. No
 
 Esto es nuevo y es el punto del gate: la fase de UI ya no espera a CI.
 
-**Primero, comprobá que el simulador está libre. No es opcional:**
-
-```bash
-bash qa/scripts/sim-libre.sh
-```
-
-Si sale `1`, **esperá**: hay otra sesión corriendo tests. Dos corridas de XCUITest sobre el mismo
-simulador se derriban entre sí y las dos salen en rojo **sin una sola línea de fallo real** (exit 65,
-`Restarting after unexpected exit`, casos en `Failing tests` que nunca fallaron). Medido el
-2026-09-07 — detalle en `.claude/rules/testing.md`. Correr igual no da un veredicto: da ruido que
-parece tuyo.
+**El XCUITest no se lanza a pelo: se lanza haciendo cola.** En esta máquina hay UN simulador y
+conviven ~14 worktrees, todos con el mismo `-destination name=iPhone 17 Pro`. Dos corridas a la vez
+se derriban entre sí —comparten bundle id, la segunda mata al runner de la primera— y, peor, la
+segunda **instala su `.app` encima**, así que la primera acaba tapeando un binario ajeno y produce
+rojos **con** su línea de fallo, idénticos a una regresión. Decisión de Jürgen (2026-09-11, opción 2
+del ticket `diez-worktrees-comparten-un-simulador`): **lock de fichero, la segunda espera**.
 
 Cruza los archivos modificados contra `codeGlobs` de `qa/coverage-index.json`; para las áreas que casen y tengan `coverage: "xcuitest:<File>#<test>"`, corre esas suites:
 
 ```bash
-xcodebuild -scheme "Yala Dev" -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+bash qa/scripts/sim-lock.sh -- \
+  xcodebuild -scheme "Yala Dev" -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
   test -only-testing:YalaUITests/<Suite> 2>&1 \
   | grep -E "(Test run with|Test Case|Executed|passed|failed|\*\* TEST)"
 ```
 
+Si otra sesión lo tiene tomado, `sim-lock.sh` **espera** y dice a quién (`[cola] … lo tiene: pid …`).
+Eso no es un fallo y no se reintenta con prisa: una corrida de XCUITest dura entre 3 y 40 min y el
+turno llega solo. `bash qa/scripts/sim-lock.sh --estado` contesta «¿hay cola?» sin entrar en ella.
+
 **No hace falta pasar `-parallel-testing-enabled NO`**: desde el 2026-07-24 ambas schemes llevan `parallelizable = "NO"` en sus `TestableReference`. Si alguna vez vuelves a ver `Simulator device failed to launch … xctrunner` con `RequestDenied`, no es el test: es que se está clonando el simulador y el disco está lleno. Corre `bash qa/scripts/disk-report.sh`.
 
-**Y si lo que ves es `Restarting after unexpected exit` con casos en `Failing tests` que no imprimieron ninguna línea de fallo, tampoco es el disco**: es otra corrida pisándote el simulador. `bash qa/scripts/sim-libre.sh` lo dice en un segundo.
+**Y si lo que ves es `Restarting after unexpected exit` con casos en `Failing tests` que no imprimieron ninguna línea de fallo, tampoco es el disco**: es otra corrida pisándote el simulador — una que no hizo cola. `bash qa/scripts/sim-libre.sh` lo dice en un segundo.
 
-**Y la foto de antes NO basta: vigilá la corrida entera.** Preguntar una vez caduca al segundo siguiente —una corrida dura entre 3 y 40 min y aquí conviven ~14 worktrees sobre un solo simulador—, así que lanzá el centinela en paralelo:
+**El lock no sustituye al centinela, porque el lock vive en el árbol de trabajo.** Un worktree con una rama anterior al 2026-09-12 no trae `sim-lock.sh` y por tanto no hace cola; un `xcodebuild` lanzado a mano, tampoco. Esos son justo los que no puedes ver, así que la corrida se sigue vigilando entera:
 
 ```bash
-xcodebuild -scheme "Yala Dev" -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+bash qa/scripts/sim-lock.sh -- \
+  xcodebuild -scheme "Yala Dev" -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
   test -only-testing:YalaUITests/<Suite> > /tmp/gate-ui.log 2>&1 &
 bash qa/scripts/sim-libre.sh --vigilar $!     # exit 1 ⇒ el veredicto NO vale, repetí
 wait; grep -E "(Test Suite|Test Case|Executed|\*\* TEST)" /tmp/gate-ui.log
 ```
 
-Si el centinela sale 1, **la corrida no da veredicto**: ni verde ni rojo. Repetila aislada. Esto no es celo: el 2026-09-11 un rojo de una corrida pisada —con su línea de fallo y su mensaje de aserto, o sea con la pinta exacta de una regresión— se archivó como ticket `high` y costó una sesión entera refutarlo (`.claude/rules/testing.md`, la regla de `L124`).
+**`$!` sigue siendo el PID correcto con el lock puesto**: `sim-lock.sh` encadena `exec` hasta el `xcodebuild`, así que no añade un proceso envoltorio — y el centinela, que exige el PID del `xcodebuild` y rechaza el de un shell, lo acepta. Mientras la corrida hace cola el centinela **no mide**: empieza cuando tu `xcodebuild` arranca de verdad, para no contar como intruso al que tiene el turno legítimamente.
+
+Tres salidas del centinela y qué significan: **0** = estuviste solo, el veredicto vale · **1** = alguien corrió encima, la corrida no da veredicto (ni verde ni rojo): repetila · **2** = no se vigiló nada (el PID murió sin llegar a ejecutar un test), que tampoco es un ✓.
+
+Si el centinela sale 1, **la corrida no da veredicto**. Repetila aislada. Esto no es celo: el 2026-09-11 un rojo de una corrida pisada —con su línea de fallo y su mensaje de aserto, o sea con la pinta exacta de una regresión— se archivó como ticket `high` y costó una sesión entera refutarlo (`.claude/rules/testing.md`, la regla de `L124`).
 
 ## 4 · Audit de calidad
 

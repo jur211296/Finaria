@@ -59,6 +59,15 @@ jobs:
       # el hook global se salta sola aquí: en el runner no hay ~/.claude.
       - name: Candado anti-atribución (.githooks/commit-msg)
         run: bash qa/scripts/commit-msg-test.sh
+      # La cola del simulador (`sim-lock.sh`) y su centinela (`sim-libre.sh`). Mismo
+      # argumento que el candado de arriba, y aquí pesa más: un lock roto NO da error — deja
+      # correr dos sesiones a la vez y el daño sale tres horas después disfrazado de test en
+      # rojo. El banco no toca ningún simulador ni compila nada: usa un `xcodebuild` de
+      # mentira y, para sus casos, un lockfile propio bajo TMPDIR. Lo que sí pide es el turno
+      # REAL mientras dura, porque esos procesos se llaman `xcodebuild` y el centinela de otra
+      # sesión los vería; aquí el lock está siempre libre y no cuesta nada.
+      - name: Cola del simulador (sim-lock.sh + sim-libre.sh)
+        run: bash qa/scripts/sim-lock-test.sh
 
   # Decide si el job `tests` (macos-26, ~1,5 h de reloj) tiene algo que probar. Un
   # cambio de solo docs/tickets no puede romper el build ni la suite y hasta ahora
