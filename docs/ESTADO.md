@@ -5,42 +5,48 @@ tags: [now, punto-de-retomada]
 
 # NOW — 2026-09-11 (Lima)
 
-**Rama** `2.1` — Merge #141: **soltar la cuenta de grupos ya no puede borrarle los gastos a los demás.**
+**Rama** `2.1` — Merge #143: **aceptar una invitación en un teléfono prestado ya no manda tus gastos al
+iCloud del dueño.**
 TestFlight build **13** (CPV 13). **Subida Yala (TF/store) = solo Mini.**
 
-## Esta sesión (el agujero que dejó el paso 10, cerrado)
+## Esta sesión (la mitad que la del paso 5 dejó abierta, cerrada)
 
-**Nadie va a perder los gastos de su grupo porque otro suelte su cuenta.** Cuando sueltas tu cuenta de
-grupos, Yala borra tus grupos **de este teléfono** — es lo que promete. Podía no quedarse ahí: el historial
-de cambios de SwiftData sobrevive al relanzamiento, así que en un **arranque posterior** el canal leía esos
-borrados locales, los convertía en borrados de servidor y **les quitaba los gastos a todos los miembros**.
-Gente que no tocó nada, viendo desaparecer su dinero de la pantalla.
+**Nadie va a meterle sus gastos de grupo en el iCloud de otra persona.** Presto el móvil, lo compro de
+segunda mano, o entro por «privado» y no termino: el teléfono ya bajó datos de iCloud. Alguien me pasa un
+enlace de invitación, lo acepto y empiezo a anotar gastos compartidos — y **esos gastos acababan en el
+iCloud del dueño del teléfono**, porque el espejo del store personal sigue adjunto y el bridge de Grupos
+escribe en él. Sin error, sin aviso y sin bloqueo: se ve en el otro dispositivo del dueño, días después.
 
-Lo único que lo impedía era el orden en que corren dos pasos del ciclo de sync, y bastaba con que el
-primero fallara —su `catch` se traga el error— para que el agujero se abriera.
+Ahora, **antes** de dejar entrar al grupo, Yala lo cuenta y ofrece dejar el teléfono en blanco: espera a
+que lo último suba a iCloud, borra lo de aquí, deja iCloud intacto y se reinicia. **Al reabrir, la hoja
+«Unirme al grupo» sale sola** — la invitación cruza el borrado. Quien llega con el teléfono limpio no ve
+nada de esto: ni una pantalla de más.
 
-**El arreglo no es ninguna de las dos vías que proponía el ticket, y esa es la decisión que más pesa.** El
-boot-wipe por ARCHIVOS exigiría **relanzar la app**, y desasociar es un gesto in-session de Ajustes:
-convertirlo en «reabre Yala» es un cambio de producto que ni el ADR ni el ticket piden. Y conservar el ancla
-del drain —la alternativa escrita— se implementó, se midió y **se retiró**: el ancla es ANTERIOR a esos
-borrados, así que no los tapaba; encima clavaba uno de los cuatro suelos del corte de purga del historial,
-sin canal que volviera a avanzarlo. ⇒ lo que queda es una tercera vía, más simple y más fuerte: **el borrado
-va FIRMADO con el autor del canal**, y el drain descarta por autor antes de traducir. No depende del cursor,
-ni de las zonas vivas, ni del orden de `syncCycleOnce`, que era el requisito duro.
+**Las dos decisiones que más pesan, y las dos son propias.** (1) **La puerta del invitado NO es la del
+organizador**: aquella vive DENTRO del Welcome y el sitio le garantiza que no hay sesión privada viva;
+ésta corre desde `drive`, al que llama el reconciler en el arranque, o sea en cualquier estado. Reusarla
+tal cual **le vaciaría el teléfono al dueño**, contra la fila `C · llega una invitación` de la matriz.
+(2) **Aquí se PREGUNTA**, al revés que en la rama de crear: allí la persona acaba de tapear una card y la
+pantalla es la respuesta a su gesto; aquí puede no haber ningún gesto detrás, y borrar en un arranque sin
+que nadie mire es lo que el ADR prohíbe. Con eso, el criterio «nunca sin pantalla» se cumple por
+construcción.
 
-**Y arregla de paso un camino que el ticket no nombraba.** La firma vive DENTRO del escritor
-(`DataWipeService.deleteLocalGroupsRows`), no en los llamadores, así que el **«Empiezo de cero»** del
-Welcome queda cubierto por construcción: sus borrados eran igualmente traducibles, a borrados de los grupos
-del humano anterior.
+**Lo que costó la review** (tres lentes + la regla de área leída contra el diff): **23 hallazgos, todos
+MÍOS**, y cuatro dejaban el arreglo sin funcionar o peor que antes. **La pantalla no se renderizaba en su
+propio estado objetivo** —el drain baja el cover del Welcome y el consumidor lo sube en la misma vuelta
+síncrona, así que el step pedido se ignoraba en silencio; era un agujero GENERAL del container, no mío—;
+el propósito era un estado paralelo que **tres de los cinco productores no escribían**, y quien volvía
+atrás en una invitación y tapeaba «Crear mi primer grupo» acababa **uniéndose al grupo de otro**; la
+reposición del sobre **destruía la invitación en la segunda pasada** del boot-hook; y un borrado abortado
+lo dejaba huérfano para siempre, listo para revivir **con el tap armado** en el cierre de sesión de OTRA
+persona. Y tres decisiones de producto que la review obligó a tomar, la más cara: **el invitado no puede
+descartar lo que el dueño no llegó a subir**.
 
-**Lo que costó la review** (tres lentes + la regla de área leída contra el diff): un `rollback` que no
-cubría los `fetch` —la misma pérdida de datos por la puerta de al lado—, una aserción que **no podía
-fallar** (el campo ya valía `"{}"` por su default de modelo), dos afirmaciones falsas en mis docblocks, y
-que **media solución no servía**.
-
-**Verificado sobre el árbol final**: unit **6923/710** en verde, XCUITest 3/3, los dos builds con `clean` y
-cero warnings nuevos, **tres mutantes y tres muertos**. Con el agujero abierto salen **2 tombstones de
-`SplitExpense`** (medido; el grupo no cuenta, su emisión es `updateOnly`).
+**Verificado sobre el árbol final**: unit **6954/714** en verde (baseline 6923/710), los dos builds con
+`clean` y cero warnings nuevos, y los XCUITest de las áreas tocadas. **Siete rojos son PREEXISTENTES** y
+están bisecados contra un worktree limpio de `2.1` — cinco de `WelcomeChooserUITests` y dos de
+`SecondarySessionGateUITests`: el Hero sale y se tapea, el chooser de nivel 1 no llega nunca. Ticket
+`high` con lo medido.
 
 ## Tu cola
 
@@ -106,7 +112,7 @@ cero warnings nuevos, **tres mutantes y tres muertos**. Con el agujero abierto s
 ## Siguiente
 
 **El paso 12** del rediseño (`shell-derives-from-two-session-axes`): el barrido de las 19 vistas y la
-retirada de M1. Pasos 0-10 cerrados; el 11 sigue vacante a propósito. **El board: 314 en disco = 314 en
+retirada de M1. Pasos 0-10 cerrados; el 11 sigue vacante a propósito. **El board: 317 en disco = 317 en
 `docs/TICKETS.md`**, cero desajustes de estado.
 
 ## Bloqueo
@@ -116,6 +122,13 @@ retirada de M1. Pasos 0-10 cerrados; el 11 sigue vacante a propósito. **El boar
 nada** — la sesión queda cerrada, la asociación borrada, y tus grupos siguen enteros en el teléfono. La app
 y el teléfono cuentan cosas distintas y la que se equivoca es la app. Es preexistente del paso 10, y su
 salida está escrita: el hermano «Empiezo de cero» sí tiene alert y canario.
+
+Y desde hoy hay otro **high** de testing, medido al correr el gate:
+`welcome-chooser-uitests-cannot-reach-the-chooser` — **siete XCUITest** de `WelcomeChooserUITests` y
+`SecondarySessionGateUITests` fallan en un worktree limpio de `2.1` (bisecado, no supuesto). El Hero sale
+y se tapea; el chooser de nivel 1 no llega nunca. Ciegan el primer minuto de la app y las dos celdas que
+el paso 5 escribió para que la puerta de Grupos no volviera a bloquear al dueño — y la suite de UI ya no
+corre en los PR, solo en la nocturna.
 
 Los otros dos son de testing: `shared-state-guard-misses-wipelocalgroupsdomain` (el guard del trait de
 aislamiento busca `wipeAllUserData(` y se le escapa el otro escritor del espejo) y
