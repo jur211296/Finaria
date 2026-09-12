@@ -1,34 +1,44 @@
 ---
-updated: 2026-09-11
+updated: 2026-09-12
 tags: [now, punto-de-retomada]
 ---
 
-# NOW — 2026-09-11 (Lima)
+# NOW — 2026-09-12 (Lima)
 
-**Rama** `2.1` — Merge #145: **los siete XCUITest del Welcome no estaban rotos; lo estaba la medición.**
+**Rama** `2.1` — Merge #146: **con la nube en pausa, la cuenta de grupos se sigue pudiendo soltar.**
 TestFlight build **13** (CPV 13). **Subida Yala (TF/store) = solo Mini.**
 
-## Esta sesión (el `high` de testing que bloqueaba la cola)
+## Esta sesión (#146 · el `high` del kill-switch)
 
-**Los siete XCUITest del Welcome están sanos: el rojo era de la máquina, no del código.** El ticket
-`welcome-chooser-uitests-cannot-reach-the-chooser` nació `high` con su log y su bisección. Medido tres
-veces: **11/11 verde** en `2.1` de hoy (dos corridas), **11/11** en `1a9cbb83` —la revisión exacta que se
-bisecó— y los once verdes en la **nocturna de CI del 11-sep** dentro de los 149 casos. Las dos suites eran
-**byte-idénticas** entre esas revisiones, así que no había eje que bisecar. Y la hipótesis se caía con un
-grep: acusaba a `WelcomeHeroView.handleEmpezar()` de encaminar, y son cuatro líneas que llaman
-`onContinue()`.
+**Con el kill-switch de la nube bajado, la fila «¿Dónde viven tus datos?» ya no desaparece si hay una
+cuenta de grupos que soltar.** Desde el paso 10 detrás de esa fila vive la única superficie para
+soltarla, y Grupos va por su propio flag: el kill de la nube apagaba un control de Grupos.
 
-**Lo que sí era real:** la corrida que lo midió compartía el único simulador con la sesión de #143. La
-segunda corrida **instala su `.app` sobre el mismo bundle id**, así que la primera sigue viva tapeando un
-binario ajeno y falla **con línea de aserto** — con la pinta exacta de una regresión, no con el
-«Restarting after unexpected exit» que las reglas daban por única firma. Ahora
-`qa/scripts/sim-libre.sh --vigilar <pid>` vigila la corrida entera y el paso 3 del `/gate` lo lanza en
-paralelo; si canta, la corrida no da veredicto. Verificado con sus cuatro controles, incluido el positivo
-con otra corrida real encima.
+**El predicado del ticket era el equivocado, y eso lo cazó la review.** Decía
+`GroupsAccountAssociation.shared.hasAssociation`; cableado literal, el arreglo dejaba el bug vivo para
+quien tiene sesión de grupos viva y ningún registro —la sección ofrece «Desasociar» también ahí, y a esa
+celda se llega por el «empiezo de cero» del Welcome, que no cierra la sesión en la nube—. El término es
+**«hay una cuenta que esta pantalla pueda soltar»**, leído del mismo sitio que dibuja el botón
+(`GroupsAssociationPresence`, nuevo, con un source-scan que prohíbe derivarlo por tu cuenta).
 
-## La sesión anterior (#144)
+**Y abrir la fila abría la migración.** «Migrar a la nube» no tenía candado propio del kill-switch: su
+cierre durante un incidente era una consecuencia de que la fila estuviera oculta. Ahora es explícito
+(`offersCloudMigrationEntry`) y **se re-mide en la acción**, porque el flujo consent → confirmación →
+chooser no volvía a preguntar por el flag.
 
-**Desasociar la cuenta de grupos ya no puede mentir.** El borrado local pasó a ser la **última condición
+**Tu decisión del 6-sep sigue en pie** —«las dos puertas de la nube cerradas bajo el kill»— y ahora se
+cumple con un candado explícito en vez de un efecto lateral. Lo que cambió fue la premisa, no la
+política. Anotado en la cabecera del gate y en `reentry-killswitch-closes-both-doors`.
+
+## Las dos anteriores (#145 y #144)
+
+**#145 · los siete XCUITest del Welcome estaban sanos: el rojo era de la máquina.** Medido tres veces
+(11/11 en `2.1`, 11/11 en la revisión bisecada, 11 verdes en la nocturna) y las dos suites eran
+byte-idénticas, así que no había eje que bisecar. Lo real era el simulador compartido; desde entonces
+`sim-libre.sh --vigilar <pid>` vigila la corrida entera y el paso 3 del `/gate` lo lanza en paralelo.
+**Y hoy ha vuelto a rendir**: confirmó «estuviste solo durante toda la corrida» en los 17 XCUITest.
+
+**#144 · desasociar la cuenta de grupos ya no puede mentir.** El borrado local pasó a ser la **última condición
 del gesto, no su último paso**: si no entra, no se limpia nada, sale un aviso propio y la sección recuerda
 que quedó a medias. Se ofrece **Terminar** el borrado, no repetir el gesto (repetirlo vuelve a entrar por
 el push-all tras el teardown y puede dejarlo sin poder terminarse nunca). La review fue en dos vueltas y
@@ -91,6 +101,11 @@ sembrada).
    simulable**, y necesita provocar el fallo: desasocia con el borrado roto y comprueba que la app lo DICE
    y que la pestaña Grupos sigue entera; que «Terminar de soltar la cuenta» funciona **sin sesión viva**;
    y que re-asociar después **no duplica** los gastos que elegiste conservar — tres siguen siendo tres.
+2-undecies. **Device-QA del #146** (`device-qa-cloud-killswitch-groups-door`, cuatro recorridos dentro).
+   **Éste SÍ es simulable**, al revés que todos los de arriba: el toggle «Simular remote OFF» del panel
+   DEBUG en un build **Yala Dev**, y el panel se alcanza desde Ajustes → iCloud, sin pasar por la pantalla
+   que se va a mirar. El que importa es el **tercero**: tras desasociar, la fila tiene que DESAPARECER —si
+   sigue ahí, el término no es un término, es un `true`.
 2-ter. **Device-QA de la reversa born-cloud → iCloud** (`reverse-cutover-cerrado-para-cuentas-born-cloud`).
    Dos cosas: el **contador de testigos con `ckRecordName`** del panel DEBUG tiene que pasar de 0 a cubrir
    tus filas vivas —ése es el único testigo real de que la subida ocurrió—, y **borra 2-3 transacciones
@@ -104,10 +119,18 @@ sembrada).
 ## Siguiente
 
 **El paso 12** del rediseño (`shell-derives-from-two-session-axes`): el barrido de las 19 vistas y la
-retirada de M1. Pasos 0-10 cerrados; el 11 sigue vacante a propósito. **El board: 321 en disco = 321 en
+retirada de M1. Pasos 0-10 cerrados; el 11 sigue vacante a propósito. **El board: 326 en disco = 326 en
 `docs/TICKETS.md`**, cero desajustes de estado.
 
 ## Bloqueo
+
+**Lo nuevo de hoy, y es el mismo agujero por el otro eje:**
+`groups-killswitch-403-blocks-detach-forever` (**high**). Con el kill de **Grupos** servido como 403 y
+cambios de grupos sin subir, desasociar queda **imposible** —`.permanent`, sin un solo reintento— y el
+aviso le dice al usuario que el problema es su cuenta. El #146 abrió la puerta para que ese gesto exista
+durante un incidente de la nube; por el eje de Grupos la puerta está abierta y el gesto no funciona. Pide
+decisión: distinguir el 403 de kill-switch del resto de lo permanente, o dejar soltar sin subir lo
+pendiente (que hoy es una decisión deliberada del orden del gesto).
 
 **El `high` de testing que iba primero ya no existe: era un falso positivo** y queda `discarded` con la
 medición dentro. Lo que sí sube a `high` es su causa, `diez-worktrees-comparten-un-simulador`, y **espera
