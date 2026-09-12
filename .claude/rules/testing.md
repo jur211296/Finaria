@@ -8,45 +8,46 @@ paths:
 
 <!-- INDICE:inicio — generado por scripts/indexar_doc.py, no editar a mano -->
 
-## Índice de reglas (30)
+## Índice de reglas (31)
 
-> Este fichero son **32 KB en 30 reglas largas**. No lo leas entero: localiza la regla
+> Este fichero son **34 KB en 31 reglas largas**. No lo leas entero: localiza la regla
 > aquí y lee **solo su tramo** con `sed -n '<linea>,<linea+N>p'`.
 > Los números de línea se desplazan al editar — regenera con
 > `python3 scripts/indexar_doc.py <fichero> --apply`.
 
 | Línea | Regla | Peso |
 |---|---|---|
-| `L56` | TODO `ModelConfiguration` de un test lleva `cloudKitDatabase: .none` EXPLÍCITO — el default es `.automatic` y en el simu | 2.5 KB |
-| `L59` | NUNCA aserjar el valor EN MEMORIA de un `@Model` ya persistido justo después de un `context.rollback()` — es dependiente | 1019 B |
-| `L60` | `.serialized` ordena DENTRO de una suite, no entre suites hermanas del mismo archivo. | 2.5 KB |
-| `L83` | En QA MANUAL, `-uitest` a secas es OBLIGATORIO y su ausencia no da ningún error (2026-09-08). | 707 B |
-| `L85` | `-uitest-seed <perfil>` SIEMPRE siembra: relanzar sin `-uitest-reset` DUPLICA el corpus entero (2026-09-09). | 1.0 KB |
-| `L87` | `-uitest-reset` NO limpia `UserDefaults` entero, así que un one-shot de arranque sobrevive al wipe (2026-09-09). | 1.0 KB |
-| `L89` | Un fixture de QA tiene que ser DISCRIMINANTE, no solo sembrar el escenario (2026-09-09). | 1.2 KB |
-| `L91` | Seed `minimal` por default | 372 B |
-| `L95` | Un `accessibilityIdentifier` aplicado a un CONTENEDOR pisa el de sus hijos, así que el id declarado en el componente pue | 783 B |
-| `L97` | `exists` NO implica alcanzable: con un sheet presentado, la vista de fondo sigue ENTERA en el árbol de accesibilidad y l | 396 B |
-| `L99` | Un seam de QA que FUERZA el resultado de un predicado deja CIEGOS a todos los tests que lo usan: cubren el flujo, no la  | 1.5 KB |
-| `L101` | El tercero de la familia, y el más barato de cometer: cuando el HELPER que construye el fixture omite el campo que decid | 1.7 KB |
-| `L103` | El gemelo del anterior: un seam de QA que PERSISTE pone rojos a los tests de OTRO target (2026-08-05). | 1.5 KB |
-| `L108` | Se finge la sesión, no se relajan las aserciones | 485 B |
-| `L110` | Crear grupo necesita ADEMÁS `-uitest-groups-consent` | 551 B |
-| `L112` | `-uitest-fake-cloud-session` ≠ `-uitest-fake-backend-session` | 476 B |
-| `L114` | `-uitest-fake-icloud` no sirve para esto | 245 B |
-| `L118` | DOS corridas de XCUITest sobre el MISMO simulador se derriban entre sí, y el síntoma NO se parece a un fallo de test (me | 1.4 KB |
-| `L120` | Corolario, y es el que ahorra el diagnóstico entero: la presencia o ausencia de la línea de fallo CLASIFICA el rojo. | 828 B |
-| `L123` | El device DEBE casar con el runtime del SDK contra el que se compila. | 832 B |
-| `L125` | NO apagar el simulador entre corridas. | 386 B |
-| `L127` | La PRIMERA corrida tras bootear un simulador no cuenta — y en iOS 27.0 falla de verdad. | 991 B |
-| `L129` | iOS 27.0 (beta) es ~2× más lento que 26.4.1 para todo el ciclo de vida de UI, y cuelga el teardown de `xcodebuild` ~600  | 412 B |
-| `L131` | En iOS 27.0 NINGÚN swipe sintético materializa una celda de `LazyVGrid` que no esté ya en pantalla ⇒ no navegues por ahí | 2.4 KB |
-| `L133` | Clasificar la corrida por su exit code ANTES de leer el output | 619 B |
-| `L135` | Con Swift Testing, «cero casos» tiene un tercer modo y NO da 70: da exit 0, `TEST SUCCEEDED` y `Executed 0 tests` (2026- | 1.1 KB |
-| `L137` | NUNCA cuentes casos con un grep anclado en `^`: los logs de la app PARTEN las líneas del reporter (2026-09-07). | 1.6 KB |
-| `L139` | `-only-testing` filtra por el TIPO, no por el FICHERO — y varios ficheros de este repo declaran DOS `@Suite` (2026-08-03 | 1015 B |
-| `L141` | Un worktree aislado necesita `Secrets.xcconfig` copiado a mano | 341 B |
-| `L143` | Cuando el source-scan es la ÚNICA red posible —el código vive en un target que la suite no compila—, grepear dos literal | 2.3 KB |
+| `L57` | TODO `ModelConfiguration` de un test lleva `cloudKitDatabase: .none` EXPLÍCITO — el default es `.automatic` y en el simu | 2.5 KB |
+| `L60` | NUNCA aserjar el valor EN MEMORIA de un `@Model` ya persistido justo después de un `context.rollback()` — es dependiente | 1019 B |
+| `L61` | `.serialized` ordena DENTRO de una suite, no entre suites hermanas del mismo archivo. | 2.5 KB |
+| `L84` | En QA MANUAL, `-uitest` a secas es OBLIGATORIO y su ausencia no da ningún error (2026-09-08). | 707 B |
+| `L86` | `-uitest-seed <perfil>` SIEMPRE siembra: relanzar sin `-uitest-reset` DUPLICA el corpus entero (2026-09-09). | 1.0 KB |
+| `L88` | `-uitest-reset` NO limpia `UserDefaults` entero, así que un one-shot de arranque sobrevive al wipe (2026-09-09). | 1.0 KB |
+| `L90` | Un fixture de QA tiene que ser DISCRIMINANTE, no solo sembrar el escenario (2026-09-09). | 1.2 KB |
+| `L92` | Seed `minimal` por default | 372 B |
+| `L96` | Un `accessibilityIdentifier` aplicado a un CONTENEDOR pisa el de sus hijos, así que el id declarado en el componente pue | 783 B |
+| `L98` | `exists` NO implica alcanzable: con un sheet presentado, la vista de fondo sigue ENTERA en el árbol de accesibilidad y l | 396 B |
+| `L100` | Un seam de QA que FUERZA el resultado de un predicado deja CIEGOS a todos los tests que lo usan: cubren el flujo, no la  | 1.5 KB |
+| `L102` | El tercero de la familia, y el más barato de cometer: cuando el HELPER que construye el fixture omite el campo que decid | 1.7 KB |
+| `L104` | El gemelo del anterior: un seam de QA que PERSISTE pone rojos a los tests de OTRO target (2026-08-05). | 1.5 KB |
+| `L109` | Se finge la sesión, no se relajan las aserciones | 485 B |
+| `L111` | Crear grupo necesita ADEMÁS `-uitest-groups-consent` | 551 B |
+| `L113` | `-uitest-fake-cloud-session` ≠ `-uitest-fake-backend-session` | 508 B |
+| `L115` | `-uitest-fake-icloud` no sirve para esto | 245 B |
+| `L119` | DOS corridas de XCUITest sobre el MISMO simulador se derriban entre sí, y el síntoma NO se parece a un fallo de test (me | 1.4 KB |
+| `L121` | Corolario, y es el que ahorra el diagnóstico entero: la presencia o ausencia de la línea de fallo CLASIFICA el rojo. | 828 B |
+| `L124` | El device DEBE casar con el runtime del SDK contra el que se compila. | 832 B |
+| `L126` | NO apagar el simulador entre corridas. | 386 B |
+| `L128` | La PRIMERA corrida tras bootear un simulador no cuenta — y en iOS 27.0 falla de verdad. | 991 B |
+| `L130` | iOS 27.0 (beta) es ~2× más lento que 26.4.1 para todo el ciclo de vida de UI, y cuelga el teardown de `xcodebuild` ~600  | 412 B |
+| `L132` | En iOS 27.0 NINGÚN swipe sintético materializa una celda de `LazyVGrid` que no esté ya en pantalla ⇒ no navegues por ahí | 2.4 KB |
+| `L134` | Clasificar la corrida por su exit code ANTES de leer el output | 619 B |
+| `L136` | Con Swift Testing, «cero casos» tiene un tercer modo y NO da 70: da exit 0, `TEST SUCCEEDED` y `Executed 0 tests` (2026- | 1.1 KB |
+| `L138` | NUNCA cuentes casos con un grep anclado en `^`: los logs de la app PARTEN las líneas del reporter (2026-09-07). | 1.6 KB |
+| `L140` | `-only-testing` filtra por el TIPO, no por el FICHERO — y varios ficheros de este repo declaran DOS `@Suite` (2026-08-03 | 1015 B |
+| `L142` | Los XCUITest que pasan por «¿Dónde viven tus datos?» van con el scheme `Yala Dev`, y con `Yala` la fila NO EXISTE (2026- | 1.1 KB |
+| `L144` | Un worktree aislado necesita `Secrets.xcconfig` copiado a mano | 341 B |
+| `L146` | Cuando el source-scan es la ÚNICA red posible —el código vive en un target que la suite no compila—, grepear dos literal | 2.3 KB |
 
 <!-- INDICE:fin -->
 
@@ -137,6 +138,8 @@ Desde el flip compilado `5490544d`, `CloudSyncFlags.groupsBackendEnabled` está 
 - **NUNCA cuentes casos con un grep anclado en `^`: los logs de la app PARTEN las líneas del reporter (2026-09-07).** Los `print` bajo `#if DEBUG` y el reporter de Swift Testing escriben en el MISMO stdout sin lock, así que un log que cae a media línea la corta en dos y **ninguna de las mitades casa con `^✔ Test .* passed`**. Medido sobre tres corridas completas del mismo árbol: `grep -cE '^✔ Test .* passed'` da **6360 · 6353** (pierde 43-50 de 6403, y pierde OTRAS distintas en cada corrida) mientras la línea `Test run with` da **6414 · 6414 · 6414** y el result bundle da `failedTests: 0` en las tres. Ejemplo literal de la corrida 2 — el nombre del test cortado a la mitad: `✔ Test exact_amountGreaterTh` + `[Push] PUSH TOKEN_OK …` + salto de línea + `anTotal_returnsNil() passed after 0.001 seconds.`. ⇒ **el veredicto se lee del exit code y de `Test run with`** (medido: las dos salieron intactas en las 3 corridas; el porqué es inferencia — se emiten al final, cuando la app ya no está loggeando — así que si algún día ves una partida, no te fíes de esta línea tampoco), **y cuando hace falta el detalle por caso, de `-resultBundlePath` + `xcrun xcresulttool get test-results summary --path <bundle>`**, que da `passedTests` / `failedTests` / `skippedTests` estructurados e inmunes al entrelazado. Si aun así hay que rascar el log, grep **sin ancla** (`grep -o '✘ Test '`). Esto no es cosmético: costó un ticket `high` entero investigando «rojos distintos en cada corrida» que en parte era el método de lectura, y **un `✘` partido es un rojo que el gate no ve**.
 
 - **`-only-testing` filtra por el TIPO, no por el FICHERO — y varios ficheros de este repo declaran DOS `@Suite` (2026-08-03).** `-only-testing:YalaTests/GroupsIdentityPurgeGateTests` corre solo el struct de ese nombre; el segundo del mismo fichero (`GroupsIdentityPurgeWiringTests`, `@Suite("C-3 · cableado de producción (source-scan)")`) **no se ejecuta y no se nota**: el conteo cuadra con las suites PEDIDAS, así que la comprobación del bullet de arriba pasa. Costó dar por verde un fix que rompía un source-scan de cableado; lo cazó la suite completa 40 minutos después. ⇒ **al acotar por suites, resuelve los nombres con `grep -n "@Suite" <fichero>` y no por el nombre del fichero**, y ten presente que la segunda suite de un fichero suele ser justamente la de source-scan del cableado — la que más te interesa cuando tocas producción. Con las áreas grandes, la corrida completa de `YalaTests` tarda ~60 s: si el cambio toca un choke-point, sale más barato correrla entera que elegir bien.
+
+- **Los XCUITest que pasan por «¿Dónde viven tus datos?» van con el scheme `Yala Dev`, y con `Yala` la fila NO EXISTE (2026-09-11).** `StorageRowGateLogic.isVisible` exige `remoteEnabled || isEngaged`; `CloudRemoteConfig.decide` corta en `isUITestHost` y devuelve `absentDefault`, que **sin `DEV_BUILD` es `false`** (fail-closed en producción, `CloudRemoteConfig.swift:125-131`). Con seed `minimal` el modo persistido es `.icloud`, así que `isEngaged` también es `false` ⇒ la fila de Ajustes nunca se monta y los cuatro casos de `GroupsAssociationRowUITests` mueren en `scrollTo("storage_settings_row")` tras 14 swipes. **El rojo no menciona el scheme y se parece mucho al del disco lleno** —tarda 70 s por caso, falla en un helper compartido y cae también en los tests que no tocaste—, así que el diagnóstico se va al sitio equivocado: costó tres corridas y dos limpiezas de disco. El paso 4 del gate y el CI ya usan `Yala Dev`; el que se equivoca es quien corre `-only-testing` a mano con el scheme por defecto. **Antes de culpar al entorno de un rojo de XCUITest, comprueba con qué scheme lo lanzaste.**
 
 - **Un worktree aislado necesita `Secrets.xcconfig` copiado a mano**: no está en git, y sin él `xcodebuild` muere antes de compilar con `error: Unable to open base configuration reference file` (fallo de INFRAESTRUCTURA, no de test). Es el primer paso de «validar en worktree limpio desde HEAD» para decidir si un rojo es preexistente.
 

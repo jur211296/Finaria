@@ -29,6 +29,7 @@
 - [Ticket nuevo: busca el duplicado primero](feedback_ticket_nuevo_busca_el_duplicado_primero.md) — dos de tres ya existían el 10-sep, y el que existía era MEJOR; leer el motivo del descarte antes de reabrir.
 - [Ramas aparcadas tocan tu ticket](feedback_ramas_aparcadas_tocan_tu_ticket.md) — `git log --all -- 'tickets/*/<id>.md'` antes de diseñar: una rama sin PR le había escrito requisitos al paso 9.
 - [El mecanismo que existe se probó con OTRO corpus](feedback_el_mecanismo_existente_se_probo_con_otro_corpus.md) — reusar un barrido sobre un corpus nuevo puede destruir datos buenos; el AC dice QUÉ, no CÓMO.
+- [Mi arreglo abre un camino INALCANZABLE](feedback_mi_arreglo_abre_un_camino_inalcanzable.md) — quitar un efecto vuelve alcanzable código que nunca corrió, con sus bugs intactos; recorre el gesto como 2.ª pasada.
 - [Mi arreglo rompe la premisa de OTRO guard](feedback_mi_arreglo_rompe_la_premisa_de_otro_guard.md) — ensanchar un predicado deja mentirosos a los guards que se apoyaban en su forma vieja, a varios ficheros de distancia.
 - [El guard va DENTRO del escritor](feedback_el_guard_va_dentro_del_escritor.md) — repetido en vistas SwiftUI solo lo prueba un grep, y un grep no ve un guard invertido.
 - [Mi fix hereda la forma del bug](feedback_mi_fix_hereda_la_forma_del_bug.md) — el arreglo repite el error del bug; enuncia el bug en una frase y aplícasela al arreglo.
@@ -66,6 +67,7 @@
 - [«Cero warnings» se mide en TODOS los logs](feedback_cero_warnings_se_mide_en_todos_los_logs.md) — el gate no mira los tests y lee un build incremental; dos míos iban al commit el 10-sep.
 
 ## Estado del trabajo
+- [«Desasociar» ya no finge que soltó la cuenta](project_desasociar_no_finge_exito.md) — PR #144; la review fue en DOS vueltas y la 2.ª cazó 2 ALTAS de mi rediseño; el botón «Terminar» NO es simulable (falta seam).
 - [Aceptar una invitación en un teléfono prestado ya no cruza datos](project_puerta_neutro_del_invitado.md) — PR #143; la puerta del invitado NO es la del organizador y aquí se PREGUNTA; la review cazó 23 defectos MÍOS; device-QA NO simulable.
 - [La cuenta de grupos ya se ve y se suelta en Ajustes](project_asociacion_cuenta_de_grupos.md) — paso 10, PR #140; el «enlace dormido» del ticket era IMPOSIBLE (sin ancla) y se sustituyó; device-QA NO simulable; deja dos tickets `high`.
 - [«Vengo por un grupo» ya no bloquea al dueño](project_puerta_grupos_vuelve_al_neutro.md) — mitad 2, PR #139; el relanzamiento ya estaba decidido en la fila B; la INVITACIÓN queda fuera con ticket `high`; device-QA NO simulable.

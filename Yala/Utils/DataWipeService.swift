@@ -303,11 +303,11 @@ final class DataWipeService {
             GroupsOutboxMirror()?.purgeAll()
         }
     ) throws {
-        #if DEBUG
-        // Mismo seam que `wipeAllUserData`: el camino de «Empiezo de cero» llama a las DOS, y el
-        // alert de fallo debe salir venga el throw de la que venga.
-        if UITestHooks.shouldFailWipeNow { throw WipeSeamError.forcedByUITestHook }
-        #endif
+        // El seam `-uitest-fail-wipe` NO está aquí: vive en `deleteLocalGroupsRows`, el escritor que
+        // esta función llama abajo (2026-09-11). Repetirlo aquí solo adelantaba el throw por delante del
+        // cinturón fail-closed, que no escribe nada, así que el estado observable tras el fallo —«todo
+        // sigue ahí»— es el mismo. Lo que se gana al tenerlo en el escritor es que lo hereden los otros
+        // call-sites, empezando por el desasociar del paso 10, que no pasa por aquí.
 
         // CINTURÓN FAIL-CLOSED (`secondary-groups-off-wipes-owner`), y va ANTES del primer `delete`.
         //
@@ -413,6 +413,20 @@ final class DataWipeService {
         in context: ModelContext, includingBridgePreferences: Bool = true,
         alsoDeleting extra: () throws -> Void = {}
     ) throws {
+        #if DEBUG
+        // Seam de QA (`-uitest-fail-wipe`), y vive AQUÍ y no en los llamadores por lo mismo que la firma
+        // del autor: este es el escritor común de los tres caminos que borran estas filas —«Empiezo de
+        // cero» (`wipeLocalGroupsDomain`), el desasociar del paso 10
+        // (`CloudSessionSignOut.purgeGroupsDomainForDetach`) y el que nazca mañana— y un seam repetido en
+        // cada uno deja fuera justo al que se olvide. Hasta el 2026-09-11 el desasociar era ese olvidado:
+        // el flag existía y su rama de fallo no tenía forma de verse en pantalla.
+        //
+        // Lanza ANTES del primer `delete` y antes de tocar `context.author`, así que no deja ni deletes
+        // sucios ni el autor del canal puesto en un contexto que sigue vivo. El estado observable tras el
+        // fallo es «todo sigue ahí», que es exactamente el caso que los dos alerts deben cubrir.
+        if UITestHooks.shouldFailWipeNow { throw WipeSeamError.forcedByUITestHook }
+        #endif
+
         // El autor se fija ANTES del primer `delete` y se restaura pase lo que pase. Es propiedad del
         // CONTEXTO en el instante del save —un autosave que se colara a mitad también quedaría firmado—,
         // así que el par fijar/restaurar tiene que envolver la transacción entera, no solo el `save()`.
@@ -501,6 +515,11 @@ final class DataWipeService {
         // que se escribe abajo: `GroupsAccountAssociation` no lee el iCloud-KV con el dominio sellado.
         defaults.removeObject(forKey: GroupsAccountAssociation.localKey)
         defaults.removeObject(forKey: GroupsDetachedBridgeLedger.userDefaultsKey)
+        // La marca de un desasociar a medias muere con el humano anterior, y va NOMBRADA aquí porque
+        // esta función es una LISTA de keys, no un barrido por prefijo — el `groups.*` del namespace es
+        // convención, no mecanismo. Sin esta línea, quien recibe el teléfono ve en «¿Dónde viven tus
+        // datos?» un botón para «terminar de soltar» una cuenta que nunca asoció.
+        defaults.removeObject(forKey: GroupsDetachPendingPurge.userDefaultsKey)
 
         // Prefijos: preferencias por-grupo (cuenta de liquidación por moneda) y dedup de
         // notificaciones de grupo. Ambos llevan el zoneID del grupo de la sesión anterior en la

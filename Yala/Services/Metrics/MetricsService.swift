@@ -197,6 +197,16 @@ enum MetricsCanary: String {
     /// confirmación es lo que hay que arreglar. Un `released=0|deleted=0` con la salida `keep` es otra
     /// cosa: el puente no tenía nada que soltar, o el fetch falló cerrado.
     case groupsAssociationDetached
+    /// **El desasociar cerró la sesión en la nube pero el borrado local LANZÓ**: los grupos siguen en el
+    /// teléfono y la cuenta sigue asociada, que es lo coherente. La persona ve el aviso y puede reintentar.
+    /// `detail` lleva la salida que eligió para el puente, sin PII.
+    ///
+    /// Hermano exacto de `freshStartWipeFailed`, y por el mismo motivo está fuera de `#if DEBUG`: hasta el
+    /// 2026-09-11 este camino era MUDO en producción —la pantalla decía que la cuenta estaba suelta sobre
+    /// unos grupos enteros— así que un fallo sistemático (store bloqueado, disco lleno, migración a medias)
+    /// no dejaba ni una señal. **Cualquier valor sostenido >0 es un bug**, no una cola de release: a
+    /// diferencia del suyo, aquí no hay corpus heredado que explique un pico.
+    case groupsDetachPurgeFailed
 }
 
 // MARK: - Servicio

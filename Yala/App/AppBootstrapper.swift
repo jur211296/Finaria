@@ -705,6 +705,14 @@ final class AppBootstrapper {
                 SessionState.shared.onboardingMode = .full
             }
             UserDefaults.standard.removeObject(forKey: OnboardingMode.userDefaultsKey)
+            //  · la marca de un desasociar a medias (`GroupsDetachPendingPurge`): la escribe el
+            //    CÓDIGO DE PRODUCCIÓN cuando el borrado local falla, y el caso con `-uitest-fail-wipe`
+            //    la deja armada a propósito. Sobrevive al wipe de SwiftData —no es una fila, es una
+            //    key— así que la corrida SIGUIENTE arrancaba con la sección ofreciendo «Terminar de
+            //    soltar la cuenta» en vez de «Desasociar», y el rojo salía en el test de al lado.
+            //    Medido el 2026-09-11: es lo que tumbaba el control negativo del seam. Misma familia
+            //    que sus vecinas de aquí, con la diferencia de que ésta no la siembra un seam.
+            GroupsDetachPendingPurge.clear()
             //  · identidad iCloud sembrada por `-uitest-icloud-identity`: se PERSISTE en defaults,
             //    así que sin esto una corrida con el arg dejaba al siguiente XCUITest resolviendo
             //    identidad contra un member que no es suyo. Es la trampa que `.claude/rules/

@@ -282,10 +282,17 @@ final class UITestHooks {
     /// `ScheduledPaymentSkipUITests` opera sobre el `firstMatch` de las filas.
     nonisolated static var scheduledDueToday: Bool { hasArg("-uitest-scheduled-due-today") }
 
-    /// `-uitest-fail-wipe`: hace que `DataWipeService.wipeAllUserData` y `wipeLocalGroupsDomain`
-    /// LANCEN antes de tocar nada, dejando los datos intactos. Es la superficie que faltaba para
-    /// ver en pantalla la rama de FALLO de «Empiezo de cero» (canario `freshStartWipeFailed` +
-    /// alert), que hoy solo cubren los 7 tests de `FreshStartWipeAlertTests` a nivel de lógica.
+    /// `-uitest-fail-wipe`: hace que los borrados LANCEN antes de tocar nada, dejando los datos
+    /// intactos. Es la superficie que faltaba para ver en pantalla las ramas de FALLO que en producción
+    /// son mudas.
+    ///
+    /// **Cubre TRES caminos, y desde el 2026-09-11 por un solo sitio.** `wipeAllUserData` lo consulta
+    /// aparte; los otros dos lo heredan de `DataWipeService.deleteLocalGroupsRows`, el escritor común
+    /// del dominio Grupos: «Empiezo de cero» (`wipeLocalGroupsDomain` → canario `freshStartWipeFailed`
+    /// + alert) y **el desasociar del paso 10** (`CloudSessionSignOut.purgeGroupsDomainForDetach` →
+    /// canario `groupsDetachPurgeFailed` + su propio aviso). Ese tercero estuvo fuera hasta entonces:
+    /// el seam se repetía en cada llamador en vez de vivir en el escritor, así que el camino que no se
+    /// acordó de copiarlo se quedó sin forma de verse en pantalla.
     ///
     /// NO simula un wipe a medias: lanza ANTES del primer borrado, así que el estado observable
     /// tras el fallo es «todo sigue ahí», que es exactamente el caso que el alert debe cubrir.

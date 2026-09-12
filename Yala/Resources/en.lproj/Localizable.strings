@@ -5892,3 +5892,21 @@
 
 /* Puerta del invitado: CTA destructivo que arranca la vuelta al neutro */
 "welcome.groups.inviteNeutralCta" = "Continue and delete";
+
+/* Aviso: el borrado local de los grupos falló al desasociar */
+"storage.groups.detachPurgeFailedTitle" = "We couldn't unlink the account";
+
+/* Aviso: cuerpo del fallo del borrado al desasociar */
+"storage.groups.detachPurgeFailedBody" = "Your groups are still on this iPhone and the account wasn't unlinked. What you chose for your Panel entries has already been applied, and we signed you out of that account. Try again to finish.";
+
+/* Aviso: el desasociar abortó porque no se pudo leer el puente */
+"storage.groups.detachBlockedBridge" = "We couldn't check your groups' entries on this iPhone. Nothing was unlinked. Try again.";
+
+/* Botón cuando quedó un desasociar a medias */
+"storage.groups.detachFinishButton" = "Finish unlinking the account";
+
+/* Cuerpo de la sección cuando quedó un desasociar a medias */
+"storage.groups.detachPendingBody" = "It stopped halfway: your groups are still on this iPhone and you're already signed out of that account.";
+
+/* Aviso: el desasociar no puede correr con otro cierre de sesión en curso */
+"storage.groups.detachBusy" = "You're signing out right now. Finish that first and then try again.";

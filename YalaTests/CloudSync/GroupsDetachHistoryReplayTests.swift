@@ -189,7 +189,7 @@ struct GroupsDetachHistoryReplayTests {
         try clearOutbox(context)
 
         // El desasociar: filas `Split*` + outbox + la mitad del cursor que es del PULL.
-        CloudSessionSignOut.purgeGroupsDomainForDetach(context: context)
+        try CloudSessionSignOut.purgeGroupsDomainForDetach(context: context)
         #expect(try context.fetchCount(FetchDescriptor<SplitExpense>()) == 0)
 
         // El primer drain del arranque siguiente CORRE pero no deja ancla (el fallo del ticket).
@@ -244,7 +244,7 @@ struct GroupsDetachHistoryReplayTests {
         #expect(try outbox(context).count > 0, "el drain encoló el upsert del gasto")
         #expect(try context.fetchCount(FetchDescriptor<GroupSyncCursor>()) == 1)
 
-        CloudSessionSignOut.purgeGroupsDomainForDetach(context: context)
+        try CloudSessionSignOut.purgeGroupsDomainForDetach(context: context)
 
         #expect(try context.fetchCount(FetchDescriptor<SplitExpense>()) == 0)
         #expect(try context.fetchCount(FetchDescriptor<SplitGroup>()) == 0)
