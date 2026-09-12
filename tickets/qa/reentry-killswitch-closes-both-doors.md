@@ -219,3 +219,21 @@ AC de la puerta de Ajustes, y leer no es tocar.
 ## Relacionados
 
 - [[reentry-counts-as-fresh-install]] — el padre, en `qa/` desde el 2026-09-05
+
+
+---
+
+## Nota del 2026-09-11 — la decisión de la pieza 1 sigue vigente, y la fila ya no está cerrada
+
+**No es una vuelta atrás.** La decisión del 6-sep («las dos puertas de la NUBE cerradas bajo el kill») se
+cumple entera: la entrada personal a la nube sigue cerrada, y desde hoy lo está con un candado propio
+(`StorageRowGateLogic.offersCloudMigrationEntry`) en vez de por el efecto lateral de esconder la fila.
+
+Lo que cambió es la premisa. El paso 10 (9-sep) metió detrás de esa misma fila la gestión de la **cuenta
+de grupos** —que va por `groupsBackendRolloutPercent`, otro flag— y con ella la única superficie desde la
+que se suelta. El kill de la nube apagaba un control de Grupos. Encargo de Jürgen del 11-sep:
+`cloud-killswitch-hides-the-only-door-to-detach-groups`, opción (1).
+
+⇒ Al leer la decisión de más arriba, la frase «descartó (c): tocar el gate del kill es tocar el freno de
+emergencia» hay que leerla con su alcance: valía para la puerta de la NUBE, que es lo que estaba sobre la
+mesa ese día. La fila hoy se abre por el eje de Grupos y por nada más.
