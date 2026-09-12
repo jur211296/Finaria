@@ -4,6 +4,7 @@ status: backlog
 priority: high
 area: "testing, qa"
 created: 2026-09-09
+updated: 2026-09-11
 source: run 34354119553 (nocturna de 2.1, 2026-09-09) — encontrado al arreglar el avisador
 ---
 
@@ -30,6 +31,24 @@ Los 12 fallos son **cuatro casos distintos** contados con sus reintentos
 
 `GroupInviteOnboardingUITests` aparece como suite fallida en el log pero ninguno de sus casos
 figura entre los fallos finales: pasó al reintentar.
+
+**Al 2026-09-11 los cuatro SIGUEN rojos, y eso ya no es un dato de una sola noche.** La nocturna
+del 11-sep (run `34600912200`, `ba618216`) dio `Executed 149 tests, with 13 failures`, y el
+desglose es el mismo cuarteto con sus reintentos:
+
+| Caso | reintentos rojos |
+|---|---|
+| `QuickActionsFavoritesUITests test_saveAsFavoriteFromTransactionAppearsInList` | 3 |
+| `InboxConvertToGroupUITests test_convertDraftToGroupExpense_preservesDraftDate` | 3 |
+| `EdgeCasesUITests test_extremeMinimumAmountSaves` | 3 |
+| `TransactionsCrudUITests test_createTransaction` | 2 |
+| `PanelDashboardUITests test_freshInstallShowsFourSectionsByDefault` | 1 (pasó al reintentar) |
+| `GroupsSmokeUITests test_groupExpenseFromTabFAB` | 1 (pasó al reintentar) |
+
+Dos noches con **tres** reintentos rojos seguidos en los tres primeros es mala señal para la
+hipótesis «flaky de runner frío»: un flaky que falla 3/3 en dos noches distintas no es un flaky.
+Medido de pasada al refutar `welcome-chooser-uitests-cannot-reach-the-chooser`, que NO es este
+conjunto — en esa misma corrida los siete del Welcome pasaron.
 
 **El aviso de esos rojos no llegó a nadie.** El paso que avisa salió con `Invalid API key`
 (`ticket ci-avisador-de-rojos-advisory-tiene-la-clave-mal`, ya cerrado), así que la única señal

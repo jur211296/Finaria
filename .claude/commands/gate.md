@@ -72,6 +72,17 @@ xcodebuild -scheme "Yala Dev" -destination 'platform=iOS Simulator,name=iPhone 1
 
 **Y si lo que ves es `Restarting after unexpected exit` con casos en `Failing tests` que no imprimieron ninguna línea de fallo, tampoco es el disco**: es otra corrida pisándote el simulador. `bash qa/scripts/sim-libre.sh` lo dice en un segundo.
 
+**Y la foto de antes NO basta: vigilá la corrida entera.** Preguntar una vez caduca al segundo siguiente —una corrida dura entre 3 y 40 min y aquí conviven ~14 worktrees sobre un solo simulador—, así que lanzá el centinela en paralelo:
+
+```bash
+xcodebuild -scheme "Yala Dev" -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  test -only-testing:YalaUITests/<Suite> > /tmp/gate-ui.log 2>&1 &
+bash qa/scripts/sim-libre.sh --vigilar $!     # exit 1 ⇒ el veredicto NO vale, repetí
+wait; grep -E "(Test Suite|Test Case|Executed|\*\* TEST)" /tmp/gate-ui.log
+```
+
+Si el centinela sale 1, **la corrida no da veredicto**: ni verde ni rojo. Repetila aislada. Esto no es celo: el 2026-09-11 un rojo de una corrida pisada —con su línea de fallo y su mensaje de aserto, o sea con la pinta exacta de una regresión— se archivó como ticket `high` y costó una sesión entera refutarlo (`.claude/rules/testing.md`, la regla de `L124`).
+
 ## 4 · Audit de calidad
 
 Aplica los checks de `/swift-audit` **solo sobre las líneas añadidas** del diff. Críticos que bloquean: credenciales hardcodeadas, `try?` que silencia, force unwrap sin guard previo, `print` fuera de `#if DEBUG`, `@Attribute(.unique)` en un `@Model`. El resto es informativo.

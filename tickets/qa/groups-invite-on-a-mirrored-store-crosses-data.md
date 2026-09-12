@@ -203,6 +203,14 @@ Y tres decisiones de producto que la review obligó a tomar:
   **Siete rojos son PREEXISTENTES** y están bisecados contra un worktree limpio de `2.1` — ticket propio
   (`welcome-chooser-uitests-cannot-reach-the-chooser`, `high`).
 
+  > **Corrección del 2026-09-11: esos siete rojos no eran preexistentes ni eran rojos.** Se midieron
+  > 11/11 verdes en `2.1` de hoy, 11/11 en `1a9cbb83` —la revisión contra la que se «bisecó»— y los
+  > once verdes en la nocturna de CI del 11-sep sobre los 149 casos, con las dos suites byte-idénticas
+  > entre ambas revisiones. El rojo venía de la máquina: esta corrida y la de la bisección compartían
+  > el único simulador, y la que llega segunda **instala su `.app` sobre el mismo bundle id**, así que
+  > la primera acaba tapeando un binario ajeno y falla con línea de aserto. El ticket quedó
+  > `discarded` con la medición; la contención vive en `diez-worktrees-comparten-un-simulador`.
+
 ### Lo que queda fuera y por qué
 
 - **Device-QA (CloudKit): NO es simulable.** Que el iCloud del dueño no reciba nada pide dos Apple IDs y

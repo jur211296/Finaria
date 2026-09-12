@@ -336,7 +336,7 @@ Source repo for absorption: `jur211296/YalaWiki` @ `1934e8ad`. This environment 
 | weekday-bar-daily-average-unmarked | backlog | tickets/backlog/weekday-bar-daily-average-unmarked.md |
 | welcome-beacon-origin-contradicts-not-found-copy | backlog | tickets/backlog/welcome-beacon-origin-contradicts-not-found-copy.md |
 | welcome-beacon-reads-owner-icloud-in-secondary | discarded | tickets/discarded/welcome-beacon-reads-owner-icloud-in-secondary.md |
-| welcome-chooser-uitests-cannot-reach-the-chooser | backlog | tickets/backlog/welcome-chooser-uitests-cannot-reach-the-chooser.md |
+| welcome-chooser-uitests-cannot-reach-the-chooser | discarded | tickets/discarded/welcome-chooser-uitests-cannot-reach-the-chooser.md |
 | welcome-cloud-back-leaves-chooser-marked-seen | backlog | tickets/backlog/welcome-cloud-back-leaves-chooser-marked-seen.md |
 | welcome-copy-blames-owner | discarded | tickets/discarded/welcome-copy-blames-owner.md |
 | welcome-destructive-buttons-are-plain-text-taps | backlog | tickets/backlog/welcome-destructive-buttons-are-plain-text-taps.md |
