@@ -14,7 +14,7 @@
 - [Cuándo la app pregunta al usuario](feedback_cuando_la_app_pregunta_al_usuario.md) — pregunta si la decisión mueve DATOS suyos; si solo cambia el recorrido, informa o calla.
 
 ## Cómo mido y cómo entrego
-- [La premisa del ENCARGO también se mide](feedback_la_premisa_del_encargo_tambien_se_mide.md) — hereda los errores del ticket; la peor es «no es simulable»: 3 falsas el 8-sep, inflaban la cola de Jürgen.
+- [La premisa del ENCARGO también se mide](feedback_la_premisa_del_encargo_tambien_se_mide.md) — hereda los errores del ticket; «no es simulable» infla la cola de Jürgen, y una BISECCIÓN sobre un sujeto que no cambió no bisecó nada.
 - [El barrido de QA rinde por lotes](feedback_el_barrido_qa_rinde_por_lotes.md) — agrupa por estado de simulador; dos números que comparas, mismo lanzamiento; el testigo aritmético gana a la captura.
 - [Instrumentar gana a razonar](feedback_instrumentar_gana_a_razonar.md) — a la tercera hipótesis caída, cuenta en vez de deducir; y lo que no se reproduce no se explica: se acota.
 - [El CI se verifica en LOCAL](feedback_el_ci_se_verifica_en_local.md) — el `run:` de un paso se extrae del YAML y se corre con matriz de escenarios; actionlint con control negativo; y el comentario con que justifiqué mi diseño era falso.
@@ -46,7 +46,7 @@
 - [El árbol base contesta «¿es mío?»](feedback_el_arbol_base_contesta_si_es_mio.md) — worktree desde HEAD zanja un rojo ajeno en 90 s; y devuelve el disco que se come.
 - [Un «rojo conocido» no exime de bisecar](feedback_rojo_conocido_no_exime_de_bisecar.md) — dos rojos idénticos en el log, causas opuestas: uno era mío y rompía guardar una transacción.
 - [XCUITest completo: por lotes](reference_xcuitest_completo_por_lotes.md) — `BUILD INTERRUPTED` no es veredicto; cuenta la cobertura por CLASE (61) y nunca en background.
-- [Dos corridas, un simulador](feedback_dos_corridas_un_simulador.md) — el runner no muere de memoria: lo pisa otra sesión; clasifica el rojo por si trae línea de fallo.
+- [Dos corridas, un simulador](feedback_dos_corridas_un_simulador.md) — vigila la corrida ENTERA, no solo la foto de antes: un rojo CON línea de fallo tampoco es tuyo si otra corrida instaló su app encima.
 - [Bisecar un flaky miente](feedback_bisect_de_un_flaky_miente.md) — la correlación es azar; lo que zanja es la muestra IMPOSIBLE, y el rojo que se muda de test.
 - [El generador regenera lo que edito](feedback_el_generador_regenera_lo_que_edito.md) — re-corre el script DESPUÉS de editar a mano; dos locales se quedaron con el texto viejo.
 - [El mutante compilado zanja hipótesis](feedback_mutante_compilado_zanja_hipotesis.md) — si un ticket dice que no hay dato para elegir, recompila el código anterior y reproduce: ese es el dato.
@@ -67,6 +67,7 @@
 - [«Cero warnings» se mide en TODOS los logs](feedback_cero_warnings_se_mide_en_todos_los_logs.md) — el gate no mira los tests y lee un build incremental; dos míos iban al commit el 10-sep.
 
 ## Estado del trabajo
+- [Los 7 XCUITest del Welcome estaban SANOS](project_siete_xcuitest_welcome_falso_positivo.md) — `discarded` con 3 mediciones (PR #145); queda el centinela del simulador y un `high` esperando decisión de Jürgen.
 - [«Desasociar» ya no finge que soltó la cuenta](project_desasociar_no_finge_exito.md) — PR #144; la review fue en DOS vueltas y la 2.ª cazó 2 ALTAS de mi rediseño; el botón «Terminar» NO es simulable (falta seam).
 - [Aceptar una invitación en un teléfono prestado ya no cruza datos](project_puerta_neutro_del_invitado.md) — PR #143; la puerta del invitado NO es la del organizador y aquí se PREGUNTA; la review cazó 23 defectos MÍOS; device-QA NO simulable.
 - [La cuenta de grupos ya se ve y se suelta en Ajustes](project_asociacion_cuenta_de_grupos.md) — paso 10, PR #140; el «enlace dormido» del ticket era IMPOSIBLE (sin ancla) y se sustituyó; device-QA NO simulable; deja dos tickets `high`.

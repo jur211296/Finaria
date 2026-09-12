@@ -1,6 +1,6 @@
 ---
 name: dos-corridas-un-simulador
-description: Antes de creerme un rojo de XCUITest, comprobar que soy la única corrida — y clasificar el rojo por si tiene línea de fallo o no
+description: Antes de creerme un rojo de XCUITest, vigilar la corrida ENTERA (no solo la foto de antes) — y saber que un rojo CON línea de fallo tampoco es veredicto si otra corrida instaló su app encima
 metadata:
   type: feedback
 ---
@@ -30,7 +30,10 @@ y pasaba AISLADO**: una tanda son ~3 min de ventana para que otra sesión entre;
 - **Clasificar el rojo antes de mirar ningún test**, con `grep -c "Test Case .* failed"`:
   - **0** con un bloque `Failing tests` ⇒ murió el runner. No hay veredicto. No archives esos nombres:
     dependen del orden, no de qué esté roto.
-  - **>0** con su mensaje de aserto ⇒ eso sí es un rojo de test.
+  - **>0** con su mensaje de aserto ⇒ eso sí es un rojo de test… **pero solo si estuviste solo**, y
+    esa mitad me faltaba (ver abajo).
+- **`bash qa/scripts/sim-libre.sh --vigilar <pid del xcodebuild>` DURANTE la corrida**, no solo la
+  foto de antes. Lo escribí el 11-sep, con sus cuatro controles; el gate ya lo lanza en paralelo.
 - **Los `JetsamEvent` contestan «¿fue la memoria?» en un minuto y suelen decir que no.** Viven en
   `/Library/Logs/DiagnosticReports` (los del sistema; los de `~/Library` no traen jetsam) y se leen
   sin `sudo` porque `jur` está en `_analyticsusers`. Filtrar por `reason`: casi todo es `idle-exit`,
@@ -45,3 +48,31 @@ y pasaba AISLADO**: una tanda son ~3 min de ventana para que otra sesión entre;
 
 Relacionado: [[el-arbol-base-contesta-si-es-mio]] · [[rojo-conocido-no-exime-de-bisecar]] ·
 [[bisect-de-un-flaky-miente]] · [[la-premisa-del-encargo-tambien-se-mide]]
+
+
+## La mitad que faltaba, y costó un ticket `high` falso (2026-09-11)
+
+**«Tiene línea de fallo» NO prueba que el rojo sea tuyo.** La segunda corrida, antes de matar al
+runner de la primera, **instala su `.app` sobre el mismo bundle id**. Desde ese instante la primera
+sigue viva y tapeando **un binario que no es el suyo** — el del árbol de la otra sesión, con su
+trabajo a medias dentro. Lo que sale entonces no es `Restarting after unexpected exit` sin
+veredicto: es un `waitForExistence` que se agota, con su `Test Case … failed` y su mensaje de
+aserto. Indistinguible de una regresión.
+
+Así nació `welcome-chooser-uitests-cannot-reach-the-chooser`, `high`, con siete casos, su log y una
+«bisección». Los siete pasan (11/11 local en las dos revisiones, y verdes en la nocturna de CI sobre
+149 casos). Una sesión entera para refutarlo.
+
+**How to apply:**
+
+- El criterio de clasificación de arriba distingue «murió el runner» de «falló una aserción». **No**
+  distingue «falló una aserción **de mi árbol**» de «falló contra el binario de otro». Para eso hace
+  falta saber si estuviste solo, y eso solo lo sabe un centinela: la foto previa caduca al segundo
+  siguiente y una corrida dura entre 3 y 40 minutos.
+- **Antes de abrir un ticket por un rojo de XCUITest**, una corrida aislada con el centinela en
+  verde. Un ticket `high` en el board cuesta mucho más que repetir una corrida.
+- Y busca la **medición independiente que ya está pagada**: la nocturna de CI corre la suite completa
+  en una máquina limpia. `gh run list --workflow qa.yml --event schedule` y `gh run view <id> --log`
+  contestan en dos minutos si el rojo existe fuera de esta Mac.
+
+Relacionado: [[la-premisa-del-encargo-tambien-se-mide]] · [[xcuitest-completo-por-lotes]]

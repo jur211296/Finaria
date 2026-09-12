@@ -8,46 +8,47 @@ paths:
 
 <!-- INDICE:inicio — generado por scripts/indexar_doc.py, no editar a mano -->
 
-## Índice de reglas (31)
+## Índice de reglas (32)
 
-> Este fichero son **34 KB en 31 reglas largas**. No lo leas entero: localiza la regla
+> Este fichero son **36 KB en 32 reglas largas**. No lo leas entero: localiza la regla
 > aquí y lee **solo su tramo** con `sed -n '<linea>,<linea+N>p'`.
 > Los números de línea se desplazan al editar — regenera con
 > `python3 scripts/indexar_doc.py <fichero> --apply`.
 
 | Línea | Regla | Peso |
 |---|---|---|
-| `L57` | TODO `ModelConfiguration` de un test lleva `cloudKitDatabase: .none` EXPLÍCITO — el default es `.automatic` y en el simu | 2.5 KB |
-| `L60` | NUNCA aserjar el valor EN MEMORIA de un `@Model` ya persistido justo después de un `context.rollback()` — es dependiente | 1019 B |
-| `L61` | `.serialized` ordena DENTRO de una suite, no entre suites hermanas del mismo archivo. | 2.5 KB |
-| `L84` | En QA MANUAL, `-uitest` a secas es OBLIGATORIO y su ausencia no da ningún error (2026-09-08). | 707 B |
-| `L86` | `-uitest-seed <perfil>` SIEMPRE siembra: relanzar sin `-uitest-reset` DUPLICA el corpus entero (2026-09-09). | 1.0 KB |
-| `L88` | `-uitest-reset` NO limpia `UserDefaults` entero, así que un one-shot de arranque sobrevive al wipe (2026-09-09). | 1.0 KB |
-| `L90` | Un fixture de QA tiene que ser DISCRIMINANTE, no solo sembrar el escenario (2026-09-09). | 1.2 KB |
-| `L92` | Seed `minimal` por default | 372 B |
-| `L96` | Un `accessibilityIdentifier` aplicado a un CONTENEDOR pisa el de sus hijos, así que el id declarado en el componente pue | 783 B |
-| `L98` | `exists` NO implica alcanzable: con un sheet presentado, la vista de fondo sigue ENTERA en el árbol de accesibilidad y l | 396 B |
-| `L100` | Un seam de QA que FUERZA el resultado de un predicado deja CIEGOS a todos los tests que lo usan: cubren el flujo, no la  | 1.5 KB |
-| `L102` | El tercero de la familia, y el más barato de cometer: cuando el HELPER que construye el fixture omite el campo que decid | 1.7 KB |
-| `L104` | El gemelo del anterior: un seam de QA que PERSISTE pone rojos a los tests de OTRO target (2026-08-05). | 1.5 KB |
-| `L109` | Se finge la sesión, no se relajan las aserciones | 485 B |
-| `L111` | Crear grupo necesita ADEMÁS `-uitest-groups-consent` | 551 B |
-| `L113` | `-uitest-fake-cloud-session` ≠ `-uitest-fake-backend-session` | 508 B |
-| `L115` | `-uitest-fake-icloud` no sirve para esto | 245 B |
-| `L119` | DOS corridas de XCUITest sobre el MISMO simulador se derriban entre sí, y el síntoma NO se parece a un fallo de test (me | 1.4 KB |
-| `L121` | Corolario, y es el que ahorra el diagnóstico entero: la presencia o ausencia de la línea de fallo CLASIFICA el rojo. | 828 B |
-| `L124` | El device DEBE casar con el runtime del SDK contra el que se compila. | 832 B |
-| `L126` | NO apagar el simulador entre corridas. | 386 B |
-| `L128` | La PRIMERA corrida tras bootear un simulador no cuenta — y en iOS 27.0 falla de verdad. | 991 B |
-| `L130` | iOS 27.0 (beta) es ~2× más lento que 26.4.1 para todo el ciclo de vida de UI, y cuelga el teardown de `xcodebuild` ~600  | 412 B |
-| `L132` | En iOS 27.0 NINGÚN swipe sintético materializa una celda de `LazyVGrid` que no esté ya en pantalla ⇒ no navegues por ahí | 2.4 KB |
-| `L134` | Clasificar la corrida por su exit code ANTES de leer el output | 619 B |
-| `L136` | Con Swift Testing, «cero casos» tiene un tercer modo y NO da 70: da exit 0, `TEST SUCCEEDED` y `Executed 0 tests` (2026- | 1.1 KB |
-| `L138` | NUNCA cuentes casos con un grep anclado en `^`: los logs de la app PARTEN las líneas del reporter (2026-09-07). | 1.6 KB |
-| `L140` | `-only-testing` filtra por el TIPO, no por el FICHERO — y varios ficheros de este repo declaran DOS `@Suite` (2026-08-03 | 1015 B |
-| `L142` | Los XCUITest que pasan por «¿Dónde viven tus datos?» van con el scheme `Yala Dev`, y con `Yala` la fila NO EXISTE (2026- | 1.1 KB |
-| `L144` | Un worktree aislado necesita `Secrets.xcconfig` copiado a mano | 341 B |
-| `L146` | Cuando el source-scan es la ÚNICA red posible —el código vive en un target que la suite no compila—, grepear dos literal | 2.3 KB |
+| `L58` | TODO `ModelConfiguration` de un test lleva `cloudKitDatabase: .none` EXPLÍCITO — el default es `.automatic` y en el simu | 2.5 KB |
+| `L61` | NUNCA aserjar el valor EN MEMORIA de un `@Model` ya persistido justo después de un `context.rollback()` — es dependiente | 1019 B |
+| `L62` | `.serialized` ordena DENTRO de una suite, no entre suites hermanas del mismo archivo. | 2.5 KB |
+| `L85` | En QA MANUAL, `-uitest` a secas es OBLIGATORIO y su ausencia no da ningún error (2026-09-08). | 707 B |
+| `L87` | `-uitest-seed <perfil>` SIEMPRE siembra: relanzar sin `-uitest-reset` DUPLICA el corpus entero (2026-09-09). | 1.0 KB |
+| `L89` | `-uitest-reset` NO limpia `UserDefaults` entero, así que un one-shot de arranque sobrevive al wipe (2026-09-09). | 1.0 KB |
+| `L91` | Un fixture de QA tiene que ser DISCRIMINANTE, no solo sembrar el escenario (2026-09-09). | 1.2 KB |
+| `L93` | Seed `minimal` por default | 372 B |
+| `L97` | Un `accessibilityIdentifier` aplicado a un CONTENEDOR pisa el de sus hijos, así que el id declarado en el componente pue | 783 B |
+| `L99` | `exists` NO implica alcanzable: con un sheet presentado, la vista de fondo sigue ENTERA en el árbol de accesibilidad y l | 396 B |
+| `L101` | Un seam de QA que FUERZA el resultado de un predicado deja CIEGOS a todos los tests que lo usan: cubren el flujo, no la  | 1.5 KB |
+| `L103` | El tercero de la familia, y el más barato de cometer: cuando el HELPER que construye el fixture omite el campo que decid | 1.7 KB |
+| `L105` | El gemelo del anterior: un seam de QA que PERSISTE pone rojos a los tests de OTRO target (2026-08-05). | 1.5 KB |
+| `L110` | Se finge la sesión, no se relajan las aserciones | 485 B |
+| `L112` | Crear grupo necesita ADEMÁS `-uitest-groups-consent` | 551 B |
+| `L114` | `-uitest-fake-cloud-session` ≠ `-uitest-fake-backend-session` | 508 B |
+| `L116` | `-uitest-fake-icloud` no sirve para esto | 245 B |
+| `L120` | DOS corridas de XCUITest sobre el MISMO simulador se derriban entre sí, y el síntoma NO se parece a un fallo de test (me | 1.4 KB |
+| `L122` | Corolario, y es el que ahorra el diagnóstico entero: la presencia o ausencia de la línea de fallo CLASIFICA el rojo. | 931 B |
+| `L124` | La otra mitad del corolario, y la que costó un ticket `high` falso (2026-09-11): «tiene línea de fallo» NO prueba que el | 1.9 KB |
+| `L127` | El device DEBE casar con el runtime del SDK contra el que se compila. | 832 B |
+| `L129` | NO apagar el simulador entre corridas. | 386 B |
+| `L131` | La PRIMERA corrida tras bootear un simulador no cuenta — y en iOS 27.0 falla de verdad. | 991 B |
+| `L133` | iOS 27.0 (beta) es ~2× más lento que 26.4.1 para todo el ciclo de vida de UI, y cuelga el teardown de `xcodebuild` ~600  | 412 B |
+| `L135` | En iOS 27.0 NINGÚN swipe sintético materializa una celda de `LazyVGrid` que no esté ya en pantalla ⇒ no navegues por ahí | 2.4 KB |
+| `L137` | Clasificar la corrida por su exit code ANTES de leer el output | 619 B |
+| `L139` | Con Swift Testing, «cero casos» tiene un tercer modo y NO da 70: da exit 0, `TEST SUCCEEDED` y `Executed 0 tests` (2026- | 1.1 KB |
+| `L141` | NUNCA cuentes casos con un grep anclado en `^`: los logs de la app PARTEN las líneas del reporter (2026-09-07). | 1.6 KB |
+| `L143` | `-only-testing` filtra por el TIPO, no por el FICHERO — y varios ficheros de este repo declaran DOS `@Suite` (2026-08-03 | 1015 B |
+| `L145` | Los XCUITest que pasan por «¿Dónde viven tus datos?» van con el scheme `Yala Dev`, y con `Yala` la fila NO EXISTE (2026- | 1.1 KB |
+| `L147` | Un worktree aislado necesita `Secrets.xcconfig` copiado a mano | 341 B |
+| `L149` | Cuando el source-scan es la ÚNICA red posible —el código vive en un target que la suite no compila—, grepear dos literal | 2.3 KB |
 
 <!-- INDICE:fin -->
 
@@ -118,7 +119,9 @@ Desde el flip compilado `5490544d`, `CloudSyncFlags.groupsBackendEnabled` está 
 
 - **DOS corridas de XCUITest sobre el MISMO simulador se derriban entre sí, y el síntoma NO se parece a un fallo de test (medido el 2026-09-07).** Comparten bundle id (`com.jurgenschmidt.yala.dev`), así que cuando la segunda instala y lanza su runner, **mata el proceso de la primera a media ejecución**. Lo que sale por el log es: `Restarting after unexpected exit, crash, or test timeout`, la suite empieza de cero, y al final **exit 65** con un bloque `Failing tests:` cuyos casos **nunca imprimieron una línea `Test Case … failed`**. En el log se ve el relevo — un PID nuevo de `YalaUITests-Runner` diciendo «Running tests…» justo donde el anterior se corta a mitad de un `Synthesize event`. **Medido, ida y vuelta:** dos corridas lanzadas con 25 s de diferencia dan `4 reinicios / 7 pasados / 0 fallos` y `3 reinicios / 1 pasado / 0 fallos`, **idéntico en las dos repeticiones**; el mismo reproductor a solas da **11/11 verde y 0 reinicios**, incluida la corrida inmediatamente posterior (o sea, el simulador no queda dañado — es la concurrencia, no el desgaste). ⇒ **antes del paso 3 del `/gate`, comprobar que nadie más está corriendo tests**: `bash qa/scripts/sim-libre.sh`. En esta máquina hay **un solo simulador** y hoy conviven ~10 worktrees, todos con el mismo `-destination name=iPhone 17 Pro`, así que la colisión no es rara: es lo normal cuando dos sesiones llegan al gate a la vez.
 
-- **Corolario, y es el que ahorra el diagnóstico entero: la presencia o ausencia de la línea de fallo CLASIFICA el rojo.** `Failing tests:` **sin** ninguna línea `Test Case … failed` ⇒ colisión de corridas (o cualquier otra muerte del runner): no hay veredicto, no mires el test. **Con** su línea de fallo y su mensaje de aserto ⇒ eso sí es un rojo de test. Es un `grep -c` y separa dos familias que llevaban semanas mezcladas en cuatro tickets distintos. **Y no confundas esto con «lo mató la memoria»**: en las corridas medidas ese día el swap estuvo lleno (6,0-6,1 GB de 6,1) y el reproductor pasó **12 corridas / 124 casos sin un solo fallo**, con el disco tanto a 25 GB como a **12 GB** forzados con un fichero de relleno. Ni el disco ni la memoria distinguían las dos condiciones; la concurrencia sí.
+- **Corolario, y es el que ahorra el diagnóstico entero: la presencia o ausencia de la línea de fallo CLASIFICA el rojo.** `Failing tests:` **sin** ninguna línea `Test Case … failed` ⇒ colisión de corridas (o cualquier otra muerte del runner): no hay veredicto, no mires el test. **Con** su línea de fallo y su mensaje de aserto ⇒ eso sí es un rojo de test **de tu árbol, siempre que hayas estado solo** — y esa segunda mitad faltaba, ver la regla siguiente. Es un `grep -c` y separa dos familias que llevaban semanas mezcladas en cuatro tickets distintos. **Y no confundas esto con «lo mató la memoria»**: en las corridas medidas ese día el swap estuvo lleno (6,0-6,1 GB de 6,1) y el reproductor pasó **12 corridas / 124 casos sin un solo fallo**, con el disco tanto a 25 GB como a **12 GB** forzados con un fichero de relleno. Ni el disco ni la memoria distinguían las dos condiciones; la concurrencia sí.
+
+- **La otra mitad del corolario, y la que costó un ticket `high` falso (2026-09-11): «tiene línea de fallo» NO prueba que el rojo sea tuyo.** La segunda corrida no solo mata al runner de la primera: antes de eso **instala su `.app` sobre el mismo bundle id** (`com.jurgenschmidt.yala.dev`). Desde ese instante la primera sigue viva y tapeando **un binario que no es el suyo** — el del árbol de la otra sesión, con su trabajo a medias dentro. Lo que sale entonces no es `Restarting after unexpected exit` sin veredicto: es un `waitForExistence` que se agota, con su `Test Case … failed` y su mensaje de aserto, indistinguible de una regresión. **Lo que pasó:** el ticket `welcome-chooser-uitests-cannot-reach-the-chooser` nació `high` afirmando que siete XCUITest del Welcome no pasaban del Hero en `2.1` limpio, «reproducido dos veces en el árbol de trabajo y otras dos en un worktree limpio», con el log del timeout citado. **Los siete pasan**: 11/11 en `2.1` de hoy, 11/11 en `1a9cbb83` —la revisión exacta que se bisecó— y los once verdes en la nocturna de CI del 11-sep sobre los 149 casos. Las dos suites eran byte-idénticas entre esas dos revisiones, así que no había nada que bisecar; lo que variaba era la máquina. Y «dos veces» no es aislar: si la otra sesión sigue trabajando, las dos repeticiones miden la misma condición. ⇒ **antes de creerte un rojo de XCUITest —y sobre todo antes de abrir un ticket por él— vigilá la corrida entera con `bash qa/scripts/sim-libre.sh --vigilar <pid del xcodebuild>`**, no solo la foto de antes: una corrida dura entre 3 y 40 min y la foto caduca al segundo siguiente. Corolario barato de método: **la hipótesis del ticket se refutaba con un grep** (decía que `WelcomeHeroView.handleEmpezar()` encaminaba a algún sitio nuevo; son cuatro líneas que llaman `onContinue()`), así que leer el código que el ticket acusa va ANTES de montar la reproducción.
 
 
 - **El device DEBE casar con el runtime del SDK contra el que se compila.** Hoy se compila contra `iPhoneSimulator27.0` ⇒ hace falta un device de **iOS 27.0**. Si no existe ninguno, `xcodebuild` no da un error de test: muere con **exit 70** y **cero casos ejecutados** (`Unable to find a device matching the provided destination specifier`). Corolario al liberar disco: **borrar simuladores eligiendo por RUNTIME, nunca por «cuál está arrancado»** — así se perdieron los `iPhone 17 Pro` de 27.0 conservando uno de 26.4, y todas las corridas murieron sin ejecutar nada. Y cuando hay dos devices con el mismo nombre en runtimes distintos (`iPhone 17 Pro` existe hoy en 26.4 **y** en 27.0), `-destination 'platform=iOS Simulator,name=iPhone 17 Pro'` es ambiguo → usar **`-destination 'platform=iOS Simulator,id=<udid>'`**.

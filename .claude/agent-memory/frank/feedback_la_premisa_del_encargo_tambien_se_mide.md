@@ -196,3 +196,34 @@ dominio— y no cuesta nada descartarla. Aquí bastó `ls Yala/Resources/*.lproj
   las cinco entradas de glosario que este pedía **ya existían**, escritas por el commit del propio
   ADR. Comprobar el estado real antes de escribir cuesta un `grep` y evita re-escribir encima. Es la
   misma familia que «el defecto YA estaba arreglado», pero por dentro del alcance en vez de fuera.
+
+## La forma más cara de todas: el ticket trae su propia BISECCIÓN, y no bisecó nada (2026-09-11)
+
+`welcome-chooser-uitests-cannot-reach-the-chooser` llegó `high`, con tabla de siete casos, el log
+del timeout citado y esta frase: «**No son flaky y no son de nadie**: se reprodujeron dos veces
+seguidas en el árbol de trabajo y otras dos en un worktree limpio de `2.1` (`1a9cbb83`). Es la
+bisección que los clasifica como preexistentes.»
+
+Los siete **pasan**. Medido: 11/11 en `2.1` de hoy (×2 corridas), 11/11 en `1a9cbb83` —la revisión
+exacta de la «bisección»— y los once verdes en la nocturna de CI del 11-sep dentro de los 149 casos.
+
+**Por qué la bisección no valía, y esto es lo que hay que reconocer al leerla:**
+
+- **Las dos suites eran byte-idénticas entre las dos revisiones.** Un `git diff --stat A..B --
+  YalaUITests/` (3 segundos) lo dice: tocaba un solo fichero, y era otro. Si el objeto medido no
+  cambia entre los dos extremos, **no hay bisección posible** — sea cual sea el resultado, el
+  cambio está fuera del eje que se cree estar recorriendo.
+- **«Dos veces seguidas» no es aislar, es repetir la condición.** Si lo que contamina es el entorno
+  —aquí, otra sesión en el mismo simulador—, cuatro repeticiones miden cuatro veces lo mismo. La
+  repetición solo refuta el azar; contra una condición persistente no prueba nada.
+- **La hipótesis se caía con un grep.** El ticket acusaba a `WelcomeHeroView.handleEmpezar()` de
+  «encaminar» a algún sitio nuevo; son cuatro líneas que llaman `onContinue()`, y el faro que
+  nombraba se consulta un paso después. **Leer el código que el ticket acusa va ANTES de montar la
+  reproducción**: es más barato que compilar.
+
+**How to apply:** ante un ticket de test rojo con bisección incluida, el orden es (1) `git diff
+--stat <base>..<head> -- <ruta del test>` para ver si el sujeto cambió siquiera, (2) leer la función
+acusada, (3) buscar una medición INDEPENDIENTE de esta máquina —la nocturna de CI la da gratis con
+`gh run view <id> --log`— y solo entonces (4) reproducir. Los tres primeros pasos cuestan minutos y
+los cuatro rojos del ticket hermano salieron de la misma corrida, o sea que el log ya estaba pagado.
+Ver [[dos-corridas-un-simulador]] y [[rojo-conocido-no-exime-de-bisecar]].
