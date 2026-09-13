@@ -57,7 +57,7 @@ struct UserDataResetView: View {
     /// sesión NO baja el scope. La etiqueta ☁️ la resuelve `cloudLabel(storageMode)` (mata C2).
     private var scopeOperation: DestructiveScopeLogic.Operation {
         DestructiveScopeLogic.wipeOperation(
-            isGroupInviteMode: sessionState.isGroupInviteMode,
+            hasPrivateSession: PrivateSessionMark.hasPrivateSession(),
             personalMountAttachesMirror: CloudSessionSignOut.personalMountAttachesMirror)
     }
 
@@ -79,10 +79,16 @@ struct UserDataResetView: View {
                                 Text(L10n.Settings.resetAllData)
                                     .font(DS.Typography.title)
 
+                                // El MISMO eje que `scopeOperation`, y tiene que serlo: este texto
+                                // describe el alcance que la hoja va a ejecutar. Leyendo
+                                // `isGroupInviteMode` divergían justo en el caso que el eje 1 existe
+                                // para cubrir —un `.groupInvite` llegado por el iCloud-KV a un
+                                // teléfono privado— y la pantalla prometía «solo tu perfil y tus
+                                // preferencias» sobre un `.wipeDataFull`.
                                 Text(
-                                    sessionState.isGroupInviteMode
-                                        ? L10n.Settings.resetDataDescriptionGroupsOnly
-                                        : L10n.Settings.resetDataDescription
+                                    PrivateSessionMark.hasPrivateSession()
+                                        ? L10n.Settings.resetDataDescription
+                                        : L10n.Settings.resetDataDescriptionGroupsOnly
                                 )
                                 .font(DS.Typography.caption)
                                 .foregroundStyle(.secondary)
@@ -228,6 +234,10 @@ struct UserDataResetView: View {
             // Solo grupos: la app sigue enseñando los grupos. Se reponen el modo y el onboarding que el
             // barrido quitó; el perfil y las preferencias, que es lo que se vaciaba, quedan restablecidos.
             sessionState.onboardingMode = .groupInvite
+            // Eje 1: idempotente por diseño. La marca SOBREVIVE al vaciado —vaciar no cambia quién
+            // eres— pero se repone junto al modo para que las dos cuenten lo mismo si algún camino
+            // futuro la barre.
+            PrivateSessionMark.set(false)
             defaults.set(true, forKey: "hasShownWelcomeChooser")
             defaults.set(true, forKey: AppPreferences.Keys.hasCompletedOnboarding)
             sessionState.selectMainTab(.groups)
@@ -240,10 +250,14 @@ struct UserDataResetView: View {
 
         // Paso 9 · a dónde aterriza la app se decide ANTES del wipe: el barrido de preferencias borra
         // `onboardingMode`, y después ya no se sabría si esto era un solo-grupos.
-        let landing = DestructiveScopeLogic.wipeLanding(isGroupInviteMode: sessionState.isGroupInviteMode)
+        let landing = DestructiveScopeLogic.wipeLanding(
+            hasPrivateSession: PrivateSessionMark.hasPrivateSession())
         // Y si avisa a los demás dispositivos del Apple ID: solo una sesión privada (ver la decisión pura).
+        // `confirmedPrivateSession` y NO `hasPrivateSession`: esta es la única de las tres cuyo `true`
+        // sale de este teléfono (ver el docblock de `wipeSignalsAppleIDDevices`).
         let signalsOtherDevices = DestructiveScopeLogic.wipeSignalsAppleIDDevices(
-            isGroupInviteMode: sessionState.isGroupInviteMode, storageMode: CloudSyncFlags.storageMode)
+            confirmedPrivateSession: PrivateSessionMark.confirmedPrivateSession(),
+            storageMode: CloudSyncFlags.storageMode)
 
         // 1. Activate wipe overlay BEFORE starting deletion
         //    This prevents @Query observers from crashing by showing a blocking overlay

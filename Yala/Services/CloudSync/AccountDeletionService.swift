@@ -93,7 +93,7 @@ final class AccountDeletionService {
         var canDelete: @MainActor () -> Bool
         var groupsBackendEnabled: () -> Bool
         var storageModeIsCloud: () -> Bool
-        /// Paso 9: ¿hay sesión PRIVADA (`!isGroupInviteMode`)? Decide el cierre local de la cuenta de grupos:
+        /// Paso 9: ¿hay sesión PRIVADA (el eje 1, `PrivateSessionMark`)? Decide el cierre local de la cuenta de grupos:
         /// con sesión privada (D) lo personal sobrevive; sin ella (F) no hay nada privado que conservar y el
         /// dispositivo vuelve a recién instalado, como tras borrar una cuenta de la nube.
         var hasPrivateSession: @MainActor () -> Bool
@@ -120,7 +120,7 @@ final class AccountDeletionService {
             // lo que el usuario ya subió al backend ni le quita el derecho de supresión.
             groupsBackendEnabled: { CloudSyncFlags.groupsBackendCompiledCapability },
             storageModeIsCloud: { CloudSyncFlags.storageMode == .cloud },
-            hasPrivateSession: { !SessionState.shared.isGroupInviteMode },
+            hasPrivateSession: { PrivateSessionMark.hasPrivateSession() },
             forgetGroupsUser: {
                 let client = GroupsMembershipClient(attestProvider: AttestSessionProvider.live)
                 _ = try await GroupBackendMembershipService(client: client).forgetUser()

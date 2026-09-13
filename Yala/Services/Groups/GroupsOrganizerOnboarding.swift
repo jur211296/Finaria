@@ -231,6 +231,8 @@ enum GroupsOrganizerOnboarding {
         // Espejo en memoria: el proceso vivo tiene que ver el modo nuevo YA (el tab bar se reduce a
         // [.groups] en el mismo render), no en el próximo arranque.
         sessionState.onboardingMode = .groupInvite
+        // Eje 1: el organizador viene a crear un grupo. No hay sesión privada en este dispositivo.
+        PrivateSessionMark.set(false)
         sessionState.selectedPeriod = .thisMonth
 
         // Seeds idénticos al camino del invitado: categorías personales (para tener subcategorías en los

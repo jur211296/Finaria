@@ -164,11 +164,11 @@ struct DestructiveScopeLogicTests {
     // MARK: - Qué operación toca a cada celda
 
     @Test func wipeOperation_groupInvite_isGroupsOnly_elseFull() {
-        #expect(DestructiveScopeLogic.wipeOperation(isGroupInviteMode: true, personalMountAttachesMirror: false)
+        #expect(DestructiveScopeLogic.wipeOperation(hasPrivateSession: false, personalMountAttachesMirror: false)
                 == .wipeDataGroupsOnly)
-        #expect(DestructiveScopeLogic.wipeOperation(isGroupInviteMode: false, personalMountAttachesMirror: false)
+        #expect(DestructiveScopeLogic.wipeOperation(hasPrivateSession: true, personalMountAttachesMirror: false)
                 == .wipeDataFull)
-        #expect(DestructiveScopeLogic.wipeOperation(isGroupInviteMode: false, personalMountAttachesMirror: true)
+        #expect(DestructiveScopeLogic.wipeOperation(hasPrivateSession: true, personalMountAttachesMirror: true)
                 == .wipeDataFull)
     }
 
@@ -176,7 +176,7 @@ struct DestructiveScopeLogicTests {
     /// dispositivos del Apple ID. Un solo-grupos sobre un store que espeja ve la hoja completa, que lo nombra;
     /// la de solo grupos le decía «No se tocan» (review adversarial del paso 9).
     @Test func wipeOperation_groupsOnlyOnAMirroredStore_isFull() {
-        #expect(DestructiveScopeLogic.wipeOperation(isGroupInviteMode: true, personalMountAttachesMirror: true)
+        #expect(DestructiveScopeLogic.wipeOperation(hasPrivateSession: false, personalMountAttachesMirror: true)
                 == .wipeDataFull)
     }
 
@@ -222,17 +222,17 @@ struct DestructiveScopeLogicTests {
     /// filas (y con el espejo, su iCloud). Solo una sesión PRIVADA habla por ese Apple ID: desde la nube o
     /// solo grupos, vaciaba el iPad privado del dueño de un móvil prestado.
     @Test func wipeSignal_onlyFromAPrivateSession() {
-        #expect(DestructiveScopeLogic.wipeSignalsAppleIDDevices(isGroupInviteMode: false, storageMode: .icloud))
-        #expect(!DestructiveScopeLogic.wipeSignalsAppleIDDevices(isGroupInviteMode: false, storageMode: .cloud))
-        #expect(!DestructiveScopeLogic.wipeSignalsAppleIDDevices(isGroupInviteMode: true, storageMode: .icloud))
-        #expect(!DestructiveScopeLogic.wipeSignalsAppleIDDevices(isGroupInviteMode: true, storageMode: .cloud))
+        #expect(DestructiveScopeLogic.wipeSignalsAppleIDDevices(confirmedPrivateSession: true, storageMode: .icloud))
+        #expect(!DestructiveScopeLogic.wipeSignalsAppleIDDevices(confirmedPrivateSession: true, storageMode: .cloud))
+        #expect(!DestructiveScopeLogic.wipeSignalsAppleIDDevices(confirmedPrivateSession: false, storageMode: .icloud))
+        #expect(!DestructiveScopeLogic.wipeSignalsAppleIDDevices(confirmedPrivateSession: false, storageMode: .cloud))
     }
 
     // MARK: - A dónde lleva «Vaciar datos»
 
     @Test func wipeLanding_personalOnboarding_unlessGroupsOnly() {
-        #expect(DestructiveScopeLogic.wipeLanding(isGroupInviteMode: false) == .personalOnboarding)
-        #expect(DestructiveScopeLogic.wipeLanding(isGroupInviteMode: true) == .groupsShell)
+        #expect(DestructiveScopeLogic.wipeLanding(hasPrivateSession: true) == .personalOnboarding)
+        #expect(DestructiveScopeLogic.wipeLanding(hasPrivateSession: false) == .groupsShell)
     }
 }
 

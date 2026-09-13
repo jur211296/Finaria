@@ -119,7 +119,7 @@ final class CloudSessionSignOut {
             secondarySessionActive: SecondarySessionStore.isActive(),
             hasLiveSession: CloudAuthService.shared.hasSession,
             groupsBackendEnabled: CloudSyncFlags.groupsBackendCompiledCapability,
-            hasPrivateSession: !SessionState.shared.isGroupInviteMode)
+            hasPrivateSession: PrivateSessionMark.hasPrivateSession())
         if let confirmedPath, confirmedPath != path {
             CloudSyncBreadcrumb.signOutCellChangedBeforeRunning()
             return

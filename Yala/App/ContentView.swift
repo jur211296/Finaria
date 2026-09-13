@@ -652,10 +652,14 @@ struct ContentView: View {
                     // El usuario era "solo grupos": no forzar onboarding personal.
                     OnboardingMode.setCurrent(.groupInvite)
                     SessionState.shared.onboardingMode = .groupInvite
+                    // Eje 1: lo restaurado son sus grupos, no una vida personal.
+                    PrivateSessionMark.set(false)
                     completeOnboardingAsRestoreSkip()
                     hasCompletedOnboarding = true
                     reEmitInviteAfterRestore()
                 case .directToApp:
+                    // Eje 1: el corpus personal bajó de iCloud y esta persona entra a usarlo.
+                    PrivateSessionMark.set(true)
                     completeOnboardingAsRestoreSkip()
                     hasCompletedOnboarding = true
                     reEmitInviteAfterRestore()
@@ -708,6 +712,8 @@ struct ContentView: View {
             // Set flag BEFORE dismiss — onChange picks it up reliably
             // El alta REAL: aquí sí van los dos efectos de primera vez (ver `EntryOnboardingEffects`).
             applyEntryOnboardingEffects(.freshInstall)
+            // Eje 1: el onboarding personal terminado ES el nacimiento de la sesión privada.
+            PrivateSessionMark.set(true)
             hasCompletedOnboarding = true
             showOnboarding = false
             prefilledOnboardingData = nil
@@ -1912,6 +1918,8 @@ private struct WelcomeFlowModifier: ViewModifier {
                         // kill-mid-adopt → el seed del onboarding jamás corre sobre una
                         // cuenta existente; un kill aterriza en MainTab con la card de
                         // Almacenamiento reflejando el estado real del adopt.
+                        // Eje 1: adoptar una cuenta existente trae su vida personal a este dispositivo.
+                        PrivateSessionMark.set(true)
                         completeOnboardingAsRestoreSkip()
                         hasCompletedOnboarding = true
                     },

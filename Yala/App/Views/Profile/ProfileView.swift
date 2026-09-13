@@ -240,7 +240,7 @@ struct ProfileView: View {
             secondarySessionActive: SecondarySessionStore.isActive(),
             hasLiveSession: CloudAuthService.shared.hasSession,
             groupsBackendEnabled: CloudSyncFlags.groupsBackendCompiledCapability,
-            hasPrivateSession: !isGroupInviteMode)
+            hasPrivateSession: PrivateSessionMark.hasPrivateSession())
     }
 
     /// H-2026-07-18-6: caption honesto mientras el sign-out solo-grupos ESPERA a que se asienten writes
@@ -327,7 +327,8 @@ struct ProfileView: View {
     /// por `DestructiveScopeLogic`; aquí solo se elige la operación (la etiqueta ☁️ es siempre la cuenta de Yala).
     private var deleteAccountScopeOperation: DestructiveScopeLogic.Operation {
         DestructiveScopeLogic.deleteAccountOperation(
-            storageMode: CloudSyncFlags.storageMode, hasPrivateSession: !isGroupInviteMode)
+            storageMode: CloudSyncFlags.storageMode,
+            hasPrivateSession: PrivateSessionMark.hasPrivateSession())
     }
 
     private func syncDeletionUI(from phase: AccountDeletionService.Phase) {
@@ -350,7 +351,9 @@ struct ProfileView: View {
 
     /// D1: shell reducida (group-invite O usageFocus == .groupsOnly). Oculta la sección
     /// «Organización» (finanzas personales). Reactivo a `usageFocus` vía `appPreferences`.
-    /// NO afecta las filas de sesión/cuenta/export (esas siguen en `isGroupInviteMode`).
+    /// NO afecta las filas de sesión/cuenta (ésas leen el eje 1, `PrivateSessionMark`) ni la de
+    /// export, que sigue en `isGroupInviteMode` — el eje de export es «qué hay que exportar», no
+    /// «hay vida personal», y lo barre el PR-B con el resto del flag.
     private var isGroupsFocusedShell: Bool {
         ShellModeLogic.effective(
             onboardingMode: SessionState.shared.onboardingMode,

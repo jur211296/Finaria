@@ -53,7 +53,7 @@ struct YalaAccountView: View {
             canDeleteAccount: AccountDeletionRowLogic.shouldShow(
                 hasSession: UITestHooks.fakeBackendSession || CloudAuthService.shared.hasSession,
                 secondaryActive: SecondarySessionStore.isActive()),
-            hasPrivateSession: !SessionState.shared.isGroupInviteMode)
+            hasPrivateSession: PrivateSessionMark.hasPrivateSession())
     }
 
     var body: some View {

@@ -113,6 +113,20 @@ final class AppBootstrapper {
         //      Pérdida acotada a config local de Cash Flow (feature Pro nueva que nunca sincronizó).
         CashFlowWipeService.wipeCashFlowDataIfNeeded(in: context)
 
+        // 0.0-bis. EL EJE 1, backfilleado una sola vez (ADR 2026-09-09 «Sesiones — dos ejes»).
+        //
+        // **Va ANTES del paso 0, y ése es todo el punto.** `PreferenceSyncService.bootstrap()` mergea
+        // `onboardingMode` con el iCloud-KV del Apple ID (never-downgrade), así que leerlo DESPUÉS
+        // backfillearía la marca con un `.groupInvite` que puede venir de OTRO dispositivo —
+        // exactamente el viaje que `PrivateSessionMark` existe para no hacer. Aquí el valor es el
+        // local de este teléfono, que es el hecho que la marca describe.
+        //
+        // Idempotente por presencia de la key: a partir del segundo arranque es un no-op, y en una
+        // instalación fresca lo es también porque el alta escribe la marca antes que nadie la lea.
+        PrivateSessionMark.backfillIfNeeded(
+            legacyIsGroupsOnly: OnboardingMode.current() == .groupInvite,
+            hasCompletedOnboarding: UserDefaults.standard.bool(forKey: AppPreferences.Keys.hasCompletedOnboarding))
+
         // 0. Sync preferences from iCloud (must be FIRST — other services read these)
         if !uiTestActive { PreferenceSyncService.shared.bootstrap() }
 
@@ -705,6 +719,14 @@ final class AppBootstrapper {
                 SessionState.shared.onboardingMode = .full
             }
             UserDefaults.standard.removeObject(forKey: OnboardingMode.userDefaultsKey)
+            //  · el EJE 1 (`-uitest-group-invite` escribe `PrivateSessionMark.set(false)` más abajo):
+            //    misma clase que su vecina de arriba y PEOR, porque `cloudSync.*` está excluido del
+            //    barrido de preferencias a propósito —para que la marca sobreviva a «Vaciar datos»—,
+            //    así que sin esta línea NADA en el árbol la borra jamás. La corrida siguiente, aunque
+            //    no pida solo-grupos, arrancaría creyendo que no hay sesión privada: las hojas de
+            //    cerrar sesión y de vaciar cambian de celda, y el arranque MANUAL de Yala Dev en ese
+            //    simulador queda igual de envenenado — la víctima que nadie mira.
+            PrivateSessionMark.clear()
             //  · la marca de un desasociar a medias (`GroupsDetachPendingPurge`): la escribe el
             //    CÓDIGO DE PRODUCCIÓN cuando el borrado local falla, y el caso con `-uitest-fail-wipe`
             //    la deja armada a propósito. Sobrevive al wipe de SwiftData —no es una fila, es una
@@ -806,6 +828,10 @@ final class AppBootstrapper {
         if UITestHooks.forceGroupInvite {
             OnboardingMode.setCurrent(.groupInvite)
             SessionState.shared.onboardingMode = .groupInvite
+            // Eje 1: el seam siembra la celda ENTERA, o el XCUITest solo-grupos correría con la marca
+            // que dejó la corrida anterior en ese simulador (o con el default conservador, que dice
+            // justo lo contrario de lo que el test quiere montar).
+            PrivateSessionMark.set(false)
             SessionState.shared.selectedMainTab = .groups
         }
         // `-uitest-groups-consent`: consent de Grupos por sembrado DIRECTO de su snapshot local. NO se usa
