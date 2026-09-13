@@ -67,9 +67,12 @@
 - [El fixture hereda la anatomía de producción](feedback_el_fixture_hereda_la_anatomia_de_produccion.md) — no la deduzcas del ticket; el error se ve en el TOTAL, y el fixture tiene que ser DISCRIMINANTE.
 - [El reparador, tan re-ejecutable como el destructor](feedback_el_reparador_tan_reejecutable_como_el_destructor.md) — en un hook kill-safe, `consume()` mata lo que repara en la 2.ª pasada; y el sobre que sobrevive a un borrado necesita TTL y su frontera.
 - [El estado paralelo al lado del step](feedback_el_estado_paralelo_al_lado_del_step.md) — «siempre va con aquello» se hereda en silencio: mételo DENTRO y que lo obligue el compilador. Cuéntalos, no lo afirmes.
+- [El prefijo que elegí tiene DOS efectos](feedback_el_prefijo_que_elegi_tiene_dos_efectos.md) — excluir una key de un barrido la excluye de todos; un seam de uitest la deja viva para siempre.
+- [El default seguro no es el mismo para todos](feedback_el_default_seguro_no_es_el_mismo_para_todos.md) — el consumidor que alcanza datos de FUERA invierte el default; dos lecturas nombradas, y comprueba que la ausencia existe.
 - [«Cero warnings» se mide en TODOS los logs](feedback_cero_warnings_se_mide_en_todos_los_logs.md) — el gate no mira los tests y lee un build incremental; dos míos iban al commit el 10-sep.
 
 ## Estado del trabajo
+- [El eje 1 ya tiene fuente propia](project_eje1_marca_sesion_privada.md) — PR #150; eran 9 constructores y no 6; el barrido de M1 es el PR-B y el device-QA NO es simulable.
 - [El paso 12 estaba roto: el eje 1 no tenía fuente](project_paso12_dominio_preferencias.md) — PR #149 entrega el tercio mecánico; 4 decisiones del 12-sep; el flag de M1 estaba en `true`, no en `false`.
 - [El simulador se pide por turno, y la segunda espera](project_cola_del_simulador.md) — PR #147; la review cazó DOS llaves maestras mías; tener el turno NO es tener el simulador; deja 4 tickets.
 - [La cuenta de grupos ya se suelta con la nube en pausa](project_killswitch_puerta_grupos.md) — PR #146; el predicado del ticket era el equivocado; device-QA SÍ simulable; deja un `high`.
