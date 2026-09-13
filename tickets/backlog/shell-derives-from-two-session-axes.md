@@ -155,3 +155,68 @@ en lo que las contradigan.
   (notificaciones de inbox, deep links de widgets). `SessionShape` necesita otro sitio.
 - **`SessionDefaults` NO es una pieza de M1 que se retire sin más.** Aparecía en 63 ficheros porque era
   la puerta que decidía el dominio de TODAS las preferencias. Lo retira el PR mecánico de arriba.
+
+## PR-A entregado (2026-09-12): el eje 1 ya tiene fuente propia
+
+Esto es lo que desbloquea el ticket. **No es el barrido**: M1 y `OnboardingMode` siguen en pie y son el
+PR-B.
+
+**Qué entra.** `PrivateSessionMark` (`Yala/Services/CloudSync/`), la marca positiva persistida que
+Jürgen decidió el 12-sep, con backfill de un arranque. Los **nueve** constructores del eje pasan a
+leerla, y los **tres source-scans** que clavaban el literal viejo pinnean ahora la forma nueva.
+
+**El eje eran 9 constructores, no 6.** Los seis del encargo son los de `hasPrivateSession:`; los otros
+tres son las funciones de `DestructiveScopeLogic` que recibían el eje bajo el nombre viejo
+(`wipeOperation`, `wipeSignalsAppleIDDevices`, `wipeLanding`) — su propio docblock decía que distinguen
+«sin vida personal» de «con vida personal». Jürgen aprobó incluirlas: dejarlas con el flag habría partido
+el eje en dos nombres justo antes del PR-B.
+
+**Dos lecturas, no una, y es lo que más costó.** `hasPrivateSession` (ausente ⇒ `true`) y
+`confirmedPrivateSession` (ausente ⇒ `false`). No hay un default que sirva para las dos preguntas:
+`wipeSignalsAppleIDDevices` decide si «Vaciar datos» ORDENA a los demás dispositivos del Apple ID
+vaciarse, y ahí un `true` por ausencia vacía el iPad del dueño — el daño exacto que la review del paso 9
+cazó. Es el único consumidor de la lectura estricta, y un test cuenta que siga siendo uno.
+
+### Lo que la review adversarial cazó, y era MÍO
+
+Tres lentes independientes, 14 hallazgos, ninguno sin juzgar. Los seis que cambiaron código:
+
+1. **El seam `-uitest-group-invite` envenenaba el simulador para siempre.** Elegí el prefijo `cloudSync.`
+   para que la marca sobreviviera a «Vaciar datos», y con eso la dejé fuera del único barrido que la
+   habría limpiado entre corridas. La corrida siguiente —y el arranque MANUAL de Yala Dev en ese
+   simulador— arrancaba creyendo que no hay sesión privada. Se purga en el bloque de `-uitest-reset`,
+   junto a su gemela `onboardingMode`.
+2. **La copy de «Vaciar datos» leía el flag viejo mientras su alcance leía la marca.** Divergían justo en
+   el caso que el eje existe para cubrir, y la pantalla prometía «solo tu perfil y tus preferencias»
+   sobre un `.wipeDataFull`. El bug se había movido una línea, no cerrado.
+3. **El backfill resucitaba la marca que el cierre de sesión acababa de borrar**, en el mismo
+   lanzamiento: el boot-wipe pre-mount llama a `clear()` y su `resetPrefs()` borra `onboardingMode`, así
+   que el backfill leía `.full` y escribía `true`. Con eso la AUSENCIA no existía nunca en producción y
+   el default estricto no protegía nada. Se cierra gateando el backfill por `hasCompletedOnboarding`:
+   el backfill es para el parque existente, y un teléfono recién barrido no lo es.
+4. **La visita podía borrar la marca del dueño.** El cinturón de `wipeLocalGroupsDomain` solo lanza si el
+   store montado no es el secundario, así que una visita operativa llegaba al `clear` del handover. Ese
+   camino es in-session y ahora lleva guard de M1; el del boot-wipe no lo necesita y no lo lleva.
+5. **Las lecturas contestaban por el dueño en sesión secundaria.** La marca vive en su `UserDefaults`, así
+   que la visita leía «¿tiene el dueño vida personal?» cuando la pregunta es «¿la tiene ESTA sesión?».
+   Las dos lecturas cortan ahora en M1 antes de mirar la marca: `false` por definición del modelo.
+6. **Mis docblocks afirmaban de más.** «Los siete puntos» eran nueve; «sus tres puertas» eran dos; y la
+   promesa de que la marca «nunca viaja por el iCloud-KV» vale para la marca ESCRITA, no para su semilla
+   — el backfill no tiene más fuente que `onboardingMode`, que sí pudo venir mergeado del KV. Es una
+   limitación de la migración, no del diseño, y ahora está escrita.
+
+**Verificado:** build ×2 (`Yala` y `Yala Dev`) con cero warnings nuevos —medido contra un worktree del
+árbol base con DerivedData limpio, porque el primer intento fue incremental y dio un cero falso— y **10
+mutantes que caen**: 4 sobre el diseño y 6 sobre las correcciones de la review.
+
+### Lo que el PR-B hereda (medido aquí, no lo redescubras)
+
+- **`CloudIdentityRoutingLogic.deviceState` (`:257-265`) es una SEGUNDA fuente del mismo eje**, derivada
+  de `onboardingMode`, cableada en `ContentView`. Su propio docblock ya dice que el paso 12 la absorbe.
+  Queda fuera a propósito: entra con el barrido, no antes.
+- **`ProfileView.isExportEnabled` / `exportDisabledHint` siguen en `isGroupInviteMode`**, y es correcto:
+  su eje es «qué hay que exportar», no «hay vida personal».
+- **El flag y la marca divergen en el vaciado REMOTO.** El barrido borra `onboardingMode` local y la marca
+  sobrevive a propósito, así que un dispositivo solo-grupos que recibe la señal conserva su eje (bien) con
+  la shell completa (la decide `ShellModeLogic`, que aún lee el flag). Se cierra solo cuando el PR-B
+  retire el flag; no hay nada que arreglar antes.

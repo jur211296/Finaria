@@ -581,6 +581,24 @@ final class DataWipeService {
         defaults.removeObject(forKey: OnboardingMode.userDefaultsKey)
         iKV.setString("", forKey: OnboardingMode.userDefaultsKey)
         iKV.synchronize()
+        // EL EJE 1 se va con el modo, porque describe lo mismo desde el modelo nuevo: «¿hay vida
+        // personal EN ESTE teléfono?». Este camino es el relevo de HUMANO, el único junto al
+        // boot-wipe del cierre de sesión donde eso deja de ser verdad. **Y no hay mitad iKV que
+        // soltar aquí: la marca nunca viaja** — que es justo lo que impide que la persona nueva
+        // herede el eje de un dispositivo ajeno del mismo Apple ID, el daño que los tres párrafos
+        // de arriba tienen que reparar a mano para `onboardingMode`.
+        // **Con guard de M1, a diferencia del otro sitio de muerte.** Aquel corre pre-mount, sin
+        // proceso de sesión detrás; éste es IN-SESSION y su cinturón fail-closed de más arriba solo
+        // lanza si el store montado NO es el secundario, así que una visita ya operativa llega hasta
+        // aquí — y la marca que borraría es la del DUEÑO, en el `UserDefaults` que comparten. El
+        // daño no es el borrado en sí (deja las lecturas en su lado conservador) sino el arranque
+        // siguiente: el backfill la re-derivaría de un `onboardingMode` que esta misma función acaba
+        // de borrar, y un dueño solo-grupos volvería con `hasPrivateSession == true` — otro verbo
+        // destructivo y una espera de export de iCloud que no le aplica. La mitad iKV de esta
+        // función ya está protegida por `OwnerKeyValueStore`; ésta era la que faltaba.
+        if !SecondarySessionStore.isActive(defaults) {
+            PrivateSessionMark.clear(defaults)
+        }
     }
 
     /// **Paso 9 · el modo solo-grupos se suelta del iCloud KV al cerrar esa sesión.** `onboardingMode` viaja

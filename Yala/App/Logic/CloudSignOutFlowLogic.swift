@@ -65,9 +65,10 @@ nonisolated enum CloudSignOutFlowLogic {
     /// dispositivo. Una cuenta `complete` sobre un store `.icloud` no existe en el modelo (asociarla se
     /// bloquea), y si existiera, el camino `.cloud` buscaría un outbox personal que no hay.
     ///
-    /// `hasPrivateSession` es `!SessionState.isGroupInviteMode`, el mismo discriminante que ya usa
-    /// «Vaciar datos» (`DestructiveScopeLogic.wipeOperation`). Sin parámetro por defecto a propósito:
-    /// la vista y el coordinador tienen que pronunciarse los dos, o la hoja prometería otro borrado.
+    /// `hasPrivateSession` es EL EJE 1 del ADR 2026-09-09, leído de `PrivateSessionMark` — el mismo
+    /// eje y la misma lectura que usa «Vaciar datos» (`DestructiveScopeLogic.wipeOperation`). Sin
+    /// parámetro por defecto a propósito: la vista y el coordinador tienen que pronunciarse los dos,
+    /// o la hoja prometería otro borrado.
     static func path(for storageMode: StorageMode,
                      secondarySessionActive: Bool,
                      hasLiveSession: Bool,

@@ -676,11 +676,11 @@ struct PrivateSignOutWiringTests {
         // En el cuerpo de `signOutRowPath`, no en todo el fichero: el literal sale también en la operación de
         // «Eliminar mi cuenta», y con él una mutación de la celda del cierre pasaba verde (review adversarial).
         let rowPath = try Self.body(of: "private var signOutRowPath: CloudSignOutFlowLogic.Path {", in: profile)
-        #expect(rowPath.contains("hasPrivateSession: !isGroupInviteMode"))
+        #expect(rowPath.contains("hasPrivateSession: PrivateSessionMark.hasPrivateSession()"))
         #expect(rowPath.contains("groupsBackendEnabled: CloudSyncFlags.groupsBackendCompiledCapability"))
         #expect(profile.contains("guard live.operation == scope.operation else {"))
         let signOut = try Self.source(Self.signOutPath)
-        #expect(signOut.contains("hasPrivateSession: !SessionState.shared.isGroupInviteMode"))
+        #expect(signOut.contains("hasPrivateSession: PrivateSessionMark.hasPrivateSession()"))
         #expect(signOut.contains("if let confirmedPath, confirmedPath != path {"))
     }
 }

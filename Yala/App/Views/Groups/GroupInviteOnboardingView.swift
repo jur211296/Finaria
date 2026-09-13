@@ -527,6 +527,8 @@ struct GroupInviteOnboardingView: View {
 
         // 1. Set onboarding mode
         sessionState.onboardingMode = .groupInvite
+        // Eje 1: esta persona vino por una invitación. No hay sesión privada en este dispositivo.
+        PrivateSessionMark.set(false)
 
         // 1.5. C2 · **ESTA vista ES el educativo del invitado**, contextual al link y con la metadata del
         // grupo, así que al terminarla se marca el hecho real: «ya se le contó qué es un grupo». Antes,

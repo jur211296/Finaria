@@ -523,6 +523,10 @@ struct FullModeActivationView: View {
             sync.set(string: OnboardingMode.completed.rawValue, forKey: OnboardingMode.userDefaultsKey)
         }
         sessionState.onboardingMode = .completed
+        // Eje 1: «Activar Yala completo» es el nacimiento de la sesión privada de un solo-grupos
+        // (F → D). Va con el modo y NO dentro del `if` de arriba: el guard de M1 lo lleva dentro
+        // `PrivateSessionMark.set`, que es donde tiene que estar.
+        PrivateSessionMark.set(true)
         // La reanudación, fuera — DESPUÉS del modo, a propósito: un kill entre las dos escrituras deja
         // `.completed` con la marca puesta, y el arranque la retira sola (`resolveAtBoot`, fuera de solo-grupos).
         // Al revés dejaría a quien ya guardó su onboarding en solo-grupos y sin nada que retome la activación.

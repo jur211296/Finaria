@@ -768,6 +768,13 @@ extension SwiftDataConfiguration {
         // que se cierra. `cloudSync.*` lo excluye el barrido de preferencias, así que sin esto la persona
         // siguiente heredaría un aviso de espejo tardío sobre un corpus que no es suyo.
         StorageModePersistence.clearPrivateChoseWithoutICloud(defaults)
+        // EL EJE 1 muere aquí, y por la misma razón que sus dos vecinas de arriba: describe la vida
+        // que se cierra. `removeUserPreferenceKeys` excluye `cloudSync.*` a propósito —y para la
+        // marca esa exclusión es deliberada, porque tiene que SOBREVIVIR a «Vaciar datos»— así que
+        // éste es el único sitio donde puede irse. Sin esto, la persona siguiente heredaría el eje
+        // del humano anterior: un solo-grupos que se va dejaría a quien restaure su iCloud con la
+        // marca en `false`, y su «Cerrar sesión» borraría sin esperar al export.
+        PrivateSessionMark.clear(defaults)
 
         // El consent de GRUPOS (§C5) es un registro de la CUENTA y `removeUserPreferenceKeys` no lo
         // nombra (ni en su lista ni en sus exclusiones deliberadas): sin esto sobrevive al wipe y la

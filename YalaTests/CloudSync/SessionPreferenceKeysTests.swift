@@ -281,7 +281,13 @@ struct SessionPreferenceKeysSpellingTests {
                     // viva?» de la puerta del invitado (`GroupInviteNeutralGateLogic`). El sitio es uno
                     // solo a propósito: el handler que la consume recibe el closure y no nombra la key,
                     // que es lo que le impide leer el dominio del dueño.
-                    expectedSites: 28),
+                    // +1 (2026-09-12): el backfill del EJE 1 la lee en `AppBootstrapper` para
+                    // distinguir «parque existente» de «dispositivo que empieza de cero». Es una
+                    // LECTURA de `.standard`, que hoy es el dominio único, y su escritura queda
+                    // gateada por el guard de M1 que `PrivateSessionMark.set` lleva dentro: en
+                    // sesión secundaria el backfill no escribe, así que leer aquí el valor del
+                    // dueño no puede sellar la celda de nadie.
+                    expectedSites: 29),
     ]
 
     /// Cuenta ocurrencias de una grafía en el CÓDIGO (sin comentarios) de todo `Yala/`, **excluyendo

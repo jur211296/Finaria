@@ -133,10 +133,15 @@ nonisolated enum DestructiveScopeLogic {
 
     /// Operación de Vaciar según la sesión (C4, §3.3.1) y lo que el store tiene debajo.
     ///
-    /// `isGroupInviteMode` distingue "sin vida personal" (solo grupos → perfil + prefs) de "con vida
-    /// personal" (todo lo demás → corpus personal completo). Una sesión backend viva NUNCA baja el scope: el
-    /// «equipo» (D, onboarding completado + sesión solo-grupos) tiene `isGroupInviteMode == false` ⇒
-    /// `.wipeDataFull`, con la fila 👥 reflejando sus grupos. Por eso NO se recibe la sesión como parámetro.
+    /// `hasPrivateSession` es EL EJE 1 del ADR 2026-09-09 y distingue "sin vida personal" (solo grupos →
+    /// perfil + prefs) de "con vida personal" (todo lo demás → corpus personal completo). Una sesión
+    /// backend viva NUNCA baja el scope: el «equipo» (D, onboarding completado + sesión solo-grupos) tiene
+    /// `hasPrivateSession == true` ⇒ `.wipeDataFull`, con la fila 👥 reflejando sus grupos. Por eso NO se
+    /// recibe la sesión como parámetro.
+    ///
+    /// El callsite lo lee de `PrivateSessionMark.hasPrivateSession` —la lectura que ante una marca
+    /// AUSENTE responde `true`—, y aquí eso significa barrer de más, que es el lado barato: la hoja
+    /// nombra todo lo que va a borrar antes de que nadie confirme.
     ///
     /// **`personalMountAttachesMirror` sube el scope de un solo-grupos cuyo store ESPEJA** (review adversarial
     /// del paso 9). «Vaciar datos» borra FILAS, y con el espejo montado esos borrados se exportan: salen de
@@ -144,8 +149,8 @@ nonisolated enum DestructiveScopeLogic {
     /// `.groupInvite` que llegó por el iCloud KV a un teléfono privado, y ahí la hoja de solo grupos decía
     /// «No se tocan» sobre un borrado que cruzaba a todos los dispositivos. Con espejo, la hoja es la
     /// completa, que lo nombra.
-    static func wipeOperation(isGroupInviteMode: Bool, personalMountAttachesMirror: Bool) -> Operation {
-        isGroupInviteMode && !personalMountAttachesMirror ? .wipeDataGroupsOnly : .wipeDataFull
+    static func wipeOperation(hasPrivateSession: Bool, personalMountAttachesMirror: Bool) -> Operation {
+        !hasPrivateSession && !personalMountAttachesMirror ? .wipeDataGroupsOnly : .wipeDataFull
     }
 
     /// ¿«Vaciar datos» avisa a los OTROS dispositivos del Apple ID para que se vacíen también? Solo desde una
@@ -157,8 +162,15 @@ nonisolated enum DestructiveScopeLogic {
     /// —la persona que usa el móvil prestado del dueño, el caso que el ADR 2026-09-09 hace normal— vaciaba
     /// el iPad privado del dueño y su iCloud. Lo medió la review adversarial del plan del paso 9. La nube ya
     /// propaga su vaciado por la cuenta (el motor sube los borrados); F no borra nada fuera de este teléfono.
-    static func wipeSignalsAppleIDDevices(isGroupInviteMode: Bool, storageMode: StorageMode) -> Bool {
-        !isGroupInviteMode && storageMode == .icloud
+    /// **Y es el ÚNICO consumidor del eje 1 que lee `confirmedPrivateSession` y no `hasPrivateSession`**
+    /// (ADR 2026-09-09, eje 1). Los otros ocho, ante una marca ausente, fallan hacia «hay vida personal
+    /// que proteger» y con eso conservan o esperan de más — barato. Éste no: su `true` sale de este
+    /// teléfono y ordena a los DEMÁS dispositivos del Apple ID vaciarse, así que fallar hacia `true`
+    /// reintroduce exactamente el daño que esta función existe para impedir. Por eso su entrada es la
+    /// lectura que ante la ausencia responde `false`: sin marca no se afirma que la sesión sea privada,
+    /// y sin esa afirmación no se toca nada fuera de aquí.
+    static func wipeSignalsAppleIDDevices(confirmedPrivateSession: Bool, storageMode: StorageMode) -> Bool {
+        confirmedPrivateSession && storageMode == .icloud
     }
 
     /// Operación de la hoja de «Cerrar sesión» para el camino que el coordinador va a recorrer.
@@ -217,8 +229,8 @@ nonisolated enum DestructiveScopeLogic {
         case groupsShell
     }
 
-    static func wipeLanding(isGroupInviteMode: Bool) -> WipeLanding {
-        isGroupInviteMode ? .groupsShell : .personalOnboarding
+    static func wipeLanding(hasPrivateSession: Bool) -> WipeLanding {
+        hasPrivateSession ? .personalOnboarding : .groupsShell
     }
 
     // MARK: - El modelo de la hoja

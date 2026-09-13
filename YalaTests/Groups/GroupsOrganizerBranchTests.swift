@@ -745,7 +745,7 @@ struct GroupsOrganizerWiringTests {
                         "secondarySessionActive: SecondarySessionStore.isActive()",
                         "hasLiveSession: CloudAuthService.shared.hasSession",
                         "groupsBackendEnabled: CloudSyncFlags.groupsBackendCompiledCapability",
-                        "hasPrivateSession: !SessionState.shared.isGroupInviteMode"] {
+                        "hasPrivateSession: PrivateSessionMark.hasPrivateSession()"] {
             #expect(cell.contains(termino), "al espejo de la celda le falta `\(termino)`")
         }
     }
