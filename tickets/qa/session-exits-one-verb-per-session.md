@@ -379,3 +379,24 @@ La sesión anterior se cortó por tokens antes del gate; ésta lo cerró. **Todo
 - **Índice de QA**: `RESULT: OK`. **Board**: 298 tickets en disco = 298 en `docs/TICKETS.md`.
 
 **Lo que sigue sin hacerse, y es de Jürgen**: el device-QA del guion de arriba. **NO es simulable.**
+
+## Qué cambió bajo este guion el 2026-09-12 (#150) — míralo al correrlo
+
+El eje que elige la celda de cierre **ya no sale del flag de onboarding**: sale de una marca
+persistida propia (`PrivateSessionMark`). Los recorridos son los mismos y no se ha tocado ninguna
+pantalla, pero si alguno diera un resultado distinto al esperado, **mira el eje antes que el flujo**:
+
+- **Qué comprobar de más, en las dos celdas que ya cubre este guion.** En **D** (privada + cuenta de
+  grupos) y en **F** (solo grupos), que la hoja prometa exactamente lo que el borrado hace. Antes las
+  dos cosas salían de la misma fuente y no podían contradecirse; ahora la hoja y el alcance leen la
+  marca y el resto de la shell sigue leyendo el flag, así que una divergencia se vería aquí primero.
+- **El caso nuevo que este guion NO cubría y conviene añadir:** «Vaciar datos» desde **F**, mirando si
+  el iPad o el Mac del mismo Apple ID se vacían también. **No deben.** Esa decisión es la única que
+  lee la lectura estricta del eje (`confirmedPrivateSession`), y su modo de fallo alcanza datos que no
+  están en este teléfono.
+- **Y un caso de entorno, barato de provocar:** entra por un grupo, cierra sesión, y comprueba que el
+  teléfono **no se queda creyendo que sigue siendo solo-grupos**. La marca muere en el boot-wipe del
+  cierre; si sobreviviera, la vida siguiente de ese teléfono heredaría el eje del humano anterior.
+
+Nada de esto es simulable: el simulador no tiene sesión de nube y las dos celdas piden dos
+dispositivos del mismo Apple ID.
